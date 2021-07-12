@@ -36,6 +36,8 @@ project "GreekBot"
 		"modules\\rapidjson\\include"
 	}
 	
+	disablewarnings "26812"
+	
 	filter "configurations:Debug"
 		links    "libcurl_a_debug"
 		symbols  "On"
