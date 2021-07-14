@@ -14,12 +14,12 @@ project "GreekBot"
 	characterset "MBCS"
 	targetdir    "bin/%{cfg.buildcfg}"
 	files {
-		"source2/**.h",
-		"source2/**.cpp"
+		"source/**.h",
+		"source/**.cpp"
 	}
 	includedirs {
-		"source2",
-		"source2/**"
+		"source",
+		"source/**"
 	}
 	
 	links {
