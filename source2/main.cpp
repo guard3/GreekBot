@@ -3,6 +3,8 @@
 #include <memory>
 #include <chrono>
 #include "Discord.h"
+#include "Gateway.h"
+#include "Bot.h"
 
 class cWebSocketSession final : public std::enable_shared_from_this<cWebSocketSession> {
 private:
@@ -102,9 +104,16 @@ public:
 
 
 int main() {
+	/*
+	cGateway c("Bot ODYzNDk5MTUxMTgxMjE3Nzky.YOnyQA.6XWkgM_P4S4lE-t8jhT_dD2qQlk");
+	if (c.GetError())
+		std::cout << c.GetError()->GetMessage();
+	else
+		std::cout << c.GetUrl();
+	 */
 	
-	json::value v;
-	cDiscord::GetGateway(nullptr, v);
+	cBot bot(nullptr);
+	bot.Run();
 	
 	/*
 	net::io_context ioc;
@@ -114,7 +123,5 @@ int main() {
 	
 	ioc.run();
 	 */
-	
-	std::cout << "HELLO";
 	return 0;
 }

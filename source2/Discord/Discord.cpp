@@ -1,6 +1,7 @@
 #include "Discord.h"
 #include "Utils.h"
 #include <iostream>
+#include "JsonError.h"
 
 #define _STR(x) #x
 #define STR(x) _STR(x)

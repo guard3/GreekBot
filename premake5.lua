@@ -13,11 +13,13 @@ project "GreekBot"
 	cppdialect   "C++17"
 	characterset "MBCS"
 	targetdir    "bin/%{cfg.buildcfg}"
-	files        "source2/**"
-	includedirs {
-		"source2",
+	files {
 		"source2/**.h",
 		"source2/**.cpp"
+	}
+	includedirs {
+		"source2",
+		"source2/**"
 	}
 	
 	links {
