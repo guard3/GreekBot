@@ -5,6 +5,7 @@
 #include "Discord.h"
 #include "Gateway.h"
 #include "Bot.h"
+#include "Websocket.h"
 
 class cWebSocketSession final : public std::enable_shared_from_this<cWebSocketSession> {
 private:
@@ -102,7 +103,6 @@ public:
 	
 };
 
-
 int main() {
 	/*
 	cGateway c("Bot ODYzNDk5MTUxMTgxMjE3Nzky.YOnyQA.6XWkgM_P4S4lE-t8jhT_dD2qQlk");
@@ -111,9 +111,6 @@ int main() {
 	else
 		std::cout << c.GetUrl();
 	 */
-	
-	cBot bot(nullptr);
-	bot.Run();
 	
 	/*
 	net::io_context ioc;
