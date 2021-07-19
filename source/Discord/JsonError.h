@@ -2,7 +2,6 @@
 #ifndef _GREEKBOT_JSONERROR_H_
 #define _GREEKBOT_JSONERROR_H_
 #include "json.h"
-#include <string>
 
 enum eJsonErrorCode {
 	DISCORD_JSON_UNKNOWN_ERROR = -1,
@@ -12,17 +11,23 @@ enum eJsonErrorCode {
 class cJsonError final {
 private:
 	eJsonErrorCode m_code;
-	const char* m_message;
-	
-	void Init(const json::value&);
+	char* m_message;
 	
 public:
-	cJsonError(const json::value& v);
-	cJsonError(const cJsonError& ) = delete;
-	cJsonError(      cJsonError&&) = delete;
+	/* Initialize from JSON value - throws exceptions */
+	cJsonError(const json::object&);
+	cJsonError(const cJsonError&);
+	cJsonError(cJsonError&&);
+	~cJsonError();
 	
+	/* Assignment operator */
+	cJsonError& operator=(cJsonError);
+	
+	/* Attributes */
 	const char* GetMessage() const { return m_message; }
-	eJsonErrorCode GetCode() const { return m_code; }
+	eJsonErrorCode GetCode() const { return m_code;    }
 };
+
+typedef const cJsonError* hJsonError;
 
 #endif /* _GREEKBOT_JSONERROR_H_*/

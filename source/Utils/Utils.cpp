@@ -1,6 +1,27 @@
 #include "Utils.h"
 #include "beast.h"
 
+void cUtils::Print(FILE* f, const char* comment, const char* fmt, va_list args) {
+	fputs(comment, f);
+	vfprintf(f, fmt, args);
+	fputc('\n', f);
+}
+
+void cUtils::PrintErr(const char *fmt, ...) {
+	va_list args;
+	va_start(args, fmt);
+	cUtils::Print(stderr, "[ERR] ", fmt, args);
+	va_end(args);
+}
+
+void cUtils::PrintLog(const char *fmt, ...) {
+	va_list args;
+	va_start(args, fmt);
+	cUtils::Print(stdout, "[LOG] ", fmt, args);
+	va_end(args);
+}
+
+
 std::string cUtils::GetHttpsRequest(const char* host, const char* path, const char* auth) {
 	/* Ensure non null arguments */
 	if (!host) host = "";

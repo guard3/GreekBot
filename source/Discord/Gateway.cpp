@@ -1,38 +1,39 @@
 #include "Gateway.h"
 #include "Discord.h"
+#include "Utils.h"
 
-cSessionStartLimit::cSessionStartLimit(const json::value& v) {
+cGatewayInfo::cGatewayInfo(const char* auth) {
+	json::value v;
+	cDiscord::GetGateway(auth, v);
+	const json::object& obj = v.as_object();
 	try {
-		/* Get session_start_limit object from JSON */
-		const json::object& obj = v.as_object().at("session_start_limit").as_object();
-		
-		/* Parse JSON object */
-		m_total           = static_cast<int>(obj.at("total"          ).as_int64());
-		m_remaining       = static_cast<int>(obj.at("remaining"      ).as_int64());
-		m_reset_after     = static_cast<int>(obj.at("reset_after"    ).as_int64());
-		m_max_concurrency = static_cast<int>(obj.at("max_concurrency").as_int64());
+		const json::string& url = obj.at("url").as_string();
+		if ((m_url = reinterpret_cast<char*>(malloc(url.size() + 1)))) {
+			strcpy(m_url, url.c_str());
+			m_shards = static_cast<int>(obj.at("shards").as_int64());
+			m_ssl = new cSessionStartLimit(obj.at("session_start_limit").as_object());
+		}
 	}
 	catch (const std::exception&) {
-		/* On error, set everything to 0 */
-		m_total = m_remaining = m_reset_after = m_max_concurrency = 0;
+		m_err = new cJsonError(obj);
 	}
 }
 
-cGateway::cGateway(const char* auth) {
-	/* Retrieve gateway object */
-	if (cDiscord::GetGateway(auth, m_json)) {
-		try {
-			m_url = m_json.as_object().at("url").as_string().c_str();
-			m_shards = static_cast<int>(m_json.as_object().at("shards").as_int64());
-			return;
+void cGateway::OnHandshake() {
+   beast::flat_buffer b;
+   beast::error_code e;
+   Read(b, e);
+   printf("%.*s", (int)b.data().size(), b.data().data());
+}
+
+void cGateway::Run(const char* auth) {
+	hGatewayInfo g = GetGatewayInfo(auth);
+	if (g) {
+		if (g->GetError()) {
+			cUtils::PrintErr("Retrieving gateway info. %s", g->GetError()->GetMessage());
 		}
-		catch (const std::exception&) {}
+		else {
+			cWebsocket::Run(g->GetUrl(), auth, 64);
+		}
 	}
-	m_errorObject = new cJsonError(m_json);
-	m_session_start_limit = new cSessionStartLimit(m_json);
-}
-
-cGateway::~cGateway() {
-	delete m_errorObject;
-	delete m_session_start_limit;
 }

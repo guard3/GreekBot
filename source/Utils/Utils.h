@@ -8,7 +8,14 @@ class cUtils final {
 private:
 	cUtils() {}
 	
+	
+	static void Print(FILE* f, const char* comment, const char* fmt, va_list args);
+	
 public:
+	/* Logger functions */
+	static void PrintErr(const char* fmt, ...);
+	static void PrintLog(const char* fmt, ...);
+	
 	static std::string GetHttpsRequest(const char* host, const char* path = "/", const char* auth = nullptr);
 };
 

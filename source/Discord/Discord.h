@@ -1,9 +1,7 @@
 #pragma once
 #ifndef _GREEKBOT_DISCORD_H_
 #define _GREEKBOT_DISCORD_H_
-
-#include <boost/json.hpp>
-namespace json = boost::json;
+#include "json.h"
 
 /* A helper class that performs HTTP requests to the API endpoint */
 class cDiscord final {

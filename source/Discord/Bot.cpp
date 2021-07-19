@@ -13,6 +13,7 @@ cBot::cBot(const char* token) {
 
 void cBot::Run() {
 	printf("Bot running...\n");
+#if 0
 	for (;;) {
 		/* Get gateway info */
 		cGateway gateway(m_http_auth);
@@ -29,5 +30,6 @@ void cBot::Run() {
 		break;
 		
 	}
+#endif
 	printf("\nExiting...\n");
 }
