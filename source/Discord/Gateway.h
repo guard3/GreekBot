@@ -3,6 +3,8 @@
 #define _GREEKBOT_GATEWAY_H_
 #include "JsonError.h"
 #include "Websocket.h"
+#include "Payload.h"
+#include <thread>
 
 class cSessionStartLimit final {
 private:
@@ -46,6 +48,8 @@ typedef const std::unique_ptr<cGatewayInfo> hGatewayInfo;
 
 class cGateway final : public cWebsocket {
 private:
+	std::thread m_heartbeatThread;
+	
 	static hGatewayInfo GetGatewayInfo(const char* auth) {
 		try {
 			return std::make_unique<cGatewayInfo>(auth);
@@ -54,6 +58,9 @@ private:
 			return std::unique_ptr<cGatewayInfo>();
 		}
 	}
+	
+	hPayload ReceivePayload();
+	void StartHeartbeating(int interval);
 	
 public:
 	cGateway() : cWebsocket() {}

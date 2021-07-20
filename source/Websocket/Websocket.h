@@ -19,8 +19,12 @@ private:
 public:
 	cWebsocket() : m_ctx(ssl::context::tlsv13_client), m_ws(m_ioc, m_ctx) {}
 	
-	void Read(beast::flat_buffer& buffer, beast::error_code& e) {
-		m_ws.read(buffer, e);
+	void Read(beast::flat_buffer& buffer) {
+		m_ws.read(buffer);
+	}
+	
+	void Write(const net::const_buffer& b) {
+		m_ws.write(b);
 	}
 	
 	virtual void OnHandshake() {}
