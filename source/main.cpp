@@ -106,11 +106,7 @@ public:
 
 int main() {
 	cGateway g;
-#if 0
 	g.Run("Bot ODYzNDk5MTUxMTgxMjE3Nzky.YOnyQA.6XWkgM_P4S4lE-t8jhT_dD2qQlk");
-#else
-	g.Run("TEST");
-#endif
 	
 	return 0;
 }
