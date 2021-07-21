@@ -23,8 +23,8 @@ public:
 		m_ws.read(buffer);
 	}
 	
-	void Write(const net::const_buffer& b) {
-		m_ws.write(b);
+	void Write(const net::const_buffer& b, beast::error_code& e) {
+		m_ws.write(b, e);
 	}
 	
 	virtual void OnHandshake() {}

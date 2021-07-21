@@ -4,7 +4,9 @@
 #include "json.h"
 
 enum ePayloadOpcode {
-	PAYLOAD_HELLO = 10
+	PAYLOAD_READY         = 0,
+	PAYLOAD_HELLO         = 10,
+	PAYLOAD_HEARTBEAT_ACK = 11
 };
 
 class cHelloPayload final {

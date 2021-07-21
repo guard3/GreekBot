@@ -105,7 +105,7 @@ public:
 };
 
 int main() {
-	cGateway g;
+	cGateway g("ODYzNDk5MTUxMTgxMjE3Nzky.YOnyQA.6XWkgM_P4S4lE-t8jhT_dD2qQlk");
 	g.Run("Bot ODYzNDk5MTUxMTgxMjE3Nzky.YOnyQA.6XWkgM_P4S4lE-t8jhT_dD2qQlk");
 	
 	return 0;

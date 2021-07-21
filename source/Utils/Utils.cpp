@@ -21,7 +21,6 @@ void cUtils::PrintLog(const char *fmt, ...) {
 	va_end(args);
 }
 
-
 std::string cUtils::GetHttpsRequest(const char* host, const char* path, const char* auth) {
 	/* Ensure non null arguments */
 	if (!host) host = "";
