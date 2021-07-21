@@ -2,15 +2,7 @@
 #include "beast.h"
 #include <iostream>
 
-void cWebsocket::ParseStrings(const char* url, const char* auth, size_t auth_size) {
-	/* Store HTTP authorization string */
-	m_auth = nullptr;
-	if (auth) {
-		size_t size = auth_size ? auth_size : strlen(auth) + 1;
-		if ((m_auth = reinterpret_cast<char*>(malloc(size))))
-			memcpy(m_auth, auth, size);
-	}
-	
+void cWebsocket::ParseStrings(const char* url) {
 	/* Parse url */
 	m_host = m_path = nullptr;
 	if (url) {
@@ -42,12 +34,11 @@ void cWebsocket::ParseStrings(const char* url, const char* auth, size_t auth_siz
 
 void cWebsocket::FreeStrings() {
 	free(m_path);
-	free(m_auth);
-	m_host = m_path = m_auth = nullptr;
+	m_host = m_path = nullptr;
 }
 
-void cWebsocket::Run(const char* url, const char* auth, size_t auth_size) {
-	ParseStrings(url, auth, auth_size);
+void cWebsocket::Run(const char* url) {
+	ParseStrings(url);
 	
 	try {
 		/* Connect websocket stream to host */
@@ -65,8 +56,6 @@ void cWebsocket::Run(const char* url, const char* auth, size_t auth_size) {
 		m_ws.set_option(ws::stream_base::decorator([&](ws::request_type& r) {
 			r.set(http::field::host, m_host);
 			r.set(http::field::user_agent, "GreekBot");
-			if (m_auth)
-				r.set(http::field::authorization, m_auth);
 		}));
 		
 		/* Perform SSL handshake */

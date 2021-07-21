@@ -137,7 +137,7 @@ void cGateway::Run(const char* auth) {
 			cUtils::PrintErr("Retrieving gateway info. %s", g->GetError()->GetMessage());
 		}
 		else {
-			cWebsocket::Run(g->GetUrl(), auth, 64);
+			cWebsocket::Run(g->GetUrl());
 		}
 	}
 }

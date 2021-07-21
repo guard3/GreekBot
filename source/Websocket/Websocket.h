@@ -11,9 +11,8 @@ private:
 	
 	char* m_host = nullptr;
 	char* m_path = nullptr;
-	char* m_auth = nullptr;
 	
-	void ParseStrings(const char* url, const char* auth, size_t auth_size);
+	void ParseStrings(const char* url);
 	void FreeStrings();
 	
 public:
@@ -32,9 +31,8 @@ public:
 	/* Set events */
 	const char* GetHost() const { return m_host ? m_host : "";  }
 	const char* GetPath() const { return m_path ? m_path : "/"; }
-	const char* GetAuth() const { return m_auth ? m_auth : "";  }
 	
-	void Run(const char* url, const char* auth = nullptr, size_t auth_size = 0);
+	void Run(const char* url);
 };
 
 #endif /* _GREEKBOT_WEBSOCKET_H_ */
