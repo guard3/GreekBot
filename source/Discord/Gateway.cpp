@@ -19,15 +19,18 @@ cGatewayInfo::cGatewayInfo(const char* auth) {
 	}
 }
 
-cGateway::cGateway(const char* token) : cWebsocket() {
+cGateway::cGateway(const char* token) {
 	strncpy(m_token, token, 59);
 	m_token[59] = '\0';
+	m_ws.SetOnConnect([this]() {
+		OnHandshake();
+	});
 }
 
 hPayload cGateway::ReceivePayload() {
 	try {
 		beast::flat_buffer b;
-		Read(b);
+		m_ws.Read(b);
 		printf("%.*s\n", b.size(), b.data().data());
 		json::parser p;
 		p.write(reinterpret_cast<const char*>(b.data().data()), b.size());
@@ -39,17 +42,16 @@ hPayload cGateway::ReceivePayload() {
 }
 
 void cGateway::StartHeartbeating(int interval) {
-	m_heartbeat.thread = std::thread([](cGateway* gateway, int interval) {
-		auto& heartbeat = gateway->m_heartbeat;
+	m_heartbeat.thread = std::thread([this](int interval) {
 		beast::error_code e;
 		for (;;) {
 			/* Set heartbeat as not acknowledged at first */
-			heartbeat.mutex.lock();
-			heartbeat.acknowledged = false;
-			heartbeat.mutex.unlock();
+			m_heartbeat.mutex.lock();
+			m_heartbeat.acknowledged = false;
+			m_heartbeat.mutex.unlock();
 			
 			/* Set heartbeat payload */
-			gateway->Write(net::buffer(std::string("{\"op\":1,\"d\":null}")), e);
+			m_ws.Write(net::buffer(std::string("{\"op\":1,\"d\":null}")), e);
 			if (e) {
 				cUtils::PrintErr("Couldn't send heartbeat; %s", e.message().c_str());
 				return;
@@ -60,15 +62,15 @@ void cGateway::StartHeartbeating(int interval) {
 			std::this_thread::sleep_for(std::chrono::milliseconds(interval));
 			
 			/* Check if heartbeat has been acknowledged */
-			heartbeat.mutex.lock();
-			bool acknowledged = heartbeat.acknowledged;
-			heartbeat.mutex.unlock();
+			m_heartbeat.mutex.lock();
+			bool acknowledged = m_heartbeat.acknowledged;
+			m_heartbeat.mutex.unlock();
 			if (!acknowledged) {
 				cUtils::PrintLog("Heartbeat not acknowledged");
 				return;
 			}
 		}
-	}, this, interval);
+	}, interval);
 }
 
 void cGateway::AcknowledgeHeartbeat() {
@@ -85,7 +87,7 @@ bool cGateway::Identify() {
 	
 	/* Send payload */
 	beast::error_code e;
-	Write(net::buffer(s), e);
+	m_ws.Write(net::buffer(s), e);
 	return !static_cast<bool>(e);
 }
 
@@ -94,7 +96,7 @@ cGateway::~cGateway() {
 		m_heartbeat.thread.join();
 }
 
-void cGateway::OnHandshake() {
+void cGateway::OnConnect() {
 	bool started = false;
 	for (;;) {
 		hPayload payload = ReceivePayload();
@@ -137,7 +139,7 @@ void cGateway::Run(const char* auth) {
 			cUtils::PrintErr("Retrieving gateway info. %s", g->GetError()->GetMessage());
 		}
 		else {
-			cWebsocket::Run(g->GetUrl());
+			m_ws.Run(g->GetUrl());
 		}
 	}
 }

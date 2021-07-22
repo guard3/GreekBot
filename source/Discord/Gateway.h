@@ -46,24 +46,15 @@ public:
 };
 typedef const std::unique_ptr<cGatewayInfo> hGatewayInfo;
 
-class cGateway final : public cWebsocket {
+class cGateway final {
 private:
 	char m_token[60];
 	
 	/* Data relating to session */
 	struct {
-		int session_id;
-		bool received = false;
-	} m_session;
-	
-	/* Session related methods */
-	const int* GetSessionId() {
-		return m_session.received ? &m_session.session_id : nullptr;
-	}
-	void SetSessionId(int session_id) {
-		m_session.session_id = session_id;
-		m_session.received = true;
-	}
+		char sessionId[40] = "null";
+		std::mutex mutex;
+	} m_sessionId;
 	
 	/* Data relating to heartbeating */
 	struct {
@@ -90,12 +81,13 @@ private:
 	
 	hPayload ReceivePayload();
 	
+	cWebsocket m_ws;
+	
+	void OnConnect();
 	
 public:
 	cGateway(const char* token);
 	~cGateway();
-	
-	void OnHandshake() override;
 	
 	void Run(const char* auth);
 };

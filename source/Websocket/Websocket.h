@@ -1,6 +1,7 @@
 #pragma once
 #ifndef _GREEKBOT_WEBSOCKET_H_
 #define _GREEKBOT_WEBSOCKET_H_
+#include "Utils.h"
 #include "beast.h"
 
 class cWebsocket {
@@ -12,11 +13,13 @@ private:
 	char* m_host = nullptr;
 	char* m_path = nullptr;
 	
-	void ParseStrings(const char* url);
-	void FreeStrings();
+	std::function<void()> m_eventOnConnect;
+	
+	void Run(char* host, const char* path);
 	
 public:
 	cWebsocket() : m_ctx(ssl::context::tlsv13_client), m_ws(m_ioc, m_ctx) {}
+	~cWebsocket() { free(m_host); }
 	
 	void Read(beast::flat_buffer& buffer) {
 		m_ws.read(buffer);
@@ -26,12 +29,13 @@ public:
 		m_ws.write(b, e);
 	}
 	
-	virtual void OnHandshake() {}
+	template<typename F>
+	cWebsocket& SetOnConnect(F f) {
+		m_eventOnConnect = f;
+		return *this;
+	}
 	
-	/* Set events */
-	const char* GetHost() const { return m_host ? m_host : "";  }
-	const char* GetPath() const { return m_path ? m_path : "/"; }
-	
+	void Run();
 	void Run(const char* url);
 };
 
