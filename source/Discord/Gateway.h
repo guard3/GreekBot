@@ -3,7 +3,7 @@
 #define _GREEKBOT_GATEWAY_H_
 #include "JsonError.h"
 #include "Websocket.h"
-#include "Payload.h"
+#include "Event.h"
 #include <thread>
 
 class cSessionStartLimit final {
@@ -48,13 +48,16 @@ typedef const std::unique_ptr<cGatewayInfo> hGatewayInfo;
 
 class cGateway final {
 private:
-	char m_token[60];
+	char m_token[60];              // The authentication token
+	char m_sessionId[40] { '\0' }; // The current session id; used for resuming
 	
-	/* Data relating to session */
+	/* Sequence */
 	struct {
-		char sessionId[40] = "null";
 		std::mutex mutex;
-	} m_sessionId;
+		int value = 0;      // The last event sequence received; 0 = none received
+	} m_last_sequence;
+	int  GetLastSequence();
+	void SetLastSequence(int);
 	
 	/* Data relating to heartbeating */
 	struct {
@@ -62,8 +65,6 @@ private:
 		std::mutex  mutex;        // Mutex for accessing 'acknowledged'
 		bool        acknowledged; // Is the heartbeat acknowledged?
 	} m_heartbeat;
-	
-	/* Heartbeat related methods */
 	void StartHeartbeating(int interval);
 	void AcknowledgeHeartbeat();
 	
@@ -79,7 +80,7 @@ private:
 		}
 	}
 	
-	hPayload ReceivePayload();
+	hEvent GetEvent();
 	
 	cWebsocket m_ws;
 	
