@@ -14,6 +14,7 @@ private:
 	char* m_path = nullptr;
 	
 	std::function<void()> m_eventOnConnect;
+	std::function<void(cWebsocket*, void*, size_t)> m_eventOnMessage;
 	
 	void Run(char* host, const char* path);
 	
@@ -35,8 +36,16 @@ public:
 		return *this;
 	}
 	
+	template<typename F>
+	cWebsocket& SetOnMessage(F f) {
+		m_eventOnMessage = f;
+		return *this;
+	}
+	
 	void Run();
 	void Run(const char* url);
+	
+	void Close(const ws::close_reason& reason = ws::close_code::policy_error);
 };
 
 #endif /* _GREEKBOT_WEBSOCKET_H_ */

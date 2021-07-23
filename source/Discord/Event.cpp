@@ -2,6 +2,7 @@
 
 cEvent::cEvent(const json::value& v) : d(v.at("d")) {
 	auto op = v.at("op").as_int64();
+	printf("OPCODE: %d\n", (int)op);
 	if (op)
 		t = static_cast<eEvent>(op);
 	else {

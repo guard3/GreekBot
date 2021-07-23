@@ -4,10 +4,21 @@
 #include "json.h"
 
 enum eEvent {
-	// 0: Generic event
-	EVENT_HEARTBEAT = 1,
-	EVENT_HELLO = 10,
-	EVENT_HEARTBEAT_ACK = 11,
+	/* Payload opcodes */
+	// 0: Dispatch
+	EVENT_HEARTBEAT       = 1,
+	// 2: Identify
+	// 3: Presence update
+	// 4: Voice state update
+	// 5: -
+	// 6: Resume
+	EVENT_RECONNECT       = 7,
+	// 8: Request quild members
+	EVENT_INVALID_SESSION = 9,
+	EVENT_HELLO           = 10,
+	EVENT_HEARTBEAT_ACK   = 11,
+	
+	/* Events */
 	EVENT_READY,
 	EVENT_NOT_IMPLEMENTED
 };

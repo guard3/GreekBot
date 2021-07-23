@@ -60,9 +60,24 @@ void cWebsocket::Run(char* host, const char* path) {
 		
 		m_ws.handshake(host, path);
 		
-		m_eventOnConnect();
+		//m_eventOnConnect();
+		
+		beast::flat_buffer buffer;
+		size_t size;
+		for (;;) {
+			m_ws.read(buffer);
+			size = buffer.size();
+			m_eventOnMessage(this, buffer.data().data(), size);
+			buffer.consume(size);
+		}
+		
 		
 		m_ioc.run();
 	}
 	catch (const std::exception&) {}
+}
+
+void cWebsocket::Close(const ws::close_reason& reason) {
+	beast::error_code e;
+	m_ws.close(reason, e);
 }

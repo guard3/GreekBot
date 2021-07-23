@@ -1,30 +1,11 @@
 #include "Gateway.h"
 #include "Discord.h"
 #include "Utils.h"
-
-cGatewayInfo::cGatewayInfo(const char* auth) {
-	json::value v;
-	cDiscord::GetGateway(auth, v);
-	const json::object& obj = v.as_object();
-	try {
-		const json::string& url = obj.at("url").as_string();
-		if ((m_url = reinterpret_cast<char*>(malloc(url.size() + 1)))) {
-			strcpy(m_url, url.c_str());
-			m_shards = static_cast<int>(obj.at("shards").as_int64());
-			m_ssl = new cSessionStartLimit(obj.at("session_start_limit").as_object());
-		}
-	}
-	catch (const std::exception&) {
-		m_err = new cJsonError(obj);
-	}
-}
+#include "Websocket.h"
 
 cGateway::cGateway(const char* token) {
 	strncpy(m_token, token, 59);
 	m_token[59] = '\0';
-	m_ws.SetOnConnect([this]() {
-		OnConnect();
-	});
 }
 
 int cGateway::GetLastSequence() {
@@ -45,7 +26,7 @@ void cGateway::SetLastSequence(int v) {
 hEvent cGateway::GetEvent() {
 	try {
 		beast::flat_buffer b;
-		m_ws.Read(b);
+		m_pWebsocket->Read(b);
 		printf("%.*s\n", (int)b.size(), b.data().data());
 		json::parser p;
 		p.write(reinterpret_cast<const char*>(b.data().data()), b.size());
@@ -73,7 +54,7 @@ bool cGateway::SendHeartbeat() {
 	/* Send payload */
 	m_heartbeat.mutex.lock();
 	m_heartbeat.acknowledged = false;
-	m_ws.Write(net::buffer(p), e);
+	m_pWebsocket->Write(net::buffer(p), e);
 	m_heartbeat.mutex.unlock();
 	
 	/* Check for error */
@@ -125,7 +106,7 @@ bool cGateway::Identify() {
 	
 	/* Send payload */
 	beast::error_code e;
-	m_ws.Write(net::buffer(s), e);
+	m_pWebsocket->Write(net::buffer(s), e);
 	return !static_cast<bool>(e);
 }
 
@@ -134,61 +115,101 @@ cGateway::~cGateway() {
 		m_heartbeat.thread.join();
 }
 
-void cGateway::OnConnect() {
-	for (;;) {
-		/* Get the next event from the gateway */
-		hEvent event = GetEvent();
-		if (!event)
-			return;
-		/* Update last sequence */
-		SetLastSequence(event->GetSequence());
-		/* Handle event based on type */
-		switch (event->GetType()) {
-			case EVENT_HEARTBEAT:
-				if (!SendHeartbeat()) {
-					cUtils::PrintErr("Couldn't send heartbeat");
-					return;
-				}
-				break;
-				
-			case EVENT_HELLO: {
-				hHelloEvent e = event->GetHelloData();
-				if (!e) {
-					cUtils::PrintErr("Invalid opcode %d received", event->GetType());
-					return;
-				}
-				StartHeartbeating(e->GetHeartbeatInterval());
-				Identify();
-				break;
+void cGateway::OnEvent(cEvent *event) {
+	switch (event->GetType()) {
+		case EVENT_HEARTBEAT:
+			if (!SendHeartbeat()) {
+				cUtils::PrintErr("Couldn't send heartbeat");
+				return;
 			}
-				
-			case EVENT_HEARTBEAT_ACK:
-				AcknowledgeHeartbeat();
-				break;
+			break;
 			
-			case EVENT_READY: {
-				hReadyEvent e = event->GetReadyData();
-				if (e) {
-					cUtils::PrintLog("Gateway version %d", e->GetVersion());
-					strcpy(m_sessionId, e->GetSessionId());
-					cUtils::PrintLog("Session ID: %s", m_sessionId);
-				}
-				else
-					cUtils::PrintErr("Invalid READY event");
-				break;
+		case EVENT_HELLO: {
+			hHelloEvent e = event->GetHelloData();
+			if (!e) {
+				cUtils::PrintErr("Invalid opcode %d received", event->GetType());
+				return;
 			}
+			StartHeartbeating(e->GetHeartbeatInterval());
+			Identify();
+			break;
+		}
+			
+		case EVENT_HEARTBEAT_ACK:
+			AcknowledgeHeartbeat();
+			break;
+		
+		case EVENT_READY: {
+			hReadyEvent e = event->GetReadyData();
+			if (e) {
+				cUtils::PrintLog("Gateway version %d", e->GetVersion());
+				strcpy(m_sessionId, e->GetSessionId());
+				cUtils::PrintLog("Session ID: %s", m_sessionId);
+			}
+			else
+				cUtils::PrintErr("Invalid READY event");
+			break;
 		}
 	}
 }
 
-void cGateway::Run(const char* auth) {
-	hGatewayInfo g = GetGatewayInfo(auth);
-	if (g) {
-		if (g->GetError()) {
-			cUtils::PrintErr("Retrieving gateway info. %s", g->GetError()->GetMessage());
+void cGateway::Run() {
+	for (;;) {
+		/* Get gateway info */
+		hGatewayInfo g = cDiscord::GetGatewayInfo(m_http_auth);
+		if (!g) {
+			cUtils::PrintErr("Couldn't retrieve gateway info");
+			for (int timeout = 5;; timeout += 5) {
+				for (int tick = timeout;; --tick) {
+					fprintf(stderr, "[ERR] Retrying in %ds \r", tick);
+					std::this_thread::sleep_for(std::chrono::seconds(1));
+					if (tick == 0)
+						break;
+				}
+				if ((g = cDiscord::GetGatewayInfo(m_http_auth))) {
+					fputc('\n', stderr);
+					break;
+				}
+				if (timeout > 10) {
+					fputc('\n', stderr);
+					cUtils::PrintErr("Exiting...");
+					return;
+				}
+			}
 		}
+		
+		if (g->GetError())
+			cUtils::PrintErr("Couldn't retrieve gateway info. %s", g->GetError()->GetMessage());
 		else {
-			m_ws.Run((std::string(g->GetUrl()) + "/?v=9").c_str());
+			/* Create a websocket */
+			cWebsocket websocket;
+			m_pWebsocket = &websocket;
+			
+			websocket.SetOnMessage([this](cWebsocket* ws, void* data, size_t size) {
+				//bool bShouldClose = false;
+				try {
+					/* Parse message as a JSON */
+					json::monotonic_resource mr;
+					json::stream_parser p(&mr);
+					p.write(reinterpret_cast<char*>(data), size);
+					
+					/* Create event object from JSON */
+					cEvent event(p.release());
+					
+					/* Update event sequence */
+					SetLastSequence(event.GetSequence());
+					
+					/* Handle event */
+					OnEvent(&event);
+				}
+				catch (const std::exception& e) {
+					cUtils::PrintErr("Couldn't read incoming event. %s", e.what());
+				}
+			}).Run((std::string(g->GetUrl()) + "/?v=9&encoding=json").c_str());
+			
+			// TODO: Graceful heartbeat thread termination
 		}
+		
+		cDiscord::CloseHandle(g);
 	}
 }

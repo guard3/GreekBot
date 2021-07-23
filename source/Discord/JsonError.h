@@ -10,22 +10,16 @@ enum eJsonErrorCode {
 
 class cJsonError final {
 private:
-	eJsonErrorCode m_code;
-	char* m_message;
+	eJsonErrorCode code;
+	json::string   message;
 	
 public:
 	/* Initialize from JSON value - throws exceptions */
-	cJsonError(const json::object&);
-	cJsonError(const cJsonError&);
-	cJsonError(cJsonError&&);
-	~cJsonError();
-	
-	/* Assignment operator */
-	cJsonError& operator=(cJsonError);
+	cJsonError(const json::value& v) : code(static_cast<eJsonErrorCode>(v.at("code").as_int64())), message(v.at("message").as_string()) {}
 	
 	/* Attributes */
-	const char* GetMessage() const { return m_message; }
-	eJsonErrorCode GetCode() const { return m_code;    }
+	eJsonErrorCode GetCode() const { return code;            }
+	const char* GetMessage() const { return message.c_str(); }
 };
 
 typedef const cJsonError* hJsonError;
