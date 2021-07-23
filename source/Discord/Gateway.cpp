@@ -56,53 +56,65 @@ hEvent cGateway::GetEvent() {
 	}
 }
 
-void cGateway::StartHeartbeating(int interval) {
-	m_heartbeat.thread = std::thread([this](int interval) {
-		std::string s;       // The payload string
-		beast::error_code e; // The error code of websocket
-		int sequence;        // The last event sequence
-		for (;;) {
-			/* Prepare payload string */
-			if ((sequence = GetLastSequence())) {
-				s.resize(50);
-				int len = sprintf(s.data(), "{\"op\":1,\"d\":%d}", sequence);
-				s.resize(len);
-			}
-			else
-				s = "{\"op\":1,\"d\":null}";
-			
-			/* Set heartbeat as not acknowledged at first */
-			m_heartbeat.mutex.lock();
-			m_heartbeat.acknowledged = false;
-			m_heartbeat.mutex.unlock();
-			
-			/* Send payload */
-			m_ws.Write(net::buffer(s), e);
-			if (e) {
-				cUtils::PrintErr("Couldn't send heartbeat; %s", e.message().c_str());
-				return;
-			}
-			cUtils::PrintLog("Heartbeat sent");
-			
-			/* Wait for the specified interval in milliseconds */
-			std::this_thread::sleep_for(std::chrono::milliseconds(interval));
-			
-			/* Check if heartbeat has been acknowledged */
-			m_heartbeat.mutex.lock();
-			bool acknowledged = m_heartbeat.acknowledged;
-			m_heartbeat.mutex.unlock();
-			if (!acknowledged) {
-				cUtils::PrintLog("Heartbeat not acknowledged");
-				return;
-			}
-		}
-	}, interval);
+bool cGateway::SendHeartbeat() {
+	/* Variables */
+	int               s; // The last event sequence
+	std::string       p; // The payload string
+	beast::error_code e; // The error code of websocket
+	
+	/* Prepare payload string */
+	if ((s = GetLastSequence())) {
+		p.resize(30);
+		int len = sprintf(p.data(), "{\"op\":1,\"d\":%d}", s);
+		p.resize(len);
+	}
+	else p = "{\"op\":1,\"d\":null}";
+	
+	/* Send payload */
+	m_heartbeat.mutex.lock();
+	m_heartbeat.acknowledged = false;
+	m_ws.Write(net::buffer(p), e);
+	m_heartbeat.mutex.unlock();
+	
+	/* Check for error */
+	return !static_cast<bool>(e);
+}
+
+bool cGateway::HeartbeatAcknowledged() {
+	m_heartbeat.mutex.lock();
+	bool r = m_heartbeat.acknowledged;
+	m_heartbeat.mutex.unlock();
+	return r;
 }
 
 void cGateway::AcknowledgeHeartbeat() {
 	m_heartbeat.mutex.lock();
 	m_heartbeat.acknowledged = true;
 	m_heartbeat.mutex.unlock();
+}
+
+void cGateway::StartHeartbeating(int interval) {
+	m_heartbeat.thread = std::thread([this](int interval) {
+		/* Wait for a random amount of time */
+		std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(interval * cUtils::Random())));
+		
+		for (;;) {
+			/* Send a heartbeat*/
+			if (!SendHeartbeat()) {
+				cUtils::PrintErr("Couldn't send heartbeat");
+				return;
+			}
+			
+			/* Wait for the specified interval in milliseconds */
+			std::this_thread::sleep_for(std::chrono::milliseconds(interval));
+			
+			/* Make sure that heartbeat has been acknowledged */
+			if (!HeartbeatAcknowledged()) {
+				cUtils::PrintLog("Heartbeat not acknowledged");
+				return;
+			}
+		}
+	}, interval);
 }
 
 bool cGateway::Identify() {
@@ -123,7 +135,6 @@ cGateway::~cGateway() {
 }
 
 void cGateway::OnConnect() {
-	bool started = false;
 	for (;;) {
 		/* Get the next event from the gateway */
 		hEvent event = GetEvent();
@@ -133,6 +144,13 @@ void cGateway::OnConnect() {
 		SetLastSequence(event->GetSequence());
 		/* Handle event based on type */
 		switch (event->GetType()) {
+			case EVENT_HEARTBEAT:
+				if (!SendHeartbeat()) {
+					cUtils::PrintErr("Couldn't send heartbeat");
+					return;
+				}
+				break;
+				
 			case EVENT_HELLO: {
 				hHelloEvent e = event->GetHelloData();
 				if (!e) {
@@ -140,16 +158,12 @@ void cGateway::OnConnect() {
 					return;
 				}
 				StartHeartbeating(e->GetHeartbeatInterval());
+				Identify();
 				break;
 			}
 				
 			case EVENT_HEARTBEAT_ACK:
 				AcknowledgeHeartbeat();
-				if (!started) {
-					Identify();
-					started = true;
-					cUtils::PrintLog("Identified");
-				}
 				break;
 			
 			case EVENT_READY: {

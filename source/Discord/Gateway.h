@@ -65,8 +65,10 @@ private:
 		std::mutex  mutex;        // Mutex for accessing 'acknowledged'
 		bool        acknowledged; // Is the heartbeat acknowledged?
 	} m_heartbeat;
-	void StartHeartbeating(int interval);
-	void AcknowledgeHeartbeat();
+	bool SendHeartbeat();                 // Send a heartbeat to the gateway
+	bool HeartbeatAcknowledged();         // Check if last heartbeat has been acknowledged by the gateway
+	void AcknowledgeHeartbeat();          // Mark last heartbeat as acknowledged
+	void StartHeartbeating(int interval); // Start sending heartbeats to the gateway every 'interval' milliseconds
 	
 	
 	bool Identify();

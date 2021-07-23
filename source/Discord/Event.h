@@ -5,7 +5,7 @@
 
 enum eEvent {
 	// 0: Generic event
-	// 1: Heartbeat command
+	EVENT_HEARTBEAT = 1,
 	EVENT_HELLO = 10,
 	EVENT_HEARTBEAT_ACK = 11,
 	EVENT_READY,

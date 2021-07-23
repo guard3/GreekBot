@@ -1,6 +1,16 @@
 #include "Utils.h"
 #include "beast.h"
 
+/* Random engine stuff */
+static std::random_device s_rd;
+static std::mt19937 s_gen(s_rd());
+static std::uniform_real_distribution<float> s_dis(0.0f, 0.1f);
+
+
+float cUtils::Random() {
+	return s_dis(s_gen);
+}
+
 void cUtils::Print(FILE* f, const char* comment, const char* fmt, va_list args) {
 	fputs(comment, f);
 	vfprintf(f, fmt, args);

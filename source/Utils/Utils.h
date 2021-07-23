@@ -8,10 +8,12 @@ class cUtils final {
 private:
 	cUtils() {}
 	
-	
 	static void Print(FILE* f, const char* comment, const char* fmt, va_list args);
 	
 public:
+	/* Random functions */
+	static float Random();
+	
 	/* Logger functions */
 	static void PrintErr(const char* fmt, ...);
 	static void PrintLog(const char* fmt, ...);
