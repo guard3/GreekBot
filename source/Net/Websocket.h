@@ -14,7 +14,7 @@ private:
 	char* m_path = nullptr;
 	
 	std::function<void()> m_eventOnConnect;
-	std::function<void(cWebsocket*, void*, size_t)> m_eventOnMessage;
+	std::function<bool(cWebsocket*, void*, size_t)> m_eventOnMessage;
 	
 	void Run(char* host, const char* path);
 	

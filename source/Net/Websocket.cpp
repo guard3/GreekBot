@@ -62,19 +62,24 @@ void cWebsocket::Run(char* host, const char* path) {
 		
 		//m_eventOnConnect();
 		
+		/* TODO: make this async so that I can instantly terminate the connection if needed */
 		beast::flat_buffer buffer;
-		size_t size;
-		for (;;) {
+		for (size_t size;;) {
 			m_ws.read(buffer);
 			size = buffer.size();
-			m_eventOnMessage(this, buffer.data().data(), size);
+			if (!m_eventOnMessage(this, buffer.data().data(), size)) {
+				Close();
+				break;
+			}
 			buffer.consume(size);
 		}
 		
 		
-		m_ioc.run();
+		
 	}
 	catch (const std::exception&) {}
+	
+	m_ioc.run();
 }
 
 void cWebsocket::Close(const ws::close_reason& reason) {

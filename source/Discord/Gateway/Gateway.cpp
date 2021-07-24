@@ -139,6 +139,10 @@ bool cGateway::OnEvent(cEvent *event) {
 		case EVENT_HEARTBEAT:
 			return SendHeartbeat();
 			
+		case EVENT_RECONNECT:
+			/* Forcefully exit */
+			return false;
+			
 		case EVENT_INVALID_SESSION: {
 			auto e = event->GetData<EVENT_INVALID_SESSION>();
 			if (!e) {
@@ -183,6 +187,10 @@ bool cGateway::OnEvent(cEvent *event) {
 			}
 			break;
 		}
+			
+			/* Make xcode shutup */
+		default:
+			break;
 	}
 	return true;
 }
@@ -224,7 +232,7 @@ void cGateway::Run() {
 			cWebsocket websocket;
 			m_pWebsocket = &websocket;
 			
-			websocket.SetOnMessage([this](cWebsocket* ws, void* data, size_t size) {
+			websocket.SetOnMessage([this](cWebsocket* ws, void* data, size_t size) -> bool {
 				try {
 					/* Parse message as a JSON */
 					json::monotonic_resource mr;
@@ -238,13 +246,12 @@ void cGateway::Run() {
 					SetLastSequence(event.GetSequence());
 					
 					/* Handle event */
-					if (OnEvent(&event))
-						return;
+					return OnEvent(&event);
 				}
 				catch (const std::exception& e) {
 					cUtils::PrintErr("Couldn't read incoming event. %s", e.what());
+					return false;
 				}
-				ws->Close();
 			}).Run(url);
 			StopHeartbeating();
 		}

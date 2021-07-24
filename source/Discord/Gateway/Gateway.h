@@ -33,7 +33,7 @@ private:
 	bool HeartbeatAcknowledged();         // Check if last heartbeat has been acknowledged by the gateway
 	void AcknowledgeHeartbeat();          // Mark last heartbeat as acknowledged
 	void StartHeartbeating(int interval); // Start sending heartbeats to the gateway every 'interval' milliseconds
-	void StopHeartbeating();
+	void StopHeartbeating();              // Stop sending heartbeats
 	
 	
 	bool Identify();
