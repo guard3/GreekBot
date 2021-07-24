@@ -23,18 +23,11 @@ void cGateway::SetLastSequence(int v) {
 	}
 }
 
-hEvent cGateway::GetEvent() {
-	try {
-		beast::flat_buffer b;
-		m_pWebsocket->Read(b);
-		printf("%.*s\n", (int)b.size(), b.data().data());
-		json::parser p;
-		p.write(reinterpret_cast<const char*>(b.data().data()), b.size());
-		return std::make_unique<cEvent>(p.release());
-	}
-	catch (const std::exception&) {
-		return hEvent();
-	}
+void cGateway::ResetSession() {
+	m_last_sequence.mutex.lock();
+	m_last_sequence.value = 0;
+	m_last_sequence.mutex.unlock();
+	m_sessionId[0] = '\0';
 }
 
 bool cGateway::SendHeartbeat() {
@@ -76,8 +69,12 @@ void cGateway::AcknowledgeHeartbeat() {
 
 void cGateway::StartHeartbeating(int interval) {
 	m_heartbeat.thread = std::thread([this](int interval) {
-		/* Wait for a random amount of time */
-		std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(interval * cUtils::Random())));
+		/* Wait a random amount of time */
+		m_heartbeat.should_exit = false;
+		auto later = std::chrono::system_clock::now() + std::chrono::milliseconds(static_cast<int>(interval * cUtils::Random()));
+		while (std::chrono::system_clock::now() < later)
+			if (m_heartbeat.should_exit)
+				return;
 		
 		for (;;) {
 			/* Send a heartbeat*/
@@ -87,7 +84,10 @@ void cGateway::StartHeartbeating(int interval) {
 			}
 			
 			/* Wait for the specified interval in milliseconds */
-			std::this_thread::sleep_for(std::chrono::milliseconds(interval));
+			later = std::chrono::system_clock::now() + std::chrono::milliseconds(interval);
+			while (std::chrono::system_clock::now() < later)
+				if (m_heartbeat.should_exit)
+					return;
 			
 			/* Make sure that heartbeat has been acknowledged */
 			if (!HeartbeatAcknowledged()) {
@@ -98,9 +98,16 @@ void cGateway::StartHeartbeating(int interval) {
 	}, interval);
 }
 
+void cGateway::StopHeartbeating() {
+	m_heartbeat.should_exit = true;
+	if (m_heartbeat.thread.joinable())
+		m_heartbeat.thread.join();
+}
+
 bool cGateway::Identify() {
 	/* Prepare payload string */
-	std::string s(200, '\0');
+	std::string s;
+	s.resize(200);
 	int len = sprintf(s.data(), "{\"op\":2,\"d\":{\"token\":\"%s\",\"intents\":%d,\"properties\":{\"$os\":\"%s\",\"$browser\":\"GreekBot\",\"$device\":\"GreekBot\"}}}", m_token, 513, cUtils::GetOS());
 	s.resize(len);
 	
@@ -110,29 +117,53 @@ bool cGateway::Identify() {
 	return !static_cast<bool>(e);
 }
 
-cGateway::~cGateway() {
-	if (m_heartbeat.thread.joinable())
-		m_heartbeat.thread.join();
+bool cGateway::Resume() {
+	/* Prepare payload string */
+	std::string s;
+	s.resize(200);
+	int len = sprintf(s.data(), "{\"op\":6,\"d\":{\"token\":\"%s\",\"session_id\":\"%s\",\"seq\":%d}}", m_token, m_sessionId, m_last_sequence.value);
+	s.resize(len);
+	
+	/* Send payload */
+	beast::error_code e;
+	m_pWebsocket->Write(net::buffer(s), e);
+	return !static_cast<bool>(e);
 }
 
-void cGateway::OnEvent(cEvent *event) {
+cGateway::~cGateway() {
+	StopHeartbeating();
+}
+
+bool cGateway::OnEvent(cEvent *event) {
 	switch (event->GetType()) {
 		case EVENT_HEARTBEAT:
-			if (!SendHeartbeat()) {
-				cUtils::PrintErr("Couldn't send heartbeat");
-				return;
+			return SendHeartbeat();
+			
+		case EVENT_INVALID_SESSION: {
+			auto e = event->GetData<EVENT_INVALID_SESSION>();
+			if (!e) {
+				cUtils::PrintErr("Invalid INVALID SESSION event");
+				return false;
 			}
-			break;
+			/* Wait a random amount of time between 1 and 5 seconds */
+			std::this_thread::sleep_for(std::chrono::milliseconds(cUtils::Random(1000, 5000)));
+			/* If session is resumable, try to Resume */
+			if (e->IsSessionResumable()) return Resume();
+			/* If not, then reset session and identify */
+			ResetSession();
+			return Identify();
+		}
 			
 		case EVENT_HELLO: {
-			hHelloEvent e = event->GetHelloData();
+			auto e = event->GetData<EVENT_HELLO>();
 			if (!e) {
-				cUtils::PrintErr("Invalid opcode %d received", event->GetType());
-				return;
+				cUtils::PrintErr("Invalid HELLO event");
+				return false;
 			}
+			/* Start heartbeating */
 			StartHeartbeating(e->GetHeartbeatInterval());
-			Identify();
-			break;
+			/* If there is an active session, try to resume */
+			return m_sessionId[0] ? Resume() : Identify();
 		}
 			
 		case EVENT_HEARTBEAT_ACK:
@@ -140,20 +171,25 @@ void cGateway::OnEvent(cEvent *event) {
 			break;
 		
 		case EVENT_READY: {
-			hReadyEvent e = event->GetReadyData();
+			auto e = event->GetData<EVENT_READY>();
 			if (e) {
 				cUtils::PrintLog("Gateway version %d", e->GetVersion());
 				strcpy(m_sessionId, e->GetSessionId());
 				cUtils::PrintLog("Session ID: %s", m_sessionId);
 			}
-			else
+			else {
 				cUtils::PrintErr("Invalid READY event");
+				return false;
+			}
 			break;
 		}
 	}
+	return true;
 }
 
 void cGateway::Run() {
+	char url[100];
+	
 	for (;;) {
 		/* Get gateway info */
 		hGatewayInfo g = cDiscord::GetGatewayInfo(m_http_auth);
@@ -181,12 +217,14 @@ void cGateway::Run() {
 		if (g->GetError())
 			cUtils::PrintErr("Couldn't retrieve gateway info. %s", g->GetError()->GetMessage());
 		else {
+			/* Prepare url string */
+			sprintf(url, "%s/?v=%d&encoding=json", g->GetUrl(), DISCORD_API_VERSION);
+			
 			/* Create a websocket */
 			cWebsocket websocket;
 			m_pWebsocket = &websocket;
 			
 			websocket.SetOnMessage([this](cWebsocket* ws, void* data, size_t size) {
-				//bool bShouldClose = false;
 				try {
 					/* Parse message as a JSON */
 					json::monotonic_resource mr;
@@ -200,14 +238,15 @@ void cGateway::Run() {
 					SetLastSequence(event.GetSequence());
 					
 					/* Handle event */
-					OnEvent(&event);
+					if (OnEvent(&event))
+						return;
 				}
 				catch (const std::exception& e) {
 					cUtils::PrintErr("Couldn't read incoming event. %s", e.what());
 				}
-			}).Run((std::string(g->GetUrl()) + "/?v=9&encoding=json").c_str());
-			
-			// TODO: Graceful heartbeat thread termination
+				ws->Close();
+			}).Run(url);
+			StopHeartbeating();
 		}
 		
 		cDiscord::CloseHandle(g);

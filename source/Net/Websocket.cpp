@@ -56,7 +56,7 @@ void cWebsocket::Run(char* host, const char* path) {
 		/* Perform SSL handshake */
 		m_ws.next_layer().handshake(ssl::stream_base::client);
 		beast::get_lowest_layer(m_ws).expires_never();
-		//ws.set_option(ws::stream_base::timeout::suggested(beast::role_type::client));
+		m_ws.set_option(ws::stream_base::timeout::suggested(beast::role_type::client));
 		
 		m_ws.handshake(host, path);
 		

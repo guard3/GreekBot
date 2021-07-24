@@ -1,15 +1,6 @@
 #include "Discord.h"
 #include "Net.h"
 
-#define _STR(x) #x
-#define STR(x) _STR(x)
-
-#define DISCORD_API_VERSION     9
-#define DISCORD_API_HOST        "discord.com"
-#define DISCORD_API_ENDPOINT    "/api/v" STR(DISCORD_API_VERSION)
-#define DISCORD_API_GATEWAY     DISCORD_API_ENDPOINT "/gateway"
-#define DISCORD_API_GATEWAY_BOT DISCORD_API_GATEWAY  "/bot"
-
 #if 0
 bool cDiscord::GetGateway(const char* auth, json::value& value) {
 	/* Make HTTP request to the gateway endpoint */

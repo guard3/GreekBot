@@ -20,27 +20,28 @@ private:
 	int  GetLastSequence();
 	void SetLastSequence(int);
 	
+	void ResetSession();
+	
 	/* Data relating to heartbeating */
 	struct {
 		std::thread thread;       // The heartbeating thread
 		std::mutex  mutex;        // Mutex for accessing 'acknowledged'
+		bool        should_exit;  // Should the heartbeating thread exit?
 		bool        acknowledged; // Is the heartbeat acknowledged?
 	} m_heartbeat;
 	bool SendHeartbeat();                 // Send a heartbeat to the gateway
 	bool HeartbeatAcknowledged();         // Check if last heartbeat has been acknowledged by the gateway
 	void AcknowledgeHeartbeat();          // Mark last heartbeat as acknowledged
 	void StartHeartbeating(int interval); // Start sending heartbeats to the gateway every 'interval' milliseconds
+	void StopHeartbeating();
 	
 	
 	bool Identify();
-	
-	hEvent GetEvent();
+	bool Resume();
 	
 	cWebsocket* m_pWebsocket;
 	
-	void OnEvent(cEvent* event);
-	
-	void OnConnect();
+	bool OnEvent(cEvent* event);
 	
 public:
 	cGateway(const char* token);

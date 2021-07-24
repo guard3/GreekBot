@@ -11,6 +11,11 @@ float cUtils::Random() {
 	return s_dis(s_gen);
 }
 
+int cUtils::Random(int a, int b) {
+	std::uniform_int_distribution<int> dis(a, b);
+	return dis(s_gen);
+}
+
 void cUtils::Print(FILE* f, const char* comment, const char* fmt, va_list args) {
 	fputs(comment, f);
 	vfprintf(f, fmt, args);

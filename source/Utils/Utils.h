@@ -13,6 +13,7 @@ private:
 public:
 	/* Random functions */
 	static float Random();
+	static int Random(int a, int b);
 	
 	/* Logger functions */
 	static void PrintErr(const char* fmt, ...);

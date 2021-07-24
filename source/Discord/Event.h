@@ -23,6 +23,19 @@ enum eEvent {
 	EVENT_NOT_IMPLEMENTED
 };
 
+/* INVALID_SESSION data */
+class cInvalidSessionEvent final {
+private:
+	bool resumable;
+	
+public:
+	cInvalidSessionEvent(const json::value& v) : resumable(v.as_bool()) {}
+	
+	bool IsSessionResumable() const { return resumable; }
+};
+typedef const std::unique_ptr<cInvalidSessionEvent> hInvalidSessionEvent;
+
+/* HELLO data */
 class cHelloEvent final {
 private:
 	int heartbeat_interval;
@@ -34,6 +47,7 @@ public:
 };
 typedef const std::unique_ptr<cHelloEvent> hHelloEvent;
 
+/* READY data */
 class cReadyEvent final {
 private:
 	int v;
@@ -49,6 +63,12 @@ public:
 };
 typedef const std::unique_ptr<cReadyEvent> hReadyEvent;
 
+/* Matching event type to event data */
+template<eEvent event> struct tEventType {};
+template<> struct tEventType<EVENT_INVALID_SESSION> { typedef cInvalidSessionEvent Type; };
+template<> struct tEventType<EVENT_HELLO>           { typedef cHelloEvent          Type; };
+template<> struct tEventType<EVENT_READY>           { typedef cReadyEvent          Type; };
+
 class cEvent final {
 private:
 	eEvent            t; // Event type
@@ -61,20 +81,13 @@ public:
 	eEvent GetType()     const { return t; }
 	int    GetSequence() const { return s; }
 	
-	hHelloEvent GetHelloData() const {
+	template<eEvent event>
+	const auto GetData() const {
 		try {
-			return std::make_unique<cHelloEvent>(d);
+			return std::make_unique<typename tEventType<event>::Type>(d);
 		}
 		catch (const std::exception&) {
-			return std::unique_ptr<cHelloEvent>();
-		}
-	}
-	hReadyEvent GetReadyData() const {
-		try {
-			return std::make_unique<cReadyEvent>(d);
-		}
-		catch (const std::exception&) {
-			return std::unique_ptr<cReadyEvent>();
+			return std::unique_ptr<typename tEventType<event>::Type>();
 		}
 	}
 };
