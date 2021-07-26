@@ -180,6 +180,7 @@ bool cGateway::OnEvent(cEvent *event) {
 				cUtils::PrintLog("Gateway version %d", e->GetVersion());
 				strcpy(m_sessionId, e->GetSessionId());
 				cUtils::PrintLog("Session ID: %s", m_sessionId);
+				m_onReady(e->GetUser());
 			}
 			else {
 				cUtils::PrintErr("Invalid READY event");

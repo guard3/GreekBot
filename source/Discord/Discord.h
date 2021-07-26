@@ -3,6 +3,7 @@
 #define _GREEKBOT_DISCORD_H_
 #include "json.h"
 #include "GatewayInfo.h"
+#include "SlashCommand.h"
 
 #define _STR(x) #x
 #define STR(x) _STR(x)
@@ -19,9 +20,8 @@ private:
 	cDiscord() {}
 	
 public:
-	static bool GetGateway(const char* auth, json::value& value);
-	
 	static hGatewayInfo GetGatewayInfo(const char* http_auth);
+	static void RegisterSlashCommand(const char* http_auth, const char* application_id, const cSlashCommand& command);
 	
 	template<typename H>
 	static void CloseHandle(H h) { delete h; }

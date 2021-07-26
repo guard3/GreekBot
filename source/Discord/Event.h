@@ -2,6 +2,7 @@
 #ifndef _GREEKBOT_EVENT_H_
 #define _GREEKBOT_EVENT_H_
 #include "json.h"
+#include "User.h"
 
 enum eEvent {
 	/* Payload opcodes */
@@ -51,15 +52,16 @@ typedef const std::unique_ptr<cHelloEvent> hHelloEvent;
 class cReadyEvent final {
 private:
 	int v;
-	// TODO: user
+	hUser user;
 	// TODO: guilds
 	const json::string session_id;
 	// TODO: application
 public:
-	cReadyEvent(const json::value& v) : v(static_cast<int>(v.at("v").as_int64())), session_id(v.at("session_id").as_string()) {}
+	cReadyEvent(const json::value& v) : v(static_cast<int>(v.at("v").as_int64())), user(new cUser(v.at("user"))), session_id(v.at("session_id").as_string()) {}
 	
-	int         GetVersion()   { return v;                  }
-	const char* GetSessionId() { return session_id.c_str(); }
+	int         GetVersion()   const { return v;                  }
+	hUser       GetUser()      const { return user;               }
+	const char* GetSessionId() const { return session_id.c_str(); }
 };
 typedef const std::unique_ptr<cReadyEvent> hReadyEvent;
 

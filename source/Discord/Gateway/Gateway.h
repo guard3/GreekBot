@@ -2,6 +2,7 @@
 #ifndef _GREEKBOT_GATEWAY_H_
 #define _GREEKBOT_GATEWAY_H_
 #include "Event.h"
+#include "User.h"
 #include <thread>
 
 class cWebsocket;
@@ -43,9 +44,17 @@ private:
 	
 	bool OnEvent(cEvent* event);
 	
+	std::function<void(hUser)> m_onReady;
+	
 public:
 	cGateway(const char* token);
 	~cGateway();
+	
+	template<typename F>
+	cGateway& SetOnReady(F f) {
+		m_onReady = f;
+		return *this;
+	}
 	
 	void Run();
 };

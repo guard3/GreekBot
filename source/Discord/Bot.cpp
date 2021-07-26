@@ -1,35 +1,27 @@
 #include "Bot.h"
 #include "Gateway.h"
-#include <thread>
-#include <chrono>
+#include "Utils.h"
+#include "Discord.h"
 
 cBot::cBot(const char* token) {
 	/* Add bot token to the http auth string */
 	if (token) {
-		strncpy(m_http_auth + 4, token, 59);
-		m_http_auth[63] = '\0';
+		strncpy(m_token, token, 59);
+		m_token[59] = '\0';
 	}
 }
 
+bool cBot::RegisterSlashCommand(const char *name, const char *description) {
+	return true;
+}
+
 void cBot::Run() {
-	printf("Bot running...\n");
-#if 0
-	for (;;) {
-		/* Get gateway info */
-		cGateway gateway(m_http_auth);
-		if (!gateway) {
-			auto error = gateway.GetError();
-			fprintf(stderr, "\nError retrieving gateway information\nCode: %d\n%s\n", error->GetCode(), error->GetMessage());
-			break;
-		}
-		
-		/* Connect to websocket */
-		//TBA
-		
-		printf("%s\n", gateway.GetUrl());
-		break;
-		
-	}
-#endif
-	printf("\nExiting...\n");
+	cGateway gateway(m_token);
+	gateway.SetOnReady([this](hUser user) {
+		const char* application_id = user->GetId();
+		if (!m_user)
+			cDiscord::RegisterSlashCommand(m_http_auth, application_id, { "bonk", "bink" });
+		m_user = user;
+		cUtils::PrintLog("%s#%s", m_user->GetUsername(), m_user->GetDiscriminator());
+	}).Run();
 }

@@ -1,21 +1,6 @@
 #include "Discord.h"
 #include "Net.h"
-
-#if 0
-bool cDiscord::GetGateway(const char* auth, json::value& value) {
-	/* Make HTTP request to the gateway endpoint */
-	std::string response = cUtils::GetHttpsRequest(DISCORD_API_HOST, DISCORD_API_GATEWAY_BOT, auth);
-	if (response.empty()) {
-		value = {};
-		return false;
-	}
-	
-	/* Parse request response as JSON */
-	json::error_code e;
-	value = json::parse(response, e);
-	return !static_cast<bool>(e);
-}
-#endif
+#include "beast.h"
 
 hGatewayInfo cDiscord::GetGatewayInfo(const char *http_auth) {
 	try {
@@ -35,4 +20,48 @@ hGatewayInfo cDiscord::GetGatewayInfo(const char *http_auth) {
 	catch (const std::exception&) {
 		return nullptr;
 	}
+}
+
+void cDiscord::RegisterSlashCommand(const char *http_auth, const char *application_id, const cSlashCommand &command) {
+	try {
+		char path[256];
+		sprintf(path, "/api/v8/applications/%s/guilds/350234668680871946/commands", application_id);
+		
+		net::io_context ioc;
+		ssl::context ctx(ssl::context::tlsv13_client);
+		
+		/* TODO: Fix certificates and shit */
+		//ctx.set_verify_mode(ssl::verify_peer);
+		
+		beast::ssl_stream<beast::tcp_stream> stream(ioc, ctx);
+		if (SSL_set_tlsext_host_name(stream.native_handle(), DISCORD_API_HOST)) {
+			beast::get_lowest_layer(stream).connect(tcp::resolver(ioc).resolve(DISCORD_API_HOST, "https"));
+			
+			/* Perform SSL handshake */
+			stream.handshake(ssl::stream_base::client);
+			
+			/* Make the GET HTTP request */
+			std::string b = std::string("{\"name\":\"") + command.GetName() + "\",\"description\":\"" + command.GetDescription() + "\"}";
+			http::request<http::string_body> request(http::verb::post, path, 11);
+			request.set(http::field::host, DISCORD_API_HOST);
+			request.set(http::field::user_agent, "GreekBot");
+			request.set(http::field::authorization, http_auth);
+			request.set(http::field::content_type, "application/json");
+			request.set(http::field::content_length, std::to_string(b.length()));
+			request.body() = b;
+			http::write(stream, request);
+			
+			/* Read the request response */
+			beast::flat_buffer buffer;
+			http::response<http::string_body> res;
+			http::read(stream, buffer, res);
+			/* Shut down the stream */
+			beast::error_code e;
+			stream.shutdown(e);
+			
+			/* Return response body */
+			printf("%s\n", res.body().c_str());
+		}
+	}
+	catch (const std::exception&) {}
 }
