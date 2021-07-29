@@ -177,15 +177,24 @@ bool cGateway::OnEvent(cEvent *event) {
 		case EVENT_READY: {
 			auto e = event->GetData<EVENT_READY>();
 			if (e) {
-				cUtils::PrintLog("Gateway version %d", e->GetVersion());
 				strcpy(m_sessionId, e->GetSessionId());
-				cUtils::PrintLog("Session ID: %s", m_sessionId);
-				m_onReady(e->GetUser());
+				if (m_onReady) m_onReady(std::move(e->GetUser()));
 			}
 			else {
 				cUtils::PrintErr("Invalid READY event");
 				return false;
 			}
+			break;
+		}
+			
+		case EVENT_INTERACTION_CREATE: {
+			auto e = event->GetData<EVENT_INTERACTION_CREATE>();
+			if (!e) {
+				cUtils::PrintErr("Invalid INTERACTION_CREATE event");
+				return false;
+			}
+			cUtils::PrintLog("TEST");
+			if (m_onInteractionCreate) m_onInteractionCreate(std::move(e));
 			break;
 		}
 			
@@ -245,6 +254,7 @@ void cGateway::Run() {
 					
 					/* Update event sequence */
 					SetLastSequence(event.GetSequence());
+					//cUtils::PrintLog("%.*s", size, data);
 					
 					/* Handle event */
 					return OnEvent(&event);

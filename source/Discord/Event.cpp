@@ -12,6 +12,8 @@ cEvent::cEvent(const json::value& v) : d(v.at("d")) {
 		cUtils::PrintLog("Event:  %s", str);
 		if (0 == strcmp(str, "READY"))
 			t = EVENT_READY;
+		else if (0 == strcmp(str, "INTERACTION_CREATE"))
+			t = EVENT_INTERACTION_CREATE;
 		else
 			t = EVENT_NOT_IMPLEMENTED;
 	}

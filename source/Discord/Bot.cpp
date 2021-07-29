@@ -11,17 +11,20 @@ cBot::cBot(const char* token) {
 	}
 }
 
-bool cBot::RegisterSlashCommand(const char *name, const char *description) {
-	return true;
+void cBot::OnInteractionCreate(uchInteraction interaction) {
+	cUtils::PrintLog("Command ID: %s", interaction->GetData()->GetCommandId()->ToString());
+	
+	if (interaction->GetData()->GetCommandId()->ToInt() == 869284421042307073) {
+		cDiscord::RespondToInteraction(m_http_auth, interaction->GetId()->ToString(), interaction->GetToken(), "{\"type\":4,\"data\":{\"content\":\"BONK!!!\"}}");
+	}
 }
 
 void cBot::Run() {
 	cGateway gateway(m_token);
-	gateway.SetOnReady([this](hUser user) {
-		const char* application_id = user->GetId();
-		if (!m_user)
-			cDiscord::RegisterSlashCommand(m_http_auth, application_id, { "bonk", "bink" });
-		m_user = user;
-		cUtils::PrintLog("%s#%s", m_user->GetUsername(), m_user->GetDiscriminator());
+	gateway.SetOnReady([this](uchUser user) {
+		cUtils::PrintLog("Connected as: %s#%d %s", user->GetUsername(), user->GetDiscriminator(), user->GetId()->ToString());
+		m_user = std::move(user);
+	}).SetOnInteractionCreate([this](uchInteraction interaction) {
+		OnInteractionCreate(std::move(interaction));
 	}).Run();
 }

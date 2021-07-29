@@ -44,7 +44,8 @@ private:
 	
 	bool OnEvent(cEvent* event);
 	
-	std::function<void(hUser)> m_onReady;
+	std::function<void(uchUser)> m_onReady;
+	std::function<void(uchInteraction)> m_onInteractionCreate;
 	
 public:
 	cGateway(const char* token);
@@ -53,6 +54,11 @@ public:
 	template<typename F>
 	cGateway& SetOnReady(F f) {
 		m_onReady = f;
+		return *this;
+	}
+	template<typename F>
+	cGateway& SetOnInteractionCreate(F f) {
+		m_onInteractionCreate = f;
 		return *this;
 	}
 	

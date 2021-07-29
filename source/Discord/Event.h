@@ -3,6 +3,7 @@
 #define _GREEKBOT_EVENT_H_
 #include "json.h"
 #include "User.h"
+#include "Interaction.h"
 
 enum eEvent {
 	/* Payload opcodes */
@@ -21,6 +22,7 @@ enum eEvent {
 	
 	/* Events */
 	EVENT_READY,
+	EVENT_INTERACTION_CREATE,
 	EVENT_NOT_IMPLEMENTED
 };
 
@@ -51,25 +53,26 @@ typedef const std::unique_ptr<cHelloEvent> hHelloEvent;
 /* READY data */
 class cReadyEvent final {
 private:
-	int v;
-	hUser user;
+	int    version;
+	uchUser user;
 	// TODO: guilds
-	const json::string session_id;
+	std::string session_id;
 	// TODO: application
 public:
-	cReadyEvent(const json::value& v) : v(static_cast<int>(v.at("v").as_int64())), user(new cUser(v.at("user"))), session_id(v.at("session_id").as_string()) {}
+	cReadyEvent(const json::value& v) : version(static_cast<int>(v.at("v").as_int64())), user(std::make_unique<const cUser>(v.at("user"))), session_id(v.at("session_id").as_string().c_str()) {}
 	
-	int         GetVersion()   const { return v;                  }
-	hUser       GetUser()      const { return user;               }
+	int         GetVersion()   const { return version;                  }
+	uchUser     GetUser()       { return std::move(user);    }
 	const char* GetSessionId() const { return session_id.c_str(); }
 };
 typedef const std::unique_ptr<cReadyEvent> hReadyEvent;
 
 /* Matching event type to event data */
 template<eEvent event> struct tEventType {};
-template<> struct tEventType<EVENT_INVALID_SESSION> { typedef cInvalidSessionEvent Type; };
-template<> struct tEventType<EVENT_HELLO>           { typedef cHelloEvent          Type; };
-template<> struct tEventType<EVENT_READY>           { typedef cReadyEvent          Type; };
+template<> struct tEventType<EVENT_INVALID_SESSION>    { typedef cInvalidSessionEvent Type; };
+template<> struct tEventType<EVENT_HELLO>              { typedef cHelloEvent          Type; };
+template<> struct tEventType<EVENT_READY>              { typedef cReadyEvent          Type; };
+template<> struct tEventType<EVENT_INTERACTION_CREATE> { typedef cInteraction         Type; };
 
 class cEvent final {
 private:
@@ -84,7 +87,7 @@ public:
 	int    GetSequence() const { return s; }
 	
 	template<eEvent event>
-	const auto GetData() const {
+	auto GetData() const {
 		try {
 			return std::make_unique<typename tEventType<event>::Type>(d);
 		}
