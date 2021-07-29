@@ -193,7 +193,6 @@ bool cGateway::OnEvent(cEvent *event) {
 				cUtils::PrintErr("Invalid INTERACTION_CREATE event");
 				return false;
 			}
-			cUtils::PrintLog("TEST");
 			if (m_onInteractionCreate) m_onInteractionCreate(std::move(e));
 			break;
 		}
