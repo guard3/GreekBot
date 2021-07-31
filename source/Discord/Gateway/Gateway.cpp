@@ -37,12 +37,15 @@ bool cGateway::SendHeartbeat() {
 	beast::error_code e; // The error code of websocket
 	
 	/* Prepare payload string */
+	p = "{\"op\":1,\"d\":";
 	if ((s = GetLastSequence())) {
-		p.resize(30);
-		int len = sprintf(p.data(), "{\"op\":1,\"d\":%d}", s);
-		p.resize(len);
+		//p.resize(30);
+		//int len = sprintf(p.data(), "{\"op\":1,\"d\":%d}", s);
+		//p.resize(len);
+		p += std::to_string(s);
 	}
-	else p = "{\"op\":1,\"d\":null}";
+	else p += "null";
+	p += "}";
 	
 	/* Send payload */
 	m_heartbeat.mutex.lock();
@@ -178,7 +181,7 @@ bool cGateway::OnEvent(cEvent *event) {
 			auto e = event->GetData<EVENT_READY>();
 			if (e) {
 				strcpy(m_sessionId, e->GetSessionId());
-				if (m_onReady) m_onReady(std::move(e->GetUser()));
+				if (m_onReady) m_onReady(e->GetUser());
 			}
 			else {
 				cUtils::PrintErr("Invalid READY event");

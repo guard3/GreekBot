@@ -8,17 +8,17 @@ class cUser final {
 private:
 	cSnowflake  id;
 	std::string username;
-	int         discriminator;
-	char        avatar[100];
+	std::string discriminator;
+	char        avatar[100] = "https://cdn.discordapp.com/";
 	// other stuff unimplemented
 	
 public:
 	cUser(const json::value&);
 	
-	chSnowflake GetId()            const { return &id;              }
-	const char* GetUsername()      const { return username.c_str(); }
-	int         GetDiscriminator() const { return discriminator;    }
-	const char* GetAvatarUrl()     const { return avatar;           }
+	chSnowflake GetId()            const { return &id;                   }
+	const char* GetUsername()      const { return username.c_str();      }
+	const char* GetDiscriminator() const { return discriminator.c_str(); }
+	const char* GetAvatarUrl()     const { return avatar;                }
 };
 typedef   hHandle<cUser>   hUser;
 typedef  chHandle<cUser>  chUser;

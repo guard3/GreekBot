@@ -4,13 +4,14 @@
 #include "User.h"
 #include "Interaction.h"
 
-class cBot final {
-private:
+class cBot {
+protected:
 	char  m_http_auth[64] = "Bot ";
 	char *m_token         = m_http_auth + 4;
 	uchUser m_user;
 	
-	void OnInteractionCreate(uchInteraction);
+protected:
+	virtual void OnInteractionCreate(uchInteraction) {}
 	
 public:
 	cBot(const char* token);

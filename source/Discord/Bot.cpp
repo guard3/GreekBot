@@ -11,14 +11,6 @@ cBot::cBot(const char* token) {
 	}
 }
 
-void cBot::OnInteractionCreate(uchInteraction interaction) {
-	cUtils::PrintLog("Command ID: %s", interaction->GetData()->GetCommandId()->ToString());
-	
-	if (interaction->GetData()->GetCommandId()->ToInt() == 869284421042307073) {
-		cDiscord::RespondToInteraction(m_http_auth, interaction->GetId()->ToString(), interaction->GetToken(), "{\"type\":4,\"data\":{\"content\":\"BONK!!!\"}}");
-	}
-}
-
 void cBot::Run() {
 	cGateway gateway(m_token);
 	gateway.SetOnReady([this](uchUser user) {
