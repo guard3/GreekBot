@@ -24,7 +24,7 @@ hGatewayInfo cDiscord::GetGatewayInfo(const char *http_auth) {
 
 void cDiscord::RespondToInteraction(const char *http_auth, const char *interaction_id, const char *interaction_token, const std::string &data) {
 	try {
-		char path[256];
+		char path[300];
 		sprintf(path, DISCORD_API_ENDPOINT "/interactions/%s/%s/callback", interaction_id, interaction_token);
 		
 		net::io_context ioc;
