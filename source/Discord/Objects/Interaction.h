@@ -4,6 +4,7 @@
 #include "Types.h"
 #include "json.h"
 #include "User.h"
+#include "Member.h"
 #include <vector>
 
 /* ================================================================================================= */
@@ -177,7 +178,7 @@ private:
 	cInteractionData data;
 	cSnowflake       guild_id;
 	cSnowflake       channel_id;
-	// member
+	uchMember member;
 	// user
 	std::string token;
 	int         version;
@@ -185,14 +186,22 @@ private:
 	
 public:
 	cInteraction(const json::value& v) :
-		id(v.at("id").as_string().c_str()),
-		application_id(v.at("application_id").as_string().c_str()),
-		type(static_cast<eInteractionType>(v.at("type").as_int64())),
-		data(v.at("data")),
-		guild_id(v.at("guild_id").as_string().c_str()),
-		channel_id(v.at("channel_id").as_string().c_str()),
-		token(v.at("token").as_string().c_str()),
-		version(static_cast<int>(v.at("version").as_int64())) {}
+	id(v.at("id").as_string().c_str()),
+	application_id(v.at("application_id").as_string().c_str()),
+	type(static_cast<eInteractionType>(v.at("type").as_int64())),
+	data(v.at("data")),
+	guild_id(v.at("guild_id").as_string().c_str()),
+	channel_id(v.at("channel_id").as_string().c_str()),
+	member([](const json::value& v) {
+		try {
+			return std::make_unique<const cMember>(v.at("member"));
+		}
+		catch (const std::exception&) {
+			return uchMember();
+		}
+	} (v)),
+	token(v.at("token").as_string().c_str()),
+	version(static_cast<int>(v.at("version").as_int64())) {}
 	
 	chSnowflake       GetId()            const { return &id;             }
 	chSnowflake       GetApplicationId() const { return &application_id; }
@@ -200,6 +209,7 @@ public:
 	chInteractionData GetData()          const { return &data;           }
 	chSnowflake       GetGuildId()       const { return &guild_id;       }
 	chSnowflake       GetChannelId()     const { return &channel_id;     }
+	chMember          GetMember()        const { return member.get();    }
 	const char*       GetToken()         const { return token.c_str();   }
 	int               GetVersion()       const { return version;         }
 };

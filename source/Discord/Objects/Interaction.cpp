@@ -21,7 +21,7 @@ cInteractionData::cInteractionData(const json::value& v) : id(v.at("id").as_stri
 		options.reserve(a.size());
 		opt.reserve(a.size());
 		for (const json::value& val : a) {
-			options.push_back(cInteractionDataOption(val));
+			options.push_back(val);
 			opt.push_back(&options.back());
 		}
 	}
