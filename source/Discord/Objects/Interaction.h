@@ -58,21 +58,31 @@ private:
 			return operator[](snowflake->ToString());
 		}
 	};
-	typedef cMap<cUser> tUserMap;
+	typedef cMap<cUser>   tUserMap;
+	typedef cMap<cMember> tMemberMap;
 	
 public:
-	const tUserMap Users;
-	// members
+	const tUserMap   Users;
+	const tMemberMap Members;
 	// roles
 	// channels
 	
 	cInteractionDataResolved() {}
-	cInteractionDataResolved(const json::value& v) : Users([](const json::value& v) {
+	cInteractionDataResolved(const json::value& v) :
+	Users([](const json::value& v) {
 		try {
 			return tUserMap(v.at("users"));
 		}
 		catch (const std::exception&) {
 			return tUserMap();
+		}
+	} (v)),
+	Members([](const json::value& v) {
+		try {
+			return tMemberMap(v.at("members"));
+		}
+		catch (const std::exception&) {
+			return tMemberMap();
 		}
 	} (v)) {}
 };
@@ -178,10 +188,10 @@ private:
 	cInteractionData data;
 	cSnowflake       guild_id;
 	cSnowflake       channel_id;
-	uchMember member;
-	// user
-	std::string token;
-	int         version;
+	uchMember        member;
+	uchUser          user;
+	std::string      token;
+	int              version;
 	// message
 	
 public:
@@ -198,6 +208,14 @@ public:
 		}
 		catch (const std::exception&) {
 			return uchMember();
+		}
+	} (v)),
+	user([](const json::value& v) {
+		try {
+			return std::make_unique<const cUser>(v.at("user"));
+		}
+		catch (const std::exception&) {
+			return uchUser();
 		}
 	} (v)),
 	token(v.at("token").as_string().c_str()),
