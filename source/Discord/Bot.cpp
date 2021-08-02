@@ -14,9 +14,9 @@ cBot::cBot(const char* token) {
 void cBot::Run() {
 	cGateway gateway(m_token);
 	gateway.SetOnReady([this](uchUser user) {
-		cUtils::PrintLog("Connected as: %s#%d %s", user->GetUsername(), user->GetDiscriminator(), user->GetId()->ToString());
+		cUtils::PrintLog("Connected as: %s#%s %s", user->GetUsername(), user->GetDiscriminator(), user->GetId()->ToString());
 		m_user = std::move(user);
-	}).SetOnInteractionCreate([this](uchInteraction interaction) {
-		OnInteractionCreate(std::move(interaction));
+	}).SetOnInteractionCreate([this](chInteraction interaction) {
+		OnInteractionCreate(interaction);
 	}).Run();
 }

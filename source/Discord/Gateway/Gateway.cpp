@@ -137,7 +137,7 @@ cGateway::~cGateway() {
 	StopHeartbeating();
 }
 
-bool cGateway::OnEvent(cEvent *event) {
+bool cGateway::OnEvent(chEvent event) {
 	switch (event->GetType()) {
 		case EVENT_HEARTBEAT:
 			return SendHeartbeat();
@@ -147,28 +147,24 @@ bool cGateway::OnEvent(cEvent *event) {
 			return false;
 			
 		case EVENT_INVALID_SESSION: {
-			auto e = event->GetData<EVENT_INVALID_SESSION>();
-			if (!e) {
-				cUtils::PrintErr("Invalid INVALID SESSION event");
-				return false;
-			}
+			bool bResumable = event->GetData<EVENT_INVALID_SESSION>();
 			/* Wait a random amount of time between 1 and 5 seconds */
 			std::this_thread::sleep_for(std::chrono::milliseconds(cUtils::Random(1000, 5000)));
 			/* If session is resumable, try to Resume */
-			if (e->IsSessionResumable()) return Resume();
+			if (bResumable) return Resume();
 			/* If not, then reset session and identify */
 			ResetSession();
 			return Identify();
 		}
 			
 		case EVENT_HELLO: {
-			auto e = event->GetData<EVENT_HELLO>();
-			if (!e) {
+			int interval = event->GetData<EVENT_HELLO>();
+			if (interval < 0) {
 				cUtils::PrintErr("Invalid HELLO event");
 				return false;
 			}
 			/* Start heartbeating */
-			StartHeartbeating(e->GetHeartbeatInterval());
+			StartHeartbeating(interval);
 			/* If there is an active session, try to resume */
 			return m_sessionId[0] ? Resume() : Identify();
 		}
@@ -179,14 +175,15 @@ bool cGateway::OnEvent(cEvent *event) {
 		
 		case EVENT_READY: {
 			auto e = event->GetData<EVENT_READY>();
-			if (e) {
-				strcpy(m_sessionId, e->GetSessionId());
-				if (m_onReady) m_onReady(e->GetUser());
-			}
-			else {
+			if (!e) {
 				cUtils::PrintErr("Invalid READY event");
 				return false;
 			}
+			auto user = e->GetUser();
+			if (!user) return false;
+			
+			strcpy(m_sessionId, e->GetSessionId());
+			if (m_onReady) m_onReady(std::move(user));
 			break;
 		}
 			
@@ -196,7 +193,7 @@ bool cGateway::OnEvent(cEvent *event) {
 				cUtils::PrintErr("Invalid INTERACTION_CREATE event");
 				return false;
 			}
-			if (m_onInteractionCreate) m_onInteractionCreate(std::move(e));
+			if (m_onInteractionCreate) m_onInteractionCreate(e.get());
 			break;
 		}
 			

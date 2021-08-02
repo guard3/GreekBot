@@ -5,6 +5,7 @@
 #include "User.h"
 #include "Interaction.h"
 
+/* ================================================================================================= */
 enum eEvent {
 	/* Payload opcodes */
 	// 0: Dispatch
@@ -26,59 +27,55 @@ enum eEvent {
 	EVENT_NOT_IMPLEMENTED
 };
 
-/* INVALID_SESSION data */
-class cInvalidSessionEvent final {
+/* ================================================================================================= */
+class cReadyEventData final {
 private:
-	bool resumable;
-	
-public:
-	cInvalidSessionEvent(const json::value& v) : resumable(v.as_bool()) {}
-	
-	bool IsSessionResumable() const { return resumable; }
-};
-typedef const std::unique_ptr<cInvalidSessionEvent> hInvalidSessionEvent;
-
-/* HELLO data */
-class cHelloEvent final {
-private:
-	int heartbeat_interval;
-
-public:
-	cHelloEvent(const json::value& v) : heartbeat_interval(static_cast<int>(v.at("heartbeat_interval").as_int64())) {}
-	
-	int GetHeartbeatInterval() const { return heartbeat_interval; }
-};
-typedef const std::unique_ptr<cHelloEvent> hHelloEvent;
-
-/* READY data */
-class cReadyEvent final {
-private:
-	int    version;
-	uchUser user;
+	int         version;
+	json::value user;
 	// TODO: guilds
 	std::string session_id;
 	// TODO: application
 public:
-	cReadyEvent(const json::value& v) : version(static_cast<int>(v.at("v").as_int64())), user(std::make_unique<const cUser>(v.at("user"))), session_id(v.at("session_id").as_string().c_str()) {}
+	cReadyEventData(const json::value& v) : version(static_cast<int>(v.at("v").as_int64())), user(v.at("user")), session_id(v.at("session_id").as_string().c_str()) {}
 	
-	int         GetVersion()   const { return version;                  }
-	uchUser     GetUser()       { return std::move(user);    }
+	int         GetVersion()   const { return version;            }
 	const char* GetSessionId() const { return session_id.c_str(); }
+	
+	uchUser GetUser() const {
+		try {
+			return std::make_unique<const cUser>(user);
+		}
+		catch (const std::exception&) {
+			return uchUser();
+		}
+	}
 };
-typedef const std::unique_ptr<cReadyEvent> hReadyEvent;
+typedef   hHandle<cReadyEventData>   hReadyEventData;
+typedef  chHandle<cReadyEventData>  chReadyEventData;
+typedef  uhHandle<cReadyEventData>  uhReadyEventData;
+typedef uchHandle<cReadyEventData> uchReadyEventData;
+typedef  shHandle<cReadyEventData>  shReadyEventData;
+typedef schHandle<cReadyEventData> schReadyEventData;
 
-/* Matching event type to event data */
-template<eEvent event> struct tEventType {};
-template<> struct tEventType<EVENT_INVALID_SESSION>    { typedef cInvalidSessionEvent Type; };
-template<> struct tEventType<EVENT_HELLO>              { typedef cHelloEvent          Type; };
-template<> struct tEventType<EVENT_READY>              { typedef cReadyEvent          Type; };
-template<> struct tEventType<EVENT_INTERACTION_CREATE> { typedef cInteraction         Type; };
-
+/* ================================================================================================= */
 class cEvent final {
 private:
-	eEvent            t; // Event type
-	int               s; // Event sequence - used for heartbeating
-	const json::value d; // Event specific data
+	eEvent      t; // Event type
+	int         s; // Event sequence - used for heartbeating
+	json::value d; // Event specific data
+	
+	template<eEvent> struct _t {};
+	template<> struct _t<EVENT_INVALID_SESSION>    { typedef bool              Type; };
+	template<> struct _t<EVENT_HELLO>              { typedef int               Type; };
+	template<> struct _t<EVENT_READY>              { typedef uchReadyEventData Type; };
+	template<> struct _t<EVENT_INTERACTION_CREATE> { typedef uchInteraction    Type; };
+	
+	template<eEvent e> using tEventType = typename _t<e>::Type;
+	
+	template<typename> struct _r {};
+	template<typename T> struct _r<uchHandle<T>> { typedef T Type; };
+	
+	template<typename T> using remove_uch = typename _r<T>::Type;
 	
 public:
 	cEvent(const json::value& v);
@@ -86,16 +83,40 @@ public:
 	eEvent GetType()     const { return t; }
 	int    GetSequence() const { return s; }
 	
-	template<eEvent event>
-	auto GetData() const {
+	template<eEvent e>
+	tEventType<e> GetData() const {
+		typedef tEventType<e> return_t;
 		try {
-			return std::make_unique<typename tEventType<event>::Type>(d);
+			return std::make_unique<remove_uch<return_t>>(d);
 		}
 		catch (const std::exception&) {
-			return std::unique_ptr<typename tEventType<event>::Type>();
+			return return_t();
 		}
 	}
+	
+	template<>
+	tEventType<EVENT_INVALID_SESSION> GetData<EVENT_INVALID_SESSION>() const {
+		auto p = d.if_bool();
+		return p && t == EVENT_INVALID_SESSION ? *p : false;
+	}
+	
+	template<>
+	tEventType<EVENT_HELLO> GetData<EVENT_HELLO>() const {
+		if (auto o = d.if_object()) {
+			if (auto v = o->if_contains("heartbeat_interval")) {
+				auto p = v->if_int64();
+				if (p && t == EVENT_HELLO)
+					return static_cast<int>(*p);
+			}
+		}
+		return -1;
+	}
 };
-typedef const std::unique_ptr<cEvent> hEvent;
+typedef   hHandle<cEvent>   hEvent;
+typedef  chHandle<cEvent>  chEvent;
+typedef  uhHandle<cEvent>  uhEvent;
+typedef uchHandle<cEvent> uchEvent;
+typedef  shHandle<cEvent>  shEvent;
+typedef schHandle<cEvent> schEvent;
 
 #endif /* _GREEKBOT_EVENT_H_ */

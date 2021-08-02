@@ -11,7 +11,7 @@ protected:
 	uchUser m_user;
 	
 protected:
-	virtual void OnInteractionCreate(uchInteraction) {}
+	virtual void OnInteractionCreate(chInteraction) {}
 	
 public:
 	cBot(const char* token);

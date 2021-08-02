@@ -5,7 +5,7 @@
 class cGreekBot final : public cBot {
 private:
 	
-	void OnInteraction_avatar(uchInteraction interaction) {
+	void OnInteraction_avatar(chInteraction interaction) {
 		if (interaction->GetData()->Options.empty()) {
 			// TODO: avatar of sender
 			return;
@@ -23,11 +23,11 @@ private:
 		}
 	}
 	
-	void OnInteractionCreate(uchInteraction interaction) override {
+	void OnInteractionCreate(chInteraction interaction) override {
 		switch (interaction->GetData()->GetCommandId()->ToInt()){
 			case 870286903545589840:
 				/* avatar */
-				OnInteraction_avatar(std::move(interaction));
+				OnInteraction_avatar(interaction);
 				
 			default:
 				break;

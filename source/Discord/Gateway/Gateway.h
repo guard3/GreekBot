@@ -42,10 +42,10 @@ private:
 	
 	cWebsocket* m_pWebsocket;
 	
-	bool OnEvent(cEvent* event);
+	bool OnEvent(chEvent event);
 	
 	std::function<void(uchUser)> m_onReady;
-	std::function<void(uchInteraction)> m_onInteractionCreate;
+	std::function<void(chInteraction)> m_onInteractionCreate;
 	
 public:
 	cGateway(const char* token);
