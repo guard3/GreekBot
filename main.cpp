@@ -1,7 +1,6 @@
 #include "Bot.h"
 #include "Discord.h"
 #include "Utils.h"
-#define TOKEN "ODYzNDk5MTUxMTgxMjE3Nzky.YOnyQA.6XWkgM_P4S4lE-t8jhT_dD2qQlk"
 
 class cGreekBot final : public cBot {
 private:
@@ -44,11 +43,10 @@ private:
 	}
 	
 public:
-	cGreekBot() : cBot(TOKEN) {}
-	
+	cGreekBot(const char* token) : cBot(token) {}
 };
 
-int main() {
-	cGreekBot().Run();
+int main(int argc, const char** argv) {
+	cGreekBot(argv[1]).Run();
 	return 0;
 }
