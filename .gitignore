@@ -1,4 +1,7 @@
-bin
-project
+# Platform specific files
 **/.DS_Store
 **/.desktop.ini
+
+# CLion project files
+.idea
+cmake-build-debug

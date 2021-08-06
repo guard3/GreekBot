@@ -26,7 +26,7 @@ private:
 			else return;
 		}
 		
-		char d[256];
+		char d[512];
 		// TODO: response class
 		sprintf(d, "{\"type\":4,\"data\":{\"content\":\"%s\"}}", avatar_url);
 		cDiscord::RespondToInteraction(m_http_auth, interaction->GetId()->ToString(), interaction->GetToken(), d);

@@ -4,7 +4,7 @@
 #include "Utils.h"
 #include "beast.h"
 
-class cWebsocket {
+class cWebsocket final {
 private:
 	net::io_context m_ioc;
 	ssl::context    m_ctx;
