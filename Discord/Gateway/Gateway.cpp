@@ -206,66 +206,60 @@ bool cGateway::OnEvent(chEvent event) {
 
 void cGateway::Run() {
 	char url[100];
-	
-	for (;;) {
+
+	for (uchGatewayInfo g;;) {
 		/* Get gateway info */
-		hGatewayInfo g = cDiscord::GetGatewayInfo(m_http_auth);
-		if (!g) {
-			cUtils::PrintErr("Couldn't retrieve gateway info");
-			for (int timeout = 5;; timeout += 5) {
-				for (int tick = timeout;; --tick) {
-					fprintf(stderr, "[ERR] Retrying in %ds \r", tick);
-					std::this_thread::sleep_for(std::chrono::seconds(1));
-					if (tick == 0)
-						break;
-				}
-				if ((g = cDiscord::GetGatewayInfo(m_http_auth))) {
-					fputc('\n', stderr);
-					break;
-				}
-				if (timeout > 10) {
-					fputc('\n', stderr);
-					cUtils::PrintErr("Exiting...");
-					return;
-				}
+		for (int timeout = 5;; timeout += 5) {
+			uchError error;
+			g = cDiscord::GetGatewayInfo(m_http_auth, error);
+			if (error) {
+				cUtils::PrintErr("Couldn't retrieve gateway info");
+				cUtils::PrintErr("Code   : %d", error->GetCode());
+				cUtils::PrintErr("Message: %s", error->GetMessage());
+				return;
 			}
-		}
-		
-		if (g->GetError())
-			cUtils::PrintErr("Couldn't retrieve gateway info. %s", g->GetError()->GetMessage());
-		else {
-			/* Prepare url string */
-			sprintf(url, "%s/?v=%d&encoding=json", g->GetUrl(), DISCORD_API_VERSION);
-			
-			/* Create a websocket */
-			cWebsocket websocket;
-			m_pWebsocket = &websocket;
-			
-			websocket.SetOnMessage([this](cWebsocket* ws, void* data, size_t size) -> bool {
-				try {
-					/* Parse message as a JSON */
-					json::monotonic_resource mr;
-					json::stream_parser p(&mr);
-					p.write(reinterpret_cast<char*>(data), size);
-					
-					/* Create event object from JSON */
-					cEvent event(p.release());
-					
-					/* Update event sequence */
-					SetLastSequence(event.GetSequence());
-					//cUtils::PrintLog("%.*s", size, data);
-					
-					/* Handle event */
-					return OnEvent(&event);
-				}
-				catch (const std::exception& e) {
-					cUtils::PrintErr("Couldn't read incoming event. %s", e.what());
-					return false;
-				}
-			}).Run(url);
-			StopHeartbeating();
-		}
-		
-		cDiscord::CloseHandle(g);
+			if (g) break;
+
+			if (timeout > 15) {
+				fputc('\n', stderr);
+				return;
+			}
+			if (timeout < 10) cUtils::PrintErr("Couldn't retrieve gateway info");
+			int tick = timeout;
+			do {
+				fprintf(stderr, "[ERR] Retrying in %ds \r", tick);
+				std::this_thread::sleep_for(std::chrono::seconds(1));
+			} while (tick--);
+		};
+
+		/* Prepare url string */
+		sprintf(url, "%s/?v=%d&encoding=json", g->GetUrl(), DISCORD_API_VERSION);
+
+		/* Create a websocket */
+		cWebsocket websocket;
+		m_pWebsocket = &websocket;
+		websocket.SetOnMessage([this](cWebsocket* ws, void* data, size_t size) -> bool {
+			try {
+				/* Parse message as a JSON */
+				json::monotonic_resource mr;
+				json::stream_parser p(&mr);
+				p.write(reinterpret_cast<char*>(data), size);
+
+				/* Create event object from JSON */
+				cEvent event(p.release());
+
+				/* Update event sequence */
+				SetLastSequence(event.GetSequence());
+				//cUtils::PrintLog("%.*s", size, data);
+
+				/* Handle event */
+				return OnEvent(&event);
+			}
+			catch (const std::exception& e) {
+				cUtils::PrintErr("Couldn't read incoming event. %s", e.what());
+				return false;
+			}
+		}).Run(url);
+		StopHeartbeating();
 	}
 }

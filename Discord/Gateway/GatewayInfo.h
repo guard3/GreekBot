@@ -1,15 +1,15 @@
 #pragma once
 #ifndef _GREEKBOT_GATEWAYINFO_H_
 #define _GREEKBOT_GATEWAYINFO_H_
-#include "JsonError.h"
+#include "Error.h"
 
 class cSessionStartLimit final {
 private:
 	int m_values[4];
 	
 public:
-	/* Construct a session_start_object from a gateway JSON - throws exceptions */
-	cSessionStartLimit(const json::value& v) : m_values {
+	/* Construct from a JSON - throws exceptions */
+	explicit cSessionStartLimit(const json::value& v) : m_values {
 		static_cast<int>(v.at("total"          ).as_int64()),
 		static_cast<int>(v.at("remaining"      ).as_int64()),
 		static_cast<int>(v.at("reset_after"    ).as_int64()),
@@ -17,34 +17,37 @@ public:
 	} {}
 	
 	/* Attributes */
-	int GetTotal()          const { return m_values[0]; }
-	int GetRemaining()      const { return m_values[1]; }
-	int GetResetAfter()     const { return m_values[2]; }
-	int GetMaxConcurrency() const { return m_values[3]; }
+	[[nodiscard]] int GetTotal()          const { return m_values[0]; }
+	[[nodiscard]] int GetRemaining()      const { return m_values[1]; }
+	[[nodiscard]] int GetResetAfter()     const { return m_values[2]; }
+	[[nodiscard]] int GetMaxConcurrency() const { return m_values[3]; }
 };
-typedef const cSessionStartLimit* hSessionStartLimit;
+typedef   hHandle<cSessionStartLimit>   hSessionStartLimit;
+typedef  chHandle<cSessionStartLimit>  chSessionStartLimit;
+typedef  uhHandle<cSessionStartLimit>  uhSessionStartLimit;
+typedef uchHandle<cSessionStartLimit> uchSessionStartLimit;
+typedef  shHandle<cSessionStartLimit>  shSessionStartLimit;
+typedef schHandle<cSessionStartLimit> schSessionStartLimit;
 
 class cGatewayInfo final {
 private:
-	hJsonError         error               = nullptr;
-	hSessionStartLimit session_start_limit = nullptr;
-	int                shards              = 0;
-	json::string       url;
+	std::string        url;
+	int                shards;
+	cSessionStartLimit session_start_limit;
 	
 public:
-	/* Get gateway info - throws exceptions */
-	cGatewayInfo(const json::value& v);
-	cGatewayInfo(const cGatewayInfo&);
-	cGatewayInfo(cGatewayInfo&&);
-	~cGatewayInfo();
-	
-	cGatewayInfo& operator=(cGatewayInfo);
-	
-	hJsonError         GetError()             const { return error;               }
-	hSessionStartLimit GetSessionStartLimit() const { return session_start_limit; }
-	const char*        GetUrl()               const { return url.c_str();         }
-	int                GetShards()            const { return shards;              }
-};
-typedef const cGatewayInfo* hGatewayInfo;
+	/* Construct from a JSON - throws exceptions */
+	explicit cGatewayInfo(const json::value& v) : url(v.at("url").as_string().c_str()), shards(static_cast<int>(v.at("shards").as_int64())), session_start_limit(v.at("session_start_limit")) {}
 
+	/* Attributes */
+	[[nodiscard]] const char         *GetUrl()               const { return url.c_str();          }
+	[[nodiscard]] int                 GetShards()            const { return shards;               }
+	[[nodiscard]] chSessionStartLimit GetSessionStartLimit() const { return &session_start_limit; }
+};
+typedef   hHandle<cGatewayInfo>   hGatewayInfo;
+typedef  chHandle<cGatewayInfo>  chGatewayInfo;
+typedef  uhHandle<cGatewayInfo>  uhGatewayInfo;
+typedef uchHandle<cGatewayInfo> uchGatewayInfo;
+typedef  shHandle<cGatewayInfo>  shGatewayInfo;
+typedef schHandle<cGatewayInfo> schGatewayInfo;
 #endif /* _GREEKBOT_GATEWAYINFO_H_ */

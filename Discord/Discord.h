@@ -16,10 +16,10 @@
 /* A helper class that performs HTTP requests to the API endpoint */
 class cDiscord final {
 private:
-	cDiscord() {}
+	cDiscord() = default;
 	
 public:
-	static hGatewayInfo GetGatewayInfo(const char* http_auth);
+	static uchGatewayInfo GetGatewayInfo(const char* http_auth, uchError& error);
 	static void RespondToInteraction(const char* http_auth, const char* interaction_id, const char* interaction_token, const std::string& data);
 	
 	template<typename H>
