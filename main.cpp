@@ -6,28 +6,24 @@ class cGreekBot final : public cBot {
 private:
 	
 	void OnInteraction_avatar(chInteraction interaction) {
-		char avatar_url[200];
-		if (interaction->GetData()->Options.empty()) {
+		auto data = interaction->GetData();
+
+		chUser user;
+		if (data->Options.empty()) {
 			/* If no option is provided, use sender's avatar */
-			strcpy(avatar_url, interaction->GetMember()->GetUser()->GetAvatarUrl());
+			user = interaction->GetUser() ? interaction->GetUser() : interaction->GetMember()->GetUser();
 		}
 		else {
 			/* Otherwise, get "user" option avatar */
-			auto opt = interaction->GetData()->Options[0];
-			if (0 == strcmp(opt->GetName(), "user")) {
-				if (opt->GetType() == APP_COMMAND_USER) {
-					auto user_id = opt->GetValue<APP_COMMAND_USER>();
-					auto user = interaction->GetData()->GetResolvedData()->Users[user_id];
-					strcpy(avatar_url, user->GetAvatarUrl());
-				}
-				else return;
-			}
-			else return;
+			auto option = data->Options[0];
+			if (0 != strcmp(option->GetName(), "user")) return;
+			if (option->GetType() != APP_COMMAND_USER) return;
+			user = option->GetValue<APP_COMMAND_USER>();
 		}
 		
 		char d[512];
 		// TODO: response class
-		sprintf(d, "{\"type\":4,\"data\":{\"content\":\"%s\"}}", avatar_url);
+		sprintf(d, R"({"type":4,"data":{"content":"%s"}})", user->GetAvatarUrl());
 		cDiscord::RespondToInteraction(m_http_auth, interaction->GetId()->ToString(), interaction->GetToken(), d);
 	}
 	
