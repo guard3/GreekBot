@@ -3,6 +3,8 @@
 #define _GREEKBOT_DISCORD_H_
 #include "json.h"
 #include "GatewayInfo.h"
+#include "Interaction.h"
+#include "InteractionResponse.h"
 
 #define _STR(x) #x
 #define STR(x) _STR(x)
@@ -20,10 +22,7 @@ private:
 	
 public:
 	static uchGatewayInfo GetGatewayInfo(const char* http_auth, uchError& error);
-	static void RespondToInteraction(const char* http_auth, const char* interaction_id, const char* interaction_token, const std::string& data);
-	
-	template<typename H>
-	static void CloseHandle(H h) { delete h; }
+	static void RespondToInteraction(const char *http_auth, const char *interaction_id, const char *interaction_token, const std::string &data);
 };
 
 #endif /* _GREEKBOT_DISCORD_H_*/

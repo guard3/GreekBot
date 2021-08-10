@@ -1,6 +1,7 @@
 #include "Bot.h"
 #include "Discord.h"
 #include "Utils.h"
+#include "InteractionResponse.h"
 
 class cGreekBot final : public cBot {
 private:
@@ -20,11 +21,9 @@ private:
 			if (option->GetType() != APP_COMMAND_USER) return;
 			user = option->GetValue<APP_COMMAND_USER>();
 		}
-		
-		char d[512];
-		// TODO: response class
-		sprintf(d, R"({"type":4,"data":{"content":"%s"}})", user->GetAvatarUrl());
-		cDiscord::RespondToInteraction(m_http_auth, interaction->GetId()->ToString(), interaction->GetToken(), d);
+
+		cInteractionResponse<INTERACTION_CALLBACK_CHANNEL_MESSAGE_WITH_SOURCE> r(user->GetAvatarUrl());
+		RespondToInteraction(interaction, r);
 	}
 	
 	void OnInteractionCreate(chInteraction interaction) override {

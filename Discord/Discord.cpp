@@ -49,7 +49,7 @@ void cDiscord::RespondToInteraction(const char *http_auth, const char *interacti
 			/* Perform SSL handshake */
 			stream.handshake(ssl::stream_base::client);
 			
-			/* Make the GET HTTP request */
+			/* Make the POST HTTP request */
 			http::request<http::string_body> request(http::verb::post, path, 11);
 			request.set(http::field::host, DISCORD_API_HOST);
 			request.set(http::field::user_agent, "GreekBot");
@@ -69,5 +69,5 @@ void cDiscord::RespondToInteraction(const char *http_auth, const char *interacti
 			stream.shutdown(e);
 		}
 	}
-	catch (const std::exception&) {}
+	catch (...) {}
 }
