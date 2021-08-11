@@ -1,11 +1,8 @@
 #include "Bot.h"
-#include "Discord.h"
-#include "Utils.h"
-#include "InteractionResponse.h"
+#include "Component.h"
 
 class cGreekBot final : public cBot {
 private:
-	
 	void OnInteraction_avatar(chInteraction interaction) {
 		auto data = interaction->GetData();
 
@@ -25,13 +22,24 @@ private:
 		cInteractionResponse<INTERACTION_CALLBACK_CHANNEL_MESSAGE_WITH_SOURCE> r(user->GetAvatarUrl());
 		RespondToInteraction(interaction, r);
 	}
+
+	void OnInteraction_role(chInteraction interaction) {
+		cInteractionResponse<INTERACTION_CALLBACK_CHANNEL_MESSAGE_WITH_SOURCE> r("Test");
+		r.SetComponent(cButton<BUTTON_STYLE_DANGER>("meow", "WOOF")); // TEST
+		std::cout << r.ToJson() << std::endl;
+		RespondToInteraction(interaction, r);
+	}
 	
 	void OnInteractionCreate(chInteraction interaction) override {
 		switch (interaction->GetData()->GetCommandId()->ToInt()){
 			case 870286903545589840:
 				/* avatar */
 				OnInteraction_avatar(interaction);
-				
+				break;
+			case 874634186374414356:
+				/* role */
+				OnInteraction_role(interaction);
+				break;
 			default:
 				break;
 		}
@@ -40,8 +48,17 @@ private:
 public:
 	cGreekBot(const char* token) : cBot(token) {}
 };
-
+#include <iostream>
 int main(int argc, const char** argv) {
+	{
+		cActionRow meow {
+			cButton<BUTTON_STYLE_DANGER>("meow", "WOOF"),
+			cButton<BUTTON_STYLE_LINK>("https://boo.com/a.png", "kek"),
+			cSelectMenu(),
+			cButton<BUTTON_STYLE_SECONDARY>("a", "a")
+		};
+		std::cout << meow.ToJson() << std::endl;
+	}
 	cGreekBot(argv[1]).Run();
 	return 0;
 }

@@ -2,6 +2,7 @@
 #ifndef _GREEKBOT_INTERACTIONRESPONSE_H_
 #define _GREEKBOT_INTERACTIONRESPONSE_H_
 #include "Types.h"
+#include "Component.h"
 
 enum eInteractionCallbackType {
 	INTERACTION_CALLBACK_PONG = 1,                                 // ACK a Ping
@@ -14,9 +15,9 @@ enum eInteractionCallbackType {
 template<eInteractionCallbackType t>
 class cInteractionResponse final {
 public:
-	std::string ToJsonString() const {
+	[[nodiscard]] std::string ToJsonString() const {
 		std::string result(R"({"type": })");
-		result[8] = static_cast<char>(t) + ' ';
+		result[8] = t + '0';
 		return result;
 	}
 };
@@ -30,6 +31,7 @@ private:
 	// allowed_mentions
 	bool ephemeral = false;
 	// components
+	cActionRow meow;
 
 public:
 	cInteractionResponse() = default;
@@ -49,24 +51,32 @@ public:
 		return *this;
 	}
 
-	std::string ToJsonString() const {
+	template<eButtonStyle s>
+	cInteractionResponse& SetComponent(const cButton<s>& b) {
+		meow = cActionRow { b };
+		return *this;
+	}
+
+	[[nodiscard]] json::value ToJson() const {
 		json::object obj;
 		obj["type"] = static_cast<int>(INTERACTION_CALLBACK_CHANNEL_MESSAGE_WITH_SOURCE);
-		{
-			json::object data;
-			if (tts)
-				data["tts"] = true;
-			if (!content.empty())
-				data["content"] = content;
-			if (ephemeral)
-				data["flags"] = 0x40;
-			if (!data.empty())
-				obj["data"] = data;
-		}
-		std::stringstream ss;
-		ss << obj;
-		return ss.str();
+		json::object data;
+		if (tts)
+			data["tts"] = true;
+		if (!content.empty())
+			data["content"] = content;
+		if (ephemeral)
+			data["flags"] = 0x40;
+		json::array components;
+		components.push_back(meow.ToJson());
+		data["components"] = components;
+		if (!data.empty())
+			obj["data"] = data;
+
+		return obj;
 	}
+
+	[[nodiscard]] std::string ToJsonString() const { return (std::stringstream() << ToJson()).str(); }
 };
 
 #endif /* _GREEKBOT_INTERACTIONRESPONSE_H_ */
