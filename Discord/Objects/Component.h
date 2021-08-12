@@ -16,7 +16,7 @@ enum eButtonStyle {
 	BUTTON_STYLE_DANGER,
 	BUTTON_STYLE_LINK
 };
-#include <iostream>
+
 class cComponent {
 private:
 	eComponentType type;
@@ -27,12 +27,12 @@ public:
 
 	[[nodiscard]] eComponentType GetType() const { return type; }
 
-	[[nodiscard]] virtual json::value ToJson() const {
+	[[nodiscard]] virtual json::object ToJson() const {
 		json::object obj;
 		obj["type"] = static_cast<int>(type);
 		return obj;
 	};
-	[[nodiscard]] virtual std::string ToJsonString() const { return (std::stringstream() << ToJson()).str(); }
+	[[nodiscard]] std::string ToJsonString() const { return (std::stringstream() << ToJson()).str(); }
 };
 typedef   hHandle<cComponent>   hComponent;
 typedef  chHandle<cComponent>  chComponent;
@@ -40,11 +40,6 @@ typedef  uhHandle<cComponent>  uhComponent;
 typedef uchHandle<cComponent> uchComponent;
 typedef  shHandle<cComponent>  shComponent;
 typedef schHandle<cComponent> schComponent;
-
-class cButtonw : public cComponent {
-public:
-	cButtonw() : cComponent(COMPONENT_BUTTON) {}
-};
 
 class _Button : public cComponent {
 protected:
@@ -59,7 +54,9 @@ public:
 	_Button(eButtonStyle s) : cComponent(COMPONENT_BUTTON), style(s) {}
 	_Button(eButtonStyle s, const std::string& label) : cComponent(COMPONENT_BUTTON), style(s), label(label) {}
 
-	[[nodiscard]] json::value ToJson() const override {
+	[[nodiscard]] eButtonStyle GetStyle() const { return style; }
+
+	[[nodiscard]] json::object ToJson() const override {
 		json::object obj;
 		obj["type"] = static_cast<int>(GetType());
 		obj["style"] = static_cast<int>(style);
@@ -71,7 +68,6 @@ public:
 			obj["url"] = url;
 		return obj;
 	}
-	[[nodiscard]] std::string ToJsonString() const override { return (std::stringstream() << ToJson()).str(); }
 };
 
 template<eButtonStyle s>
@@ -88,87 +84,119 @@ public:
 	cButton(const std::string& url, const std::string& label) : cButton(url) { this->label = label; }
 };
 
-class cSelectMenu final : public cComponent {
+class cSelectOption final {
+private:
+	std::string label;
+	std::string value;
+	std::string description;
+	// emoji
+
 public:
-	cSelectMenu() : cComponent(COMPONENT_SELECT_MENU) {}
+	cSelectOption(const char* label, const char* value, const char* description = nullptr) :
+	label(label ? label : std::string()),
+	value(value ? value : std::string()),
+	description(description ? description : std::string()) {}
+
+	[[nodiscard]] json::value ToJson() const {
+		json::object obj;
+		if (!label.empty())
+			obj["label"] = label;
+		if (!value.empty())
+			obj["value"] = value;
+		if (!description.empty())
+			obj["description"] = description;
+		return obj;
+	}
+};
+
+class cSelectMenu final : public cComponent {
+private:
+	std::string custom_id;
+	std::string placeholder;
+	std::vector<cSelectOption> options;
+
+public:
+	template<typename... Args>
+	explicit cSelectMenu(const char* custom_id, Args... opts) : cComponent(COMPONENT_SELECT_MENU), custom_id(custom_id ? custom_id : std::string()), options{ opts... } {}
+	template<typename... Args>
+	cSelectMenu(const char* custom_id, const char* placeholder, Args... opts) : cSelectMenu(custom_id, opts...) { if (placeholder) this->placeholder = placeholder; }
+	~cSelectMenu() override = default;
+
+	[[nodiscard]] json::object ToJson() const override {
+		json::object obj = cComponent::ToJson();
+		if (!custom_id.empty())
+			obj["custom_id"] = custom_id;
+		if (!placeholder.empty())
+			obj["placeholder"] = placeholder;
+		if (!options.empty()) {
+			json::array opts;
+			opts.reserve(options.size());
+			for (auto& o : options)
+				opts.push_back(o.ToJson());
+			obj["options"] = std::move(opts);
+		}
+		return obj;
+	}
 };
 
 class cActionRow : public cComponent {
 private:
-	template<eButtonStyle s>
-	void add_components(const cButton<s>& component) {
-		const_cast<std::vector<chComponent>&>(Components).push_back(new cButton(component));
-	}
-	void add_components(const cSelectMenu& component) {
-		const_cast<std::vector<chComponent>&>(Components).push_back(new cSelectMenu(component));
+	void populate_components() {}
+	template<eButtonStyle s, typename... Args>
+	void populate_components(const cButton<s>& b, Args... bb) {
+		const_cast<std::vector<chComponent>&>(Components).push_back(new cButton<s>(b));
+		populate_components(bb...);
 	}
 	template<eButtonStyle s, typename... Args>
-	void add_components(const cButton<s>& component, const Args&... components) {
-		add_components(component);
-		add_components(components...);
-	}
-	template<typename... Args>
-	void add_components(const cSelectMenu& component, const Args&... components) {
-		add_components(component);
-		add_components(components...);
+	void populate_components(cButton<s>&& b, Args... bb) {
+		const_cast<std::vector<chComponent>&>(Components).push_back(new cButton<s>(std::move(b)));
+		populate_components(bb...);
 	}
 
 public:
 	const std::vector<chComponent> Components;
 
-	cActionRow() : cComponent(COMPONENT_ACTION_ROW) {}
-	template<typename... Args>
-	explicit cActionRow(const Args&... components) : cActionRow() {
-		const_cast<std::vector<chComponent>&>(Components).reserve(sizeof...(components));
-		add_components(components...);
-	}
+	template<typename... Args, typename = std::enable_if_t<(sizeof...(Args) < 6)>>
+	explicit cActionRow(Args... buttons) : cComponent(COMPONENT_ACTION_ROW) { populate_components(buttons...); }
+	explicit cActionRow(const cSelectMenu&  m) : cComponent(COMPONENT_ACTION_ROW), Components{ new cSelectMenu(m) } {}
+	explicit cActionRow(      cSelectMenu&& m) : cComponent(COMPONENT_ACTION_ROW), Components{ new cSelectMenu(m) } {}
+
 	cActionRow(const cActionRow& o) : cComponent(o.GetType()) {
-		auto& c = const_cast<std::vector<chComponent>&>(Components);
-		c.reserve(o.Components.size());
-		for (chComponent p : c) {
-			switch (p->GetType()) {
+		auto& components = const_cast<std::vector<chComponent>&>(Components);
+		components.reserve(o.Components.size());
+		for (chComponent c : o.Components) {
+			switch (c->GetType()) {
 				case COMPONENT_ACTION_ROW:
-					c.push_back(new cActionRow(*dynamic_cast<const cActionRow*>(p)));
+					components.push_back(new cActionRow(*dynamic_cast<const cActionRow*>(c)));
+					break;
 				case COMPONENT_BUTTON:
+					components.push_back(new _Button(*dynamic_cast<const _Button*>(c)));
+					break;
 				case COMPONENT_SELECT_MENU:
-					// TODO: TBA
+					components.push_back(new cSelectMenu(*dynamic_cast<const cSelectMenu*>(c)));
 					break;
 			}
 		}
 	}
-	cActionRow(cActionRow&& o)  noexcept : cComponent(o.GetType()), Components(std::move(const_cast<std::vector<chComponent>&>(o.Components))) {}
-	~cActionRow() override { for (chComponent p : Components) delete p; }
+	cActionRow(cActionRow&& o) noexcept : cComponent(o.GetType()), Components(std::move(const_cast<std::vector<chComponent>&>(o.Components))) {}
+	~cActionRow() override { for (chComponent c : Components) delete c; }
 
 	cActionRow& operator=(cActionRow o) {
 		const_cast<std::vector<chComponent>&>(Components) = std::move(const_cast<std::vector<chComponent>&>(o.Components));
 		return *this;
 	}
 
-	template<typename Arg>
-	cActionRow& AddComponent(const Arg& component) {
-		add_components(component);
-		return *this;
-	}
-	template<typename... Args>
-	cActionRow& AddComponents(const Args&... components) {
-		add_components(components...);
-		return *this;
-	}
-
-	[[nodiscard]] json::value ToJson() const override {
-		json::object obj;
-		obj["type"] = static_cast<int>(GetType());
+	[[nodiscard]] json::object ToJson() const override {
+		json::object obj = cComponent::ToJson();
 		if (!Components.empty()) {
 			json::array components;
 			components.reserve(Components.size());
-			for (chComponent p : Components)
-				components.push_back(p->ToJson());
-			obj["components"] = components;
+			for (chComponent c : Components)
+				components.push_back(c->ToJson());
+			obj["components"] = std::move(components);
 		}
 		return obj;
 	}
-
-	[[nodiscard]] std::string ToJsonString() const override { return (std::stringstream() << ToJson()).str(); }
 };
 typedef   hHandle<cActionRow>   hActionRow;
 typedef  chHandle<cActionRow>  chActionRow;

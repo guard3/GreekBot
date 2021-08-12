@@ -30,13 +30,27 @@ private:
 	// embeds
 	// allowed_mentions
 	bool ephemeral = false;
-	// components
-	cActionRow meow;
+	std::vector<cActionRow> components;
+
+	void populate_components() {}
+	template<typename... Args>
+	void populate_components(const cActionRow& c, Args... cc) {
+		components.push_back(c);
+		populate_components(cc...);
+	}
+	template<typename... Args>
+	void populate_components(cActionRow&& c, Args... cc) {
+		components.push_back(std::move(c));
+		populate_components(cc...);
+	}
 
 public:
-	cInteractionResponse() = default;
+	template<typename... Args>
+	explicit cInteractionResponse(Args... actionRows) : components{ actionRows... } {}
+
 	// TODO: Variadic arguments to support embeds as well
-	cInteractionResponse(const std::string& str) : content(str) {}
+	template<typename... Args>
+	explicit cInteractionResponse(const char* str, Args... actionRows) : content(str), components{ actionRows... } {}
 
 	cInteractionResponse& SetContent(const std::string& str) {
 		content = str;
@@ -51,31 +65,29 @@ public:
 		return *this;
 	}
 
-	template<eButtonStyle s>
-	cInteractionResponse& SetComponent(const cButton<s>& b) {
-		meow = cActionRow { b };
-		return *this;
-	}
-
 	[[nodiscard]] json::value ToJson() const {
 		json::object obj;
 		obj["type"] = static_cast<int>(INTERACTION_CALLBACK_CHANNEL_MESSAGE_WITH_SOURCE);
-		json::object data;
-		if (tts)
-			data["tts"] = true;
-		if (!content.empty())
-			data["content"] = content;
-		if (ephemeral)
-			data["flags"] = 0x40;
-		json::array components;
-		components.push_back(meow.ToJson());
-		data["components"] = components;
-		if (!data.empty())
-			obj["data"] = data;
-
+		{
+			json::object data;
+			if (tts)
+				data["tts"] = true;
+			if (!content.empty())
+				data["content"] = content;
+			if (ephemeral)
+				data["flags"] = 0x40;
+			if (!components.empty()) {
+				json::array a;
+				a.reserve(components.size());
+				for (auto& c : components)
+					a.push_back(c.ToJson());
+				data["components"] = std::move(a);
+			}
+			if (!data.empty())
+				obj["data"] = std::move(data);
+		}
 		return obj;
 	}
-
 	[[nodiscard]] std::string ToJsonString() const { return (std::stringstream() << ToJson()).str(); }
 };
 
