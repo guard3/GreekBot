@@ -32,8 +32,31 @@ value([](const json::value& v) {
 	catch (...) {}
 }
 
-cInteractionData::cInteractionData(const json::value &v) : id(v.at("id")), name(v.at("name").as_string().c_str()) {
+cInteractionData::cInteractionData(const json::value &v) {
 	if (auto o = v.if_object()) {
+		/* Initialize id */
+		if (auto c = o->if_contains("id")) {
+			if (auto s = c->if_string())
+				id = new cSnowflake(s->c_str());
+		}
+
+		/* Initialize name */
+		if (auto c = o->if_contains("name")) {
+			if (auto s = c->if_string()) {
+				name = new char[s->size() + 1];
+				strcpy(name, s->c_str());
+			}
+		}
+
+		/* Initialize custom_id */
+		if (auto c = o->if_contains("custom_id")) {
+			if (auto s = c->if_string()) {
+				custom_id = new char[s->size() + 1];
+				strcpy(custom_id, s->c_str());
+			}
+		}
+
+		/* Initialize options */
 		const json::value* r = o->if_contains("resolved");
 		auto& opt = const_cast<std::vector<chInteractionDataOption>&>(Options);
 		try {
@@ -48,6 +71,24 @@ cInteractionData::cInteractionData(const json::value &v) : id(v.at("id")), name(
 		catch (...) {
 			options.clear();
 			opt.clear();
+		}
+
+		/* Initialize values */
+		if (auto c = o->if_contains("values")) {
+			auto& val = const_cast<std::vector<const char*>&>(Values);
+			try {
+				const json::array& a = c->as_array();
+				values.reserve(a.size());
+				val.reserve(a.size());
+				for (auto& value : a) {
+					values.emplace_back(value.as_string().c_str());
+					val.push_back(values.back().c_str());
+				}
+			}
+			catch (...) {
+				values.clear();
+				val.clear();
+			}
 		}
 	}
 }

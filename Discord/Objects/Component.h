@@ -2,6 +2,7 @@
 #ifndef _GREEKBOT_COMPONENT_H_
 #define _GREEKBOT_COMPONENT_H_
 #include "Types.h"
+#include "Emoji.h"
 
 enum eComponentType {
 	COMPONENT_ACTION_ROW = 1, // A container for other components
@@ -41,8 +42,8 @@ typedef uchHandle<cComponent> uchComponent;
 typedef  shHandle<cComponent>  shComponent;
 typedef schHandle<cComponent> schComponent;
 
-class _Button : public cComponent {
-protected:
+class cBaseButton : public cComponent {
+private:
 	eButtonStyle style;
 	std::string label;
 	// emoji
@@ -51,14 +52,13 @@ protected:
 	// disabled
 
 public:
-	_Button(eButtonStyle s) : cComponent(COMPONENT_BUTTON), style(s) {}
-	_Button(eButtonStyle s, const std::string& label) : cComponent(COMPONENT_BUTTON), style(s), label(label) {}
+	cBaseButton(eButtonStyle s, const char* l, const char* c, const char* u) : cComponent(COMPONENT_BUTTON), style(s), label(l ? l : std::string()), custom_id(c ? c : std::string()), url(u ? u : std::string()) {}
+	~cBaseButton() override = default;
 
 	[[nodiscard]] eButtonStyle GetStyle() const { return style; }
 
 	[[nodiscard]] json::object ToJson() const override {
-		json::object obj;
-		obj["type"] = static_cast<int>(GetType());
+		json::object obj = cComponent::ToJson();
 		obj["style"] = static_cast<int>(style);
 		if (!label.empty())
 			obj["label"] = label;
@@ -71,17 +71,15 @@ public:
 };
 
 template<eButtonStyle s>
-class cButton final : public _Button {
+class cButton final : public cBaseButton {
 public:
-	cButton(const std::string& custom_id) : _Button(s) { this->custom_id = custom_id;}
-	cButton(const std::string& custom_id, const std::string& label) : cButton(custom_id) { this->label = label; }
+	explicit cButton(const char* custom_id, const char* label = nullptr) : cBaseButton(s, label, custom_id, nullptr) {}
 };
 
 template<>
-class cButton<BUTTON_STYLE_LINK> final : public _Button {
+class cButton<BUTTON_STYLE_LINK> final : public cBaseButton {
 public:
-	cButton(const std::string& url) : _Button(BUTTON_STYLE_LINK) { this->url = url; }
-	cButton(const std::string& url, const std::string& label) : cButton(url) { this->label = label; }
+	explicit cButton(const char* url, const char* label = nullptr) : cBaseButton(BUTTON_STYLE_LINK, label, nullptr, url) {}
 };
 
 class cSelectOption final {
@@ -89,22 +87,36 @@ private:
 	std::string label;
 	std::string value;
 	std::string description;
-	// emoji
+	chEmoji     emoji;
 
 public:
-	cSelectOption(const char* label, const char* value, const char* description = nullptr) :
-	label(label ? label : std::string()),
-	value(value ? value : std::string()),
-	description(description ? description : std::string()) {}
+	cSelectOption(const char* label, const char* value, const char* description = nullptr) : label(label), value(value), description(description ? description : std::string()), emoji(nullptr) {}
+	cSelectOption(const char* label, const char* value, const cEmoji&  emoji) : label(label), value(value), emoji(new cEmoji(emoji)) {}
+	cSelectOption(const char* label, const char* value,       cEmoji&& emoji) : label(label), value(value), emoji(new cEmoji(std::forward<cEmoji>(emoji))) {}
+	cSelectOption(const char* label, const char* value, const char* description, const cEmoji&  emoji) : label(label), value(value), description(description), emoji(new cEmoji(emoji)) {}
+	cSelectOption(const char* label, const char* value, const char* description,       cEmoji&& emoji) : label(label), value(value), description(description), emoji(new cEmoji(std::forward<cEmoji>(emoji))) {}
+
+	cSelectOption(const cSelectOption& o) : label(o.label), value(o.value), description(o.description), emoji(o.emoji ? new cEmoji(*o.emoji) : nullptr) {}
+	cSelectOption(cSelectOption&& o) noexcept : label(std::move(o.label)), value(std::move(o.value)), description(std::move(o.description)), emoji(o.emoji) { o.emoji = nullptr; }
+	~cSelectOption() { delete emoji; }
+
+	cSelectOption& operator=(cSelectOption o) {
+		label = std::move(o.label);
+		value = std::move(o.value);
+		description = std::move(o.description);
+		emoji = o.emoji;
+		o.emoji = nullptr;
+		return *this;
+	}
 
 	[[nodiscard]] json::value ToJson() const {
 		json::object obj;
-		if (!label.empty())
-			obj["label"] = label;
-		if (!value.empty())
-			obj["value"] = value;
+		obj["label"] = label;
+		obj["value"] = value;
 		if (!description.empty())
 			obj["description"] = description;
+		if (emoji)
+			obj["emoji"] = emoji->ToJson();
 		return obj;
 	}
 };
@@ -117,9 +129,10 @@ private:
 
 public:
 	template<typename... Args>
-	explicit cSelectMenu(const char* custom_id, Args... opts) : cComponent(COMPONENT_SELECT_MENU), custom_id(custom_id ? custom_id : std::string()), options{ opts... } {}
+	explicit cSelectMenu(const char* custom_id, Args... opts) : cComponent(COMPONENT_SELECT_MENU), custom_id(custom_id ? custom_id : std::string()), options{ std::move(opts)... } {}
 	template<typename... Args>
 	cSelectMenu(const char* custom_id, const char* placeholder, Args... opts) : cSelectMenu(custom_id, opts...) { if (placeholder) this->placeholder = placeholder; }
+
 	~cSelectMenu() override = default;
 
 	[[nodiscard]] json::object ToJson() const override {
@@ -140,26 +153,13 @@ public:
 };
 
 class cActionRow : public cComponent {
-private:
-	void populate_components() {}
-	template<eButtonStyle s, typename... Args>
-	void populate_components(const cButton<s>& b, Args... bb) {
-		const_cast<std::vector<chComponent>&>(Components).push_back(new cButton<s>(b));
-		populate_components(bb...);
-	}
-	template<eButtonStyle s, typename... Args>
-	void populate_components(cButton<s>&& b, Args... bb) {
-		const_cast<std::vector<chComponent>&>(Components).push_back(new cButton<s>(std::move(b)));
-		populate_components(bb...);
-	}
-
 public:
 	const std::vector<chComponent> Components;
 
 	template<typename... Args, typename = std::enable_if_t<(sizeof...(Args) < 6)>>
-	explicit cActionRow(Args... buttons) : cComponent(COMPONENT_ACTION_ROW) { populate_components(buttons...); }
+	explicit cActionRow(Args... buttons)       : cComponent(COMPONENT_ACTION_ROW), Components{ new cBaseButton(std::move(buttons))... } {}
 	explicit cActionRow(const cSelectMenu&  m) : cComponent(COMPONENT_ACTION_ROW), Components{ new cSelectMenu(m) } {}
-	explicit cActionRow(      cSelectMenu&& m) : cComponent(COMPONENT_ACTION_ROW), Components{ new cSelectMenu(m) } {}
+	explicit cActionRow(      cSelectMenu&& m) : cComponent(COMPONENT_ACTION_ROW), Components{ new cSelectMenu(std::forward<cSelectMenu>(m)) } {}
 
 	cActionRow(const cActionRow& o) : cComponent(o.GetType()) {
 		auto& components = const_cast<std::vector<chComponent>&>(Components);
@@ -170,7 +170,7 @@ public:
 					components.push_back(new cActionRow(*dynamic_cast<const cActionRow*>(c)));
 					break;
 				case COMPONENT_BUTTON:
-					components.push_back(new _Button(*dynamic_cast<const _Button*>(c)));
+					components.push_back(new cBaseButton(*dynamic_cast<const cBaseButton*>(c)));
 					break;
 				case COMPONENT_SELECT_MENU:
 					components.push_back(new cSelectMenu(*dynamic_cast<const cSelectMenu*>(c)));

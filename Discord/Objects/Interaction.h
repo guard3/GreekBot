@@ -102,18 +102,22 @@ typedef schHandle<cInteractionDataOption> schInteractionDataOption;
 /* ================================================================================================= */
 class cInteractionData {
 private:
-	cSnowflake                          id;
-	std::string                         name;
+	chSnowflake id = nullptr;
+	char* name;
+	// type
 	std::vector<cInteractionDataOption> options;
-	// custom_id
+	char* custom_id;
 	// component_type
+	std::vector<std::string> values;
 public:
 	const std::vector<chInteractionDataOption> Options;
+	const std::vector<const char*> Values;
 
 	explicit cInteractionData(const json::value& v);
 
-	[[nodiscard]] chSnowflake GetCommandId()   const { return &id;          }
-	[[nodiscard]] const char* GetCommandName() const { return name.c_str(); }
+	[[nodiscard]] chSnowflake GetCommandId()   const { return id;        }
+	[[nodiscard]] const char* GetCommandName() const { return name;      }
+	[[nodiscard]] const char* GetCustomId()    const { return custom_id; }
 };
 typedef   hHandle<cInteractionData>   hInteractionData; // handle
 typedef  chHandle<cInteractionData>  chInteractionData; // const handle

@@ -2,6 +2,7 @@
 #ifndef _GREEKBOT_TYPES_H_
 #define _GREEKBOT_TYPES_H_
 #include "json.h"
+#include <cinttypes>
 
 /* === Handle types === */
 
@@ -36,7 +37,8 @@ private:
 	uint64_t m_int;     // The snowflake as a 64-bit integer
 	
 public:
-	explicit cSnowflake(const char* str) {
+	cSnowflake(uint64_t i) : m_int(i) { sprintf(m_str, "%" PRIu64, i); }
+	cSnowflake(const char* str) {
 		strcpy(m_str, str);
 		char* temp;
 		m_int = strtoull(str, &temp, 10);
