@@ -20,11 +20,18 @@ public:
 	
 	const char* GetToken() { return m_token; }
 
+	// TODO: Rate limit
+	void AddGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake& role_id);
+	void RemoveGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake& role_id);
+
+	void UpdateGuildMemberRoles(const cSnowflake& guild_id, const cSnowflake& user_id, const std::vector<chSnowflake>& role_ids);
+
 	template<eInteractionCallbackType t>
 	void RespondToInteraction(chInteraction interaction, const cInteractionResponse<t>& response) {
 		if (interaction)
 			RespondToInteraction(interaction->GetId()->ToString(), interaction->GetToken(), response.ToJsonString());
 	}
+	void EditInteractionResponse(chInteraction interaction, const cInteractionResponse<INTERACTION_CALLBACK_UPDATE_MESSAGE>& response);
 	
 	void Run();
 };

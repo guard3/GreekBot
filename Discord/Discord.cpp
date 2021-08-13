@@ -1,7 +1,7 @@
 #include "Discord.h"
 #include "Net.h"
 #include "beast.h"
-
+#include <iostream>
 uchGatewayInfo cDiscord::GetGatewayInfo(const char *http_auth, uchError& error) {
 	/* Reset error handle at first */
 	error.reset();
@@ -63,6 +63,8 @@ void cDiscord::RespondToInteraction(const char *http_auth, const char *interacti
 			beast::flat_buffer buffer;
 			http::response<http::string_body> res;
 			http::read(stream, buffer, res);
+
+			std::cout << "RESPONSE:" << std::endl << res.body() << std::endl;
 			
 			/* Shut down the stream */
 			beast::error_code e;

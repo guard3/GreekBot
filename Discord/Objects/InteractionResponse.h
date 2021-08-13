@@ -12,36 +12,50 @@ enum eInteractionCallbackType {
 	INTERACTION_CALLBACK_UPDATE_MESSAGE = 7                        // for components, edit the message the component was attached to
 };
 
-
-
 typedef int tInteractionFlag;
-inline constexpr tInteractionFlag INTERACTION_FLAG_TTS              = 1 << 0;
-inline constexpr tInteractionFlag INTERACTION_FLAG_DISABLE_MENTIONS = 1 << 1;
-inline constexpr tInteractionFlag INTERACTION_FLAG_EPHEMERAL        = 1 << 6;
+inline constexpr tInteractionFlag INTERACTION_FLAG_TTS               = 1 << 0;
+inline constexpr tInteractionFlag INTERACTION_FLAG_DISABLE_MENTIONS  = 1 << 1;
+inline constexpr tInteractionFlag INTERACTION_FLAG_REMOVE_COMPONENTS = 1 << 2;
+inline constexpr tInteractionFlag INTERACTION_FLAG_EPHEMERAL         = 1 << 6;
+
+class cBaseInteractionResponse {
+private:
+	eInteractionCallbackType type;
+
+public:
+	explicit cBaseInteractionResponse(eInteractionCallbackType t) : type(t) {}
+
+	[[nodiscard]] eInteractionCallbackType GetCallbackType() const { return type; }
+
+	[[nodiscard]] virtual json::object ToJson() const {
+		json::object obj;
+		obj["type"] = static_cast<int>(type);
+		return obj;
+	};
+	[[nodiscard]] std::string ToJsonString() const { return (std::stringstream() << ToJson()).str(); }
+};
 
 template<eInteractionCallbackType t>
-class cInteractionResponse final {
+class cInteractionResponse final : public cBaseInteractionResponse {
 private:
-	tInteractionFlag flags;
+	int flags;
 	std::string content;
 	// embeds
 	std::vector<cActionRow> components;
 
 public:
 	template<typename... Args>
-	explicit cInteractionResponse(Args... actionRows) : flags(0), components{ std::move(actionRows)... } {}
+	cInteractionResponse(const char* content, tInteractionFlag flags, Args... actionRows) : cBaseInteractionResponse(t), flags(flags), content(content ? content : std::string()), components{ std::move(actionRows)... } {}
+	template<typename... Args>
+	explicit cInteractionResponse(Args&&... actionRows) : cInteractionResponse(nullptr, 0, std::forward<Args>(actionRows)...) {}
+	template<typename... Args>
+	explicit cInteractionResponse(tInteractionFlag flags, Args&&... actionRows) : cInteractionResponse(nullptr, flags, std::forward<Args>(actionRows)...)  {}
+	template<typename... Args>
+	explicit cInteractionResponse(const char* content, Args&&... actionRows) : cInteractionResponse(content, 0, std::forward<Args>(actionRows)...) {}
 
-	// TODO: Variadic arguments to support embeds as well
-	template<typename... Args>
-	explicit cInteractionResponse(const char* content, Args... actionRows) : flags(0), content(content ? content : std::string()), components{ std::move(actionRows)... } {}
-	template<typename... Args>
-	explicit cInteractionResponse(tInteractionFlag flags, Args... actionRows) : flags(flags), components{ std::move(actionRows)... } {}
-	template<typename... Args>
-	cInteractionResponse(const char* content, tInteractionFlag flags, Args... actionRows) : flags(flags), content(content ? content : std::string()), components{ std::move(actionRows)... } {}
-
-	[[nodiscard]] json::value ToJson() const {
+	[[nodiscard]] json::object ToJson() const override {
 		json::object obj;
-		obj["type"] = static_cast<int>(INTERACTION_CALLBACK_CHANNEL_MESSAGE_WITH_SOURCE);
+		obj["type"] = static_cast<int>(t);
 		{
 			json::object data;
 			if (flags & INTERACTION_FLAG_TTS)
@@ -50,39 +64,33 @@ public:
 				data["content"] = content;
 			if (flags & INTERACTION_FLAG_EPHEMERAL)
 				data["flags"] = static_cast<int>(INTERACTION_FLAG_EPHEMERAL);
-			if (!components.empty()) {
+			if (components.empty()) {
+				if (flags & INTERACTION_FLAG_REMOVE_COMPONENTS)
+					data["components"] = json::array();
+			}
+			else {
 				json::array a;
 				a.reserve(components.size());
 				for (auto& c : components)
 					a.push_back(c.ToJson());
 				data["components"] = std::move(a);
 			}
-			if (!data.empty())
-				obj["data"] = std::move(data);
+			obj["data"] = std::move(data);
 		}
 		return obj;
 	}
-	[[nodiscard]] std::string ToJsonString() const { return (std::stringstream() << ToJson()).str(); }
 };
 
 template<>
-class cInteractionResponse<INTERACTION_CALLBACK_DEFERRED_UPDATE_MESSAGE> final {
+class cInteractionResponse<INTERACTION_CALLBACK_DEFERRED_UPDATE_MESSAGE> final : public cBaseInteractionResponse {
 public:
-	[[nodiscard]] std::string ToJsonString() const {
-		std::string result(R"({"type": })");
-		result[8] = INTERACTION_CALLBACK_DEFERRED_UPDATE_MESSAGE + '0';
-		return result;
-	}
+	cInteractionResponse() : cBaseInteractionResponse(INTERACTION_CALLBACK_DEFERRED_UPDATE_MESSAGE) {}
 };
 
 template<>
-class cInteractionResponse<INTERACTION_CALLBACK_DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE> final {
+class cInteractionResponse<INTERACTION_CALLBACK_DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE> final : public cBaseInteractionResponse {
 public:
-	[[nodiscard]] std::string ToJsonString() const {
-		std::string result(R"({"type": })");
-		result[8] = INTERACTION_CALLBACK_DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE + '0';
-		return result;
-	}
+	cInteractionResponse() : cBaseInteractionResponse(INTERACTION_CALLBACK_DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE) {}
 };
 
 #endif /* _GREEKBOT_INTERACTIONRESPONSE_H_ */
