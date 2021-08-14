@@ -28,7 +28,7 @@ private:
 	};
 
 	void OnInteraction_avatar(chInteraction interaction) {
-		auto data = interaction->GetData();
+		auto data = interaction->GetData<INTERACTION_APPLICATION_COMMAND>();
 
 		chUser user;
 		if (data->Options.empty()) {
@@ -39,8 +39,8 @@ private:
 			/* Otherwise, get "user" option avatar */
 			auto option = data->Options[0];
 			if (0 != strcmp(option->GetName(), "user")) return;
-			if (option->GetType() != APP_COMMAND_USER) return;
-			user = option->GetValue<APP_COMMAND_USER>();
+			if (option->GetType() != APP_COMMAND_OPT_USER) return;
+			user = option->GetValue<APP_COMMAND_OPT_USER>();
 		}
 
 		cInteractionResponse<INTERACTION_CALLBACK_CHANNEL_MESSAGE_WITH_SOURCE> r(user->GetAvatarUrl());
@@ -134,7 +134,7 @@ private:
 	void OnInteraction_MessageComponent(chInteraction interaction) {
 		/* Acknowledge interaction */
 		RespondToInteraction(interaction, cInteractionResponse<INTERACTION_CALLBACK_DEFERRED_UPDATE_MESSAGE>());
-		const char* value = interaction->GetData()->Values[0];
+		const char* value = interaction->GetData<INTERACTION_MESSAGE_COMPONENT>()->Values[0];
 		auto member = interaction->GetMember();
 
 		if (0 == strcmp(value, "opt_gr")) {
@@ -168,7 +168,7 @@ private:
 	
 	void OnInteractionCreate(chInteraction interaction) override {
 		if (interaction->GetType() == INTERACTION_APPLICATION_COMMAND) {
-			switch (interaction->GetData()->GetCommandId()->ToInt()) {
+			switch (interaction->GetData<INTERACTION_APPLICATION_COMMAND>()->GetCommandId()->ToInt()) {
 				case 870286903545589840:
 					/* avatar */
 					OnInteraction_avatar(interaction);

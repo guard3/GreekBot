@@ -2,15 +2,13 @@
 #ifndef _GREEKBOT_MEMBER_H_
 #define _GREEKBOT_MEMBER_H_
 #include "Types.h"
-#include "json.h"
 #include "User.h"
 #include <vector>
 
 class cMember final {
 private:
-	uchUser user;
-	uchHandle<std::string> nick;
-	std::vector<cSnowflake> roles;
+	hUser user;
+	char* nick;
 	// joined_at
 	// premium_since
 	// deaf
@@ -21,16 +19,16 @@ private:
 public:
 	const std::vector<chSnowflake> Roles;
 	
-	cMember(const json::value& v);
+	explicit cMember(const json::value&);
+	cMember(const cMember&);
+	cMember(cMember&& o) noexcept;
+	~cMember();
 	
-	chUser      GetUser()     const { return user.get(); }
-	const char* GetNickname() const { return nick ? nick->c_str() : nullptr; }
+	[[nodiscard]] chUser      GetUser()     const { return user; }
+	[[nodiscard]] const char* GetNickname() const { return nick; }
 };
 typedef   hHandle<cMember>   hMember;
 typedef  chHandle<cMember>  chMember;
 typedef  uhHandle<cMember>  uhMember;
 typedef uchHandle<cMember> uchMember;
-typedef  shHandle<cMember>  shMember;
-typedef schHandle<cMember> schMember;
-
 #endif /* _GREEKBOT_MEMBER_H_ */
