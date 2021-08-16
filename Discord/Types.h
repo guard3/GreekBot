@@ -4,41 +4,70 @@
 #include "json.h"
 #include <cinttypes>
 
-/* === Handle types === */
-
-/* Type hHandle; h: handle */
-template<typename T>
-using hHandle = typename std::remove_const<T>::type*;
-
-/* Type chHandle; ch: const handle */
-template<typename T>
-using chHandle = const T*; // ch: const handle
-
-/* Type uhHandle; uh: unique handle */
-template<typename T>
-using uhHandle = std::unique_ptr<typename std::remove_const<T>::type>;
-
-/* Type uchHandle; uch: unique const handle */
-template<typename T>
+/* ========== Handle types ========== */
+template<typename T> // handle
+using   hHandle = std::remove_const_t<T>*;
+template<typename T> // const handle
+using  chHandle = const T*; // ch: const handle
+template<typename T> // unique handle
+using  uhHandle = std::unique_ptr<std::remove_const_t<T>>;
+template<typename T> // unique const handle
 using uchHandle = std::unique_ptr<const T>;
-
-/* Type shHandle; sh: shared handle */
-template<typename T>
-using shHandle = std::shared_ptr<typename std::remove_const<T>::type>;
-
-/* Type schHandle; sch: shared const handle */
-template<typename T>
+template<typename T> // shared handle
+using  shHandle = std::shared_ptr<std::remove_const_t<T>>;
+template<typename T> // shared const handle
 using schHandle = std::shared_ptr<const T>;
 
-/* === Discord snowflake === */
+/* ========== Handle creation functions ========== */
+class cHandle final {
+private:
+	cHandle() = default;
+
+public:
+	template<typename T, typename... Args>
+	static uhHandle<T> MakeUnique(Args&&... args) { return std::make_unique<T>(std::forward<Args>(args)...); }
+	template<typename T, typename... Args>
+	static shHandle<T> MakeShared(Args&&... args) { return std::make_shared<T>(std::forward<Args>(args)...); }
+	template<typename T, typename... Args>
+	static uchHandle<T> MakeUniqueConst(Args&&... args) { return MakeUnique<T>(std::forward<Args>(args)...); }
+	template<typename T, typename... Args>
+	static schHandle<T> MakeSharedConst(Args&&... args) { return MakeShared<T>(std::forward<Args>(args)...); }
+
+	template<typename T, typename... Args>
+	static uhHandle<T> MakeUniqueNoEx(Args&&... args) {
+		try {
+			return MakeUnique<T>(std::forward<Args>(args)...);
+		}
+		catch (...) {
+			return uhHandle<T>();
+		}
+	}
+	template<typename T, typename... Args>
+	static shHandle<T> MakeSharedNoEx(Args&&... args) {
+		try {
+			return MakeShared<T>(std::forward<Args>(args)...);
+		}
+		catch (...) {
+			return shHandle<T>();
+		}
+	}
+	template<typename T, typename... Args>
+	static uchHandle<T> MakeUniqueConstNoEx(Args&&... args) { return MakeUniqueNoEx<T>(std::forward<Args>(args)...); }
+	template<typename T, typename... Args>
+	static schHandle<T> MakeSharedConstNoEx(Args&&... args) { return MakeSharedNoEx<T>(std::forward<Args>(args)...); }
+};
+
+/* ========== Discord snowflake ========== */
 class cSnowflake final {
 private:
 	char     m_str[24]{}; // The snowflake as a string
 	uint64_t m_int;     // The snowflake as a 64-bit integer
 	
 public:
-	cSnowflake(uint64_t i) : m_int(i) { sprintf(m_str, "%" PRIu64, i); }
-	cSnowflake(const char* str) {
+	typedef uint64_t tSnowflake;
+
+	cSnowflake(tSnowflake i) noexcept : m_int(i) { sprintf(m_str, "%" PRIu64, i); }
+	cSnowflake(const char* str) noexcept {
 		strcpy(m_str, str);
 		char* temp;
 		m_int = strtoull(str, &temp, 10);

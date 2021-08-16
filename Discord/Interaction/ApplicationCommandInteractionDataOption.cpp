@@ -1,62 +1,44 @@
 #include "Interaction.h"
 
-cApplicationCommandInteractionDataOption::cApplicationCommandInteractionDataOption(const json::value& v, const json::value* r) : type(static_cast<eApplicationCommandOptionType>(v.at("type").as_int64())) {
-	/* value to object */
-	auto& obj = v.as_object();
-	/* Initialize name */
-	auto& n = v.at("name").as_string();
-	name = new char[n.size() + 1];
-	strcpy(name, n.c_str());
-	/* Initialize value union */
+cApplicationCommandInteractionDataOption::cApplicationCommandInteractionDataOption(const json::value& v, const json::value* r) : name(v.at("name").as_string().c_str()), type(static_cast<eApplicationCommandOptionType>(v.at("type").as_int64())) {
 	memset(&value, 0, sizeof(value));
-	if (auto c = obj.if_contains("value")) {
-		switch (type) {
-			case APP_COMMAND_OPT_INTEGER:
-				if (auto x = c->if_int64()) value.v_int = static_cast<int>(*x);
-				break;
-			case APP_COMMAND_OPT_BOOLEAN:
-				if (auto x = c->if_bool()) value.v_bll = *x;
-				break;
-			case APP_COMMAND_OPT_NUMBER:
-				if (auto x = c->if_double()) value.v_dbl = *x;
-				break;
-			default:
-				if (auto s = c->if_string()) {
-					const char* val = s->c_str();
-					try {
-						switch (type) {
-							case APP_COMMAND_OPT_STRING:
-								value.v_str = new char[s->size() + 1];
-								strcpy(value.v_str, val);
-								break;
-							case APP_COMMAND_OPT_USER:
-								if (r) {
-									value.v_usr.v_usr = new cUser(r->at("users").at(val));
-									value.v_usr.v_mbr = new cMember(r->at("members").at(val));
-								}
-								break;
-							default:
-								if (r) value.v_sfl = new cSnowflake(val);
-								break;
-						}
-					}
-					catch (...) {}
-				}
-				break;
+	switch (type) {
+		case APP_COMMAND_OPT_SUB_COMMAND:
+		case APP_COMMAND_OPT_SUB_COMMAND_GROUP:
+			// TODO: parse options
+			break;
+		case APP_COMMAND_OPT_STRING: {
+			auto& s = v.at("value").as_string();
+			value.v_str = new char[s.size() + 1];
+			strcpy(value.v_str, s.c_str());
+			break;
 		}
-	}
-	else if (auto c = obj.if_contains("options")) {
-		//TODO: parse options
+		case APP_COMMAND_OPT_INTEGER:
+			value.v_int = static_cast<int>(v.at("value").as_int64());
+			break;
+		case APP_COMMAND_OPT_BOOLEAN:
+			value.v_bll = v.at("value").as_bool();
+			break;
+		case APP_COMMAND_OPT_NUMBER:
+			value.v_dbl = v.at("value").as_double();
+			break;
+		case APP_COMMAND_OPT_USER:
+			if (r) {
+				try {
+					auto s = v.at("value").as_string().c_str();
+					value.v_usr.v_usr = new cUser(r->at("users").at(s));
+					value.v_usr.v_mbr = new cMember(r->at("members").at(s));
+				}
+				catch (...) {}
+			}
+			break;
+		default:
+			value.v_sfl = new cSnowflake(v.at("value"));
+			break;
 	}
 }
 
-cApplicationCommandInteractionDataOption::cApplicationCommandInteractionDataOption(const cApplicationCommandInteractionDataOption& o) : name(nullptr), type(o.type) {
-	/* Initialize name */
-	if (o.name) {
-		name = new char[strlen(o.name) + 1];
-		strcpy(name, o.name);
-	}
-	/* Initialize value */
+cApplicationCommandInteractionDataOption::cApplicationCommandInteractionDataOption(const cApplicationCommandInteractionDataOption& o) : name(o.name), type(o.type) {
 	memcpy(&value, &o.value, sizeof(value));
 	switch (type) {
 		case APP_COMMAND_OPT_STRING:
@@ -66,10 +48,19 @@ cApplicationCommandInteractionDataOption::cApplicationCommandInteractionDataOpti
 			}
 			break;
 		case APP_COMMAND_OPT_USER:
-			if (o.value.v_usr.v_usr)
-				value.v_usr.v_usr = new cUser(*o.value.v_usr.v_usr);
-			if (o.value.v_usr.v_mbr)
-				value.v_usr.v_mbr = new cMember(*value.v_usr.v_mbr);
+			try {
+				if (o.value.v_usr.v_usr)
+					value.v_usr.v_usr = new cUser(*o.value.v_usr.v_usr);
+				if (o.value.v_usr.v_mbr)
+					value.v_usr.v_mbr = new cMember(*value.v_usr.v_mbr);
+			}
+			catch (const std::exception& e) {
+				delete value.v_usr.v_usr;
+				throw e;
+			}
+			catch (...) {
+				delete value.v_usr.v_usr;
+			}
 			break;
 		case APP_COMMAND_OPT_CHANNEL:
 		case APP_COMMAND_OPT_ROLE:
@@ -81,17 +72,12 @@ cApplicationCommandInteractionDataOption::cApplicationCommandInteractionDataOpti
 	}
 }
 
-cApplicationCommandInteractionDataOption::cApplicationCommandInteractionDataOption(cApplicationCommandInteractionDataOption&& o) noexcept : type(o.type) {
-	/* Move name */
-	name = o.name;
-	o.name = nullptr;
-	/* Move value */
+cApplicationCommandInteractionDataOption::cApplicationCommandInteractionDataOption(cApplicationCommandInteractionDataOption&& o) noexcept : name(std::move(o.name)), type(o.type) {
 	memcpy(&value, &o.value, sizeof(value));
 	memset(&o.value, 0, sizeof(o.value));
 }
 
 cApplicationCommandInteractionDataOption::~cApplicationCommandInteractionDataOption() {
-	delete[] name;
 	switch (type) {
 		case APP_COMMAND_OPT_STRING:
 			delete[] value.v_str;
@@ -110,13 +96,8 @@ cApplicationCommandInteractionDataOption::~cApplicationCommandInteractionDataOpt
 }
 
 cApplicationCommandInteractionDataOption& cApplicationCommandInteractionDataOption::operator=(cApplicationCommandInteractionDataOption o) {
-	/* Swap name */
-	char* n = name;
-	name = o.name;
-	o.name = n;
-	/* Copy type */
+	name.swap(o.name);
 	type = o.type;
-	/* Swap value */
 	switch (type) {
 		case APP_COMMAND_OPT_STRING:
 		case APP_COMMAND_OPT_USER:
