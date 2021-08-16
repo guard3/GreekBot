@@ -12,11 +12,13 @@ enum eInteractionCallbackType {
 	INTERACTION_CALLBACK_UPDATE_MESSAGE = 7                        // for components, edit the message the component was attached to
 };
 
-typedef int tInteractionFlag;
-inline constexpr tInteractionFlag INTERACTION_FLAG_TTS               = 1 << 0;
-inline constexpr tInteractionFlag INTERACTION_FLAG_DISABLE_MENTIONS  = 1 << 1;
-inline constexpr tInteractionFlag INTERACTION_FLAG_REMOVE_COMPONENTS = 1 << 2;
-inline constexpr tInteractionFlag INTERACTION_FLAG_EPHEMERAL         = 1 << 6;
+enum eInteractionFlag {
+	INTERACTION_FLAG_TTS               = 1 << 0,
+	INTERACTION_FLAG_DISABLE_MENTIONS  = 1 << 1,
+	INTERACTION_FLAG_REMOVE_COMPONENTS = 1 << 2,
+	INTERACTION_FLAG_EPHEMERAL         = 1 << 6
+};
+inline eInteractionFlag operator|(eInteractionFlag f1, eInteractionFlag f2) { return static_cast<eInteractionFlag>(static_cast<int>(f1) | static_cast<int>(f2)); }
 
 class cBaseInteractionResponse {
 private:
@@ -38,20 +40,20 @@ public:
 template<eInteractionCallbackType t>
 class cInteractionResponse final : public cBaseInteractionResponse {
 private:
-	int flags;
+	eInteractionFlag flags;
 	std::string content;
 	// embeds
 	std::vector<cActionRow> components;
 
 public:
 	template<typename... Args>
-	cInteractionResponse(const char* content, tInteractionFlag flags, Args... actionRows) : cBaseInteractionResponse(t), flags(flags), content(content ? content : std::string()), components{ std::move(actionRows)... } {}
+	cInteractionResponse(const char* content, eInteractionFlag flags, Args... actionRows) : cBaseInteractionResponse(t), flags(flags), content(content ? content : std::string()), components{ std::move(actionRows)... } {}
 	template<typename... Args>
-	explicit cInteractionResponse(Args&&... actionRows) : cInteractionResponse(nullptr, 0, std::forward<Args>(actionRows)...) {}
+	explicit cInteractionResponse(Args&&... actionRows) : cInteractionResponse(nullptr, static_cast<eInteractionFlag>(0), std::forward<Args>(actionRows)...) {}
 	template<typename... Args>
-	explicit cInteractionResponse(tInteractionFlag flags, Args&&... actionRows) : cInteractionResponse(nullptr, flags, std::forward<Args>(actionRows)...)  {}
+	explicit cInteractionResponse(eInteractionFlag flags, Args&&... actionRows) : cInteractionResponse(nullptr, flags, std::forward<Args>(actionRows)...)  {}
 	template<typename... Args>
-	explicit cInteractionResponse(const char* content, Args&&... actionRows) : cInteractionResponse(content, 0, std::forward<Args>(actionRows)...) {}
+	explicit cInteractionResponse(const char* content, Args&&... actionRows) : cInteractionResponse(content, static_cast<eInteractionFlag>(0), std::forward<Args>(actionRows)...) {}
 
 	[[nodiscard]] json::object ToJson() const override {
 		json::object obj;
