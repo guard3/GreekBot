@@ -22,6 +22,18 @@ void cBot::Run() {
 	}).Run();
 }
 
+void cBot::respond_to_interaction(chInteraction interaction, json::object &&obj) {
+	char path[300];
+	sprintf(path, "%s/interactions/%s/%s/callback", DISCORD_API_ENDPOINT, interaction->GetId()->ToString(), interaction->GetToken());
+	cNet::PostHttpsRequest(DISCORD_API_HOST, path, m_http_auth, obj);
+}
+
+void cBot::edit_interaction_response(chInteraction interaction, json::object &&obj) {
+	char path[512];
+	sprintf(path, "%s/webhooks/%s/%s/messages/@original", DISCORD_API_ENDPOINT, interaction->GetApplicationId()->ToString(), interaction->GetToken());
+	cNet::PatchHttpsRequest(DISCORD_API_HOST, path, m_http_auth, obj.at("data").as_object());
+}
+
 void cBot::AddGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake &role_id) {
 	char path[300];
 	sprintf(path, "%s/guilds/%s/members/%s/roles/%s", DISCORD_API_ENDPOINT, guild_id.ToString(), user_id.ToString(), role_id.ToString());
@@ -49,14 +61,4 @@ void cBot::UpdateGuildMemberRoles(const cSnowflake& guild_id, const cSnowflake& 
 	sprintf(path, "%s/guilds/%s/members/%s", DISCORD_API_ENDPOINT, guild_id.ToString(), user_id.ToString());
 	/* Perform http request */
 	cNet::PatchHttpsRequest(DISCORD_API_HOST, path, m_http_auth, obj);
-}
-
-void cBot::RespondToInteraction(const char *interaction_id, const char *token, const std::string &data) {
-	cDiscord::RespondToInteraction(m_http_auth, interaction_id, token, data);
-}
-
-void cBot::EditInteractionResponse(chInteraction interaction, const cInteractionResponse<INTERACTION_CALLBACK_UPDATE_MESSAGE> &response) {
-	char path[512];
-	sprintf(path, "%s/webhooks/%s/%s/messages/@original", DISCORD_API_ENDPOINT, interaction->GetApplicationId()->ToString(), interaction->GetToken());
-	cNet::PatchHttpsRequest(DISCORD_API_HOST, path, m_http_auth, response.ToJson().at("data").as_object());
 }

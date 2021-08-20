@@ -1,7 +1,6 @@
 #include "Discord.h"
 #include "Net.h"
-#include "beast.h"
-#include <iostream>
+
 uchGatewayInfo cDiscord::GetGatewayInfo(const char *http_auth, uchError& error) {
 	/* Reset error handle at first */
 	error.reset();
@@ -29,47 +28,4 @@ uchGatewayInfo cDiscord::GetGatewayInfo(const char *http_auth, uchError& error) 
 		catch (const std::exception&) {}
 		return uchGatewayInfo();
 	}
-}
-
-void cDiscord::RespondToInteraction(const char *http_auth, const char *interaction_id, const char *interaction_token, const std::string &data) {
-	try {
-		char path[300];
-		sprintf(path, DISCORD_API_ENDPOINT "/interactions/%s/%s/callback", interaction_id, interaction_token);
-		
-		net::io_context ioc;
-		ssl::context ctx(ssl::context::tlsv13_client);
-		
-		/* TODO: Fix certificates and shit */
-		//ctx.set_verify_mode(ssl::verify_peer);
-		
-		beast::ssl_stream<beast::tcp_stream> stream(ioc, ctx);
-		if (SSL_set_tlsext_host_name(stream.native_handle(), DISCORD_API_HOST)) {
-			beast::get_lowest_layer(stream).connect(tcp::resolver(ioc).resolve(DISCORD_API_HOST, "https"));
-			
-			/* Perform SSL handshake */
-			stream.handshake(ssl::stream_base::client);
-			
-			/* Make the POST HTTP request */
-			http::request<http::string_body> request(http::verb::post, path, 11);
-			request.set(http::field::host, DISCORD_API_HOST);
-			request.set(http::field::user_agent, "GreekBot");
-			request.set(http::field::authorization, http_auth);
-			request.set(http::field::content_type, "application/json");
-			request.set(http::field::content_length, std::to_string(data.length()));
-			request.body() = data;
-			http::write(stream, request);
-			
-			/* Read the request response */
-			beast::flat_buffer buffer;
-			http::response<http::string_body> res;
-			http::read(stream, buffer, res);
-
-			std::cout << "RESPONSE:" << std::endl << res.body() << std::endl;
-			
-			/* Shut down the stream */
-			beast::error_code e;
-			stream.shutdown(e);
-		}
-	}
-	catch (...) {}
 }

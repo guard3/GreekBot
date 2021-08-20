@@ -38,9 +38,8 @@ private:
 		else {
 			/* Otherwise, get "user" option avatar */
 			auto option = data->Options[0];
-			if (0 != strcmp(option->GetName(), "user")) return;
-			if (option->GetType() != APP_COMMAND_OPT_USER) return;
-			user = option->GetValue<APP_COMMAND_OPT_USER>();
+			if (!(user = option->GetValue<APP_COMMAND_OPT_USER>()))
+				return;
 		}
 
 		cInteractionResponse<INTERACTION_CALLBACK_CHANNEL_MESSAGE_WITH_SOURCE> r(user->GetAvatarUrl());
@@ -48,10 +47,7 @@ private:
 	}
 
 	void OnInteraction_role(chInteraction interaction) {
-		cInteractionResponse<INTERACTION_CALLBACK_CHANNEL_MESSAGE_WITH_SOURCE> r {
-			"Select a role depending on your greek level:",
-			INTERACTION_FLAG_EPHEMERAL,
-			cActionRow {
+		RespondToInteraction<INTERACTION_CALLBACK_CHANNEL_MESSAGE_WITH_SOURCE>(interaction, "Select a role depending on your greek level:", INTERACTION_FLAG_EPHEMERAL, cActionRow {
 				cSelectMenu {
 					"proficiency_role_menu",
 					"Choose an option...",
@@ -111,9 +107,9 @@ private:
 					"Don't know what to pick?"
 				}
 			}
-		};
-		std::cout << r.ToJsonString() << std::endl;
-		RespondToInteraction(interaction, r);
+		);
+		//std::cout << r.ToJsonString() << std::endl;
+		//RespondToInteraction(interaction, r);
 	}
 
 	void lmg_update_proficiency_role(chMember member, eLmgProficiencyRoleId proficiency_role) {
@@ -133,7 +129,7 @@ private:
 
 	void OnInteraction_MessageComponent(chInteraction interaction) {
 		/* Acknowledge interaction */
-		RespondToInteraction(interaction, cInteractionResponse<INTERACTION_CALLBACK_DEFERRED_UPDATE_MESSAGE>());
+		RespondToInteraction<INTERACTION_CALLBACK_DEFERRED_UPDATE_MESSAGE>(interaction);
 		const char* value = interaction->GetData<INTERACTION_MESSAGE_COMPONENT>()->Values[0];
 		auto member = interaction->GetMember();
 
@@ -162,8 +158,7 @@ private:
 			lmg_update_proficiency_role(member, LMG_PROFICIENCY_NON_LEARNER);
 		}
 		/* Edit original interaction message */
-		cInteractionResponse<INTERACTION_CALLBACK_UPDATE_MESSAGE> r("Role assigned!", INTERACTION_FLAG_EPHEMERAL | INTERACTION_FLAG_REMOVE_COMPONENTS);
-		EditInteractionResponse(interaction, r);
+		EditInteractionResponse(interaction, "Role assigned!", INTERACTION_FLAG_EPHEMERAL | INTERACTION_FLAG_REMOVE_COMPONENTS);
 	}
 	
 	void OnInteractionCreate(chInteraction interaction) override {

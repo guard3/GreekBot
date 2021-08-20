@@ -22,7 +22,6 @@ private:
 	
 public:
 	static uchGatewayInfo GetGatewayInfo(const char* http_auth, uchError& error);
-	static void RespondToInteraction(const char *http_auth, const char *interaction_id, const char *interaction_token, const std::string &data);
 };
 
 #endif /* _GREEKBOT_DISCORD_H_*/

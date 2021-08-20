@@ -198,6 +198,13 @@ bool cNet::DeleteHttpsRequest(const char* host, const char* path, const char* au
 	return false;
 }
 
+bool cNet::PostHttpsRequest(const char *host, const char *path, const char *auth, const json::object& obj) {
+	return https_request(http::verb::post, host, path, auth, "application/json", (std::stringstream() << obj).str());
+}
+bool cNet::PostHttpsRequest(const char *host, const char *path, const char *auth, json::object&& obj) {
+	return https_request(http::verb::post, host, path, auth, "application/json", (std::stringstream() << obj).str());
+}
+
 bool cNet::PatchHttpsRequest(const char *host, const char *path, const char *auth, const std::string &data) {
 	return https_request(http::verb::patch, host, path, auth, nullptr, data);
 }

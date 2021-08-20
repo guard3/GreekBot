@@ -9,6 +9,8 @@ private:
 	
 public:
 	static bool GetHttpsRequest(const char* host, const char* path, const char* auth, std::string& response);
+	static bool PostHttpsRequest(const char* host, const char* path, const char* auth, const json::object& obj);
+	static bool PostHttpsRequest(const char* host, const char* path, const char* auth, json::object&& obj);
 	static bool PutHttpsRequest(const char* host, const char* path, const char* auth);
 	static bool DeleteHttpsRequest(const char* host, const char* path, const char* auth);
 	static bool PatchHttpsRequest(const char* host, const char* path, const char* auth, const std::string& data);
