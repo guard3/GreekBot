@@ -108,8 +108,6 @@ private:
 				}
 			}
 		);
-		//std::cout << r.ToJsonString() << std::endl;
-		//RespondToInteraction(interaction, r);
 	}
 
 	void lmg_update_proficiency_role(chMember member, eLmgProficiencyRoleId proficiency_role) {
@@ -164,7 +162,7 @@ private:
 	void OnInteractionCreate(chInteraction interaction) override {
 		if (interaction->GetType() == INTERACTION_APPLICATION_COMMAND) {
 			switch (interaction->GetData<INTERACTION_APPLICATION_COMMAND>()->GetCommandId()->ToInt()) {
-				case 870286903545589840:
+				case 878391425568473098:
 					/* avatar */
 					OnInteraction_avatar(interaction);
 					break;
