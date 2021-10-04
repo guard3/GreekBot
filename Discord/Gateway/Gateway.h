@@ -9,7 +9,7 @@ class cWebsocket;
 
 class cGateway final {
 private:
-	char  m_http_auth[64] = "Bot ";          // The authorization paramerer for HTTP requests 'Bot token'
+	char  m_http_auth[64] = "Bot ";          // The authorization parameter for HTTP requests 'Bot token'
 	char  m_sessionId[40] = "";              // The current session id; used for resuming
 	char *m_token         = m_http_auth + 4; // The authentication token
 	
@@ -24,6 +24,7 @@ private:
 	void ResetSession();
 	
 	/* Data relating to heartbeating */
+	char m_heartbeat_payload[40] = R"({"op":1,"d":)";
 	struct {
 		std::thread thread;       // The heartbeating thread
 		std::mutex  mutex;        // Mutex for accessing 'acknowledged'
@@ -40,7 +41,7 @@ private:
 	bool Identify();
 	bool Resume();
 	
-	cWebsocket* m_pWebsocket;
+	cWebsocket* m_pWebsocket = nullptr;
 	
 	bool OnEvent(chEvent event);
 	

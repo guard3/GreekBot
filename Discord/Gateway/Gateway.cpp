@@ -31,30 +31,21 @@ void cGateway::ResetSession() {
 }
 
 bool cGateway::SendHeartbeat() {
-	/* Variables */
-	int               s; // The last event sequence
-	std::string       p; // The payload string
-	beast::error_code e; // The error code of websocket
-	
-	/* Prepare payload string */
-	p = "{\"op\":1,\"d\":";
-	if ((s = GetLastSequence())) {
-		//p.resize(30);
-		//int len = sprintf(p.data(), "{\"op\":1,\"d\":%d}", s);
-		//p.resize(len);
-		p += std::to_string(s);
+	volatile int sequence = GetLastSequence();
+	size_t size;
+	if (sequence)
+		size = 12 + sprintf(m_heartbeat_payload + 12, "%d}", sequence);
+	else {
+		strcpy(m_heartbeat_payload + 12, "null}");
+		size = 17;
 	}
-	else p += "null";
-	p += "}";
-	
-	/* Send payload */
+
 	m_heartbeat.mutex.lock();
 	m_heartbeat.acknowledged = false;
-	m_pWebsocket->Write(net::buffer(p), e);
+	bool result = size == m_pWebsocket->Write(m_heartbeat_payload, size);
 	m_heartbeat.mutex.unlock();
-	
-	/* Check for error */
-	return !static_cast<bool>(e);
+
+	return result;
 }
 
 bool cGateway::HeartbeatAcknowledged() {
@@ -108,29 +99,26 @@ void cGateway::StopHeartbeating() {
 }
 
 bool cGateway::Identify() {
-	/* Prepare payload string */
-	std::string s;
-	s.resize(200);
-	int len = sprintf(s.data(), "{\"op\":2,\"d\":{\"token\":\"%s\",\"intents\":%d,\"properties\":{\"$os\":\"%s\",\"$browser\":\"GreekBot\",\"$device\":\"GreekBot\"}}}", m_token, 513, cUtils::GetOS());
-	s.resize(len);
-	
-	/* Send payload */
-	beast::error_code e;
-	m_pWebsocket->Write(net::buffer(s), e);
-	return !static_cast<bool>(e);
+	bool result = false;
+	char* payload = reinterpret_cast<char*>(malloc(200));
+	if (payload) {
+		// TODO: Parametrize intents
+		int len = sprintf(payload, R"({"op":2,"d":{"token":"%s","intents":%d,"properties":{"$os":"%s","$browser":"GreekBot","$device":"GreekBot"}}})", m_token, 513, cUtils::GetOS());
+		result = len == m_pWebsocket->Write(payload, len);
+		free(payload);
+	}
+	return result;
 }
 
 bool cGateway::Resume() {
-	/* Prepare payload string */
-	std::string s;
-	s.resize(200);
-	int len = sprintf(s.data(), "{\"op\":6,\"d\":{\"token\":\"%s\",\"session_id\":\"%s\",\"seq\":%d}}", m_token, m_sessionId, m_last_sequence.value);
-	s.resize(len);
-	
-	/* Send payload */
-	beast::error_code e;
-	m_pWebsocket->Write(net::buffer(s), e);
-	return !static_cast<bool>(e);
+	bool result = false;
+	char* payload = reinterpret_cast<char*>(malloc(200));
+	if (payload) {
+		int len = sprintf(payload, R"({"op":6,"d":{"token":"%s","session_id":"%s","seq":%d}})", m_token, m_sessionId, m_last_sequence.value);
+		result = len == m_pWebsocket->Write(payload, len);
+		free(payload);
+	}
+	return result;
 }
 
 cGateway::~cGateway() {
@@ -236,30 +224,71 @@ void cGateway::Run() {
 		sprintf(url, "%s/?v=%d&encoding=json", g->GetUrl(), DISCORD_API_VERSION);
 
 		/* Create a websocket */
-		cWebsocket websocket;
+		cWebsocket websocket(url);
 		m_pWebsocket = &websocket;
-		websocket.SetOnMessage([this](cWebsocket* ws, void* data, size_t size) -> bool {
+
+		/* Allocate buffer for receiving websocket messages */
+		size_t recv_size = 256;
+		char* recv_buffer;
+		if (!(recv_buffer = reinterpret_cast<char*>(malloc(recv_size)))) {
+			cUtils::PrintErr("Out of memory.");
+			return;
+		}
+
+		/* Start listening for messages */
+		for (size_t total_size, msg_size; websocket.IsOpen();) {
+			total_size = 0;
+			for (;;) {
+				/* Read available message bytes */
+				msg_size = websocket.Read(recv_buffer + total_size, recv_size - total_size);
+				/* If an error occured, close websocket and reconnect */
+				if (msg_size == 0) {
+					websocket.Close();
+					goto LABEL_EXIT_LOOP;
+				}
+				/* Update total message size */
+				total_size += msg_size;
+				/* If the entire message has been read, proceed */
+				if (websocket.IsMessageDone())
+					break;
+				/* Otherwise, if recv_buffer is full, reallocate more memory */
+				if (total_size == recv_size) {
+					void* temp = reinterpret_cast<char*>(realloc(recv_buffer, recv_size <<= 1));
+					if (!temp) {
+						cUtils::PrintErr("Out of memory.");
+						free(recv_buffer);
+						websocket.Close();
+						StopHeartbeating();
+						return;
+					}
+					recv_buffer = reinterpret_cast<char*>(temp);
+				}
+			}
+
 			try {
 				/* Parse message as a JSON */
 				json::monotonic_resource mr;
 				json::stream_parser p(&mr);
-				p.write(reinterpret_cast<char*>(data), size);
+				p.write(recv_buffer, total_size);
 
 				/* Create event object from JSON */
 				cEvent event(p.release());
 
 				/* Update event sequence */
 				SetLastSequence(event.GetSequence());
-				//cUtils::PrintLog("%.*s", size, data);
+				//cUtils::PrintLog("%.*s", msg_size, recv_buffer);
 
 				/* Handle event */
-				return OnEvent(&event);
+				if (!OnEvent(&event))
+					break;
 			}
 			catch (const std::exception& e) {
 				cUtils::PrintErr("Couldn't read incoming event. %s", e.what());
-				return false;
+				break;
 			}
-		}).Run(url);
+		}
+	LABEL_EXIT_LOOP:
+		free(recv_buffer);
 		StopHeartbeating();
 	}
 }

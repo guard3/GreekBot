@@ -1,6 +1,5 @@
 #include "Bot.h"
 #include "Component.h"
-#include <iostream>
 #include "Utils.h"
 class cGreekBot final : public cBot {
 private:
