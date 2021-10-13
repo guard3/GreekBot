@@ -36,27 +36,22 @@ cWebsocket::cWebsocket(const char *url) : m_ctx(ssl::context::tlsv13_client), m_
 		/* Connect websocket stream to host */
 		beast::get_lowest_layer(m_ws).expires_after(std::chrono::seconds(30));
 		auto ep = beast::get_lowest_layer(m_ws).connect(tcp::resolver(m_ioc).resolve(host, "https"));
-
 		/* Set SNI Hostname */
-		if (!SSL_set_tlsext_host_name(m_ws.next_layer().native_handle(), host))
-			return;
-
-		/* Append resolved port number to host name */
-		sprintf(host + host_len, ":%d", ep.port() & 0xFFFF);
-
-		/* Set HTTP header fields for the handshake */
-		m_ws.set_option(ws::stream_base::decorator([&](ws::request_type& r) {
-			r.set(http::field::host, host);
-			r.set(http::field::user_agent, "GreekBot");
-		}));
-
-		/* Perform SSL handshake */
-		m_ws.next_layer().handshake(ssl::stream_base::client);
-		beast::get_lowest_layer(m_ws).expires_never();
-		m_ws.set_option(ws::stream_base::timeout::suggested(beast::role_type::client));
-
-		/* Perform websocket handshake */
-		m_ws.handshake(host, path);
+		if (SSL_set_tlsext_host_name(m_ws.next_layer().native_handle(), host)) {
+			/* Append resolved port number to host name */
+			sprintf(host + host_len, ":%d", ep.port() & 0xFFFF);
+			/* Set HTTP header fields for the handshake */
+			m_ws.set_option(ws::stream_base::decorator([&](ws::request_type& r) {
+				r.set(http::field::host, host);
+				r.set(http::field::user_agent, "GreekBot");
+			}));
+			/* Perform SSL handshake */
+			m_ws.next_layer().handshake(ssl::stream_base::client);
+			beast::get_lowest_layer(m_ws).expires_never();
+			m_ws.set_option(ws::stream_base::timeout::suggested(beast::role_type::client));
+			/* Perform websocket handshake */
+			m_ws.handshake(host, path);
+		}
 	}
 	catch (...) {}
 

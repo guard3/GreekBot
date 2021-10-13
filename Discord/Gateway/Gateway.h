@@ -9,22 +9,13 @@ class cWebsocket;
 
 class cGateway final {
 private:
-	char  m_http_auth[64] = "Bot ";          // The authorization parameter for HTTP requests 'Bot token'
-	char  m_sessionId[40] = "";              // The current session id; used for resuming
-	char *m_token         = m_http_auth + 4; // The authentication token
-	
-	/* Sequence */
-	struct {
-		std::mutex mutex;
-		int value = 0;      // The last event sequence received; 0 = none received
-	} m_last_sequence;
-	int  GetLastSequence();
-	void SetLastSequence(int);
-	
-	void ResetSession();
+	char        m_http_auth[64] = "Bot ";          // The authorization parameter for HTTP requests 'Bot token'
+	char       *m_token         = m_http_auth + 4; // The authentication token
+	const char *m_sessionId     = nullptr;         // The current session id, used for resuming; null = no valid session
+
+	int m_last_sequence = 0; // The last event sequence received, used for heartbeating; 0 = none received
 	
 	/* Data relating to heartbeating */
-	char m_heartbeat_payload[40] = R"({"op":1,"d":)";
 	struct {
 		std::thread thread;       // The heartbeating thread
 		std::mutex  mutex;        // Mutex for accessing 'acknowledged'
@@ -36,7 +27,6 @@ private:
 	void AcknowledgeHeartbeat();          // Mark last heartbeat as acknowledged
 	void StartHeartbeating(int interval); // Start sending heartbeats to the gateway every 'interval' milliseconds
 	void StopHeartbeating();              // Stop sending heartbeats
-	
 	
 	bool Identify();
 	bool Resume();

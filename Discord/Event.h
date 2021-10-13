@@ -16,7 +16,7 @@ enum eEvent {
 	// 5: -
 	// 6: Resume
 	EVENT_RECONNECT       = 7,
-	// 8: Request quild members
+	// 8: Request guild members
 	EVENT_INVALID_SESSION = 9,
 	EVENT_HELLO           = 10,
 	EVENT_HEARTBEAT_ACK   = 11,
@@ -30,23 +30,39 @@ enum eEvent {
 /* ================================================================================================= */
 class cReadyEventData final {
 private:
-	int         version;
-	json::value user;
-	// TODO: guilds
-	std::string session_id;
-	// TODO: application
+	json::value m_value;
+
 public:
-	cReadyEventData(const json::value& v) : version(static_cast<int>(v.at("v").as_int64())), user(v.at("user")), session_id(v.at("session_id").as_string().c_str()) {}
-	
-	int         GetVersion()   const { return version;            }
-	const char* GetSessionId() const { return session_id.c_str(); }
-	
-	uchUser GetUser() const {
+	explicit cReadyEventData(json::value v) : m_value(std::move(v)) {}
+
+	// TODO: guilds, application
+	[[nodiscard]] int GetVersion() const {
 		try {
-			return std::make_unique<const cUser>(user);
+			return static_cast<int>(m_value.at("v").as_int64());
 		}
-		catch (const std::exception&) {
-			return uchUser();
+		catch (...) {
+			return 0;
+		}
+	}
+
+	[[nodiscard]] uchHandle<char[]> GetSessionId() const {
+		try {
+			auto& s = m_value.at("session_id").as_string();
+			auto result = cHandle::MakeUnique<char[]>(s.size() + 1);
+			strcpy(result.get(), s.c_str());
+			return result;
+		}
+		catch (...) {
+			return {};
+		}
+	}
+
+	[[nodiscard]] uchUser GetUser() const {
+		try {
+			return cHandle::MakeUnique<cUser>(m_value.at("user"));
+		}
+		catch (...) {
+			return {};
 		}
 	}
 };

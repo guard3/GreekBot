@@ -8,41 +8,18 @@ cGateway::cGateway(const char* token) {
 	m_token[59] = '\0';
 }
 
-int cGateway::GetLastSequence() {
-	m_last_sequence.mutex.lock();
-	int r = m_last_sequence.value;
-	m_last_sequence.mutex.unlock();
-	return r;
-}
-
-void cGateway::SetLastSequence(int v) {
-	if (v) {
-		m_last_sequence.mutex.lock();
-		m_last_sequence.value = v;
-		m_last_sequence.mutex.unlock();
-	}
-}
-
-void cGateway::ResetSession() {
-	m_last_sequence.mutex.lock();
-	m_last_sequence.value = 0;
-	m_last_sequence.mutex.unlock();
-	m_sessionId[0] = '\0';
-}
-
 bool cGateway::SendHeartbeat() {
-	volatile int sequence = GetLastSequence();
-	size_t size;
-	if (sequence)
-		size = 12 + sprintf(m_heartbeat_payload + 12, "%d}", sequence);
-	else {
-		strcpy(m_heartbeat_payload + 12, "null}");
-		size = 17;
-	}
+	bool result;
 
 	m_heartbeat.mutex.lock();
 	m_heartbeat.acknowledged = false;
-	bool result = size == m_pWebsocket->Write(m_heartbeat_payload, size);
+	volatile int s = m_last_sequence;
+	if (s) {
+		char payload[40];
+		size_t size = sprintf(payload, R"({"op":1,"d":%d})", s);
+		result = size == m_pWebsocket->Write(payload, size);
+	}
+	else result = 17 == m_pWebsocket->Write(R"({"op":1,"d":null})", 17);
 	m_heartbeat.mutex.unlock();
 
 	return result;
@@ -100,10 +77,9 @@ void cGateway::StopHeartbeating() {
 
 bool cGateway::Identify() {
 	bool result = false;
-	char* payload = reinterpret_cast<char*>(malloc(200));
-	if (payload) {
+	if (char* payload = reinterpret_cast<char*>(malloc(200))) {
 		// TODO: Parametrize intents
-		int len = sprintf(payload, R"({"op":2,"d":{"token":"%s","intents":%d,"properties":{"$os":"%s","$browser":"GreekBot","$device":"GreekBot"}}})", m_token, 513, cUtils::GetOS());
+		size_t len = sprintf(payload, R"({"op":2,"d":{"token":"%s","intents":%d,"properties":{"$os":"%s","$browser":"GreekBot","$device":"GreekBot"}}})", m_token, 513, cUtils::GetOS());
 		result = len == m_pWebsocket->Write(payload, len);
 		free(payload);
 	}
@@ -112,9 +88,8 @@ bool cGateway::Identify() {
 
 bool cGateway::Resume() {
 	bool result = false;
-	char* payload = reinterpret_cast<char*>(malloc(200));
-	if (payload) {
-		int len = sprintf(payload, R"({"op":6,"d":{"token":"%s","session_id":"%s","seq":%d}})", m_token, m_sessionId, m_last_sequence.value);
+	if (char* payload = reinterpret_cast<char*>(malloc(200))) {
+		size_t len = sprintf(payload, R"({"op":6,"d":{"token":"%s","session_id":"%s","seq":%d}})", m_token, m_sessionId, m_last_sequence);
 		result = len == m_pWebsocket->Write(payload, len);
 		free(payload);
 	}
@@ -122,70 +97,71 @@ bool cGateway::Resume() {
 }
 
 cGateway::~cGateway() {
+	delete[] m_sessionId;
 	StopHeartbeating();
 }
 
 bool cGateway::OnEvent(chEvent event) {
+	/* First, update event sequence */
+	m_last_sequence = event->GetSequence();
+
+	/* Then handle the event */
 	switch (event->GetType()) {
 		case EVENT_HEARTBEAT:
+			/* Send a heartbeat */
 			return SendHeartbeat();
 			
 		case EVENT_RECONNECT:
 			/* Forcefully exit */
 			return false;
 			
-		case EVENT_INVALID_SESSION: {
-			bool bResumable = event->GetData<EVENT_INVALID_SESSION>();
+		case EVENT_INVALID_SESSION:
 			/* Wait a random amount of time between 1 and 5 seconds */
 			std::this_thread::sleep_for(std::chrono::milliseconds(cUtils::Random(1000, 5000)));
-			/* If session is resumable, try to Resume */
-			if (bResumable) return Resume();
+			/* If session is resumable, try to resume */
+			if (event->GetData<EVENT_INVALID_SESSION>()) return Resume();
 			/* If not, then reset session and identify */
-			ResetSession();
+			m_last_sequence = 0;
+			delete[] m_sessionId;
+			m_sessionId = nullptr;
 			return Identify();
-		}
 			
-		case EVENT_HELLO: {
-			int interval = event->GetData<EVENT_HELLO>();
-			if (interval < 0) {
-				cUtils::PrintErr("Invalid HELLO event");
-				return false;
+		case EVENT_HELLO:
+			if (int interval = event->GetData<EVENT_HELLO>(); interval >= 0) {
+				/* Start heartbeating */
+				StartHeartbeating(interval);
+				/* If there is an active session, try to resume */
+				return m_sessionId ? Resume() : Identify();
 			}
-			/* Start heartbeating */
-			StartHeartbeating(interval);
-			/* If there is an active session, try to resume */
-			return m_sessionId[0] ? Resume() : Identify();
-		}
+			cUtils::PrintErr("Invalid HELLO event");
+			return false;
 			
 		case EVENT_HEARTBEAT_ACK:
+			/* Heartbeat was acknowledged */
 			AcknowledgeHeartbeat();
 			break;
 		
-		case EVENT_READY: {
-			auto e = event->GetData<EVENT_READY>();
-			if (!e) {
-				cUtils::PrintErr("Invalid READY event");
-				return false;
+		case EVENT_READY:
+			if (auto e = event->GetData<EVENT_READY>()) {
+				if (auto user = e->GetUser()) {
+					if (auto session = e->GetSessionId()) {
+						m_sessionId = session.release();
+						if (m_onReady) m_onReady(std::move(user));
+						break;
+					}
+				}
 			}
-			auto user = e->GetUser();
-			if (!user) return false;
+			cUtils::PrintErr("Invalid READY event");
+			return false;
 			
-			strcpy(m_sessionId, e->GetSessionId());
-			if (m_onReady) m_onReady(std::move(user));
-			break;
-		}
-			
-		case EVENT_INTERACTION_CREATE: {
-			auto e = event->GetData<EVENT_INTERACTION_CREATE>();
-			if (!e) {
-				cUtils::PrintErr("Invalid INTERACTION_CREATE event");
-				return false;
+		case EVENT_INTERACTION_CREATE:
+			if (auto e = event->GetData<EVENT_INTERACTION_CREATE>()) {
+				if (m_onInteractionCreate) m_onInteractionCreate(e.get());
+				break;
 			}
-			if (m_onInteractionCreate) m_onInteractionCreate(e.get());
-			break;
-		}
-			
-			/* Make xcode shutup */
+			cUtils::PrintErr("Invalid INTERACTION_CREATE event");
+			return false;
+
 		default:
 			break;
 	}
@@ -241,7 +217,7 @@ void cGateway::Run() {
 			for (;;) {
 				/* Read available message bytes */
 				msg_size = websocket.Read(recv_buffer + total_size, recv_size - total_size);
-				/* If an error occured, close websocket and reconnect */
+				/* If an error occurred, close websocket and reconnect */
 				if (msg_size == 0) {
 					websocket.Close();
 					goto LABEL_EXIT_LOOP;
@@ -253,7 +229,7 @@ void cGateway::Run() {
 					break;
 				/* Otherwise, if recv_buffer is full, reallocate more memory */
 				if (total_size == recv_size) {
-					void* temp = reinterpret_cast<char*>(realloc(recv_buffer, recv_size <<= 1));
+					void* temp = realloc(recv_buffer, recv_size <<= 1);
 					if (!temp) {
 						cUtils::PrintErr("Out of memory.");
 						free(recv_buffer);
@@ -270,14 +246,8 @@ void cGateway::Run() {
 				json::monotonic_resource mr;
 				json::stream_parser p(&mr);
 				p.write(recv_buffer, total_size);
-
 				/* Create event object from JSON */
 				cEvent event(p.release());
-
-				/* Update event sequence */
-				SetLastSequence(event.GetSequence());
-				//cUtils::PrintLog("%.*s", msg_size, recv_buffer);
-
 				/* Handle event */
 				if (!OnEvent(&event))
 					break;
