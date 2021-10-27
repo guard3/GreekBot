@@ -1,11 +1,24 @@
 #include "Gateway.h"
-#include "Discord.h"
 #include "Utils.h"
 #include "Websocket.h"
 
-cGateway::cGateway(const char* token) {
-	strncpy(m_token, token, 59);
-	m_token[59] = '\0';
+uchGatewayInfo cGateway::get_gateway_info(cDiscordError& error) {
+	try {
+		/* The JSON parser */
+		json::monotonic_resource mr;
+		json::stream_parser p(&mr);
+		/* The http request response */
+		std::string http_response;
+		/* Return gateway info if http request is successful */
+		if (200 == cDiscord::GetHttpsRequest(DISCORD_API_GATEWAY_BOT, m_http_auth, http_response, error)) {
+			p.write(http_response);
+			return cHandle::MakeUnique<cGatewayInfo>(p.release());
+		}
+	}
+	catch (...) {
+		error = cDiscordError::MakeError<DISCORD_ERROR_GENERIC>();
+	}
+	return {};
 }
 
 bool cGateway::SendHeartbeat() {
@@ -39,10 +52,10 @@ void cGateway::AcknowledgeHeartbeat() {
 }
 
 void cGateway::StartHeartbeating(int interval) {
+	m_heartbeat.should_exit = false;
 	m_heartbeat.thread = std::thread([this](int interval) {
 		/* Wait a random amount of time */
-		m_heartbeat.should_exit = false;
-		auto later = std::chrono::system_clock::now() + std::chrono::milliseconds(static_cast<int>(interval * cUtils::Random()));
+		auto later = std::chrono::system_clock::now() + std::chrono::milliseconds((int)((float)interval * cUtils::Random()));
 		while (std::chrono::system_clock::now() < later)
 			if (m_heartbeat.should_exit)
 				return;
@@ -79,7 +92,7 @@ bool cGateway::Identify() {
 	bool result = false;
 	if (char* payload = reinterpret_cast<char*>(malloc(200))) {
 		// TODO: Parametrize intents
-		size_t len = sprintf(payload, R"({"op":2,"d":{"token":"%s","intents":%d,"properties":{"$os":"%s","$browser":"GreekBot","$device":"GreekBot"}}})", m_token, 513, cUtils::GetOS());
+		size_t len = sprintf(payload, R"({"op":2,"d":{"token":"%s","intents":%d,"properties":{"$os":"%s","$browser":"GreekBot","$device":"GreekBot"}}})", m_http_auth + 4, 513, cUtils::GetOS());
 		result = len == m_pWebsocket->Write(payload, len);
 		free(payload);
 	}
@@ -89,16 +102,11 @@ bool cGateway::Identify() {
 bool cGateway::Resume() {
 	bool result = false;
 	if (char* payload = reinterpret_cast<char*>(malloc(200))) {
-		size_t len = sprintf(payload, R"({"op":6,"d":{"token":"%s","session_id":"%s","seq":%d}})", m_token, m_sessionId, m_last_sequence);
+		size_t len = sprintf(payload, R"({"op":6,"d":{"token":"%s","session_id":"%s","seq":%d}})", m_http_auth + 4, m_sessionId, m_last_sequence);
 		result = len == m_pWebsocket->Write(payload, len);
 		free(payload);
 	}
 	return result;
-}
-
-cGateway::~cGateway() {
-	delete[] m_sessionId;
-	StopHeartbeating();
 }
 
 bool cGateway::OnEvent(chEvent event) {
@@ -169,75 +177,67 @@ bool cGateway::OnEvent(chEvent event) {
 }
 
 void cGateway::Run() {
+	/* The string that holds the gateway websocket url */
 	char url[100];
-
-	for (uchGatewayInfo g;;) {
-		/* Get gateway info */
-		for (int timeout = 5;; timeout += 5) {
-			uchError error;
-			g = cDiscord::GetGatewayInfo(m_http_auth, error);
-			if (error) {
-				cUtils::PrintErr("Couldn't retrieve gateway info");
-				cUtils::PrintErr("Code   : %d", error->GetCode());
-				cUtils::PrintErr("Message: %s", error->GetMessage());
-				return;
+	/* The gateway info object */
+	uchGatewayInfo g;
+	/* The buffer that holds the received messages from the gateway */
+	size_t recv_size = 256;
+	char  *recv_buff = reinterpret_cast<char*>(malloc(recv_size));
+	if (!recv_buff) {
+		cUtils::PrintErr("Out of memory");
+		goto LABEL_RETURN_NO_FREE_BUFF;
+	}
+	/* The main loop */
+	for (cDiscordError e;;) {
+		/* Get gateway info - retry with a timeout if any error occurs */
+		for (int timeout = 5, tick; ; timeout += 5) {
+			g = get_gateway_info(e);
+			if (!e) break;
+			switch (timeout) {
+				case 20:
+					fputc('\n', stderr);
+					goto LABEL_RETURN;
+				case 5:
+					cUtils::PrintErr("Couldn't retrieve gateway info");
+				default:
+					if (e.GetType() == DISCORD_ERROR_HTTP) {
+						cUtils::PrintErr(e.Get()->GetMessage());
+						cUtils::PrintErr("Error code: %d", e.Get()->GetCode());
+						goto LABEL_RETURN;
+					}
+					tick = timeout;
+					do {
+						fprintf(stderr, "[ERR] Retrying in %ds \r", tick);
+						std::this_thread::sleep_for(std::chrono::seconds(1));
+					} while (tick--);
 			}
-			if (g) break;
-
-			if (timeout > 15) {
-				fputc('\n', stderr);
-				return;
-			}
-			if (timeout < 10) cUtils::PrintErr("Couldn't retrieve gateway info");
-			int tick = timeout;
-			do {
-				fprintf(stderr, "[ERR] Retrying in %ds \r", tick);
-				std::this_thread::sleep_for(std::chrono::seconds(1));
-			} while (tick--);
-		};
-
-		/* Prepare url string */
-		sprintf(url, "%s/?v=%d&encoding=json", g->GetUrl(), DISCORD_API_VERSION);
-
+		}
 		/* Create a websocket */
+		sprintf(url, "%s/?v=%d&encoding=json", g->GetUrl(), DISCORD_API_VERSION);
 		cWebsocket websocket(url);
 		m_pWebsocket = &websocket;
-
-		/* Allocate buffer for receiving websocket messages */
-		size_t recv_size = 256;
-		char* recv_buffer;
-		if (!(recv_buffer = reinterpret_cast<char*>(malloc(recv_size)))) {
-			cUtils::PrintErr("Out of memory.");
-			return;
-		}
-
 		/* Start listening for messages */
-		for (size_t total_size, msg_size; websocket.IsOpen();) {
-			total_size = 0;
+		while (websocket.IsOpen()) {
+			size_t msg_size = 0;
 			for (;;) {
 				/* Read available message bytes */
-				msg_size = websocket.Read(recv_buffer + total_size, recv_size - total_size);
-				/* If an error occurred, close websocket and reconnect */
-				if (msg_size == 0) {
-					websocket.Close();
-					goto LABEL_EXIT_LOOP;
-				}
+				size_t recv_len = websocket.Read(recv_buff + msg_size, recv_size - msg_size);
+				/* If an error occurred, reconnect */
+				if (recv_len == 0) goto LABEL_EXIT_MESSAGE_LOOP;
 				/* Update total message size */
-				total_size += msg_size;
+				msg_size += recv_len;
 				/* If the entire message has been read, proceed */
-				if (websocket.IsMessageDone())
-					break;
-				/* Otherwise, if recv_buffer is full, reallocate more memory */
-				if (total_size == recv_size) {
-					void* temp = realloc(recv_buffer, recv_size <<= 1);
+				if (websocket.IsMessageDone()) break;
+				/* Otherwise, if the buffer is full, allocate more memory */
+				if (msg_size == recv_size) {
+					void* temp = realloc(recv_buff, recv_size <<= 1);
 					if (!temp) {
 						cUtils::PrintErr("Out of memory.");
-						free(recv_buffer);
-						websocket.Close();
 						StopHeartbeating();
-						return;
+						goto LABEL_RETURN;
 					}
-					recv_buffer = reinterpret_cast<char*>(temp);
+					recv_buff = reinterpret_cast<char*>(temp);
 				}
 			}
 
@@ -245,20 +245,22 @@ void cGateway::Run() {
 				/* Parse message as a JSON */
 				json::monotonic_resource mr;
 				json::stream_parser p(&mr);
-				p.write(recv_buffer, total_size);
+				p.write(recv_buff, msg_size);
 				/* Create event object from JSON */
 				cEvent event(p.release());
 				/* Handle event */
-				if (!OnEvent(&event))
-					break;
+				if (!OnEvent(&event)) break;
 			}
 			catch (const std::exception& e) {
 				cUtils::PrintErr("Couldn't read incoming event. %s", e.what());
 				break;
 			}
 		}
-	LABEL_EXIT_LOOP:
-		free(recv_buffer);
+	LABEL_EXIT_MESSAGE_LOOP:
 		StopHeartbeating();
 	}
+LABEL_RETURN:
+	free(recv_buff);
+LABEL_RETURN_NO_FREE_BUFF:
+	cUtils::PrintLog("Exiting...");
 }
