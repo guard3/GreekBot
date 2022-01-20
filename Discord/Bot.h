@@ -4,12 +4,11 @@
 #include "User.h"
 #include "Interaction.h"
 #include "InteractionResponse.h"
+#include "Gateway.h"
 
-class cBot {
+class cBot : public cGateway {
 private:
-	char  m_http_auth[64] = "Bot ";
-	char *m_token         = m_http_auth + 4;
-	uchUser m_user;
+	chUser m_user = nullptr;
 
 	void respond_to_interaction(chInteraction interaction, json::object&& obj);
 	void edit_interaction_response(chInteraction interaction, json::object&& obj);
@@ -21,13 +20,18 @@ private:
 	void edit_interaction_response(chInteraction interaction, const cInteractionResponse<INTERACTION_CALLBACK_UPDATE_MESSAGE>& response) { edit_interaction_response(interaction, response.ToJson()); }
 	void edit_interaction_response(chInteraction interaction, cInteractionResponse<INTERACTION_CALLBACK_UPDATE_MESSAGE>&& response) { edit_interaction_response(interaction, response.ToJson()); }
 
+	void OnReady(uchUser user) override;
+
 protected:
-	virtual void OnInteractionCreate(chInteraction) {}
+	using cGateway::OnInteractionCreate;
+	using cGateway::OnGuildCreate;
+	using cGateway::OnMessageCreate;
 	
 public:
-	cBot(const char* token);
-	
-	const char* GetToken() { return m_token; }
+	explicit cBot(const char* token, eIntent intents) : cGateway(token, intents) {}
+	~cBot() { delete m_user; }
+
+	using cGateway::GetToken;
 
 	// TODO: Rate limit
 	void AddGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake& role_id);
@@ -46,7 +50,7 @@ public:
 	template<typename... Args>
 	void EditInteractionResponse(chInteraction interaction, Args... args) { edit_interaction_response(interaction, cInteractionResponse<INTERACTION_CALLBACK_UPDATE_MESSAGE>(std::forward<Args>(args)...)); }
 	
-	void Run();
+	//void Run();
 };
 
 

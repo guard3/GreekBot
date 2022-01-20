@@ -10,7 +10,7 @@ using   hHandle = std::remove_const_t<T>*;
 template<typename T> // const handle
 using  chHandle = const T*; // ch: const handle
 template<typename T> // unique handle
-using  uhHandle = std::unique_ptr<std::remove_const_t<T>>;
+using  uhHandle = std::unique_ptr<T>;//std::remove_const_t<T>>;
 template<typename T> // unique const handle
 using uchHandle = std::unique_ptr<const T>;
 template<typename T> // shared handle
@@ -64,9 +64,8 @@ private:
 	uint64_t m_int;     // The snowflake as a 64-bit integer
 	
 public:
-	typedef uint64_t tSnowflake;
-
-	cSnowflake(tSnowflake i) noexcept : m_int(i) { sprintf(m_str, "%" PRIu64, i); }
+	cSnowflake() noexcept : m_int(0) { m_str[0] = '0', m_str[1] = '\0'; }
+	cSnowflake(uint64_t i) noexcept : m_int(i) { sprintf(m_str, "%" PRIu64, i); }
 	cSnowflake(const char* str) noexcept {
 		strcpy(m_str, str);
 		char* temp;

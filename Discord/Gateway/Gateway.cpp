@@ -1,7 +1,7 @@
 #include "Gateway.h"
 #include "Utils.h"
 #include "Websocket.h"
-
+#include <iostream>
 uchGatewayInfo cGateway::get_gateway_info(cDiscordError& error) {
 	try {
 		/* The JSON parser */
@@ -92,7 +92,7 @@ bool cGateway::Identify() {
 	bool result = false;
 	if (char* payload = reinterpret_cast<char*>(malloc(200))) {
 		// TODO: Parametrize intents
-		size_t len = sprintf(payload, R"({"op":2,"d":{"token":"%s","intents":%d,"properties":{"$os":"%s","$browser":"GreekBot","$device":"GreekBot"}}})", m_http_auth + 4, 513, cUtils::GetOS());
+		size_t len = sprintf(payload, R"({"op":2,"d":{"token":"%s","intents":%d,"properties":{"$os":"%s","$browser":"GreekBot","$device":"GreekBot"}}})", m_http_auth + 4, m_intents, cUtils::GetOS());
 		result = len == m_pWebsocket->Write(payload, len);
 		free(payload);
 	}
@@ -154,20 +154,36 @@ bool cGateway::OnEvent(chEvent event) {
 				if (auto user = e->GetUser()) {
 					if (auto session = e->GetSessionId()) {
 						m_sessionId = session.release();
-						if (m_onReady) m_onReady(std::move(user));
+						OnReady(std::move(user));
 						break;
 					}
 				}
 			}
 			cUtils::PrintErr("Invalid READY event");
 			return false;
+
+		case EVENT_GUILD_CREATE:
+			if (auto e = event->GetData<EVENT_GUILD_CREATE>()) {
+				OnGuildCreate(e.get());
+				break;
+			}
+			cUtils::PrintErr("Invalid GUILD_CREATE event");
+			return false;
 			
 		case EVENT_INTERACTION_CREATE:
 			if (auto e = event->GetData<EVENT_INTERACTION_CREATE>()) {
-				if (m_onInteractionCreate) m_onInteractionCreate(e.get());
+				OnInteractionCreate(e.get());
 				break;
 			}
 			cUtils::PrintErr("Invalid INTERACTION_CREATE event");
+			return false;
+
+		case EVENT_MESSAGE_CREATE:
+			if (auto e = event->GetData<EVENT_MESSAGE_CREATE>()) {
+				OnMessageCreate(e.get());
+				break;
+			}
+			cUtils::PrintErr("Invalid MESSAGE_CREATE event");
 			return false;
 
 		default:
@@ -247,7 +263,13 @@ void cGateway::Run() {
 				json::stream_parser p(&mr);
 				p.write(recv_buff, msg_size);
 				/* Create event object from JSON */
+#if 0
+				auto e = p.release();
+				std::cout << e << std::endl;
+				cEvent event(e);
+#else
 				cEvent event(p.release());
+#endif
 				/* Handle event */
 				if (!OnEvent(&event)) break;
 			}

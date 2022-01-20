@@ -26,6 +26,10 @@ private:
 		352001527780474881  // @Non Learner
 	};
 
+	/* Voice */
+	std::vector<uint64_t> m_lmg_voice_channels;
+	std::vector<std::vector<uint64_t>> m_lmg_users_connected_to_voice;
+
 	void OnInteraction_avatar(chInteraction interaction) {
 		auto data = interaction->GetData<INTERACTION_APPLICATION_COMMAND>();
 
@@ -109,6 +113,12 @@ private:
 		);
 	}
 
+	void OnInteraction_connect(chInteraction interaction) {
+		chMember member = interaction->GetMember();
+		//member->
+
+	}
+
 	void lmg_update_proficiency_role(chMember member, eLmgProficiencyRoleId proficiency_role) {
 		/* The new roles for the member */
 		std::vector<chSnowflake> roles;
@@ -157,7 +167,23 @@ private:
 		/* Edit original interaction message */
 		EditInteractionResponse(interaction, "Role assigned!", INTERACTION_FLAG_EPHEMERAL | INTERACTION_FLAG_REMOVE_COMPONENTS);
 	}
-	
+
+	void OnGuildCreate(chGuild guild) override {
+		if (guild->GetId()->ToInt() == m_lmg_id.ToInt()) {
+			cUtils::PrintLog("HELLO LMG!!!");
+			for (auto& channel : guild->Channels) {
+				if (channel->GetType() == CHANNEL_GUILD_VOICE)
+					m_lmg_voice_channels.push_back(channel->GetId()->ToInt());
+			}
+			for (auto& voice_state : guild->VoiceStates) {
+				auto it = std::find(m_lmg_voice_channels.begin(), m_lmg_voice_channels.end(), voice_state->GetChannelId()->ToInt());
+				if (it != std::end(m_lmg_voice_channels)) {
+
+				}
+			}
+		}
+	}
+
 	void OnInteractionCreate(chInteraction interaction) override {
 		if (interaction->GetType() == INTERACTION_APPLICATION_COMMAND) {
 			switch (interaction->GetData<INTERACTION_APPLICATION_COMMAND>()->GetCommandId()->ToInt()) {
@@ -169,6 +195,10 @@ private:
 					/* role */
 					OnInteraction_role(interaction);
 					break;
+				case 904462004071313448:
+					/* connect */
+					OnInteraction_connect(interaction);
+					break;
 				default:
 					break;
 			}
@@ -176,9 +206,13 @@ private:
 		else if (interaction->GetType() == INTERACTION_MESSAGE_COMPONENT)
 			OnInteraction_MessageComponent(interaction);
 	}
+
+	void OnMessageCreate(chMessage msg) override {
+		cUtils::PrintLog("%s#%s said: %s", msg->GetAuthor()->GetUsername(), msg->GetAuthor()->GetDiscriminator(), msg->GetContent());
+	}
 	
 public:
-	cGreekBot(const char* token) : cBot(token) {}
+	explicit cGreekBot(const char* token) : cBot(token, INTENT_GUILD_INTEGRATIONS | INTENT_GUILD_MESSAGES) {}
 };
 
 int main(int argc, const char** argv) {

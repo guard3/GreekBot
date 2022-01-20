@@ -3,7 +3,9 @@
 #define _GREEKBOT_EVENT_H_
 #include "json.h"
 #include "User.h"
+#include "Guild.h"
 #include "Interaction.h"
+#include "Message.h"
 
 /* ================================================================================================= */
 enum eEvent {
@@ -23,7 +25,9 @@ enum eEvent {
 	
 	/* Events */
 	EVENT_READY,
+	EVENT_GUILD_CREATE,
 	EVENT_INTERACTION_CREATE,
+	EVENT_MESSAGE_CREATE,
 	EVENT_NOT_IMPLEMENTED
 };
 
@@ -79,53 +83,42 @@ private:
 	eEvent      t; // Event type
 	int         s; // Event sequence - used for heartbeating
 	json::value d; // Event specific data
-	
-	template<eEvent> struct _t {};
-	template<> struct _t<EVENT_INVALID_SESSION>    { typedef bool              Type; };
-	template<> struct _t<EVENT_HELLO>              { typedef int               Type; };
-	template<> struct _t<EVENT_READY>              { typedef uchReadyEventData Type; };
-	template<> struct _t<EVENT_INTERACTION_CREATE> { typedef uchInteraction    Type; };
-	
-	template<eEvent e> using tEventType = typename _t<e>::Type;
-	
-	template<typename> struct _r {};
-	template<typename T> struct _r<uchHandle<T>> { typedef T Type; };
-	
-	template<typename T> using remove_uch = typename _r<T>::Type;
-	
+
+	template<eEvent> struct data_type {};
+	template<> struct data_type<EVENT_READY>              { typedef cReadyEventData Type; };
+	template<> struct data_type<EVENT_GUILD_CREATE>       { typedef cGuild          Type; };
+	template<> struct data_type<EVENT_INTERACTION_CREATE> { typedef cInteraction    Type; };
+	template<> struct data_type<EVENT_MESSAGE_CREATE>     { typedef cMessage        Type; };
+	template<eEvent e> using tDataType = typename data_type<e>::Type;
+
+	template<eEvent e> struct return_type { typedef uchHandle<tDataType<e>> Type; };
+	template<> struct return_type<EVENT_INVALID_SESSION> { typedef bool Type; };
+	template<> struct return_type<EVENT_HELLO>           { typedef int  Type; };
+	template<eEvent e> using tReturnType = typename return_type<e>::Type;
+
 public:
 	cEvent(const json::value& v);
 	
 	eEvent GetType()     const { return t; }
 	int    GetSequence() const { return s; }
-	
+
 	template<eEvent e>
-	tEventType<e> GetData() const {
-		typedef tEventType<e> return_t;
-		try {
-			return std::make_unique<remove_uch<return_t>>(d);
+	tReturnType<e> GetData() const {
+		if constexpr (e == EVENT_INVALID_SESSION) {
+			auto p = d.if_bool();
+			return p && *p && t == EVENT_INVALID_SESSION;
 		}
-		catch (const std::exception&) {
-			return return_t();
-		}
-	}
-	
-	template<>
-	tEventType<EVENT_INVALID_SESSION> GetData<EVENT_INVALID_SESSION>() const {
-		auto p = d.if_bool();
-		return p && t == EVENT_INVALID_SESSION ? *p : false;
-	}
-	
-	template<>
-	tEventType<EVENT_HELLO> GetData<EVENT_HELLO>() const {
-		if (auto o = d.if_object()) {
-			if (auto v = o->if_contains("heartbeat_interval")) {
-				auto p = v->if_int64();
-				if (p && t == EVENT_HELLO)
-					return static_cast<int>(*p);
+		else if constexpr(e == EVENT_HELLO) {
+			try {
+				return d.at("heartbeat_interval").as_int64();
+			}
+			catch (...) {
+				return -1;
 			}
 		}
-		return -1;
+		else {
+			return cHandle::MakeUniqueConstNoEx<tDataType<e>>(d);
+		}
 	}
 };
 typedef   hHandle<cEvent>   hEvent;
