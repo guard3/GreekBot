@@ -91,7 +91,6 @@ void cGateway::StopHeartbeating() {
 bool cGateway::Identify() {
 	bool result = false;
 	if (char* payload = reinterpret_cast<char*>(malloc(200))) {
-		// TODO: Parametrize intents
 		size_t len = sprintf(payload, R"({"op":2,"d":{"token":"%s","intents":%d,"properties":{"$os":"%s","$browser":"GreekBot","$device":"GreekBot"}}})", m_http_auth + 4, m_intents, cUtils::GetOS());
 		result = len == m_pWebsocket->Write(payload, len);
 		free(payload);

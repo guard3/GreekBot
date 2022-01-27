@@ -1,0 +1,6 @@
+CREATE TABLE IF NOT EXISTS leaderboard(
+    id INTEGER PRIMARY KEY,
+    num_msg INTEGER NOT NULL,
+    xp INTEGER NOT NULL,
+    timestamp INTEGER NOT NULL
+);

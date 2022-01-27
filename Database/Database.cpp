@@ -1,4 +1,5 @@
 #include "Database.h"
+#include "Queries.h"
 #include "Utils.h"
 #include <cstdlib>
 #include <cstring>
@@ -72,13 +73,7 @@ LABEL:
 	/* If database handle is open, create leaderboard table */
 	if (rc == SQLITE_OK) {
 		char* err_msg;
-		rc = sqlite3_exec(
-			db,
-			"CREATE TABLE IF NOT EXISTS leaderboard(id INTEGER PRIMARY KEY, num_msg INTEGER NOT NULL, xp INTEGER NOT NULL, timestamp INTEGER NOT NULL);",
-			nullptr,
-			nullptr,
-			&err_msg
-		);
+		rc = sqlite3_exec(db, QUERY_INIT, nullptr, nullptr, &err_msg);
 		if (rc == SQLITE_OK) {
 			ms_pDB = db;
 			cUtils::PrintLog("Database initialized successfully.");
