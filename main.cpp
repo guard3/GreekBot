@@ -1,6 +1,7 @@
 #include "Bot.h"
 #include "Component.h"
 #include "Utils.h"
+#include "Database.h"
 class cGreekBot final : public cBot {
 private:
 	enum eLmgProficiencyRoleId {
