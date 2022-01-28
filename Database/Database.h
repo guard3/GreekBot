@@ -2,6 +2,7 @@
 #ifndef _GREEKBOT_DATABASE_H_
 #define _GREEKBOT_DATABASE_H_
 #include <sqlite3.h>
+#include "Message.h"
 
 class cDatabase final {
 private:
@@ -11,6 +12,8 @@ private:
 
 	cDatabase();
 public:
+
+	static int UpdateLeaderboard(chMessage);
 
 	~cDatabase() { sqlite3_close(ms_pDB); }
 };

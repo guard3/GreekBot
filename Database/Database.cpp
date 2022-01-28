@@ -3,7 +3,6 @@
 #include "Utils.h"
 #include <cstdlib>
 #include <cstring>
-
 /* The filename of the database */
 #define __DB_FILENAME "database.db"
 
@@ -85,4 +84,25 @@ LABEL:
 	else cUtils::PrintErr("Fatal Database Error: %s", sqlite3_errmsg(db));
 	sqlite3_close(db);
 	exit(EXIT_FAILURE);
+}
+
+int cDatabase::UpdateLeaderboard(chMessage msg) {
+	/* Prepare the leaderboard SQL statement */
+	sqlite3_stmt* stmt;
+	if (SQLITE_OK == sqlite3_prepare_v2(ms_pDB, QUERY_UPDATE_LB, sizeof(QUERY_UPDATE_LB)-1, &stmt, nullptr)) {
+		/* Bind user id and message timestamp parameters */
+		int rc;
+		rc  = sqlite3_bind_int64(stmt, 1, msg->GetAuthor()->GetId()->ToInt());
+		rc |= sqlite3_bind_int64(stmt, 2, msg->GetId()->GetTimestamp());
+		if (rc == SQLITE_OK) {
+			if (SQLITE_ROW == sqlite3_step(stmt)) {
+				int xp = sqlite3_column_int(stmt, 0);
+				sqlite3_finalize(stmt);
+				return xp;
+			}
+		}
+	}
+	sqlite3_finalize(stmt);
+	cUtils::PrintErr("Database error: %s", sqlite3_errmsg(ms_pDB));
+	return -1;
 }

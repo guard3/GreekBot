@@ -209,7 +209,11 @@ private:
 	}
 
 	void OnMessageCreate(chMessage msg) override {
-		cUtils::PrintLog("%s#%s said: %s", msg->GetAuthor()->GetUsername(), msg->GetAuthor()->GetDiscriminator(), msg->GetContent());
+		int xp = cDatabase::UpdateLeaderboard(msg);
+		if (xp > 0) {
+			cUtils::PrintLog("%s#%s has %d XP", msg->GetAuthor()->GetUsername(), msg->GetAuthor()->GetDiscriminator(), xp);
+		}
+		//cUtils::PrintLog("%s#%s said: %s", msg->GetAuthor()->GetUsername(), msg->GetAuthor()->GetDiscriminator(), msg->GetContent());
 	}
 	
 public:

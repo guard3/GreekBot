@@ -6,3 +6,4 @@
 .idea
 cmake-build-*
 Database/Queries.h
+Find*.cmake
