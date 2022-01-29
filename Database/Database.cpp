@@ -2,18 +2,23 @@
 #include "Queries.h"
 #include "Utils.h"
 #include <cstdlib>
-#include <cstring>
+
 /* The filename of the database */
 #define __DB_FILENAME "database.db"
 
 #ifdef _WIN32
 	#define UNICODE
-	// include windows...
+	#define WIN32_LEAN_AND_MEAN
+	#include <Windows.h>
+	#include <Shlwapi.h>
 	#define DB_FILENAME TEXT(__DB_FILENAME)
+	#define DB_FILENAME_SIZE (sizeof(DB_FILENAME) / sizeof(WCHAR))
 	#define SQLITE3_OPEN(filename, ppDB) sqlite3_open16(filename, ppDB)
 #else
 	#include <climits>
+	#include <cstring>
 	#define DB_FILENAME __DB_FILENAME
+	#define DB_FILENAME_SIZE (sizeof(DB_FILENAME))
 	#define SQLITE3_OPEN(filename, ppDB) sqlite3_open(filename, ppDB)
 	#define TCHAR char
 	#ifdef __APPLE__
@@ -31,7 +36,16 @@ cDatabase::cDatabase() {
 	/* Get the path of the database file */
 	TCHAR* db_filename = nullptr;
 #ifdef _WIN32
-	// Windows tba
+	DWORD dwSize = MAX_PATH;
+	for (LPWSTR p; (p = (LPWSTR)realloc(db_filename, dwSize * sizeof(WCHAR))); dwSize <<= 1) {
+		db_filename = p;
+		DWORD dwLen = GetModuleFileNameW(NULL, db_filename, dwSize);
+		if (dwLen == 0) break;
+		if (dwLen + DB_FILENAME_SIZE < dwSize) {
+			lstrcpyW(PathFindFileNameW(db_filename), DB_FILENAME);
+			goto LABEL;
+		}
+	}
 #else
 	path_len_t size = PATH_MAX;
 #ifdef __APPLE__
@@ -58,10 +72,10 @@ cDatabase::cDatabase() {
 		}
 	}
 #endif
+#endif
 	free(db_filename);
 	cUtils::PrintErr("Fatal initialisation error.");
 	exit(EXIT_FAILURE);
-#endif
 
 LABEL:
 	/* Open a database handle */

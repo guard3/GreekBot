@@ -5,6 +5,7 @@
 #include "User.h"
 #include "GatewayInfo.h"
 #include <thread>
+#include <mutex>
 #include "Discord.h"
 
 class cWebsocket;

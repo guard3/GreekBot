@@ -2,6 +2,9 @@
 #include "Utils.h"
 #include "Websocket.h"
 #include <iostream>
+// Workaround to make this compiled on Windows, YIKES!
+// TODO: Rename I guess...
+#undef GetMessage
 uchGatewayInfo cGateway::get_gateway_info(cDiscordError& error) {
 	try {
 		/* The JSON parser */

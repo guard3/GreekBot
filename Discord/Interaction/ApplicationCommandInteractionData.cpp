@@ -49,4 +49,5 @@ cApplicationCommandInteractionData &cApplicationCommandInteractionData::operator
 	std::swap(target_id, o.target_id);
 	options.swap(o.options);
 	Options.swap(o.Options);
+	return *this;
 }

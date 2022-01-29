@@ -26,17 +26,21 @@ target_link_libraries(GreekBot OpenSSL::SSL)
 
 # Link Boost
 set(Boost_USE_STATIC_LIBS     ON)
-set(Boost_USE_DEBUG_LIBS     OFF)
-set(Boost_USE_RELEASE_LIBS    ON)
 set(Boost_USE_MULTITHREADED   ON)
 set(Boost_USE_STATIC_RUNTIME OFF)
 find_package(Boost 1.76.0 REQUIRED COMPONENTS json)
+include_directories(SYSTEM ${Boost_INCLUDE_DIR})
 target_link_libraries(GreekBot ${Boost_LIBRARIES})
 
 # Link SQLite
 find_package(SQLite3 3.35.0 REQUIRED)
 include_directories(SYSTEM ${SQLite3_INCLUDE_DIRS})
-target_link_libraries(GreekBot ${SQLite3_LIBRARIES})
+target_link_libraries(GreekBot SQLite::SQLite3)
+
+# Link Slwapi on Windows
+if(WIN32)
+    target_link_libraries(GreekBot Shlwapi.lib)
+endif()
 
 # Prepare SQL query defines
 file(READ Database/query_init.sql QUERY_INIT)

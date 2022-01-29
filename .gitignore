@@ -7,3 +7,8 @@
 cmake-build-*
 Database/Queries.h
 Find*.cmake
+
+# Visual Studio stuff
+.vs
+out
+*.json

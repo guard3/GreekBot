@@ -1,4 +1,5 @@
 #include "Utils.h"
+#include <cstdarg>
 #include <random>
 
 /* Random engine stuff */
