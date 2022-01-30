@@ -2,14 +2,11 @@
 #include "Utils.h"
 
 cEvent::cEvent(const json::value& v) : d(v.at("d")) {
-	auto op = v.at("op").as_int64();
-	if (op) {
-		t = static_cast<eEvent>(op);
-		cUtils::PrintLog("Opcode: %d", t);
-	}
+	if (int64_t op = v.at("op").as_int64())
+		t = (eEvent)op;
 	else {
 		const char* str = v.at("t").as_string().c_str();
-		cUtils::PrintLog("Event:  %s", str);
+		cUtils::PrintLog("Event: %s", str);
 		if (0 == strcmp(str, "READY"))
 			t = EVENT_READY;
 		else if (0 == strcmp(str, "GUILD_CREATE"))
@@ -22,5 +19,5 @@ cEvent::cEvent(const json::value& v) : d(v.at("d")) {
 			t = EVENT_NOT_IMPLEMENTED;
 	}
 	const json::value& seq = v.at("s");
-	s = seq.is_null() ? 0 : static_cast<int>(seq.as_int64());
+	s = seq.is_null() ? 0 : seq.as_int64();
 }

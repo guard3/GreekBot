@@ -1,0 +1,9 @@
+#pragma once
+#ifndef _GREEKBOT_QUERIES_H_
+#define _GREEKBOT_QUERIES_H_
+#define QUERY_INIT @QUERY_INIT@
+#define QRLEN_INIT (sizeof(QUERY_INIT) - 1)
+
+#define QUERY_UPDATE_LB @QUERY_UPDATE_LB@
+#define QRLEN_UPDATE_LB (sizeof(QUERY_UPDATE_LB) - 1)
+#endif /* _GREEKBOT_QUERIES_H_ */

@@ -37,14 +37,22 @@ find_package(SQLite3 3.35.0 REQUIRED)
 include_directories(SYSTEM ${SQLite3_INCLUDE_DIRS})
 target_link_libraries(GreekBot SQLite::SQLite3)
 
-# Link Slwapi on Windows
+# Link Shlwapi on Windows
 if(WIN32)
     target_link_libraries(GreekBot Shlwapi.lib)
 endif()
 
 # Prepare SQL query defines
-file(READ Database/query_init.sql QUERY_INIT)
-string(REGEX REPLACE "[\n\t ]+" " " QUERY_INIT "R\"(${QUERY_INIT})\"")
-file(READ Database/query_update_lb.sql QUERY_UPDATE_LB)
-string(REGEX REPLACE "[\n\t ]+" " " QUERY_UPDATE_LB "R\"(${QUERY_UPDATE_LB})\"")
-configure_file(Database/Queries.in ${PROJECT_SOURCE_DIR}/Database/Queries.h)
+function(define_query VAR_NAME FILE_NAME)
+    file(READ ${FILE_NAME} CONTENT)
+    string(REGEX REPLACE "[\n\t ]+" " " CONTENT "R\"(${CONTENT})\"")
+    set(${VAR_NAME} ${CONTENT} PARENT_SCOPE)
+endfunction()
+
+#file(READ Database/query_init.sql QUERY_INIT)
+#string(REGEX REPLACE "[\n\t ]+" " " QUERY_INIT "R\"(${QUERY_INIT})\"")
+#file(READ Database/query_update_lb.sql QUERY_UPDATE_LB)
+#string(REGEX REPLACE "[\n\t ]+" " " QUERY_UPDATE_LB "R\"(${QUERY_UPDATE_LB})\"")
+define_query(QUERY_INIT      Database/query_init.sql     )
+define_query(QUERY_UPDATE_LB Database/query_update_lb.sql)
+configure_file(Database/Queries.h.in ${PROJECT_SOURCE_DIR}/Database/Queries.h)

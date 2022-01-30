@@ -209,11 +209,11 @@ private:
 	}
 
 	void OnMessageCreate(chMessage msg) override {
-		int xp = cDatabase::UpdateLeaderboard(msg);
-		if (xp > 0) {
-			cUtils::PrintLog("%s#%s has %d XP", msg->GetAuthor()->GetUsername(), msg->GetAuthor()->GetDiscriminator(), xp);
-		}
-		//cUtils::PrintLog("%s#%s said: %s", msg->GetAuthor()->GetUsername(), msg->GetAuthor()->GetDiscriminator(), msg->GetContent());
+		/* Ignore messages of bots and system users */
+		if (chUser author = msg->GetAuthor(); author->IsBotUser() || author->IsSystemUser())
+			return;
+		/* Update leaderboard */
+		cDatabase::UpdateLeaderboard(msg);
 	}
 	
 public:

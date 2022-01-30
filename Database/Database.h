@@ -13,7 +13,7 @@ private:
 	cDatabase();
 public:
 
-	static int UpdateLeaderboard(chMessage);
+	static bool UpdateLeaderboard(chMessage);
 
 	~cDatabase() { sqlite3_close(ms_pDB); }
 };

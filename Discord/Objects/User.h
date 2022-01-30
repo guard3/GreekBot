@@ -10,15 +10,20 @@ private:
 	std::string username;
 	std::string discriminator;
 	char        avatar[100] = "https://cdn.discordapp.com/";
+	bool        bot;
+	bool        system;
 	// other stuff unimplemented
 	
 public:
-	cUser(const json::value&);
+	explicit cUser(const json::value&);
 	
 	chSnowflake GetId()            const { return &id;                   }
 	const char* GetUsername()      const { return username.c_str();      }
 	const char* GetDiscriminator() const { return discriminator.c_str(); }
 	const char* GetAvatarUrl()     const { return avatar;                }
+
+	bool        IsBotUser()        const { return bot;                   }
+	bool        IsSystemUser()     const { return system;                }
 };
 typedef   hHandle<cUser>   hUser;
 typedef  chHandle<cUser>  chUser;

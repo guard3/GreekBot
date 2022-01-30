@@ -82,41 +82,38 @@ LABEL:
 	sqlite3* db;
 	int rc = SQLITE3_OPEN(db_filename, &db);
 	free(db_filename);
-
 	/* If database handle is open, create leaderboard table */
 	if (rc == SQLITE_OK) {
-		char* err_msg;
-		rc = sqlite3_exec(db, QUERY_INIT, nullptr, nullptr, &err_msg);
-		if (rc == SQLITE_OK) {
-			ms_pDB = db;
-			cUtils::PrintLog("Database initialized successfully.");
-			return;
+		sqlite3_stmt* stmt;
+		if (SQLITE_OK == sqlite3_prepare_v2(db, QUERY_INIT, QRLEN_INIT, &stmt, nullptr)) {
+			if (SQLITE_DONE == sqlite3_step(stmt)) {
+				sqlite3_finalize(stmt);
+				ms_pDB = db;
+				cUtils::PrintLog("Database initialized successfully.");
+				return;
+			}
 		}
-		cUtils::PrintErr("Fatal Database Error: %s", err_msg);
-		sqlite3_free(err_msg);
+		sqlite3_finalize(stmt);
 	}
-	else cUtils::PrintErr("Fatal Database Error: %s", sqlite3_errmsg(db));
+	cUtils::PrintErr("Fatal Database Error: %s", sqlite3_errmsg(db));
 	sqlite3_close(db);
 	exit(EXIT_FAILURE);
 }
 
-int cDatabase::UpdateLeaderboard(chMessage msg) {
-	/* Prepare the leaderboard SQL statement */
+bool cDatabase::UpdateLeaderboard(chMessage msg) {
+	/* Execute QUERY_UPDATE_LB */
 	sqlite3_stmt* stmt;
-	if (SQLITE_OK == sqlite3_prepare_v2(ms_pDB, QUERY_UPDATE_LB, sizeof(QUERY_UPDATE_LB)-1, &stmt, nullptr)) {
-		/* Bind user id and message timestamp parameters */
-		int rc;
-		rc  = sqlite3_bind_int64(stmt, 1, msg->GetAuthor()->GetId()->ToInt());
-		rc |= sqlite3_bind_int64(stmt, 2, msg->GetId()->GetTimestamp());
-		if (rc == SQLITE_OK) {
-			if (SQLITE_ROW == sqlite3_step(stmt)) {
-				int xp = sqlite3_column_int(stmt, 0);
-				sqlite3_finalize(stmt);
-				return xp;
+	if (SQLITE_OK == sqlite3_prepare_v2(ms_pDB, QUERY_UPDATE_LB, QRLEN_UPDATE_LB, &stmt, nullptr)) {
+		if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, msg->GetAuthor()->GetId()->ToInt())) {
+			if (SQLITE_OK == sqlite3_bind_int64(stmt, 2, msg->GetId()->GetTimestamp())) {
+				if (SQLITE_DONE == sqlite3_step(stmt)) {
+					sqlite3_finalize(stmt);
+					return true;
+				}
 			}
 		}
 	}
 	sqlite3_finalize(stmt);
 	cUtils::PrintErr("Database error: %s", sqlite3_errmsg(ms_pDB));
-	return -1;
+	return false;
 }

@@ -12,4 +12,11 @@ cUser::cUser(const json::value& v) : id(v.at("id").as_string().c_str()), usernam
 		const char* hash = av.as_string().c_str();
 		sprintf(avatar + 27, "avatars/%s/%s.%s?size=4096", id.ToString(), hash, hash[0] == 'a' && hash[1] == '_' ? "gif" : "png");
 	}
+
+	const json::object& o = v.as_object();
+	const json::value* p;
+	p = o.if_contains("bot");
+	bot = p && p->as_bool();
+	p = o.if_contains("system");
+	system = p && p->as_bool();
 }
