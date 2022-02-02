@@ -42,7 +42,6 @@ static bool https_request(http::verb method, const char* host, const char* path,
 			http::response<http::string_body> res;
 			http::read(stream, buffer, res);
 
-			std::cout << "PATCH: " << res.body() << std::endl;
 			/* Shut down the stream */
 			beast::error_code e;
 			stream.shutdown(e);

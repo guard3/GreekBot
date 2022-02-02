@@ -1,26 +1,35 @@
 #pragma once
 #ifndef _GREEKBOT_BOT_H_
 #define _GREEKBOT_BOT_H_
-#include "User.h"
 #include "Interaction.h"
-#include "InteractionResponse.h"
 #include "Gateway.h"
+#include "Message.h"
+#include <vector>
 
 class cBot : public cGateway {
 private:
 	chUser m_user = nullptr;
 
-	void respond_to_interaction(chInteraction interaction, json::object&& obj);
-	void edit_interaction_response(chInteraction interaction, json::object&& obj);
-
-	template<eInteractionCallbackType t>
-	void respond_to_interaction(chInteraction interaction, const cInteractionResponse<t>& response) { respond_to_interaction(interaction, response.ToJson()); }
-	template<eInteractionCallbackType t>
-	void respond_to_interaction(chInteraction interaction, cInteractionResponse<t>&& response) { respond_to_interaction(interaction, response.ToJson()); }
-	void edit_interaction_response(chInteraction interaction, const cInteractionResponse<INTERACTION_CALLBACK_UPDATE_MESSAGE>& response) { edit_interaction_response(interaction, response.ToJson()); }
-	void edit_interaction_response(chInteraction interaction, cInteractionResponse<INTERACTION_CALLBACK_UPDATE_MESSAGE>&& response) { edit_interaction_response(interaction, response.ToJson()); }
-
 	void OnReady(uchUser user) override;
+
+	template<typename T>
+	void interaction_response_get_args(const std::vector<T>& v, const T*& ptr, int32_t& sz) {
+		if (v.empty()) {
+			ptr = nullptr;
+			sz = 0;
+		}
+		else {
+			ptr = &v[0];
+			sz = v.size();
+		}
+	}
+	template<typename T, size_t size>
+	void interaction_response_get_args(const T(&a)[size], const T*& ptr, int32_t & sz) { ptr = a; sz = size; }
+	template<typename T>
+	void interaction_response_get_args(std::nullptr_t n, const T*& ptr, int32_t& sz) { ptr = nullptr; sz = -1; }
+
+	bool respond_to_interaction(chInteraction interaction, const char* content, eMessageFlag flags, chActionRow components, int32_t num_components);
+	bool edit_interaction_response(chInteraction interaction, const char* content, eMessageFlag flags, chActionRow components, int32_t num_components);
 
 protected:
 	using cGateway::OnInteractionCreate;
@@ -39,18 +48,23 @@ public:
 
 	void UpdateGuildMemberRoles(const cSnowflake& guild_id, const cSnowflake& user_id, const std::vector<chSnowflake>& role_ids);
 
-	template<typename T>
-	void RespondToInteraction(chInteraction interaction, T&& response) { respond_to_interaction(interaction, std::forward<T>(response)); }
-	template<eInteractionCallbackType t, typename... Args>
-	void RespondToInteraction(chInteraction interaction, Args&&... args) { respond_to_interaction(interaction, cInteractionResponse<t>(std::forward<Args>(args)...)); }
+	bool AcknowledgeInteraction(chInteraction interaction);
 
+	template<typename TEmbed, typename TMentions, typename TComponent, typename TAttachment>
+	bool RespondToInteraction(chInteraction interaction, const char* content, eMessageFlag flags, const TEmbed& embeds, const TMentions& allowed_mentions, const TComponent& components, const TAttachment& attachments) {
+		chActionRow component_args;
+		int32_t component_size;
+		interaction_response_get_args(components, component_args, component_size);
+		return respond_to_interaction(interaction, content, flags, component_args, component_size);
+	}
 
-	template<typename T>
-	void EditInteractionResponse(chInteraction interaction, T&& response) { edit_interaction_response(interaction, std::forward<T>(response)); }
-	template<typename... Args>
-	void EditInteractionResponse(chInteraction interaction, Args... args) { edit_interaction_response(interaction, cInteractionResponse<INTERACTION_CALLBACK_UPDATE_MESSAGE>(std::forward<Args>(args)...)); }
-	
-	//void Run();
+	template<typename TEmbed, typename TMentions, typename TComponent, typename TAttachment>
+	bool EditInteractionResponse(chInteraction interaction, const char* content, eMessageFlag flags, const TEmbed& embeds, const TMentions& allowed_mentions, const TComponent& components, const TAttachment& attachments) {
+		chActionRow component_args;
+		int32_t component_size;
+		interaction_response_get_args(components, component_args, component_size);
+		return edit_interaction_response(interaction, content, flags, component_args, component_size);
+	}
 };
 
 

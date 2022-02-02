@@ -46,71 +46,79 @@ private:
 				return;
 		}
 
-		cInteractionResponse<INTERACTION_CALLBACK_CHANNEL_MESSAGE_WITH_SOURCE> r(user->GetAvatarUrl());
-		RespondToInteraction(interaction, r);
+		RespondToInteraction(interaction, user->GetAvatarUrl(), MESSAGE_FLAG_NONE, nullptr, nullptr, nullptr, nullptr);
 	}
 
 	void OnInteraction_role(chInteraction interaction) {
-		RespondToInteraction<INTERACTION_CALLBACK_CHANNEL_MESSAGE_WITH_SOURCE>(interaction, "Select a role depending on your greek level:", INTERACTION_FLAG_EPHEMERAL, cActionRow {
-				cSelectMenu {
-					"proficiency_role_menu",
-					"Choose an option...",
-					cSelectOption {
-						"Native",
-						"opt_gr",
-						"If greek is your native language",
-						cEmoji("level_gr", "875469185529036880")
-					},
-					cSelectOption {
-						"Beginner",
-						"opt_a1",
-						"If you just started learning greek or your level is A1",
-						cEmoji("level_a1", "875469185793286164")
-					},
-					cSelectOption {
-						"Elementary",
-						"opt_a2",
-						"If your greek level is A2",
-						cEmoji("level_a2", "875469185394827355")
-					},
-					cSelectOption {
-						"Intermediate",
-						"opt_b1",
-						"If your greek level is B1",
-						cEmoji("level_b1", "875469185659056138")
-					},
-					cSelectOption {
-						"Upper Intermediate",
-						"opt_b2",
-						"If your greek level is B2",
-						cEmoji("level_b2", "875469185751347251")
-					},
-					cSelectOption {
-						"Advanced",
-						"opt_c1",
-						"If your greek level is C1",
-						cEmoji("level_c1", "875469185726173276")
-					},
-					cSelectOption {
-						"Fluent",
-						"opt_c2",
-						"If your greek level is C2",
-						cEmoji("level_c2", "875469185734541382")
-					},
-					cSelectOption {
-						"Non Learner",
-						"opt_no",
-						"If you don't want to learn greek",
-						cEmoji("level_no", "875469185466109992")
+		RespondToInteraction(
+			interaction,
+			"Select a role depending on your greek level:",
+			MESSAGE_FLAG_EPHEMERAL,
+			nullptr,
+			nullptr,
+			std::vector<cActionRow>{
+				cActionRow{
+					cSelectMenu{
+						"proficiency_role_menu",
+						"Choose an option...",
+						cSelectOption{
+							"Native",
+							"opt_gr",
+							"If greek is your native language",
+							cEmoji("level_gr", "875469185529036880")
+						},
+						cSelectOption{
+							"Beginner",
+							"opt_a1",
+							"If you just started learning greek or your level is A1",
+							cEmoji("level_a1", "875469185793286164")
+						},
+						cSelectOption{
+							"Elementary",
+							"opt_a2",
+							"If your greek level is A2",
+							cEmoji("level_a2", "875469185394827355")
+						},
+						cSelectOption{
+							"Intermediate",
+							"opt_b1",
+							"If your greek level is B1",
+							cEmoji("level_b1", "875469185659056138")
+						},
+						cSelectOption{
+							"Upper Intermediate",
+							"opt_b2",
+							"If your greek level is B2",
+							cEmoji("level_b2", "875469185751347251")
+						},
+						cSelectOption{
+							"Advanced",
+							"opt_c1",
+							"If your greek level is C1",
+							cEmoji("level_c1", "875469185726173276")
+						},
+						cSelectOption{
+							"Fluent",
+							"opt_c2",
+							"If your greek level is C2",
+							cEmoji("level_c2", "875469185734541382")
+						},
+						cSelectOption{
+							"Non Learner",
+							"opt_no",
+							"If you don't want to learn greek",
+							cEmoji("level_no", "875469185466109992")
+						}
+					}
+				},
+				cActionRow{
+					cButton<BUTTON_STYLE_LINK>{
+						"https://en.wikipedia.org/wiki/Common_European_Framework_of_Reference_for_Languages",
+						"Don't know what to pick?"
 					}
 				}
 			},
-			cActionRow {
-				cButton<BUTTON_STYLE_LINK> {
-					"https://en.wikipedia.org/wiki/Common_European_Framework_of_Reference_for_Languages",
-					"Don't know what to pick?"
-				}
-			}
+			nullptr
 		);
 	}
 
@@ -137,7 +145,7 @@ private:
 
 	void OnInteraction_MessageComponent(chInteraction interaction) {
 		/* Acknowledge interaction */
-		RespondToInteraction<INTERACTION_CALLBACK_DEFERRED_UPDATE_MESSAGE>(interaction);
+		AcknowledgeInteraction(interaction);
 		const char* value = interaction->GetData<INTERACTION_MESSAGE_COMPONENT>()->Values[0];
 		auto member = interaction->GetMember();
 
@@ -166,7 +174,7 @@ private:
 			lmg_update_proficiency_role(member, LMG_PROFICIENCY_NON_LEARNER);
 		}
 		/* Edit original interaction message */
-		EditInteractionResponse(interaction, "Role assigned!", INTERACTION_FLAG_EPHEMERAL | INTERACTION_FLAG_REMOVE_COMPONENTS);
+		EditInteractionResponse(interaction, "Role assigned!", MESSAGE_FLAG_EPHEMERAL, nullptr, nullptr, std::vector<cActionRow>(), nullptr);
 	}
 
 	void OnGuildCreate(chGuild guild) override {
@@ -186,39 +194,38 @@ private:
 	}
 
 	void OnInteraction_rank(chInteraction interaction) {
+		/* Retrieve user argument */
 		auto data = interaction->GetData<INTERACTION_APPLICATION_COMMAND>();
 		chUser user = data->Options.empty() ? interaction->GetMember()->GetUser() : data->Options[0]->GetValue<APP_COMMAND_OPT_USER>();
-
+		/* Don't display data for bot users */
 		if (user->IsBotUser()) {
-			RespondToInteraction<INTERACTION_CALLBACK_CHANNEL_MESSAGE_WITH_SOURCE>(interaction, "Ranking isn't available for bot users.");
+			RespondToInteraction(interaction, "Ranking isn't available for bot users.", MESSAGE_FLAG_EPHEMERAL, nullptr, nullptr, nullptr, nullptr);
 			return;
 		}
 		if (user->IsSystemUser()) {
-			RespondToInteraction<INTERACTION_CALLBACK_CHANNEL_MESSAGE_WITH_SOURCE>(interaction, "Ranking isn't available for system users.");
+			RespondToInteraction(interaction, "Ranking isn't available for system users.", MESSAGE_FLAG_EPHEMERAL, nullptr, nullptr, nullptr, nullptr);
 			return;
 		}
-
-		RespondToInteraction<INTERACTION_CALLBACK_DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE>(interaction);
-
+		/* Acknowledge interaction while we're looking through the database */
+		AcknowledgeInteraction(interaction);
+		/* Get user's ranking info from the database */
 		int64_t rank, xp, num_msg;
 		bool user_exists;
-
-		// BIG TODO!!!: Make responding to interactions SANE! All the code below is a hack just to make it compile!
 		if (!cDatabase::GetUserRank(user, user_exists, rank, xp, num_msg)) {
-			EditInteractionResponse(interaction, "Database error.", INTERACTION_FLAG_REMOVE_COMPONENTS);
+			EditInteractionResponse(interaction, "Database error.", MESSAGE_FLAG_NONE, nullptr, nullptr, nullptr, nullptr);
 			return;
 		}
-
+		/* Calculate level */
 		if (!user_exists)
-			EditInteractionResponse(interaction, "User has no XP yet!", INTERACTION_FLAG_REMOVE_COMPONENTS);
+			EditInteractionResponse(interaction, "User has no XP yet!", MESSAGE_FLAG_NONE, nullptr, nullptr, nullptr, nullptr);
 		else {
-
-			for (uint64_t curr_lvl = 0, curr_xp = 0, next_lvl = 1, next_xp = 0;;) {
+			for (uint64_t curr_lvl = 0, curr_xp = 0, next_lvl = 1, next_xp;;) {
 				next_xp = curr_xp + 5 * (next_lvl * next_lvl) + 40 * (next_lvl) + 55;
 				if (next_xp > xp) {
+					// TODO: implement embeds and make this pretty
 					char str[300];
 					sprintf(str, "#%d: %s#%s has %d XP, %d messages, level %d, %d/%d for next level", (int)rank, user->GetUsername(), user->GetDiscriminator(), (int)xp, (int)num_msg, (int)curr_lvl, (int)(next_xp-xp), (int)(next_xp-curr_xp));
-					EditInteractionResponse(interaction, cInteractionResponse<INTERACTION_CALLBACK_UPDATE_MESSAGE>((decltype("skata"))str));
+					EditInteractionResponse(interaction, str, MESSAGE_FLAG_NONE, nullptr, nullptr, nullptr, nullptr);
 					return;
 				}
 				curr_xp = next_xp;
