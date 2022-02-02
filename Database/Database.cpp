@@ -117,3 +117,29 @@ bool cDatabase::UpdateLeaderboard(chMessage msg) {
 	cUtils::PrintErr("Database error: %s", sqlite3_errmsg(ms_pDB));
 	return false;
 }
+
+bool cDatabase::GetUserRank(chUser user, bool& user_exists, int64_t& rank, int64_t& xp, int64_t& num_msg) {
+	sqlite3_stmt* stmt;
+	if (SQLITE_OK == sqlite3_prepare_v2(ms_pDB, QUERY_GET_RANK, QRLEN_GET_RANK, &stmt, nullptr)) {
+		if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, user->GetId()->ToInt())) {
+			switch (sqlite3_step(stmt)) {
+				case SQLITE_DONE:
+					/* Statement didn't return, no user data found */
+					user_exists = false;
+					goto LABEL_SUCCESS;
+				case SQLITE_ROW:
+					/* Statement returned data for the user */
+					user_exists = true;
+					rank    = sqlite3_column_int64(stmt, 0);
+					xp      = sqlite3_column_int64(stmt, 1);
+					num_msg = sqlite3_column_int64(stmt, 2);
+				LABEL_SUCCESS:
+					sqlite3_finalize(stmt);
+					return true;
+			}
+		}
+	}
+	sqlite3_finalize(stmt);
+	cUtils::PrintErr("Database error: %s", sqlite3_errmsg(ms_pDB));
+	return false;
+}

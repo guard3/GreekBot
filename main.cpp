@@ -185,6 +185,49 @@ private:
 		}
 	}
 
+	void OnInteraction_rank(chInteraction interaction) {
+		auto data = interaction->GetData<INTERACTION_APPLICATION_COMMAND>();
+		chUser user = data->Options.empty() ? interaction->GetMember()->GetUser() : data->Options[0]->GetValue<APP_COMMAND_OPT_USER>();
+
+		if (user->IsBotUser()) {
+			RespondToInteraction<INTERACTION_CALLBACK_CHANNEL_MESSAGE_WITH_SOURCE>(interaction, "Ranking isn't available for bot users.");
+			return;
+		}
+		if (user->IsSystemUser()) {
+			RespondToInteraction<INTERACTION_CALLBACK_CHANNEL_MESSAGE_WITH_SOURCE>(interaction, "Ranking isn't available for system users.");
+			return;
+		}
+
+		RespondToInteraction<INTERACTION_CALLBACK_DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE>(interaction);
+
+		int64_t rank, xp, num_msg;
+		bool user_exists;
+
+		// BIG TODO!!!: Make responding to interactions SANE! All the code below is a hack just to make it compile!
+		if (!cDatabase::GetUserRank(user, user_exists, rank, xp, num_msg)) {
+			EditInteractionResponse(interaction, "Database error.", INTERACTION_FLAG_REMOVE_COMPONENTS);
+			return;
+		}
+
+		if (!user_exists)
+			EditInteractionResponse(interaction, "User has no XP yet!", INTERACTION_FLAG_REMOVE_COMPONENTS);
+		else {
+
+			for (uint64_t curr_lvl = 0, curr_xp = 0, next_lvl = 1, next_xp = 0;;) {
+				next_xp = curr_xp + 5 * (next_lvl * next_lvl) + 40 * (next_lvl) + 55;
+				if (next_xp > xp) {
+					char str[300];
+					sprintf(str, "#%d: %s#%s has %d XP, %d messages, level %d, %d/%d for next level", (int)rank, user->GetUsername(), user->GetDiscriminator(), (int)xp, (int)num_msg, (int)curr_lvl, (int)(next_xp-xp), (int)(next_xp-curr_xp));
+					EditInteractionResponse(interaction, cInteractionResponse<INTERACTION_CALLBACK_UPDATE_MESSAGE>((decltype("skata"))str));
+					return;
+				}
+				curr_xp = next_xp;
+				curr_lvl++;
+				next_lvl++;
+			}
+		}
+	}
+
 	void OnInteractionCreate(chInteraction interaction) override {
 		if (interaction->GetType() == INTERACTION_APPLICATION_COMMAND) {
 			switch (interaction->GetData<INTERACTION_APPLICATION_COMMAND>()->GetCommandId()->ToInt()) {
@@ -195,6 +238,10 @@ private:
 				case 874634186374414356:
 					/* role */
 					OnInteraction_role(interaction);
+					break;
+				case 938199801420456066:
+					/* rank */
+					OnInteraction_rank(interaction);
 					break;
 				case 904462004071313448:
 					/* connect */

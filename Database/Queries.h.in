@@ -1,6 +1,9 @@
 #pragma once
 #ifndef _GREEKBOT_QUERIES_H_
 #define _GREEKBOT_QUERIES_H_
+#define QUERY_GET_RANK @QUERY_GET_RANK@
+#define QRLEN_GET_RANK (sizeof(QUERY_GET_RANK) - 1)
+
 #define QUERY_INIT @QUERY_INIT@
 #define QRLEN_INIT (sizeof(QUERY_INIT) - 1)
 

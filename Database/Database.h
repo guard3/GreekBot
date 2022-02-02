@@ -14,6 +14,7 @@ private:
 public:
 
 	static bool UpdateLeaderboard(chMessage);
+	static bool GetUserRank(chUser user, bool& user_exists, int64_t& rank, int64_t& xp, int64_t& num_msg);
 
 	~cDatabase() { sqlite3_close(ms_pDB); }
 };
