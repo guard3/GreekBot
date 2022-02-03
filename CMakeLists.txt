@@ -4,7 +4,7 @@ project(GreekBot)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR})
 
-add_executable(GreekBot main.cpp boost/beast.h boost/json.h Discord/Bot.cpp Discord/Bot.h Discord/Discord.cpp Discord/Discord.h Discord/Event.cpp Discord/Event.h Discord/Types.h Discord/Gateway/Gateway.cpp Discord/Gateway/Gateway.h Discord/Gateway/GatewayInfo.h Discord/Interaction/Interaction.cpp Discord/Interaction/Interaction.h Discord/Objects/Member.cpp Discord/Objects/Member.h Discord/Objects/User.cpp Discord/Objects/User.h Net/Net.cpp Net/Net.h Net/Websocket.cpp Net/Websocket.h Utils/Utils.cpp Utils/Utils.h Discord/Objects/Component.h Discord/Objects/Emoji.h Discord/Interaction/ApplicationCommandInteractionDataOption.cpp Discord/Interaction/ApplicationCommandInteractionData.cpp Discord/Interaction/MessageComponentInteractionData.cpp Discord/Voice/VoiceGateway.h Discord/Objects/Guild.h Discord/Voice/VoiceState.h Discord/Objects/Channel.h Discord/Objects/Message.h Database/Database.h Database/Database.cpp)
+add_executable(GreekBot main.cpp boost/beast.h boost/json.h Discord/Bot.cpp Discord/Bot.h Discord/Discord.cpp Discord/Discord.h Discord/Event.cpp Discord/Event.h Discord/Types.h Discord/Gateway/Gateway.cpp Discord/Gateway/Gateway.h Discord/Gateway/GatewayInfo.h Discord/Interaction/Interaction.cpp Discord/Interaction/Interaction.h Discord/Objects/Member.cpp Discord/Objects/Member.h Discord/Objects/User.cpp Discord/Objects/User.h Net/Net.cpp Net/Net.h Net/Websocket.cpp Net/Websocket.h Utils/Utils.cpp Utils/Utils.h Discord/Objects/Component.h Discord/Objects/Emoji.h Discord/Interaction/ApplicationCommandInteractionDataOption.cpp Discord/Interaction/ApplicationCommandInteractionData.cpp Discord/Interaction/MessageComponentInteractionData.cpp Discord/Voice/VoiceGateway.h Discord/Objects/Guild.h Discord/Voice/VoiceState.h Discord/Objects/Channel.h Discord/Objects/Message.h Database/Database.h Database/Database.cpp Discord/Objects/Embed.h)
 
 target_include_directories(
     GreekBot PRIVATE
@@ -53,7 +53,8 @@ endfunction()
 #string(REGEX REPLACE "[\n\t ]+" " " QUERY_INIT "R\"(${QUERY_INIT})\"")
 #file(READ Database/query_update_lb.sql QUERY_UPDATE_LB)
 #string(REGEX REPLACE "[\n\t ]+" " " QUERY_UPDATE_LB "R\"(${QUERY_UPDATE_LB})\"")
-define_query(QUERY_GET_RANK  Database/query_get_rank.sql )
-define_query(QUERY_INIT      Database/query_init.sql     )
-define_query(QUERY_UPDATE_LB Database/query_update_lb.sql)
+define_query(QUERY_GET_RANK   Database/query_get_rank.sql  )
+define_query(QUERY_INIT       Database/query_init.sql      )
+define_query(QUERY_UPDATE_LB  Database/query_update_lb.sql )
+define_query(QUERY_GET_TOP_10 Database/query_get_top_10.sql)
 configure_file(Database/Queries.h.in ${PROJECT_SOURCE_DIR}/Database/Queries.h)

@@ -9,4 +9,7 @@
 
 #define QUERY_UPDATE_LB @QUERY_UPDATE_LB@
 #define QRLEN_UPDATE_LB (sizeof(QUERY_UPDATE_LB) - 1)
+
+#define QUERY_GET_TOP_10 @QUERY_GET_TOP_10@
+#define QRLEN_GET_TOP_10 (sizeof(QUERY_GET_TOP_10) - 1)
 #endif /* _GREEKBOT_QUERIES_H_ */

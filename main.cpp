@@ -2,6 +2,7 @@
 #include "Component.h"
 #include "Utils.h"
 #include "Database.h"
+#include "Embed.h"
 class cGreekBot final : public cBot {
 private:
 	enum eLmgProficiencyRoleId {
@@ -199,33 +200,31 @@ private:
 		chUser user = data->Options.empty() ? interaction->GetMember()->GetUser() : data->Options[0]->GetValue<APP_COMMAND_OPT_USER>();
 		/* Don't display data for bot users */
 		if (user->IsBotUser()) {
-			RespondToInteraction(interaction, "Ranking isn't available for bot users.", MESSAGE_FLAG_EPHEMERAL, nullptr, nullptr, nullptr, nullptr);
+			RespondToInteraction(interaction, "Ranking isn't available for bot users.", MESSAGE_FLAG_NONE, nullptr, nullptr, nullptr, nullptr);
 			return;
 		}
 		if (user->IsSystemUser()) {
-			RespondToInteraction(interaction, "Ranking isn't available for system users.", MESSAGE_FLAG_EPHEMERAL, nullptr, nullptr, nullptr, nullptr);
+			RespondToInteraction(interaction, "Ranking isn't available for system users.", MESSAGE_FLAG_NONE, nullptr, nullptr, nullptr, nullptr);
 			return;
 		}
 		/* Acknowledge interaction while we're looking through the database */
 		AcknowledgeInteraction(interaction);
 		/* Get user's ranking info from the database */
-		int64_t rank, xp, num_msg;
-		bool user_exists;
-		if (!cDatabase::GetUserRank(user, user_exists, rank, xp, num_msg)) {
-			EditInteractionResponse(interaction, "Database error.", MESSAGE_FLAG_NONE, nullptr, nullptr, nullptr, nullptr);
+		tRankQueryData db_result;
+		if (!cDatabase::GetUserRank(user, db_result)) {
+			EditInteractionResponse(interaction, "Hmm... Looks like I've run into some trouble. Try again later!", MESSAGE_FLAG_NONE, nullptr, nullptr, nullptr, nullptr);
 			return;
 		}
 		/* Calculate level */
-		if (!user_exists)
-			EditInteractionResponse(interaction, "User has no XP yet!", MESSAGE_FLAG_NONE, nullptr, nullptr, nullptr, nullptr);
-		else {
+		if (!db_result.empty()) {
+			auto& res = db_result[0];
 			for (uint64_t curr_lvl = 0, curr_xp = 0, next_lvl = 1, next_xp;;) {
 				next_xp = curr_xp + 5 * (next_lvl * next_lvl) + 40 * (next_lvl) + 55;
-				if (next_xp > xp) {
+				if (next_xp > db_result[0].GetXp()) {
 					// TODO: implement embeds and make this pretty
 					char str[300];
-					sprintf(str, "#%d: %s#%s has %d XP, %d messages, level %d, %d/%d for next level", (int)rank, user->GetUsername(), user->GetDiscriminator(), (int)xp, (int)num_msg, (int)curr_lvl, (int)(next_xp-xp), (int)(next_xp-curr_xp));
-					EditInteractionResponse(interaction, str, MESSAGE_FLAG_NONE, nullptr, nullptr, nullptr, nullptr);
+					sprintf(str, "Rank #%d: %s#%s has %d XP, %d messages, level %d, %d/%d for next level", (int)res.GetRank(), user->GetUsername(), user->GetDiscriminator(), (int)res.GetXp(), (int)res.GetNumMessages(), (int)curr_lvl, (int)(next_xp-res.GetXp()), (int)(next_xp-curr_xp));
+					EditInteractionResponse(interaction, str, MESSAGE_FLAG_NONE, std::vector<cEmbed>{ cEmbed().SetTitle("Title").SetColor(0x5bc2e9) }, nullptr, nullptr, nullptr);
 					return;
 				}
 				curr_xp = next_xp;
@@ -233,6 +232,32 @@ private:
 				next_lvl++;
 			}
 		}
+		EditInteractionResponse(interaction, "User has no XP yet!", MESSAGE_FLAG_NONE, nullptr, nullptr, nullptr, nullptr);
+	}
+
+	void OnInteraction_top(chInteraction interaction) {
+		/* Acknowledge interaction */
+		AcknowledgeInteraction(interaction);
+		/* Get data from the database */
+		tRankQueryData db_result;
+		if (!cDatabase::GetTop10(db_result)) {
+			EditInteractionResponse(interaction, "Hmm... Looks like I've run into some trouble. Try again later!", MESSAGE_FLAG_NONE, nullptr, nullptr, nullptr, nullptr);
+			return;
+		}
+		if (db_result.empty()) {
+			EditInteractionResponse(interaction, "I don't have any data yet. Start talking!", MESSAGE_FLAG_NONE, nullptr, nullptr, nullptr, nullptr);
+			return;
+		}
+		/* Display data */
+		// TODO: make this pretty with embeds and stuff...
+		std::string str;
+		for (auto &d: db_result) {
+			char test[500];
+			sprintf(test, "Rank #%d, User id: %s", (int)d.GetRank(), d.GetUserId()->ToString());
+			str += test;
+			str += '\n';
+		}
+		EditInteractionResponse(interaction, str.c_str(), MESSAGE_FLAG_NONE, nullptr, nullptr, nullptr, nullptr);
 	}
 
 	void OnInteractionCreate(chInteraction interaction) override {
@@ -249,6 +274,10 @@ private:
 				case 938199801420456066:
 					/* rank */
 					OnInteraction_rank(interaction);
+					break;
+				case 938863857466757131:
+					/* top */
+					OnInteraction_top(interaction);
 					break;
 				case 904462004071313448:
 					/* connect */
