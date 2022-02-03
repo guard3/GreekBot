@@ -64,7 +64,7 @@ bool cBot::AcknowledgeInteraction(chInteraction interaction) {
 	}
 	char path[300];
 	sprintf(path, "%s/interactions/%s/%s/callback", DISCORD_API_ENDPOINT, interaction->GetId()->ToString(), interaction->GetToken());
-	return cNet::PostHttpsRequest(DISCORD_API_HOST, path, GetHttpAuthorization(), obj);
+	return -1 != cNet::PostHttpsRequest(DISCORD_API_HOST, path, GetHttpAuthorization(), obj);
 }
 
 static json::object make_interaction_response_data(const char* content, eMessageFlag flags, chActionRow components, int32_t num_components) {
@@ -98,7 +98,7 @@ bool cBot::respond_to_interaction(chInteraction interaction, const char* content
 	obj["data"] = make_interaction_response_data(content, flags, components, num_components);
 	char path[300];
 	sprintf(path, "%s/interactions/%s/%s/callback", DISCORD_API_ENDPOINT, interaction->GetId()->ToString(), interaction->GetToken());
-	return cNet::PostHttpsRequest(DISCORD_API_HOST, path, GetHttpAuthorization(), obj);
+	return -1 != cNet::PostHttpsRequest(DISCORD_API_HOST, path, GetHttpAuthorization(), obj);
 }
 
 bool cBot::edit_interaction_response(chInteraction interaction, const char* content, eMessageFlag flags, chActionRow components, int32_t num_components) {
@@ -106,5 +106,5 @@ bool cBot::edit_interaction_response(chInteraction interaction, const char* cont
 		return false;
 	char path[512];
 	sprintf(path, "%s/webhooks/%s/%s/messages/@original", DISCORD_API_ENDPOINT, interaction->GetApplicationId()->ToString(), interaction->GetToken());
-	return cNet::PatchHttpsRequest(DISCORD_API_HOST, path, GetHttpAuthorization(), make_interaction_response_data(content, flags, components, num_components));
+	return -1 != cNet::PatchHttpsRequest(DISCORD_API_HOST, path, GetHttpAuthorization(), make_interaction_response_data(content, flags, components, num_components));
 }
