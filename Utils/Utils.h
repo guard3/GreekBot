@@ -1,6 +1,7 @@
 #pragma once
 #ifndef _GREEKBOT_UTILS_H_
 #define _GREEKBOT_UTILS_H_
+#include <string>
 
 /* A helper class with various useful functions */
 class cUtils final {
@@ -15,6 +16,9 @@ public:
 	/* Logger functions */
 	static void PrintErr(const char* fmt, ...);
 	static void PrintLog(const char* fmt, ...);
+
+	/* C style formatting for std::string */
+	static std::string Format(const char* fmt, ...);
 	
 	static const char* GetOS() {
 #ifdef _WIN32

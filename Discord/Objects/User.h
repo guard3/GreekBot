@@ -9,7 +9,7 @@ private:
 	cSnowflake  id;
 	std::string username;
 	std::string discriminator;
-	char        avatar[128] = "https://cdn.discordapp.com/";
+	std::string avatar;
 	bool        bot;
 	bool        system;
 	// other stuff unimplemented
@@ -20,7 +20,7 @@ public:
 	chSnowflake GetId()            const { return &id;                   }
 	const char* GetUsername()      const { return username.c_str();      }
 	const char* GetDiscriminator() const { return discriminator.c_str(); }
-	const char* GetAvatarUrl()     const { return avatar;                }
+	const char* GetAvatarUrl()     const { return avatar.c_str();                }
 
 	bool        IsBotUser()        const { return bot;                   }
 	bool        IsSystemUser()     const { return system;                }

@@ -12,6 +12,8 @@
 #define DISCORD_API_GATEWAY     DISCORD_API_ENDPOINT "/gateway"
 #define DISCORD_API_GATEWAY_BOT DISCORD_API_GATEWAY  "/bot"
 
+#define DISCORD_IMAGE_BASE_URL "https://cdn.discordapp.com/"
+
 enum eDiscordErrorType {
 	DISCORD_ERROR_NO_ERROR,
 	DISCORD_ERROR_GENERIC,

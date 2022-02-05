@@ -218,14 +218,10 @@ private:
 		/* Calculate level */
 		if (!db_result.empty()) {
 			auto& res = db_result[0];
-			for (uint64_t curr_lvl = 0, curr_xp = 0, next_lvl = 1, next_xp;;) {
+			for (int64_t curr_lvl = 0, curr_xp = 0, next_lvl = 1, next_xp;;) {
 				next_xp = curr_xp + 5 * (next_lvl * next_lvl) + 40 * (next_lvl) + 55;
 				if (next_xp > db_result[0].GetXp()) {
-					/* Prepare embed author name */
-					char embed_author[128];
-					sprintf(embed_author, "%s#%s", user->GetUsername(), user->GetDiscriminator());
 					/* Prepare embed title */
-					char embed_title[128];
 					const char* medal;
 					switch (res.GetRank()) {
 						case 1:
@@ -240,18 +236,17 @@ private:
 						default:
 							medal = "🏅";
 					}
-					sprintf(embed_title, "%s Rank **#%d**", medal, (int)res.GetRank());
 					EditInteractionResponse(
 						interaction,
 						nullptr,//str,
 						MESSAGE_FLAG_NONE,
 						std::vector<cEmbed> {
 							cEmbed::CreateBuilder()
-							.SetAuthor(embed_author, nullptr, user->GetAvatarUrl())
-							.SetTitle(embed_title)
+							.SetAuthor(cUtils::Format("%s#%s", user->GetUsername(), user->GetDiscriminator()).c_str(), nullptr, user->GetAvatarUrl())
+							.SetTitle(cUtils::Format("%s Rank **#%" PRIi64 "**", medal, res.GetRank()).c_str())
 							.SetColor(0x5bc2e9) // TODO: Get user's role color
 							.AddField("Level", std::to_string(curr_lvl).c_str(), true)
-							.AddField("XP Progress", (std::to_string(next_xp - res.GetXp()) + '/' + std::to_string(next_xp - curr_xp)).c_str(), true)
+							.AddField("XP Progress", cUtils::Format("%" PRIi64 "/%" PRIi64, res.GetXp() - curr_xp, next_xp - curr_xp).c_str(), true)
 							.AddField("Total XP", std::to_string(res.GetXp()).c_str(), true)
 							.SetFooter("Keep talking and establish yourself in the leaderboard!", nullptr)
 							.Build()

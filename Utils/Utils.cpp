@@ -35,3 +35,22 @@ void cUtils::PrintLog(const char *fmt, ...) {
 	print(stdout, "[LOG] ", fmt, args);
 	va_end(args);
 }
+
+std::string
+cUtils::Format(const char *fmt, ...) {
+	va_list args1;
+	va_start(args1, fmt);
+	std::string str(10, '\0');
+	int str_len = vsnprintf(str.data(), str.size() + 1, fmt, args1);
+	va_end(args1);
+	if (str_len >= 0) {
+		str.resize(str_len);
+		if (str_len > 10) {
+			va_list args2;
+			va_start(args2, fmt);
+			vsprintf(str.data(), fmt, args2);
+			va_end(args2);
+		}
+	}
+	return str;
+}
