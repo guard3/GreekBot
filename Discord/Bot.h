@@ -71,6 +71,8 @@ public:
 
 	using cGateway::GetToken;
 
+	chUser GetUser() const { return m_user; }
+
 	// TODO: Rate limit
 	void AddGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake& role_id);
 	void RemoveGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake& role_id);

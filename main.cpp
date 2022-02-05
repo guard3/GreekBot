@@ -221,10 +221,46 @@ private:
 			for (uint64_t curr_lvl = 0, curr_xp = 0, next_lvl = 1, next_xp;;) {
 				next_xp = curr_xp + 5 * (next_lvl * next_lvl) + 40 * (next_lvl) + 55;
 				if (next_xp > db_result[0].GetXp()) {
-					// TODO: implement embeds and make this pretty
-					char str[300];
-					sprintf(str, "Rank #%d: %s#%s has %d XP, %d messages, level %d, %d/%d for next level", (int)res.GetRank(), user->GetUsername(), user->GetDiscriminator(), (int)res.GetXp(), (int)res.GetNumMessages(), (int)curr_lvl, (int)(next_xp-res.GetXp()), (int)(next_xp-curr_xp));
-					EditInteractionResponse(interaction, str, MESSAGE_FLAG_NONE, std::vector<cEmbed>{ cEmbed().SetTitle("Title").SetColor(0x5bc2e9) }, nullptr, nullptr, nullptr);
+					/* Prepare embed author name */
+					char embed_author[128];
+					sprintf(embed_author, "%s#%s", user->GetUsername(), user->GetDiscriminator());
+					/* Prepare embed title */
+					char embed_title[128];
+					const char* medal;
+					switch (res.GetRank()) {
+						case 1:
+							medal = "🥇";
+							break;
+						case 2:
+							medal = "🥈";
+							break;
+						case 3:
+							medal = "🥉";
+							break;
+						default:
+							medal = "🏅";
+					}
+					sprintf(embed_title, "%s Rank **#%d**", medal, (int)res.GetRank());
+					EditInteractionResponse(
+						interaction,
+						nullptr,//str,
+						MESSAGE_FLAG_NONE,
+						std::vector<cEmbed> {
+							cEmbed::CreateBuilder()
+							.SetAuthor(embed_author, nullptr, user->GetAvatarUrl())
+							.SetTitle(embed_title)
+							.SetColor(0x5bc2e9) // TODO: Get user's role color
+							.AddField("Level", std::to_string(curr_lvl).c_str(), true)
+							.AddField("XP Progress", (std::to_string(next_xp - res.GetXp()) + '/' + std::to_string(next_xp - curr_xp)).c_str(), true)
+							.AddField("Total XP", std::to_string(res.GetXp()).c_str(), true)
+							.SetFooter("Keep talking and establish yourself in the leaderboard!", nullptr)
+							.Build()
+						},
+						nullptr,
+						nullptr,
+						nullptr
+					);
+					// TODO: Maybe add a button that will explain how the ranking system works
 					return;
 				}
 				curr_xp = next_xp;
