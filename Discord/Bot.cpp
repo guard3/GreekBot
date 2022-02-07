@@ -9,6 +9,53 @@ void cBot::OnReady(uchUser user) {
 	m_user = user.release();
 }
 
+std::vector<uchRole>
+cBot::get_guild_roles(const cSnowflake& guild_id) {
+	std::vector<uchRole> result;
+	if (std::string response; 200 == cNet::GetHttpsRequest(DISCORD_API_HOST, cUtils::Format("%s/guilds/%s/roles", DISCORD_API_ENDPOINT, guild_id.ToString()).c_str(), GetHttpAuthorization(), response)) {
+		try {
+			json::monotonic_resource mr;
+			json::stream_parser p(&mr);
+			p.write(response);
+			json::value j = p.release();
+			json::array a = j.as_array();
+			result.reserve(a.size());
+			for (auto& v : a)
+				result.emplace_back(cHandle::MakeUnique<cRole>(v));
+		}
+		catch (...) {
+			result.clear();
+		}
+	}
+	return result;
+}
+
+std::vector<uchRole>
+cBot::GetGuildMemberRoles(const cSnowflake &guild_id, chMember member, chUser user) {
+	chUser u;
+#if 0
+	if ((u = member->GetUser()));
+	else if ((u = user));
+	else return {};
+#else
+	if (!(u = member->GetUser())) {
+		if (!(u = user))
+			return {};
+	}
+#endif
+
+	std::vector<uchRole> result;
+	std::vector<uchRole> guild_roles = GetGuildRoles(guild_id);
+	for (auto& r : guild_roles) {
+		if (r->GetId()->ToInt() == guild_id.ToInt())
+			result.push_back(std::move(r));
+		else if (member->Roles.end() != std::find_if(member->Roles.begin(), member->Roles.end(), [&](const chSnowflake& s) { return s->ToInt() == r->GetId()->ToInt(); })) {
+			result.push_back(std::move(r));
+		}
+	}
+	return result;
+}
+
 void cBot::AddGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake &role_id) {
 	char path[300];
 	sprintf(path, "%s/guilds/%s/members/%s/roles/%s", DISCORD_API_ENDPOINT, guild_id.ToString(), user_id.ToString(), role_id.ToString());

@@ -6,7 +6,7 @@
 
 /* ========== Handle types ========== */
 template<typename T> // handle
-using   hHandle = std::remove_const_t<T>*;
+using   hHandle = T*;
 template<typename T> // const handle
 using  chHandle = const T*; // ch: const handle
 template<typename T> // unique handle
@@ -14,7 +14,7 @@ using  uhHandle = std::unique_ptr<T>;//std::remove_const_t<T>>;
 template<typename T> // unique const handle
 using uchHandle = std::unique_ptr<const T>;
 template<typename T> // shared handle
-using  shHandle = std::shared_ptr<std::remove_const_t<T>>;
+using  shHandle = std::shared_ptr<T>;
 template<typename T> // shared const handle
 using schHandle = std::shared_ptr<const T>;
 
@@ -22,6 +22,16 @@ using schHandle = std::shared_ptr<const T>;
 class cHandle final {
 private:
 	cHandle() = default;
+
+	template<typename T> struct is_handle              : std::false_type {};
+	template<typename T> struct is_handle<T*>          : std::true_type  {};
+	template<typename T> struct is_handle<uhHandle<T>> : std::true_type  {};
+	template<typename T> struct is_handle<shHandle<T>> : std::true_type  {};
+
+	template<typename T> struct remove_h { typedef T Type; };
+	template<typename T> struct remove_h<hHandle<T>> { typedef T Type; };
+	template<typename T> struct remove_h<uhHandle<T>> { typedef T Type; };
+	template<typename T> struct remove_h<shHandle<T>> { typedef T Type; };
 
 public:
 	template<typename T, typename... Args>
@@ -55,6 +65,17 @@ public:
 	static uchHandle<T> MakeUniqueConstNoEx(Args&&... args) { return MakeUniqueNoEx<T>(std::forward<Args>(args)...); }
 	template<typename T, typename... Args>
 	static schHandle<T> MakeSharedConstNoEx(Args&&... args) { return MakeSharedNoEx<T>(std::forward<Args>(args)...); }
+
+	template<typename T>
+	static inline constexpr bool IsHandleType = is_handle<T>::value;
+	template<typename T>
+	using RemoveHandle = typename remove_h<std::remove_cv_t<T>>::Type;
+	template<typename T>
+	using RemoveHandleC = std::remove_const_t<RemoveHandle<T>>;
+	template<typename T>
+	using RemoveHandleV = std::remove_volatile_t<RemoveHandle<T>>;
+	template<typename T>
+	using RemoveHandleCV = std::remove_cv_t<RemoveHandle<T>>;
 };
 
 /* ========== Discord snowflake ========== */
@@ -89,5 +110,25 @@ typedef  uhHandle<cSnowflake>  uhSnowflake; // unique handle
 typedef uchHandle<cSnowflake> uchSnowflake; // unique const handle
 typedef  shHandle<cSnowflake>  shSnowflake; // shared handle
 typedef schHandle<cSnowflake> schSnowflake; // shared const handle
+
+/* ========== Color ========== */
+class cColor final {
+private:
+	int32_t m_value;
+
+public:
+	static inline constexpr int NO_COLOR = -1;
+	cColor() : m_value(-1) {}
+	cColor(int v) : m_value(v) {}
+
+	uint8_t GetRed()   const { return (m_value >> 16) & 0xFF; }
+	uint8_t GetGreen() const { return (m_value >>  8) & 0xFF; }
+	uint8_t GetBlue()  const { return  m_value        & 0xFF; }
+
+	int ToInt() const { return m_value; }
+	operator int() { return m_value; }
+	operator bool() { return m_value != NO_COLOR; }
+	bool operator!() { return m_value == NO_COLOR; }
+};
 
 #endif /* _GREEKBOT_TYPES_H_ */

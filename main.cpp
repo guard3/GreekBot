@@ -197,7 +197,16 @@ private:
 	void OnInteraction_rank(chInteraction interaction) {
 		/* Retrieve user argument */
 		auto data = interaction->GetData<INTERACTION_APPLICATION_COMMAND>();
-		chUser user = data->Options.empty() ? interaction->GetMember()->GetUser() : data->Options[0]->GetValue<APP_COMMAND_OPT_USER>();
+		chUser user;
+		chMember member;
+		if (data->Options.empty()) {
+			member = interaction->GetMember();
+			user = member->GetUser();
+		}
+		else {
+			user = data->Options[0]->GetValue<APP_COMMAND_OPT_USER>(member);
+		}
+
 		/* Don't display data for bot users */
 		if (user->IsBotUser()) {
 			RespondToInteraction(interaction, "Ranking isn't available for bot users.", MESSAGE_FLAG_NONE, nullptr, nullptr, nullptr, nullptr);
@@ -224,27 +233,20 @@ private:
 					/* Prepare embed title */
 					const char* medal;
 					switch (res.GetRank()) {
-						case 1:
-							medal = "🥇";
-							break;
-						case 2:
-							medal = "🥈";
-							break;
-						case 3:
-							medal = "🥉";
-							break;
-						default:
-							medal = "🏅";
+						case 1:  medal = "🥇"; break;
+						case 2:  medal = "🥈"; break;
+						case 3:  medal = "🥉"; break;
+						default: medal = "🏅"; break;
 					}
 					EditInteractionResponse(
 						interaction,
-						nullptr,//str,
+						nullptr,
 						MESSAGE_FLAG_NONE,
 						std::vector<cEmbed> {
 							cEmbed::CreateBuilder()
 							.SetAuthor(cUtils::Format("%s#%s", user->GetUsername(), user->GetDiscriminator()).c_str(), nullptr, user->GetAvatarUrl())
 							.SetTitle(cUtils::Format("%s Rank **#%" PRIi64 "**", medal, res.GetRank()).c_str())
-							.SetColor(0x5bc2e9) // TODO: Get user's role color
+							.SetColor(GetGuildMemberColor(m_lmg_id, member, user))
 							.AddField("Level", std::to_string(curr_lvl).c_str(), true)
 							.AddField("XP Progress", cUtils::Format("%" PRIi64 "/%" PRIi64, res.GetXp() - curr_xp, next_xp - curr_xp).c_str(), true)
 							.AddField("Total XP", std::to_string(res.GetXp()).c_str(), true)

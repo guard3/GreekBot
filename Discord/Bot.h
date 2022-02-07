@@ -5,6 +5,7 @@
 #include "Gateway.h"
 #include "Message.h"
 #include "Embed.h"
+#include "Role.h"
 #include <vector>
 
 class cBot : public cGateway {
@@ -60,6 +61,21 @@ private:
 		return ms_interaction_functions[func](&func_data);
 	}
 
+	template<typename T>
+	cSnowflake resolve_snowflake(T&& arg) {
+		if constexpr(cHandle::IsHandleType<T>) {
+			cUtils::PrintLog("I'm a handle owo");
+			static_assert(std::is_same_v<cHandle::RemoveHandleCV<T>, cSnowflake>);
+			return *arg;
+		}
+		else {
+			cUtils::PrintLog("I'm NOT a handle owo");
+			return arg;
+		}
+	}
+
+	std::vector<uchRole> get_guild_roles(const cSnowflake& guild_id);
+
 protected:
 	using cGateway::OnInteractionCreate;
 	using cGateway::OnGuildCreate;
@@ -74,9 +90,28 @@ public:
 	chUser GetUser() const { return m_user; }
 
 	// TODO: Rate limit
+	template<typename T>
+	std::vector<uchRole> GetGuildRoles(T&& guild_id) {
+		return get_guild_roles(resolve_snowflake(std::forward<T>(guild_id)));
+	}
+
+	std::vector<uchRole> GetGuildMemberRoles(const cSnowflake& guild_id, chMember member, chUser user = nullptr);
+	cColor GetGuildMemberColor(const cSnowflake& guild_id, chMember member, chUser user = nullptr) {
+		auto v = GetGuildMemberRoles(guild_id, member, user);
+		if (v.empty())
+			return {};
+
+		auto i = v.begin();
+		chRole top_role = i++->get();
+		do {
+			if ((*i)->GetPosition() > top_role->GetPosition())
+				top_role = i->get();
+		} while (++i != v.end());
+		return top_role->GetColor();
+	}
+
 	void AddGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake& role_id);
 	void RemoveGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake& role_id);
-
 	void UpdateGuildMemberRoles(const cSnowflake& guild_id, const cSnowflake& user_id, const std::vector<chSnowflake>& role_ids);
 
 	bool AcknowledgeInteraction(chInteraction interaction);

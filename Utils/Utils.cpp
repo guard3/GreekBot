@@ -3,18 +3,13 @@
 #include <random>
 
 /* Random engine stuff */
-static std::random_device s_rd;
-static std::mt19937 s_gen(s_rd());
-static std::uniform_real_distribution<float> s_dis(0.0f, 0.1f);
+static std::mt19937 s_gen(std::random_device{}());
+static std::uniform_real_distribution<float> s_rDis;
+static std::uniform_int_distribution<int> s_iDis;
 
-float cUtils::Random() {
-	return s_dis(s_gen);
-}
+float cUtils::Random() { return s_rDis(s_gen, decltype(s_rDis)::param_type(0.0f, 1.0f)); }
 
-int cUtils::Random(int a, int b) {
-	std::uniform_int_distribution<int> dis(a, b);
-	return dis(s_gen);
-}
+int cUtils::Random(int a, int b) { return s_iDis(s_gen, decltype(s_iDis)::param_type(a, b)); }
 
 static void print(FILE* f, const char* comment, const char* fmt, va_list args) {
 	fputs(comment, f);
@@ -38,19 +33,18 @@ void cUtils::PrintLog(const char *fmt, ...) {
 
 std::string
 cUtils::Format(const char *fmt, ...) {
-	va_list args1;
-	va_start(args1, fmt);
-	std::string str(10, '\0');
-	int str_len = vsnprintf(str.data(), str.size() + 1, fmt, args1);
-	va_end(args1);
-	if (str_len >= 0) {
-		str.resize(str_len);
-		if (str_len > 10) {
-			va_list args2;
-			va_start(args2, fmt);
-			vsprintf(str.data(), fmt, args2);
-			va_end(args2);
-		}
+	va_list args;
+	va_start(args, fmt);
+	std::string str(255, '\0');
+	int str_len = vsnprintf(str.data(), str.size() + 1, fmt, args);
+	va_end(args);
+	if (str_len < 0)
+		return {};
+	str.resize(str_len);
+	if (str_len > 255) {
+		va_start(args, fmt);
+		vsprintf(str.data(), fmt, args);
+		va_end(args);
 	}
 	return str;
 }
