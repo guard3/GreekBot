@@ -4,7 +4,7 @@ project(GreekBot)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR})
 
-add_executable(GreekBot main.cpp boost/beast.h boost/json.h Discord/Bot.cpp Discord/Bot.h Discord/Discord.cpp Discord/Discord.h Discord/Event.cpp Discord/Event.h Discord/Types.h Discord/Gateway/Gateway.cpp Discord/Gateway/Gateway.h Discord/Gateway/GatewayInfo.h Discord/Interaction/Interaction.cpp Discord/Interaction/Interaction.h Discord/Objects/Member.cpp Discord/Objects/Member.h Discord/Objects/User.cpp Discord/Objects/User.h Net/Net.cpp Net/Net.h Net/Websocket.cpp Net/Websocket.h Utils/Utils.cpp Utils/Utils.h Discord/Objects/Component.h Discord/Objects/Emoji.h Discord/Interaction/ApplicationCommandInteractionDataOption.cpp Discord/Interaction/ApplicationCommandInteractionData.cpp Discord/Interaction/MessageComponentInteractionData.cpp Discord/Voice/VoiceGateway.h Discord/Objects/Guild.h Discord/Voice/VoiceState.h Discord/Objects/Channel.h Discord/Objects/Message.h Database/Database.h Database/Database.cpp Discord/Objects/Embed.h Discord/Objects/Embed.cpp Discord/Objects/Role.h Discord/Objects/Role.cpp)
+add_executable(GreekBot main.cpp boost/beast.h boost/json.h Discord/Bot.cpp Discord/Bot.h Discord/Discord.cpp Discord/Discord.h Discord/Event.cpp Discord/Event.h Discord/Types.h Discord/Gateway/Gateway.cpp Discord/Gateway/Gateway.h Discord/Gateway/GatewayInfo.h Discord/Interaction/Interaction.cpp Discord/Interaction/Interaction.h Discord/Objects/Member.cpp Discord/Objects/Member.h Discord/Objects/User.cpp Discord/Objects/User.h Net/Net.cpp Net/Net.h Net/Websocket.cpp Net/Websocket.h Utils/Utils.cpp Utils/Utils.h Discord/Objects/Component.h Discord/Objects/Emoji.h Discord/Interaction/ApplicationCommandInteractionDataOption.cpp Discord/Interaction/ApplicationCommandInteractionData.cpp Discord/Interaction/MessageComponentInteractionData.cpp Discord/Voice/VoiceGateway.h Discord/Objects/Guild.h Discord/Voice/VoiceState.h Discord/Objects/Channel.h Discord/Objects/Message.h Database/Database.h Database/Database.cpp Discord/Objects/Embed.h Discord/Objects/Embed.cpp Discord/Objects/Role.h Discord/Objects/Role.cpp GreekBot/GreekBot.h GreekBot/GreekBot.cpp GreekBot/GreekBot_Leaderboard.cpp GreekBot/GreekBot_Avatar.cpp GreekBot/GreekBot_Role.cpp)
 
 target_include_directories(
     GreekBot PRIVATE
@@ -14,6 +14,7 @@ target_include_directories(
     ${PROJECT_SOURCE_DIR}/Discord/Gateway
     ${PROJECT_SOURCE_DIR}/Discord/Interaction
     ${PROJECT_SOURCE_DIR}/Discord/Voice
+    ${PROJECT_SOURCE_DIR}/GreekBot
     ${PROJECT_SOURCE_DIR}/Net
     ${PROJECT_SOURCE_DIR}/Utils
     ${PROJECT_SOURCE_DIR}/Database
@@ -49,10 +50,6 @@ function(define_query VAR_NAME FILE_NAME)
     set(${VAR_NAME} ${CONTENT} PARENT_SCOPE)
 endfunction()
 
-#file(READ Database/query_init.sql QUERY_INIT)
-#string(REGEX REPLACE "[\n\t ]+" " " QUERY_INIT "R\"(${QUERY_INIT})\"")
-#file(READ Database/query_update_lb.sql QUERY_UPDATE_LB)
-#string(REGEX REPLACE "[\n\t ]+" " " QUERY_UPDATE_LB "R\"(${QUERY_UPDATE_LB})\"")
 define_query(QUERY_GET_RANK   Database/query_get_rank.sql  )
 define_query(QUERY_INIT       Database/query_init.sql      )
 define_query(QUERY_UPDATE_LB  Database/query_update_lb.sql )
