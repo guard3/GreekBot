@@ -3,6 +3,9 @@
 #define _GREEKBOT_GREEKBOT_H_
 #include "Bot.h"
 
+/* Define custom message component ids; used for responding to component interactions */
+#define CMP_ID_BUTTON_RANK_HELP 0
+
 class cGreekBot final : public cBot {
 private:
 	enum eLmgProficiencyRoleId {
@@ -18,14 +21,14 @@ private:
 	};
 	cSnowflake m_lmg_id = 350234668680871946; // Learning Greek
 	cSnowflake m_lmg_proficiency_roles[8] {
-			350483752490631181, // @Native
-			351117824300679169, // @Beginner
-			351117954974482435, // @Elementary
-			350485376109903882, // @Intermediate
-			351118486426091521, // @Upper Intermediate
-			350485279238258689, // @Advanced
-			350483489461895168, // @Fluent
-			352001527780474881  // @Non Learner
+		350483752490631181, // @Native
+		351117824300679169, // @Beginner
+		351117954974482435, // @Elementary
+		350485376109903882, // @Intermediate
+		351118486426091521, // @Upper Intermediate
+		350485279238258689, // @Advanced
+		350483489461895168, // @Fluent
+		352001527780474881  // @Non Learner
 	};
 
 	/* Voice */
@@ -57,7 +60,7 @@ private:
 		UpdateGuildMemberRoles(m_lmg_id, *member->GetUser()->GetId(), roles);
 	}
 
-	void OnInteraction_MessageComponent(chInteraction interaction) {
+	void OnInteraction_SelectMenu(chInteraction interaction) {
 		/* Acknowledge interaction */
 		AcknowledgeInteraction(interaction);
 		const char* value = interaction->GetData<INTERACTION_MESSAGE_COMPONENT>()->Values[0];
@@ -91,10 +94,9 @@ private:
 		EditInteractionResponse(interaction, "Role assigned!", MESSAGE_FLAG_EPHEMERAL, nullptr, nullptr, std::vector<cActionRow>(), nullptr);
 	}
 
-
-
 	void OnInteraction_rank(chInteraction interaction);
 	void OnInteraction_top(chInteraction interaction);
+	void OnInteraction_button(chInteraction interaction);
 
 	void OnGuildCreate(chGuild guild) override;
 	void OnInteractionCreate(chInteraction interaction) override;

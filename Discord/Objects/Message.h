@@ -2,6 +2,8 @@
 #ifndef _GREEKBOT_MESSAGE_H_
 #define _GREEKBOT_MESSAGE_H_
 #include "User.h"
+#include "Embed.h"
+#include "Member.h"
 
 enum eMessageType {
 	MESSAGE_TYPE_DEFAULT,
@@ -55,37 +57,33 @@ private:
 	cSnowflake  channel_id;
 	uhSnowflake guild_id;
 	cUser       author;
-	// member
+	uhMember    member;
 	std::string content;
 	std::string timestamp;
-	// edited_timestamp
-	//bool tts;
+	std::string edited_timestamp;
 	// ...
 	eMessageType type;
 	// ...
 	eMessageFlag flags;
 
 public:
-	//template<typename T, typename = std::enable_if_t<std::is_same_v<T, json::value>>>
-	explicit cMessage(const json::value& v):
-		id(v.at("id")),
-		channel_id(v.at("channel_id")),
-		guild_id(cHandle::MakeUniqueNoEx<cSnowflake>(v.at("guild_id"))),
-		author(v.at("author")),
-		content(v.at("content").as_string().c_str()),
-		timestamp(v.at("timestamp").as_string().c_str()),
-		type((eMessageType)v.at("type").as_int64())
-	{
-		const json::value* f;
-		flags = (eMessageFlag)((f = v.as_object().if_contains("flags")) ? f->as_int64() : 0);
-		flags = flags | (eMessageFlag)((v.at("tts").as_bool() << 15) | (v.at("mention_everyone").as_bool() << 16));
-	}
+	std::vector<cEmbed> Embeds;
+
+	cMessage(const json::object&);
+	cMessage(const json::value& v) : cMessage(v.as_object()) {}
+	cMessage(const cMessage& o);
+	cMessage(cMessage&&) = default;
+
+	cMessage& operator=(cMessage o);
+
 	chSnowflake  GetId()        const { return &id;               }
 	chSnowflake  GetChannelId() const { return &channel_id;       }
 	chSnowflake  GetGuildId()   const { return guild_id.get();    }
 	chUser       GetAuthor()    const { return &author;           }
+	chMember     GetMember()    const { return member.get();      }
 	const char  *GetContent()   const { return content.c_str();   }
 	const char  *GetTimestamp() const { return timestamp.c_str(); }
+	const char  *GetEditedTimestamp() const { return edited_timestamp.empty() ? nullptr : edited_timestamp.c_str(); }
 	eMessageType GetType()      const { return type;              }
 	eMessageFlag GetFlags()     const { return flags;             }
 };
@@ -95,5 +93,4 @@ typedef  uhHandle<cMessage>  uhMessage;
 typedef uchHandle<cMessage> uchMessage;
 typedef  shHandle<cMessage>  shMessage;
 typedef schHandle<cMessage> schMessage;
-
 #endif /* _GREEKBOT_MESSAGE_H_ */

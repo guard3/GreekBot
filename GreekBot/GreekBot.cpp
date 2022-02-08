@@ -20,8 +20,8 @@ cGreekBot::OnGuildCreate(chGuild guild) {
 
 void
 cGreekBot::OnInteractionCreate(chInteraction interaction) {
-	if (interaction->GetType() == INTERACTION_APPLICATION_COMMAND) {
-		switch (interaction->GetData<INTERACTION_APPLICATION_COMMAND>()->GetCommandId()->ToInt()) {
+	if (auto data = interaction->GetData<INTERACTION_APPLICATION_COMMAND>()) {
+		switch (data->GetCommandId()->ToInt()) {
 			case 878391425568473098:
 				/* avatar */
 				OnInteraction_avatar(interaction);
@@ -42,12 +42,22 @@ cGreekBot::OnInteractionCreate(chInteraction interaction) {
 				/* connect */
 				OnInteraction_connect(interaction);
 				break;
-			default:
+		}
+	}
+	else if (auto data = interaction->GetData<INTERACTION_MESSAGE_COMPONENT>()) {
+		switch (data->GetComponentType()) {
+			case COMPONENT_BUTTON:
+				switch (strtol(data->GetCustomId(), nullptr, 10)) {
+					case CMP_ID_BUTTON_RANK_HELP:
+						OnInteraction_button(interaction);
+						break;
+				}
+				break;
+			case COMPONENT_SELECT_MENU:
+				OnInteraction_SelectMenu(interaction);
 				break;
 		}
 	}
-	else if (interaction->GetType() == INTERACTION_MESSAGE_COMPONENT)
-		OnInteraction_MessageComponent(interaction);
 }
 
 void

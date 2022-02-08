@@ -85,7 +85,17 @@ cGreekBot::OnInteraction_rank(chInteraction interaction) {
 						.AddField("Total XP", std::to_string(res.GetXp()).c_str(), true)
 						.SetFooter("Keep talking and establish yourself in the leaderboard!", nullptr)
 						.Build()
-				}, nullptr, nullptr, nullptr
+				},
+				nullptr,
+				std::vector<cActionRow> {
+					cActionRow {
+						cButton<BUTTON_STYLE_PRIMARY> {
+							STR(CMP_ID_BUTTON_RANK_HELP),
+							"How does this work?"
+						}
+					}
+				},
+				nullptr
 			);
 			// TODO: Maybe add a button that will explain how the ranking system works
 			return;

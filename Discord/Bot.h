@@ -33,6 +33,7 @@ private:
 	enum eIF {
 		IF_RESPOND,
 		IF_EDIT_OG_MSG,
+		IF_FOLLOWUP,
 		IF_NUM
 	};
 	struct sIF_data {
@@ -62,17 +63,9 @@ private:
 	}
 
 	template<typename T>
-	cSnowflake resolve_snowflake(T&& arg) {
-		if constexpr(cHandle::IsHandleType<T>) {
-			cUtils::PrintLog("I'm a handle owo");
-			static_assert(std::is_same_v<cHandle::RemoveHandleCV<T>, cSnowflake>);
-			return *arg;
-		}
-		else {
-			cUtils::PrintLog("I'm NOT a handle owo");
-			return arg;
-		}
-	}
+	cSnowflake resolve_snowflake(T&& arg) { return arg; }
+	template<typename T, typename = std::enable_if_t<cHandle::IsHandleType<T> && std::is_same_v<cHandle::RemoveHandleCV<T>, cSnowflake>>>
+	cSnowflake resolve_snowflake(T&& arg) { return *arg; };
 
 	std::vector<uchRole> get_guild_roles(const cSnowflake& guild_id);
 
@@ -91,9 +84,7 @@ public:
 
 	// TODO: Rate limit
 	template<typename T>
-	std::vector<uchRole> GetGuildRoles(T&& guild_id) {
-		return get_guild_roles(resolve_snowflake(std::forward<T>(guild_id)));
-	}
+	std::vector<uchRole> GetGuildRoles(T&& guild_id) { return get_guild_roles(resolve_snowflake(std::forward<T>(guild_id))); }
 
 	std::vector<uchRole> GetGuildMemberRoles(const cSnowflake& guild_id, chMember member, chUser user = nullptr);
 	cColor GetGuildMemberColor(const cSnowflake& guild_id, chMember member, chUser user = nullptr) {
@@ -119,6 +110,8 @@ public:
 	bool RespondToInteraction(Args&&... args) { return exec_if(IF_RESPOND, std::forward<Args>(args)...); }
 	template<typename... Args>
 	bool EditInteractionResponse(Args&&... args) { return exec_if(IF_EDIT_OG_MSG, std::forward<Args>(args)...); }
+	template<typename... Args>
+	bool SendInteractionFollowupMessage(Args&&... args) { return exec_if(IF_FOLLOWUP, std::forward<Args>(args)...); }
 };
 
 

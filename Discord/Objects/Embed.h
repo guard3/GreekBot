@@ -15,7 +15,7 @@ enum eEmbedType {
 };
 
 /* ================================================================================================= */
-class cEmbedMedia final {
+class cEmbedMedia {
 	friend class cEmbed;
 private:
 	std::string url;       // The source url of the image or video
@@ -26,6 +26,9 @@ private:
 	cEmbedMedia() : width(-1), height(-1) {}
 
 public:
+	cEmbedMedia(const json::object& o);
+	cEmbedMedia(const json::value& v) : cEmbedMedia(v.as_object()) {}
+
 	const char* GetUrl()      const { return       url.empty() ? nullptr :       url.c_str(); }
 	const char* GetProxyUrl() const { return proxy_url.empty() ? nullptr : proxy_url.c_str(); }
 	int         GetWidth()    const { return width;  }
@@ -48,7 +51,9 @@ private:
 	std::string proxy_icon_url; // A proxied url of the icon
 
 protected:
-	cBaseEmbedGenericObject(std::string str, std::string icon_url) : str(std::move(str)), icon_url(std::move(icon_url)) {}
+	cBaseEmbedGenericObject(std::string str, std::string icon_url);
+	cBaseEmbedGenericObject(std::string str, const json::object& o);
+	cBaseEmbedGenericObject(std::string str, const json::value& v) : cBaseEmbedGenericObject(std::move(str), v.as_object()) {}
 
 	const std::string& GetString() const { return str; }
 
@@ -65,6 +70,8 @@ private:
 	std::string url;
 
 public:
+	cEmbedAuthor(const json::object& o);
+	cEmbedAuthor(const json::value& v) : cEmbedAuthor(v.as_object()) {}
 	cEmbedAuthor(const char* name, const char* url, const char* icon_url) : cBaseEmbedGenericObject(name, icon_url ? icon_url : std::string()), url(url ? url : std::string()) {}
 
 	const char* GetName() const { return GetString().c_str();                 }
@@ -87,6 +94,8 @@ typedef schHandle<cEmbedAuthor> schEmbedAuthor;
 /* ================================================================================================= */
 class cEmbedFooter final : public cBaseEmbedGenericObject {
 public:
+	cEmbedFooter(const json::value& v) : cEmbedFooter(v.as_object()) {}
+	cEmbedFooter(const json::object& o) : cBaseEmbedGenericObject(o.at("text").as_string().c_str(), o) {}
 	cEmbedFooter(const char* text, const char* icon_url) : cBaseEmbedGenericObject(text, icon_url ? icon_url : std::string()) {}
 
 	const char* GetText() const { return GetString().c_str(); }
@@ -111,6 +120,8 @@ private:
 	std::string value;
 	bool        inline_;
 public:
+	cEmbedField(const json::value& v) : cEmbedField(v.as_object()) {}
+	cEmbedField(const json::object& o);
 	cEmbedField(const char* name, const char* value, bool inline_ = false) : name(name), value(value), inline_(inline_) {}
 
 	const char* GetName()  const { return name.c_str();  }
@@ -135,24 +146,23 @@ typedef schHandle<cEmbedField> schEmbedField;
 /* ================================================================================================= */
 class cBaseEmbed {
 protected:
-	int          color;
-	std::string  title;
-	std::string  description;
-	std::string  url;
-	std::string  timestamp;
-	hEmbedFooter footer;
-	hEmbedAuthor author;
-	std::vector<cEmbedField> fields;
+	cColor        color;
+	std::string   title;
+	std::string   description;
+	std::string   url;
+	std::string   timestamp;
+	uhEmbedFooter footer;
+	uhEmbedAuthor author;
+	std::vector<cEmbedField> Fields;
 
-	cBaseEmbed();
+	cBaseEmbed() = default;
+	cBaseEmbed(const json::object&);
+	cBaseEmbed(const json::value& v) : cBaseEmbed(v.as_object()) {}
 	cBaseEmbed(const cBaseEmbed&);
-	cBaseEmbed(cBaseEmbed&&) noexcept;
+	cBaseEmbed(cBaseEmbed&&) noexcept = default;
 
 	cBaseEmbed& operator=(const cBaseEmbed& o);
-	cBaseEmbed& operator=(cBaseEmbed&&) noexcept;
-
-public:
-	~cBaseEmbed();
+	cBaseEmbed& operator=(cBaseEmbed&&) noexcept = default;
 };
 
 /* ================================================================================================= */
@@ -161,25 +171,28 @@ class cEmbed final : public cBaseEmbed {
 	friend class cEmbedBuilder;
 private:
 	eEmbedType   type;
-	hEmbedMedia thumbnail;
-	hEmbedMedia image;
-	hEmbedMedia video;
+	uhEmbedMedia thumbnail;
+	uhEmbedMedia image;
+	uhEmbedMedia video;
 
 	cEmbed(cEmbedBuilder&& o);
 
 public:
-	cEmbed() : cBaseEmbed(), type(EMBED_RICH), thumbnail(nullptr), image(nullptr), video(nullptr) {}
+	using cBaseEmbed::Fields;
+
+	cEmbed() : type(EMBED_RICH) {}
+	cEmbed(const json::object&);
+	cEmbed(const json::value& v) : cEmbed(v.as_object()) {}
 	cEmbed(const cEmbed& o);
-	cEmbed(cEmbed&& o) noexcept;
-	~cEmbed();
+	cEmbed(cEmbed&& o) noexcept = default;
 
 	cEmbed& operator=(cEmbed o);
 
-	eEmbedType   GetType()      const { return type;      }
-	int          GetColor()     const { return color;     }
-	chEmbedMedia GetThumbnail() const { return thumbnail; }
-	chEmbedMedia GetImage()     const { return image;     }
-	chEmbedMedia GetVideo()     const { return video;     }
+	eEmbedType   GetType()      const { return type;            }
+	cColor       GetColor()     const { return color;           }
+	chEmbedMedia GetThumbnail() const { return thumbnail.get(); }
+	chEmbedMedia GetImage()     const { return image.get();     }
+	chEmbedMedia GetVideo()     const { return video.get();     }
 	const char*  GetTitle()       const { return       title.empty() ? nullptr :       title.c_str(); }
 	const char*  GetDescription() const { return description.empty() ? nullptr : description.c_str(); }
 	const char*  GetUrl()         const { return         url.empty() ? nullptr :         url.c_str(); }

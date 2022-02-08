@@ -120,6 +120,7 @@ public:
 	static inline constexpr int NO_COLOR = -1;
 	cColor() : m_value(-1) {}
 	cColor(int v) : m_value(v) {}
+	cColor(const json::value& v) : cColor(v.as_int64()) {}
 
 	uint8_t GetRed()   const { return (m_value >> 16) & 0xFF; }
 	uint8_t GetGreen() const { return (m_value >>  8) & 0xFF; }

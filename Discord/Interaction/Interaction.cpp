@@ -28,6 +28,9 @@ cInteraction::cInteraction(const json::value &v) : id(v.at("id")), application_i
 	channel_id = u_channel_id.release();
 	member     = u_member.release();
 	user       = u_user.release();
+
+	if (auto p = v.as_object().if_contains("message"))
+		message = cHandle::MakeUnique<cMessage>(*p);
 }
 
 cInteraction::cInteraction(const cInteraction& o) : id(o.id), application_id(o.application_id), type(o.type), token(o.token), version(o.version) {
@@ -53,6 +56,9 @@ cInteraction::cInteraction(const cInteraction& o) : id(o.id), application_id(o.a
 	channel_id = u_channel_id.release();
 	member     = u_member.release();
 	user       = u_user.release();
+
+	if (o.message)
+		message = cHandle::MakeUnique<cMessage>(*o.message);
 }
 
 cInteraction::cInteraction(cInteraction&& o) noexcept : id(o.id), application_id(o.application_id), type(o.type), token(std::move(o.token)), version(o.version) {
@@ -66,6 +72,8 @@ cInteraction::cInteraction(cInteraction&& o) noexcept : id(o.id), application_id
 	o.channel_id = nullptr;
 	o.member     = nullptr;
 	o.user       = nullptr;
+
+	message = std::move(o.message);
 }
 
 cInteraction::~cInteraction() {

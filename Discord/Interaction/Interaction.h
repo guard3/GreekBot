@@ -7,6 +7,7 @@
 #include "Member.h"
 #include <vector>
 #include "Component.h"
+#include "Message.h"
 
 /* ================================================================================================= */
 enum eInteractionType {
@@ -176,7 +177,7 @@ private:
 	chUser           user;
 	std::string      token;
 	int              version;
-	// message
+	uhMessage        message;
 
 	template<eInteractionType> struct _t {};
 	template<> struct _t<INTERACTION_APPLICATION_COMMAND> { typedef chApplicationCommandInteractionData Type; };
@@ -201,9 +202,12 @@ public:
 	[[nodiscard]] chUser            GetUser()          const { return user;            }
 	[[nodiscard]] const char*       GetToken()         const { return token.c_str();   }
 	[[nodiscard]] int               GetVersion()       const { return version;         }
+	chMessage GetMessage() const { return message.get(); }
 
 	template<eInteractionType t>
-	[[nodiscard]] tInteractionDataType<t> GetData() const { return reinterpret_cast<tInteractionDataType<t>>(data); }
+	[[nodiscard]] tInteractionDataType<t> GetData() const {
+		return t == type ? reinterpret_cast<tInteractionDataType<t>>(data) : nullptr;
+	}
 };
 typedef   hHandle<cInteraction>   hInteraction; // handle
 typedef  chHandle<cInteraction>  chInteraction; // const handle
