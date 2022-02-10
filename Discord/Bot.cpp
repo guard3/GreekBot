@@ -30,6 +30,21 @@ cBot::get_guild_roles(const cSnowflake& guild_id) {
 	return result;
 }
 
+uchMember
+cBot::get_guild_member(const cSnowflake &guild_id, const cSnowflake &user_id) {
+	std::string response;
+	if (200 == cNet::GetHttpsRequest(DISCORD_API_HOST, cUtils::Format("%s/guilds/%s/members/%s", DISCORD_API_ENDPOINT, guild_id.ToString(), user_id.ToString()).c_str(), GetHttpAuthorization(), response)) {
+		try {
+			json::monotonic_resource mr;
+			json::parser p(&mr);
+			p.write(response);
+			return cHandle::MakeUnique<cMember>(p.release());
+		}
+		catch (...) {}
+	}
+	return {};
+}
+
 std::vector<uchRole>
 cBot::GetGuildMemberRoles(const cSnowflake &guild_id, chMember member, chUser user) {
 	chUser u;

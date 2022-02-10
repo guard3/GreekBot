@@ -11,6 +11,12 @@ cEvent::cEvent(const json::value& v) : d(v.at("d")) {
 			t = EVENT_READY;
 		else if (0 == strcmp(str, "GUILD_CREATE"))
 			t = EVENT_GUILD_CREATE;
+		else if (0 == strcmp(str, "GUILD_ROLE_CREATE"))
+			t = EVENT_GUILD_ROLE_CREATE;
+		else if (0 == strcmp(str, "GUILD_ROLE_UPDATE"))
+			t = EVENT_GUILD_ROLE_UPDATE;
+		else if (0 == strcmp(str, "GUILD_ROLE_DELETE"))
+			t = EVENT_GUILD_ROLE_DELETE;
 		else if (0 == strcmp(str, "INTERACTION_CREATE"))
 			t = EVENT_INTERACTION_CREATE;
 		else if (0 == strcmp(str, "MESSAGE_CREATE"))

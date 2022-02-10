@@ -2,18 +2,46 @@
 #include "Database.h"
 
 void
-cGreekBot::OnGuildCreate(chGuild guild) {
-	if (guild->GetId()->ToInt() == m_lmg_id.ToInt()) {
-		cUtils::PrintLog("HELLO LMG!!!");
-		for (auto& channel : guild->Channels) {
-			if (channel->GetType() == CHANNEL_GUILD_VOICE)
-				m_lmg_voice_channels.push_back(channel->GetId()->ToInt());
-		}
-		for (auto& voice_state : guild->VoiceStates) {
-			auto it = std::find(m_lmg_voice_channels.begin(), m_lmg_voice_channels.end(), voice_state->GetChannelId()->ToInt());
-			if (it != std::end(m_lmg_voice_channels)) {
+cGreekBot::OnGuildCreate(uhGuild guild) {
+	/* Make sure the guild is Learning Greek */
+	if (guild->GetId()->ToInt() == 350234668680871946) {
+		/* Save guild roles */
+		m_lmg_roles = std::move(guild->Roles);
+		m_lmg_sorted_roles.clear();
+		/* Save guild object */
+		m_lmg_guild = std::move(guild);
+	}
+}
 
-			}
+void
+cGreekBot::OnGuildRoleCreate(chSnowflake guild_id, hRole role) {
+	if (m_lmg_guild) {
+		if (*m_lmg_guild->GetId() == *guild_id) {
+			/* A new role was created in Learning Greek */
+			m_lmg_roles.push_back(std::move(*role));
+			m_lmg_sorted_roles.clear();
+		}
+	}
+}
+
+void cGreekBot::OnGuildRoleUpdate(chSnowflake guild_id, hRole role) {
+	if (m_lmg_guild) {
+		if (*m_lmg_guild->GetId() == *guild_id) {
+			auto i = std::find_if(m_lmg_roles.begin(), m_lmg_roles.end(), [&role](const cRole& r) { return *r.GetId() == *role->GetId(); });
+			if (i != m_lmg_roles.end())
+				*i = std::move(*role);
+			m_lmg_sorted_roles.clear();
+		}
+	}
+}
+
+void
+cGreekBot::OnGuildRoleDelete(chSnowflake guild_id, chSnowflake role_id) {
+	if (m_lmg_guild) {
+		if (*m_lmg_guild->GetId() == *guild_id) {
+			auto i = std::find_if(m_lmg_roles.begin(), m_lmg_roles.end(), [&role_id](const cRole& r) { return *r.GetId() == *role_id; });
+			if (i != m_lmg_roles.end())
+				m_lmg_roles.erase(i);
 		}
 	}
 }

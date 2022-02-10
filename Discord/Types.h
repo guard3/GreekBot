@@ -93,7 +93,14 @@ public:
 		m_int = strtoull(str, &temp, 10);
 	}
 	explicit cSnowflake(const json::value& v) : cSnowflake(v.as_string().c_str()) {}
-	
+
+	bool operator==(const cSnowflake& o) const { return m_int == o.m_int; }
+	bool operator!=(const cSnowflake& o) const { return m_int != o.m_int; }
+	bool operator< (const cSnowflake& o) const { return m_int <  o.m_int; }
+	bool operator> (const cSnowflake& o) const { return m_int >  o.m_int; }
+	bool operator<=(const cSnowflake& o) const { return m_int <= o.m_int; }
+	bool operator>=(const cSnowflake& o) const { return m_int >= o.m_int; }
+
 	/* Attributes */
 	[[nodiscard]] const char *ToString() const { return m_str; }
 	[[nodiscard]] uint64_t    ToInt()    const { return m_int; }

@@ -67,7 +67,10 @@ protected:
 	const char* GetToken()             const { return m_http_auth + 4; }
 
 	virtual void OnReady(uchUser) {}
-	virtual void OnGuildCreate(chGuild) {}
+	virtual void OnGuildCreate(uhGuild) {}
+	virtual void OnGuildRoleCreate(chSnowflake guild_id, hRole role) {}
+	virtual void OnGuildRoleUpdate(chSnowflake guild_id, hRole role) {}
+	virtual void OnGuildRoleDelete(chSnowflake guild_id, chSnowflake role_id) {}
 	virtual void OnInteractionCreate(chInteraction) {}
 	virtual void OnMessageCreate(chMessage) {}
 	

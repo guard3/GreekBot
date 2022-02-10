@@ -31,6 +31,10 @@ private:
 		352001527780474881  // @Non Learner
 	};
 
+	uchGuild m_lmg_guild;
+	std::vector<cRole> m_lmg_roles;
+	std::vector<chRole> m_lmg_sorted_roles;
+
 	/* Voice */
 	std::vector<uint64_t> m_lmg_voice_channels;
 	std::vector<std::vector<uint64_t>> m_lmg_users_connected_to_voice;
@@ -98,11 +102,14 @@ private:
 	void OnInteraction_top(chInteraction interaction);
 	void OnInteraction_button(chInteraction interaction);
 
-	void OnGuildCreate(chGuild guild) override;
+	void OnGuildCreate(uhGuild guild) override;
+	void OnGuildRoleCreate(chSnowflake guild_id, hRole role) override;
+	void OnGuildRoleUpdate(chSnowflake guild_id, hRole role) override;
+	void OnGuildRoleDelete(chSnowflake guild_id, chSnowflake role_id) override;
 	void OnInteractionCreate(chInteraction interaction) override;
 	void OnMessageCreate(chMessage msg) override;
 
 public:
-	explicit cGreekBot(const char* token) : cBot(token, INTENT_GUILD_INTEGRATIONS | INTENT_GUILD_MESSAGES) {}
+	explicit cGreekBot(const char* token) : cBot(token, INTENT_GUILD_INTEGRATIONS | INTENT_GUILD_MESSAGES | INTENT_GUILDS) {}
 };
 #endif /* _GREEKBOT_GREEKBOT_H_ */

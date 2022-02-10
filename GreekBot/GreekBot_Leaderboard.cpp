@@ -26,6 +26,12 @@ cGreekBot::OnInteraction_rank(chInteraction interaction) {
 	}
 	/* Acknowledge interaction while we're looking through the database */
 	AcknowledgeInteraction(interaction);
+	/* Sort guild_roles based on position */
+	if (m_lmg_sorted_roles.empty()) {
+		for (auto& r : m_lmg_roles)
+			m_lmg_sorted_roles.push_back(&r);
+		std::sort(m_lmg_sorted_roles.begin(), m_lmg_sorted_roles.end(), [](chRole a, chRole b) { return a->GetPosition() > b->GetPosition(); });
+	}
 	/* Get user's ranking info from the database */
 	tRankQueryData db_result;
 	if (!cDatabase::GetUserRank(user, db_result)) {
@@ -78,18 +84,19 @@ cGreekBot::OnInteraction_rank(chInteraction interaction) {
 				std::vector<cEmbed> {
 					cEmbed::CreateBuilder()
 						.SetAuthor(cUtils::Format("%s#%s", user->GetUsername(), user->GetDiscriminator()).c_str(), nullptr, user->GetAvatarUrl())
-						.SetTitle(cUtils::Format("%s Rank **#%" PRIi64 "**", medal, res.GetRank()).c_str())
+						.SetTitle(cUtils::Format("%s Rank **#%" PRIi64 "**    Level **%" PRIi64 "**", medal, res.GetRank(), curr_lvl).c_str())
 						.SetColor(GetGuildMemberColor(m_lmg_id, member, user))
-						.AddField("Level", std::to_string(curr_lvl).c_str(), true)
+						//.AddField("Level", std::to_string(curr_lvl).c_str(), true)
 						.AddField("XP Progress", cUtils::Format("%" PRIi64 "/%" PRIi64, res.GetXp() - curr_xp, next_xp - curr_xp).c_str(), true)
 						.AddField("Total XP", std::to_string(res.GetXp()).c_str(), true)
-						.SetFooter("Keep talking and establish yourself in the leaderboard!", nullptr)
+						.AddField("Messages", std::to_string(res.GetNumMessages()).c_str(), true)
+						//.SetFooter("Keep talking and establish yourself in the leaderboard! aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", nullptr)
 						.Build()
 				},
 				nullptr,
 				std::vector<cActionRow> {
 					cActionRow {
-						cButton<BUTTON_STYLE_PRIMARY> {
+						cButton<BUTTON_STYLE_SECONDARY> {
 							STR(CMP_ID_BUTTON_RANK_HELP),
 							"How does this work?"
 						}
@@ -97,7 +104,6 @@ cGreekBot::OnInteraction_rank(chInteraction interaction) {
 				},
 				nullptr
 			);
-			// TODO: Maybe add a button that will explain how the ranking system works
 			return;
 		}
 		curr_xp = next_xp;
@@ -110,6 +116,12 @@ void
 cGreekBot::OnInteraction_top(chInteraction interaction) {
 	/* Acknowledge interaction */
 	AcknowledgeInteraction(interaction);
+	/* Sort guild roles based on position */
+	if (m_lmg_sorted_roles.empty()) {
+		for (auto& r : m_lmg_roles)
+			m_lmg_sorted_roles.push_back(&r);
+		std::sort(m_lmg_sorted_roles.begin(), m_lmg_sorted_roles.end(), [](chRole a, chRole b) { return a->GetPosition() > b->GetPosition(); });
+	}
 	/* Get data from the database */
 	tRankQueryData db_result;
 	if (!cDatabase::GetTop10(db_result)) {
@@ -123,11 +135,53 @@ cGreekBot::OnInteraction_top(chInteraction interaction) {
 	/* Display data */
 	// TODO: make this pretty with embeds and stuff...
 	std::string str;
+	std::vector<cEmbed> embeds;
+	embeds.reserve(db_result.size());
+	uchMember u_member;
+	uchUser   u_user;
+	chMember  member;
+	chUser    user;
 	for (auto &d: db_result) {
+		if (d.GetUserId()->ToInt() == interaction->GetMember()->GetUser()->GetId()->ToInt()) {
+			member = interaction->GetMember();
+			user = member->GetUser();
+		}
+		else if ((u_member = GetGuildMember(m_lmg_id, d.GetUserId()))) {
+			/* Try to resolve member object */
+			member = u_member.get();
+			user = member->GetUser();
+		}
+		else {
+			/* If user isn't a member anymore... TBA */
+		}
+
+		cColor color = 0;
+		for (auto& r : m_lmg_sorted_roles) {
+			if (std::find_if(member->Roles.begin(), member->Roles.end(), [&r](const chSnowflake& a) { return r->GetId()->ToInt() == a->ToInt();}) != member->Roles.end()) {
+				if (r->GetColor().ToInt() != 0) {
+					color = r->GetColor();
+					break;
+				}
+			}
+		}
+
+		embeds.emplace_back(
+			cEmbed::CreateBuilder()
+				.SetAuthor(cUtils::Format("%s#%s", user->GetUsername(), user->GetDiscriminator()).c_str(), nullptr, user->GetAvatarUrl())
+				.SetTitle(cUtils::Format("🏅 Rank **#%d**\tLevel **TBA**", (int)d.GetRank()).c_str())
+				.SetColor(color/*GetGuildMemberColor(m_lmg_id, member.get(), user)*/)
+				.AddField("XP Progress", "TBA", true)
+				.AddField("Total XP", std::to_string(d.GetXp()).c_str(), true)
+				.AddField("Messages", std::to_string(d.GetNumMessages()).c_str(), true)
+				.Build()
+		);
+		/*
 		char test[500];
 		sprintf(test, "Rank #%d, User id: %s", (int)d.GetRank(), d.GetUserId()->ToString());
 		str += test;
-		str += '\n';
+		str += '\n';*/
 	}
-	EditInteractionResponse(interaction, str.c_str(), MESSAGE_FLAG_NONE, nullptr, nullptr, nullptr, nullptr);
+	//auto e = cEmbed::CreateBuilder().SetDescription("MEOW").AddField("A", "B").AddField("C", "D").Build();
+	//cEmbed es[] { e, e, e, e, e, e, e, e, e, e };
+	EditInteractionResponse(interaction, str.c_str(), MESSAGE_FLAG_NONE, embeds, nullptr, nullptr, nullptr);
 }

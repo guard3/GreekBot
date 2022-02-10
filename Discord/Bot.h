@@ -63,15 +63,23 @@ private:
 	}
 
 	template<typename T>
-	cSnowflake resolve_snowflake(T&& arg) { return arg; }
-	template<typename T, typename = std::enable_if_t<cHandle::IsHandleType<T> && std::is_same_v<cHandle::RemoveHandleCV<T>, cSnowflake>>>
-	cSnowflake resolve_snowflake(T&& arg) { return *arg; };
+	cSnowflake resolve_snowflake(T&& arg) {
+		if constexpr(cHandle::IsHandleType<T>) {
+			static_assert(std::is_same_v<cHandle::RemoveHandleCV<T>, cSnowflake>);
+			return *arg;
+		}
+		else return arg;
+	}
 
 	std::vector<uchRole> get_guild_roles(const cSnowflake& guild_id);
+	uchMember get_guild_member(const cSnowflake& guild_id, const cSnowflake& user_id);
 
 protected:
 	using cGateway::OnInteractionCreate;
 	using cGateway::OnGuildCreate;
+	using cGateway::OnGuildRoleCreate;
+	using cGateway::OnGuildRoleUpdate;
+	using cGateway::OnGuildRoleDelete;
 	using cGateway::OnMessageCreate;
 	
 public:
@@ -101,6 +109,10 @@ public:
 		return top_role->GetColor();
 	}
 
+	template<typename TSnowflake1, typename TSnowflake2>
+	uchMember GetGuildMember(TSnowflake1&& guild_id, TSnowflake2 user_id) {
+		return get_guild_member(resolve_snowflake(std::forward<TSnowflake1>(guild_id)), resolve_snowflake(std::forward<TSnowflake2>(user_id)));
+	}
 	void AddGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake& role_id);
 	void RemoveGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake& role_id);
 	void UpdateGuildMemberRoles(const cSnowflake& guild_id, const cSnowflake& user_id, const std::vector<chSnowflake>& role_ids);

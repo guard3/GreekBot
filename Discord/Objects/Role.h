@@ -109,6 +109,8 @@ public:
 	bool IsHoisted()     const { return hoist;       }
 	bool IsManaged()     const { return managed;     }
 	bool IsMentionable() const { return mentionable; }
+
+	cRole& SetPosition(int v) { position = v; return *this; }
 };
 typedef   hHandle<cRole>   hRole;
 typedef  chHandle<cRole>  chRole;

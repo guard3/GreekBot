@@ -166,10 +166,34 @@ bool cGateway::OnEvent(chEvent event) {
 
 		case EVENT_GUILD_CREATE:
 			if (auto e = event->GetData<EVENT_GUILD_CREATE>()) {
-				OnGuildCreate(e.get());
+				OnGuildCreate(std::move(e));
 				break;
 			}
 			cUtils::PrintErr("Invalid GUILD_CREATE event");
+			return false;
+
+		case EVENT_GUILD_ROLE_CREATE:
+			if (auto e = event->GetData<EVENT_GUILD_ROLE_CREATE>()) {
+				OnGuildRoleCreate(e->GetGuildId(), e->GetRole());
+				break;
+			}
+			cUtils::PrintErr("Invalid GUILD_ROLE_CREATE event");
+			return false;
+
+		case EVENT_GUILD_ROLE_UPDATE:
+			if (auto e = event->GetData<EVENT_GUILD_ROLE_UPDATE>()) {
+				OnGuildRoleUpdate(e->GetGuildId(), e->GetRole());
+				break;
+			}
+			cUtils::PrintErr("Invalid GUILD_ROLE_UPDATE event");
+			return false;
+
+		case EVENT_GUILD_ROLE_DELETE:
+			if (auto e = event->GetData<EVENT_GUILD_ROLE_DELETE>()) {
+				OnGuildRoleDelete(e->GetGuildId(), e->GetRoleId());
+				break;
+			}
+			cUtils::PrintErr("Invalid GUILD_ROLE_DELETE event");
 			return false;
 			
 		case EVENT_INTERACTION_CREATE:

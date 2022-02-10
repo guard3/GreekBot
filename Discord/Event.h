@@ -26,6 +26,9 @@ enum eEvent {
 	/* Events */
 	EVENT_READY,
 	EVENT_GUILD_CREATE,
+	EVENT_GUILD_ROLE_CREATE,
+	EVENT_GUILD_ROLE_UPDATE,
+	EVENT_GUILD_ROLE_DELETE,
 	EVENT_INTERACTION_CREATE,
 	EVENT_MESSAGE_CREATE,
 	EVENT_NOT_IMPLEMENTED
@@ -77,6 +80,43 @@ typedef uchHandle<cReadyEventData> uchReadyEventData;
 typedef  shHandle<cReadyEventData>  shReadyEventData;
 typedef schHandle<cReadyEventData> schReadyEventData;
 
+class cGuildRoleCreateUpdateEventData final {
+private:
+	cSnowflake guild_id;
+	cRole      role;
+public:
+	cGuildRoleCreateUpdateEventData(const json::value& v) : cGuildRoleCreateUpdateEventData(v.as_object()) {}
+	cGuildRoleCreateUpdateEventData(const json::object& o) : guild_id(o.at("guild_id")), role(o.at("role")) {}
+
+	hSnowflake GetGuildId() { return &guild_id; }
+	hRole      GetRole()    { return &role;     }
+};
+typedef   hHandle<cGuildRoleCreateUpdateEventData>   hGuildRoleCreateUpdateEventData;
+typedef  chHandle<cGuildRoleCreateUpdateEventData>  chGuildRoleCreateUpdateEventData;
+typedef  uhHandle<cGuildRoleCreateUpdateEventData>  uhGuildRoleCreateUpdateEventData;
+typedef uchHandle<cGuildRoleCreateUpdateEventData> uchGuildRoleCreateUpdateEventData;
+typedef  shHandle<cGuildRoleCreateUpdateEventData>  shGuildRoleCreateUpdateEventData;
+typedef schHandle<cGuildRoleCreateUpdateEventData> schGuildRoleCreateUpdateEventData;
+
+class cGuildRoleDeleteEventData final {
+private:
+	cSnowflake guild_id;
+	cSnowflake role_id;
+
+public:
+	cGuildRoleDeleteEventData(const json::value& v) : cGuildRoleDeleteEventData(v.as_object()) {}
+	cGuildRoleDeleteEventData(const json::object& o) : guild_id(o.at("guild_id")), role_id(o.at("role_id")) {}
+
+	hSnowflake GetGuildId() { return &guild_id; }
+	hSnowflake GetRoleId()  { return &role_id; }
+};
+typedef   hHandle<cGuildRoleDeleteEventData>   hGuildRoleDeleteEventData;
+typedef  chHandle<cGuildRoleDeleteEventData>  chGuildRoleDeleteEventData;
+typedef  uhHandle<cGuildRoleDeleteEventData>  uhGuildRoleDeleteEventData;
+typedef uchHandle<cGuildRoleDeleteEventData> uchGuildRoleDeleteEventData;
+typedef  shHandle<cGuildRoleDeleteEventData>  shGuildRoleDeleteEventData;
+typedef schHandle<cGuildRoleDeleteEventData> schGuildRoleDeleteEventData;
+
 /* ================================================================================================= */
 class cEvent final {
 private:
@@ -85,13 +125,16 @@ private:
 	json::value d; // Event specific data
 
 	template<eEvent> struct data_type {};
-	template<> struct data_type<EVENT_READY>              { typedef cReadyEventData Type; };
-	template<> struct data_type<EVENT_GUILD_CREATE>       { typedef cGuild          Type; };
-	template<> struct data_type<EVENT_INTERACTION_CREATE> { typedef cInteraction    Type; };
-	template<> struct data_type<EVENT_MESSAGE_CREATE>     { typedef cMessage        Type; };
+	template<> struct data_type<EVENT_READY>              { typedef cReadyEventData                 Type; };
+	template<> struct data_type<EVENT_GUILD_CREATE>       { typedef cGuild                          Type; };
+	template<> struct data_type<EVENT_GUILD_ROLE_CREATE>  { typedef cGuildRoleCreateUpdateEventData Type; };
+	template<> struct data_type<EVENT_GUILD_ROLE_UPDATE>  { typedef cGuildRoleCreateUpdateEventData Type; };
+	template<> struct data_type<EVENT_GUILD_ROLE_DELETE>  { typedef cGuildRoleDeleteEventData       Type; };
+	template<> struct data_type<EVENT_INTERACTION_CREATE> { typedef cInteraction                    Type; };
+	template<> struct data_type<EVENT_MESSAGE_CREATE>     { typedef cMessage                        Type; };
 	template<eEvent e> using tDataType = typename data_type<e>::Type;
 
-	template<eEvent e> struct return_type { typedef uchHandle<tDataType<e>> Type; };
+	template<eEvent e> struct return_type { typedef uhHandle<tDataType<e>> Type; };
 	template<> struct return_type<EVENT_INVALID_SESSION> { typedef bool Type; };
 	template<> struct return_type<EVENT_HELLO>           { typedef int  Type; };
 	template<eEvent e> using tReturnType = typename return_type<e>::Type;
@@ -117,7 +160,7 @@ public:
 			}
 		}
 		else {
-			return cHandle::MakeUniqueConstNoEx<tDataType<e>>(d);
+			return cHandle::MakeUniqueNoEx<tDataType<e>>(d);
 		}
 	}
 };
