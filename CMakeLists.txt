@@ -4,7 +4,7 @@ project(GreekBot)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR})
 
-add_executable(GreekBot main.cpp boost/beast.h boost/json.h Discord/Bot.cpp Discord/Bot.h Discord/Discord.cpp Discord/Discord.h Discord/Event.cpp Discord/Event.h Discord/Types.h Discord/Gateway/Gateway.cpp Discord/Gateway/Gateway.h Discord/Gateway/GatewayInfo.h Discord/Interaction/Interaction.cpp Discord/Interaction/Interaction.h Discord/Objects/Member.cpp Discord/Objects/Member.h Discord/Objects/User.cpp Discord/Objects/User.h Net/Net.cpp Net/Net.h Net/Websocket.cpp Net/Websocket.h Utils/Utils.cpp Utils/Utils.h Discord/Objects/Component.h Discord/Objects/Emoji.h Discord/Interaction/ApplicationCommandInteractionDataOption.cpp Discord/Interaction/ApplicationCommandInteractionData.cpp Discord/Interaction/MessageComponentInteractionData.cpp Discord/Voice/VoiceGateway.h Discord/Objects/Guild.h Discord/Voice/VoiceState.h Discord/Objects/Channel.h Discord/Objects/Message.h Database/Database.h Database/Database.cpp Discord/Objects/Embed.h Discord/Objects/Embed.cpp Discord/Objects/Role.h Discord/Objects/Role.cpp GreekBot/GreekBot.h GreekBot/GreekBot.cpp GreekBot/GreekBot_Leaderboard.cpp GreekBot/GreekBot_Avatar.cpp GreekBot/GreekBot_Role.cpp GreekBot/GreekBot_Button.cpp Discord/Objects/Message.cpp)
+add_executable(GreekBot main.cpp boost/beast.h boost/json.h Discord/Bot.cpp Discord/Bot.h Discord/Discord.cpp Discord/Discord.h Discord/Gateway/Event.cpp Discord/Gateway/Event.h Discord/Types.h Discord/Gateway/GatewayInfo.h Discord/Interaction/Interaction.cpp Discord/Interaction/Interaction.h Discord/Objects/Member.cpp Discord/Objects/Member.h Discord/Objects/User.cpp Discord/Objects/User.h Net/Net.cpp Net/Net.h Utils/Utils.cpp Utils/Utils.h Discord/Objects/Component.h Discord/Objects/Emoji.h Discord/Interaction/ApplicationCommandInteractionDataOption.cpp Discord/Interaction/ApplicationCommandInteractionData.cpp Discord/Interaction/MessageComponentInteractionData.cpp Discord/Voice/VoiceGateway.h Discord/Objects/Guild.h Discord/Voice/VoiceState.h Discord/Objects/Channel.h Discord/Objects/Message.h Database/Database.h Database/Database.cpp Discord/Objects/Embed.h Discord/Objects/Embed.cpp Discord/Objects/Role.h Discord/Objects/Role.cpp GreekBot/GreekBot.h GreekBot/GreekBot.cpp GreekBot/GreekBot_Leaderboard.cpp GreekBot/GreekBot_Avatar.cpp GreekBot/GreekBot_Role.cpp GreekBot/GreekBot_Button.cpp Discord/Objects/Message.cpp Discord/Gateway/TaskManager.h Discord/Gateway/Gateway.h Discord/Gateway/Gateway.cpp Discord/Gateway/GatewayCommands.cpp Discord/Gateway/GatewayEvents.cpp)
 
 target_include_directories(
     GreekBot PRIVATE
@@ -19,6 +19,14 @@ target_include_directories(
     ${PROJECT_SOURCE_DIR}/Utils
     ${PROJECT_SOURCE_DIR}/Database
 )
+
+option(GW_LOG_LVL "Whether or not to print logs from the gateway" 1)
+if(GW_LOG_LVL EQUAL 1)
+    target_compile_definitions(GreekBot PRIVATE GW_LOG_LVL_1)
+elseif(GW_LOG_LVL EQUAL 2)
+    target_compile_definitions(GreekBot PRIVATE GW_LOG_LVL_2)
+    target_compile_definitions(GreekBot PRIVATE GW_LOG_LVL_1)
+endif()
 
 # Link OpenSSL
 set(OPENSSL_USE_STATIC_LIBS TRUE)
@@ -37,6 +45,11 @@ target_link_libraries(GreekBot ${Boost_LIBRARIES})
 find_package(SQLite3 3.35.0 REQUIRED)
 include_directories(SYSTEM ${SQLite3_INCLUDE_DIRS})
 target_link_libraries(GreekBot SQLite::SQLite3)
+
+# Link ZLIB
+find_package(ZLIB REQUIRED)
+include_directories(SYSTEM ${ZLIB_INCLUDE_DIRS})
+target_link_libraries(GreekBot ZLIB::ZLIB)
 
 # Link Shlwapi on Windows
 if(WIN32)

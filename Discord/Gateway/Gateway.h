@@ -1,14 +1,30 @@
 #pragma once
 #ifndef _GREEKBOT_GATEWAY_H_
 #define _GREEKBOT_GATEWAY_H_
-#include "Event.h"
-#include "User.h"
-#include "GatewayInfo.h"
+#include "Utils.h"
+#include "json.h"
+
 #include <thread>
-#include <mutex>
+#include <atomic>
+
+#include "Types.h"
+#include "User.h"
+#include "Guild.h"
+#include "GatewayInfo.h"
 #include "Discord.h"
 
-class cWebsocket;
+class cGatewaySession;
+
+class cUser;
+typedef uchHandle<cUser> uchUser;
+class cInteraction;
+typedef chHandle<cInteraction> chInteraction;
+class cMessage;
+typedef chHandle<cMessage> chMessage;
+
+class cEvent;
+class cGatewayInfo;
+typedef uchHandle<cGatewayInfo> uchGatewayInfo;
 
 enum eIntent {
 	INTENT_GUILDS                    = 1 << 0,
@@ -27,44 +43,51 @@ enum eIntent {
 	INTENT_DIRECT_MESSAGE_REACTIONS  = 1 << 13,
 	INTENT_DIRECT_MESSAGE_TYPING     = 1 << 14
 };
-
 inline eIntent operator|(eIntent a, eIntent b) { return (eIntent)((int)a | (int)b); }
 inline eIntent operator&(eIntent a, eIntent b) { return (eIntent)((int)a & (int)b); }
 
 class cGateway {
 private:
-	char        m_http_auth[64];       // The authorization parameter for HTTP requests 'Bot token'
-	const char *m_sessionId = nullptr; // The current session id, used for resuming; null = no valid session
-
-	eIntent m_intents; // The gateway intents
-
-	int m_last_sequence = 0; // The last event sequence received, used for heartbeating; 0 = none received
-	
-	/* Data relating to heartbeating */
-	struct {
-		std::thread thread;               // The heartbeating thread
-		std::mutex  mutex;                // Mutex for accessing 'acknowledged'
-		bool        should_exit  = true;  // Should the heartbeating thread exit?
-		bool        acknowledged = false; // Is the heartbeat acknowledged?
-	} m_heartbeat;
-	bool SendHeartbeat();                 // Send a heartbeat to the gateway
-	bool HeartbeatAcknowledged();         // Check if last heartbeat has been acknowledged by the gateway
-	void AcknowledgeHeartbeat();          // Mark last heartbeat as acknowledged
-	void StartHeartbeating(int interval); // Start sending heartbeats to the gateway every 'interval' milliseconds
-	void StopHeartbeating();              // Stop sending heartbeats
-	
-	bool Identify();
-	bool Resume();
-	
-	cWebsocket* m_pWebsocket = nullptr;
-	
-	bool OnEvent(chEvent event);
-
+	/* Initial parameters for identifying */
+	std::string m_http_auth; // The authorization parameter for HTTP requests 'Bot token'
+	eIntent     m_intents;   // The gateway intents
+	/* Session attributes */
+	std::string         m_session_id;        // The current session id, used for resuming; empty = no valid session
+	std::atomic_int64_t m_last_sequence = 0; // The last event sequence received, used for heartbeating; 0 = none received
+	/* Heartbeating */
+	std::thread      m_heartbeat_thread;       // The heartbeating thread
+	std::atomic_bool m_heartbeat_exit = false; // Should the heartbeating thread exit?
+	std::atomic_bool m_heartbeat_ack = false;  // Is the heartbeat acknowledged?
+	/* Json parsing for gateway events */
+	json::monotonic_resource m_mr;          // A monotonic memory resource for json parsing
+	json::stream_parser      m_json_parser; // The json parser
+	/* Websocket session */
+	cGatewaySession* m_session = nullptr;
+	/* Session close reason */
+	int         m_close_code = -1;
+	std::string m_close_msg;
+	/* Gateway commands */
+	void resume();
+	void identify();
+	void heartbeat();
+	void start_heartbeating(int64_t);
+	void stop_heartbeating();
+	/* Websocket message queuing */
+	void send(std::string);
+	/* Beast/Asio async functions */
+	void on_read(boost::system::error_code, size_t);
+	void on_write(boost::system::error_code, size_t);
+	/* A method that initiates the gateway connection */
+	void run_session(const char* url);
 	uchGatewayInfo get_gateway_info(cDiscordError&);
+	/* A method that's invoked for every gateway event */
+	void on_event(const cEvent& event);
 
 protected:
-	const char* GetHttpAuthorization() const { return m_http_auth;     }
-	const char* GetToken()             const { return m_http_auth + 4; }
+	const char* GetHttpAuthorization() const { return m_http_auth.c_str(); }
+
+public:
+	const char* GetToken() const { return m_http_auth.c_str() + 4; }
 
 	virtual void OnReady(uchUser) {}
 	virtual void OnGuildCreate(uhGuild) {}
@@ -73,14 +96,13 @@ protected:
 	virtual void OnGuildRoleDelete(chSnowflake guild_id, chSnowflake role_id) {}
 	virtual void OnInteractionCreate(chInteraction) {}
 	virtual void OnMessageCreate(chMessage) {}
-	
-public:
-	explicit cGateway(const char* token, eIntent intents) : m_intents(intents) { sprintf(m_http_auth, "Bot %.59s", token); }
+
+	cGateway(const char* token, eIntent intents) : m_http_auth(cUtils::Format("Bot %s", token)), m_intents(intents), m_json_parser(&m_mr) {}
 	cGateway(const cGateway&) = delete;
-	~cGateway() { delete[] m_sessionId; }
-	
+	cGateway(cGateway&&) noexcept = delete;
+
+	cGateway& operator=(cGateway) = delete;
+
 	void Run();
 };
-
-
-#endif /* _GREEKBOT_GATEWAY_H_*/
+#endif /* _GREEKBOT_GATEWAY_H_ */

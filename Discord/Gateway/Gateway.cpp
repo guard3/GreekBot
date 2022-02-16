@@ -1,11 +1,193 @@
+/* Includes for Beast and Asio */
+#include <boost/beast/core.hpp>
+#include <boost/beast/ssl.hpp>
+#include <boost/beast/websocket.hpp>
+#include <boost/asio.hpp>
+namespace beast = boost::beast;
+namespace asio  = boost::asio;
+
+#include <deque>
 #include "Gateway.h"
-#include "Utils.h"
-#include "Websocket.h"
-#include <iostream>
-// Workaround to make this compile on Windows, YIKES!
-// TODO: Rename I guess...
-#undef GetMessage
-uchGatewayInfo cGateway::get_gateway_info(cDiscordError& error) {
+#include "GatewayInfo.h"
+#include "Event.h"
+
+/* Gateway event/command opcodes */
+enum eGatewayOpcode {
+	OP_DISPATCH              = 0,  // An event was dispatched.
+	OP_HEARTBEAT             = 1,  // Fired periodically by the client to keep the connection alive.
+	// Identify              = 2,  // Starts a new session during the initial handshake.
+	// Presence update       = 3,  // Update the client's presence.
+	// Voice state update    = 4,  // Used to join/leave or move between voice channels.
+	// Resume                = 6,  // Resume a previous session that was disconnected.
+	OP_RECONNECT             = 7,  // You should attempt to reconnect and resume immediately.
+	// Request guild members = 8,  // Request information about offline guild members in a large guild.
+	OP_INVALID_SESSION       = 9,  // The session has been invalidated. You should reconnect and identify/resume accordingly.
+	OP_HELLO                 = 10, // Sent immediately after connecting, contains the heartbeat_interval to use.
+	OP_HEARTBEAT_ACK         = 11, // Sent in response to receiving a heartbeat to acknowledge that it has been received.
+};
+
+/* A class with all asio and beast related objects to avoid including boost everywhere */
+class cGatewaySession final {
+private:
+	asio::ssl::context ctx; // The SSL context
+public:
+	asio::io_context         ioc;    // The IO context
+	asio::io_context::strand strand; // The strand for all async handlers
+
+	beast::flat_buffer      buffer;    // A buffer for reading from the websocket
+	std::deque<std::string> msg_queue; // A queue with all pending messages to be sent
+	beast::websocket::stream<beast::ssl_stream<beast::tcp_stream>> ws; // The websocket stream
+
+	cGatewaySession() : ctx(asio::ssl::context::tlsv13_client), strand(ioc), ws(ioc, ctx) {}
+	cGatewaySession(const cGatewaySession&) = delete;
+	cGatewaySession(cGatewaySession&&) = delete;
+
+	cGatewaySession& operator=(cGatewaySession) = delete;
+};
+
+void
+cGateway::send(std::string msg) {
+	/* Make sure we're running on one strand */
+	if (!m_session->strand.running_in_this_thread())
+		return asio::post(m_session->strand, [this, s = std::move(msg)] { send(s); });
+	/* Push the new message at the end of the message queue */
+	m_session->msg_queue.push_back(std::move(msg));
+	/* If there's no other message in the queue, start the asynchronous send operation */
+	if (m_session->msg_queue.size() == 1)
+		m_session->ws.async_write(asio::buffer(m_session->msg_queue.front()), asio::bind_executor(m_session->strand, [this](beast::error_code ec, size_t size) { on_write(ec, size); }));
+}
+
+void
+cGateway::on_read(beast::error_code ec, size_t size) {
+	/* If an error occurred, close the websocket stream */
+	if (ec) {
+		if (ec != beast::websocket::error::closed)
+			m_session->ws.close(beast::websocket::close_code::none, ec);
+		return;
+	}
+	try {
+		/* Parse buffer contents as a json value */
+		m_json_parser.write((const char*)m_session->buffer.data().data(), size);
+		json::value v = m_json_parser.release();
+		/* Consume all read bytes from the dynamic buffer */
+		m_session->buffer.consume(size);
+		/* Start the next asynchronous read operation to keep listening for more events */
+		m_session->ws.async_read(m_session->buffer, asio::bind_executor(m_session->strand, [this](beast::error_code ec, size_t size) { on_read(ec, size); }));
+		/* Process the event */
+#ifdef GW_LOG_LVL_2
+		cUtils::PrintLog((std::stringstream() << v).str().c_str());
+#endif
+		switch (v.at("op").as_int64()) {
+			case OP_DISPATCH:
+				/* Process event */
+				on_event(std::move(v));
+				break;
+			case OP_HEARTBEAT:
+				/* Send a heartbeat immediately */
+				heartbeat();
+				break;
+			case OP_RECONNECT:
+				/* Let the server close the connection gracefully */
+				break;
+			case OP_INVALID_SESSION:
+				/* Wait a random amount of time */
+				std::this_thread::sleep_for(std::chrono::milliseconds(cUtils::Random(1000, 5000)));
+				/* Try to resume the session */
+				if (v.at("d").as_bool()) {
+					resume();
+					break;
+				}
+				/* Otherwise, reset session and identify */
+				m_last_sequence.store(0);
+				m_session_id.clear();
+				identify();
+				break;
+			case OP_HELLO:
+				/* Immediately start heartbeating */
+				start_heartbeating(v.at("d").at("heartbeat_interval").as_int64());
+				/* If there is an active session, try to resume, otherwise identify */
+				m_session_id.empty() ? identify() : resume();
+				break;
+			case OP_HEARTBEAT_ACK:
+				/* Acknowledge heartbeat */
+				m_heartbeat_ack.store(true);
+				break;
+		}
+	}
+	catch (...) {}
+	m_json_parser.reset(&m_mr);
+}
+
+void
+cGateway::on_write(beast::error_code ec, size_t size) {
+	/* If an error occurred, close the websocket stream */
+	if (ec) {
+		if (ec != beast::websocket::error::closed)
+			m_session->ws.close(beast::websocket::close_code::none, ec);
+		return;
+	}
+	/* Pop the message that was just sent */
+	m_session->msg_queue.pop_front();
+	/* If the queue isn't clear, continue the asynchronous send operation */
+	if (!m_session->msg_queue.empty())
+		m_session->ws.async_write(asio::buffer(m_session->msg_queue.front()), asio::bind_executor(m_session->strand, [this](beast::error_code ec, size_t size) { on_write(ec, size); }));
+}
+
+void
+cGateway::run_session(const char* url) {
+	/* Resolve host */
+	const char* host = strstr(url, "://");
+	if (host)
+		host += 3;
+	else
+		host = url;
+	/* Create a new session */
+	m_session = new cGatewaySession();
+	/* Run */
+	try {
+		/* Look up the domain name */
+		auto results = asio::ip::tcp::resolver(m_session->ioc).resolve(host, "https");
+		/* Set a timeout and make a connection to the resolved IP address */
+		beast::get_lowest_layer(m_session->ws).expires_after(std::chrono::seconds(30));
+		auto ep = beast::get_lowest_layer(m_session->ws).connect(results);
+		/* Set a timeout and perform an SSL handshake */
+		beast::get_lowest_layer(m_session->ws).expires_after(std::chrono::seconds(30));
+		m_session->ws.next_layer().handshake(asio::ssl::stream_base::client);
+		/* Use the recommended timout period for the websocket stream */
+		beast::get_lowest_layer(m_session->ws).expires_never();
+		m_session->ws.set_option(beast::websocket::stream_base::timeout::suggested(beast::role_type::client));
+		/* Append resolved port number to host name */
+		std::string host_str = cUtils::Format("%s:%d", host, ep.port());
+		/* Set HTTP header fields for the handshake */
+		m_session->ws.set_option(beast::websocket::stream_base::decorator([&](beast::websocket::request_type& r) {
+			r.set(beast::http::field::host, host_str);
+			r.set(beast::http::field::user_agent, "GreekBot");
+		}));
+		/* Perform websocket handshake */
+		m_session->ws.handshake(host_str, cUtils::Format("/?v=%d&encoding=json", DISCORD_API_VERSION));
+		/* Start the asynchronous read operation */
+		m_session->ws.async_read(m_session->buffer, asio::bind_executor(m_session->strand, [this](beast::error_code ec, size_t size) { on_read(ec, size); }));
+		m_session->ioc.run();
+		/* When the websocket stream closes, save the reason */
+		m_close_code = m_session->ws.reason().code;
+		m_close_msg  = m_session->ws.reason().reason.c_str();
+	}
+	catch (const std::exception& e) {
+		m_close_code = -1;
+		m_close_msg  = e.what();
+	}
+	catch (...) {
+		m_close_code = -1;
+		m_close_msg = "An error occurred";
+	}
+	/* Stop heartbeating */
+	stop_heartbeating();
+	/* Delete session */
+	delete m_session;
+}
+
+uchGatewayInfo
+cGateway::get_gateway_info(cDiscordError& error) {
 	try {
 		/* The JSON parser */
 		json::monotonic_resource mr;
@@ -13,7 +195,7 @@ uchGatewayInfo cGateway::get_gateway_info(cDiscordError& error) {
 		/* The http request response */
 		std::string http_response;
 		/* Return gateway info if http request is successful */
-		if (200 == cDiscord::GetHttpsRequest(DISCORD_API_GATEWAY_BOT, m_http_auth, http_response, error)) {
+		if (200 == cDiscord::GetHttpsRequest(DISCORD_API_GATEWAY_BOT, GetHttpAuthorization(), http_response, error)) {
 			p.write(http_response);
 			return cHandle::MakeUnique<cGatewayInfo>(p.release());
 		}
@@ -24,214 +206,10 @@ uchGatewayInfo cGateway::get_gateway_info(cDiscordError& error) {
 	return {};
 }
 
-bool cGateway::SendHeartbeat() {
-	bool result;
-
-	m_heartbeat.mutex.lock();
-	m_heartbeat.acknowledged = false;
-	volatile int s = m_last_sequence;
-	if (s) {
-		char payload[40];
-		size_t size = sprintf(payload, R"({"op":1,"d":%d})", s);
-		result = size == m_pWebsocket->Write(payload, size);
-	}
-	else result = 17 == m_pWebsocket->Write(R"({"op":1,"d":null})", 17);
-	m_heartbeat.mutex.unlock();
-
-	return result;
-}
-
-bool cGateway::HeartbeatAcknowledged() {
-	m_heartbeat.mutex.lock();
-	bool r = m_heartbeat.acknowledged;
-	m_heartbeat.mutex.unlock();
-	return r;
-}
-
-void cGateway::AcknowledgeHeartbeat() {
-	m_heartbeat.mutex.lock();
-	m_heartbeat.acknowledged = true;
-	m_heartbeat.mutex.unlock();
-}
-
-void cGateway::StartHeartbeating(int interval) {
-	m_heartbeat.should_exit = false;
-	m_heartbeat.thread = std::thread([this](int interval) {
-		/* Wait a random amount of time */
-		auto later = std::chrono::system_clock::now() + std::chrono::milliseconds((int)((float)interval * cUtils::Random()));
-		while (std::chrono::system_clock::now() < later)
-			if (m_heartbeat.should_exit)
-				return;
-		
-		for (;;) {
-			/* Send a heartbeat*/
-			if (!SendHeartbeat()) {
-				cUtils::PrintErr("Couldn't send heartbeat");
-				return;
-			}
-			
-			/* Wait for the specified interval in milliseconds */
-			later = std::chrono::system_clock::now() + std::chrono::milliseconds(interval);
-			while (std::chrono::system_clock::now() < later)
-				if (m_heartbeat.should_exit)
-					return;
-			
-			/* Make sure that heartbeat has been acknowledged */
-			if (!HeartbeatAcknowledged()) {
-				cUtils::PrintLog("Heartbeat not acknowledged");
-				return;
-			}
-		}
-	}, interval);
-}
-
-void cGateway::StopHeartbeating() {
-	m_heartbeat.should_exit = true;
-	if (m_heartbeat.thread.joinable())
-		m_heartbeat.thread.join();
-}
-
-bool cGateway::Identify() {
-	bool result = false;
-	if (char* payload = reinterpret_cast<char*>(malloc(200))) {
-		size_t len = sprintf(payload, R"({"op":2,"d":{"token":"%s","intents":%d,"properties":{"$os":"%s","$browser":"GreekBot","$device":"GreekBot"}}})", m_http_auth + 4, m_intents, cUtils::GetOS());
-		result = len == m_pWebsocket->Write(payload, len);
-		free(payload);
-	}
-	return result;
-}
-
-bool cGateway::Resume() {
-	bool result = false;
-	if (char* payload = reinterpret_cast<char*>(malloc(200))) {
-		size_t len = sprintf(payload, R"({"op":6,"d":{"token":"%s","session_id":"%s","seq":%d}})", m_http_auth + 4, m_sessionId, m_last_sequence);
-		result = len == m_pWebsocket->Write(payload, len);
-		free(payload);
-	}
-	return result;
-}
-
-bool cGateway::OnEvent(chEvent event) {
-	/* First, update event sequence */
-	m_last_sequence = event->GetSequence();
-
-	/* Then handle the event */
-	switch (event->GetType()) {
-		case EVENT_HEARTBEAT:
-			/* Send a heartbeat */
-			return SendHeartbeat();
-			
-		case EVENT_RECONNECT:
-			/* Forcefully exit */
-			return false;
-			
-		case EVENT_INVALID_SESSION:
-			/* Wait a random amount of time between 1 and 5 seconds */
-			std::this_thread::sleep_for(std::chrono::milliseconds(cUtils::Random(1000, 5000)));
-			/* If session is resumable, try to resume */
-			if (event->GetData<EVENT_INVALID_SESSION>()) return Resume();
-			/* If not, then reset session and identify */
-			m_last_sequence = 0;
-			delete[] m_sessionId;
-			m_sessionId = nullptr;
-			return Identify();
-			
-		case EVENT_HELLO:
-			if (int interval = event->GetData<EVENT_HELLO>(); interval >= 0) {
-				/* Start heartbeating */
-				StartHeartbeating(interval);
-				/* If there is an active session, try to resume */
-				return m_sessionId ? Resume() : Identify();
-			}
-			cUtils::PrintErr("Invalid HELLO event");
-			return false;
-			
-		case EVENT_HEARTBEAT_ACK:
-			/* Heartbeat was acknowledged */
-			AcknowledgeHeartbeat();
-			break;
-		
-		case EVENT_READY:
-			if (auto e = event->GetData<EVENT_READY>()) {
-				if (auto user = e->GetUser()) {
-					if (auto session = e->GetSessionId()) {
-						m_sessionId = session.release();
-						OnReady(std::move(user));
-						break;
-					}
-				}
-			}
-			cUtils::PrintErr("Invalid READY event");
-			return false;
-
-		case EVENT_GUILD_CREATE:
-			if (auto e = event->GetData<EVENT_GUILD_CREATE>()) {
-				OnGuildCreate(std::move(e));
-				break;
-			}
-			cUtils::PrintErr("Invalid GUILD_CREATE event");
-			return false;
-
-		case EVENT_GUILD_ROLE_CREATE:
-			if (auto e = event->GetData<EVENT_GUILD_ROLE_CREATE>()) {
-				OnGuildRoleCreate(e->GetGuildId(), e->GetRole());
-				break;
-			}
-			cUtils::PrintErr("Invalid GUILD_ROLE_CREATE event");
-			return false;
-
-		case EVENT_GUILD_ROLE_UPDATE:
-			if (auto e = event->GetData<EVENT_GUILD_ROLE_UPDATE>()) {
-				OnGuildRoleUpdate(e->GetGuildId(), e->GetRole());
-				break;
-			}
-			cUtils::PrintErr("Invalid GUILD_ROLE_UPDATE event");
-			return false;
-
-		case EVENT_GUILD_ROLE_DELETE:
-			if (auto e = event->GetData<EVENT_GUILD_ROLE_DELETE>()) {
-				OnGuildRoleDelete(e->GetGuildId(), e->GetRoleId());
-				break;
-			}
-			cUtils::PrintErr("Invalid GUILD_ROLE_DELETE event");
-			return false;
-			
-		case EVENT_INTERACTION_CREATE:
-			if (auto e = event->GetData<EVENT_INTERACTION_CREATE>()) {
-				OnInteractionCreate(e.get());
-				break;
-			}
-			cUtils::PrintErr("Invalid INTERACTION_CREATE event");
-			return false;
-
-		case EVENT_MESSAGE_CREATE:
-			if (auto e = event->GetData<EVENT_MESSAGE_CREATE>()) {
-				OnMessageCreate(e.get());
-				break;
-			}
-			cUtils::PrintErr("Invalid MESSAGE_CREATE event");
-			return false;
-
-		default:
-			break;
-	}
-	return true;
-}
-
-void cGateway::Run() {
-	/* The string that holds the gateway websocket url */
-	char url[100];
-	/* The gateway info object */
-	uchGatewayInfo g;
-	/* The buffer that holds the received messages from the gateway */
-	size_t recv_size = 256;
-	char  *recv_buff = reinterpret_cast<char*>(malloc(recv_size));
-	if (!recv_buff) {
-		cUtils::PrintErr("Out of memory");
-		goto LABEL_RETURN_NO_FREE_BUFF;
-	}
-	/* The main loop */
-	for (cDiscordError e;;) {
+void
+cGateway::Run() {
+	cDiscordError e;
+	for (uchGatewayInfo g;;) {
 		/* Get gateway info - retry with a timeout if any error occurs */
 		for (int timeout = 5, tick; ; timeout += 5) {
 			g = get_gateway_info(e);
@@ -255,60 +233,25 @@ void cGateway::Run() {
 					} while (tick--);
 			}
 		}
-		/* Create a websocket */
-		sprintf(url, "%s/?v=%d&encoding=json", g->GetUrl(), DISCORD_API_VERSION);
-		cWebsocket websocket(url);
-		m_pWebsocket = &websocket;
-		/* Start listening for messages */
-		while (websocket.IsOpen()) {
-			size_t msg_size = 0;
-			for (;;) {
-				/* Read available message bytes */
-				size_t recv_len = websocket.Read(recv_buff + msg_size, recv_size - msg_size);
-				/* If an error occurred, reconnect */
-				if (recv_len == 0) goto LABEL_EXIT_MESSAGE_LOOP;
-				/* Update total message size */
-				msg_size += recv_len;
-				/* If the entire message has been read, proceed */
-				if (websocket.IsMessageDone()) break;
-				/* Otherwise, if the buffer is full, allocate more memory */
-				if (msg_size == recv_size) {
-					void* temp = realloc(recv_buff, recv_size <<= 1);
-					if (!temp) {
-						cUtils::PrintErr("Out of memory.");
-						StopHeartbeating();
-						goto LABEL_RETURN;
-					}
-					recv_buff = reinterpret_cast<char*>(temp);
-				}
-			}
-
-			try {
-				/* Parse message as a JSON */
-				json::monotonic_resource mr;
-				json::stream_parser p(&mr);
-				p.write(recv_buff, msg_size);
-				/* Create event object from JSON */
-#if 0
-				auto e = p.release();
-				std::cout << e << std::endl;
-				cEvent event(e);
-#else
-				cEvent event(p.release());
-#endif
-				/* Handle event */
-				if (!OnEvent(&event)) break;
-			}
-			catch (const std::exception& e) {
-				cUtils::PrintErr("Couldn't read incoming event. %s", e.what());
-				break;
-			}
+		/* Connect to the gateway and run for a session */
+		run_session(g->GetUrl());
+		/* Handle session close codes */
+		switch (const char* fmt; m_close_code) {
+			case -1:
+				fmt = "Error establishing connection: %s";
+				goto LABEL_MSG;
+			case 4004:
+			case 4010:
+			case 4011:
+			case 4012:
+			case 4013:
+			case 4014:
+				fmt = "Closing connection: %s";
+			LABEL_MSG:
+				cUtils::PrintErr(fmt, m_close_msg.c_str());
+				return;
 		}
-	LABEL_EXIT_MESSAGE_LOOP:
-		StopHeartbeating();
 	}
 LABEL_RETURN:
-	free(recv_buff);
-LABEL_RETURN_NO_FREE_BUFF:
 	cUtils::PrintLog("Exiting...");
 }

@@ -7,8 +7,10 @@
 #include "Embed.h"
 #include "Role.h"
 #include <vector>
+#include "User.h"
+#include "Guild.h"
 
-class cBot : public cGateway {
+class cBot : public cGateway {//cGateway {
 private:
 	chUser m_user = nullptr;
 

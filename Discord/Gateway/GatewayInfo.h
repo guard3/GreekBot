@@ -17,10 +17,10 @@ public:
 	} {}
 	
 	/* Attributes */
-	[[nodiscard]] int GetTotal()          const { return m_values[0]; }
-	[[nodiscard]] int GetRemaining()      const { return m_values[1]; }
-	[[nodiscard]] int GetResetAfter()     const { return m_values[2]; }
-	[[nodiscard]] int GetMaxConcurrency() const { return m_values[3]; }
+	int GetTotal()          const { return m_values[0]; }
+	int GetRemaining()      const { return m_values[1]; }
+	int GetResetAfter()     const { return m_values[2]; }
+	int GetMaxConcurrency() const { return m_values[3]; }
 };
 typedef   hHandle<cSessionStartLimit>   hSessionStartLimit;
 typedef  chHandle<cSessionStartLimit>  chSessionStartLimit;
@@ -40,9 +40,9 @@ public:
 	explicit cGatewayInfo(const json::value& v) : url(v.at("url").as_string().c_str()), shards(static_cast<int>(v.at("shards").as_int64())), session_start_limit(v.at("session_start_limit")) {}
 
 	/* Attributes */
-	[[nodiscard]] const char         *GetUrl()               const { return url.c_str();          }
-	[[nodiscard]] int                 GetShards()            const { return shards;               }
-	[[nodiscard]] chSessionStartLimit GetSessionStartLimit() const { return &session_start_limit; }
+	const char         *GetUrl()               const { return url.c_str();          }
+	int                 GetShards()            const { return shards;               }
+	chSessionStartLimit GetSessionStartLimit() const { return &session_start_limit; }
 };
 typedef   hHandle<cGatewayInfo>   hGatewayInfo;
 typedef  chHandle<cGatewayInfo>  chGatewayInfo;

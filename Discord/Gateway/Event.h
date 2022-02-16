@@ -8,70 +8,33 @@
 #include "Message.h"
 
 /* ================================================================================================= */
-enum eEvent {
-	/* Payload opcodes */
-	// 0: Dispatch
-	EVENT_HEARTBEAT       = 1,
-	// 2: Identify
-	// 3: Presence update
-	// 4: Voice state update
-	// 5: -
-	// 6: Resume
-	EVENT_RECONNECT       = 7,
-	// 8: Request guild members
-	EVENT_INVALID_SESSION = 9,
-	EVENT_HELLO           = 10,
-	EVENT_HEARTBEAT_ACK   = 11,
-	
-	/* Events */
-	EVENT_READY,
-	EVENT_GUILD_CREATE,
-	EVENT_GUILD_ROLE_CREATE,
-	EVENT_GUILD_ROLE_UPDATE,
-	EVENT_GUILD_ROLE_DELETE,
-	EVENT_INTERACTION_CREATE,
-	EVENT_MESSAGE_CREATE,
-	EVENT_NOT_IMPLEMENTED
+enum eEvent : uint32_t {
+	EVENT_RESUMED                   = 0x712ED6EE,
+	EVENT_READY                     = 0xDFC1471F,
+	EVENT_GUILD_CREATE              = 0xDA68E698,
+	EVENT_GUILD_MEMBER_UPDATE       = 0x73288C4D,
+	EVENT_GUILD_ROLE_CREATE         = 0xEFECD22C,
+	EVENT_GUILD_ROLE_UPDATE         = 0xF81F07AF,
+	EVENT_GUILD_ROLE_DELETE         = 0x5A284E50,
+	EVENT_GUILD_JOIN_REQUEST_DELETE = 0xC3A463EA,
+	EVENT_INTERACTION_CREATE        = 0xB1E5D8EC,
+	EVENT_MESSAGE_CREATE            = 0x9C643E55,
+	EVENT_MESSAGE_UPDATE            = 0x8B97EBD6,
+	EVENT_MESSAGE_DELETE            = 0x29A0A229,
 };
 
 /* ================================================================================================= */
 class cReadyEventData final {
 private:
-	json::value m_value;
+	json::value m_data;
 
 public:
-	explicit cReadyEventData(json::value v) : m_value(std::move(v)) {}
+	cReadyEventData(json::value v) : m_data(std::move(v)) {}
 
 	// TODO: guilds, application
-	[[nodiscard]] int GetVersion() const {
-		try {
-			return static_cast<int>(m_value.at("v").as_int64());
-		}
-		catch (...) {
-			return 0;
-		}
-	}
-
-	[[nodiscard]] uchHandle<char[]> GetSessionId() const {
-		try {
-			auto& s = m_value.at("session_id").as_string();
-			auto result = cHandle::MakeUnique<char[]>(s.size() + 1);
-			strcpy(result.get(), s.c_str());
-			return result;
-		}
-		catch (...) {
-			return {};
-		}
-	}
-
-	[[nodiscard]] uchUser GetUser() const {
-		try {
-			return cHandle::MakeUnique<cUser>(m_value.at("user"));
-		}
-		catch (...) {
-			return {};
-		}
-	}
+	int         GetVersion()   const { return m_data.at("v").as_int64();                     }
+	const char* GetSessionId() const { return m_data.at("session_id").as_string().c_str();   }
+	uchUser     GetUser()      const { return cHandle::MakeUnique<cUser>(m_data.at("user")); }
 };
 typedef   hHandle<cReadyEventData>   hReadyEventData;
 typedef  chHandle<cReadyEventData>  chReadyEventData;
@@ -108,7 +71,7 @@ public:
 	cGuildRoleDeleteEventData(const json::object& o) : guild_id(o.at("guild_id")), role_id(o.at("role_id")) {}
 
 	hSnowflake GetGuildId() { return &guild_id; }
-	hSnowflake GetRoleId()  { return &role_id; }
+	hSnowflake GetRoleId()  { return &role_id;  }
 };
 typedef   hHandle<cGuildRoleDeleteEventData>   hGuildRoleDeleteEventData;
 typedef  chHandle<cGuildRoleDeleteEventData>  chGuildRoleDeleteEventData;
@@ -120,9 +83,10 @@ typedef schHandle<cGuildRoleDeleteEventData> schGuildRoleDeleteEventData;
 /* ================================================================================================= */
 class cEvent final {
 private:
-	eEvent      t; // Event type
-	int         s; // Event sequence - used for heartbeating
-	json::value d; // Event specific data
+	std::string m_name; // Event name as a string
+	eEvent      m_type; // Event type
+	int64_t     m_seq;  // Event sequence - used for heartbeating
+	json::value m_data; // Event specific data
 
 	template<eEvent> struct data_type {};
 	template<> struct data_type<EVENT_READY>              { typedef cReadyEventData                 Type; };
@@ -134,35 +98,16 @@ private:
 	template<> struct data_type<EVENT_MESSAGE_CREATE>     { typedef cMessage                        Type; };
 	template<eEvent e> using tDataType = typename data_type<e>::Type;
 
-	template<eEvent e> struct return_type { typedef uhHandle<tDataType<e>> Type; };
-	template<> struct return_type<EVENT_INVALID_SESSION> { typedef bool Type; };
-	template<> struct return_type<EVENT_HELLO>           { typedef int  Type; };
-	template<eEvent e> using tReturnType = typename return_type<e>::Type;
-
 public:
-	cEvent(const json::value& v);
+	cEvent(json::value&& v) : cEvent(v.as_object()) {}
+	cEvent(json::object& o);
 	
-	eEvent GetType()     const { return t; }
-	int    GetSequence() const { return s; }
+	eEvent      GetType()     const { return m_type;         }
+	const char* GetName()     const { return m_name.c_str(); }
+	int64_t     GetSequence() const { return m_seq;          }
 
 	template<eEvent e>
-	tReturnType<e> GetData() const {
-		if constexpr (e == EVENT_INVALID_SESSION) {
-			auto p = d.if_bool();
-			return p && *p && t == EVENT_INVALID_SESSION;
-		}
-		else if constexpr(e == EVENT_HELLO) {
-			try {
-				return d.at("heartbeat_interval").as_int64();
-			}
-			catch (...) {
-				return -1;
-			}
-		}
-		else {
-			return cHandle::MakeUniqueNoEx<tDataType<e>>(d);
-		}
-	}
+	uhHandle<tDataType<e>> GetData() const { return cHandle::MakeUniqueNoEx<tDataType<e>>(m_data); }
 };
 typedef   hHandle<cEvent>   hEvent;
 typedef  chHandle<cEvent>  chEvent;
@@ -170,5 +115,4 @@ typedef  uhHandle<cEvent>  uhEvent;
 typedef uchHandle<cEvent> uchEvent;
 typedef  shHandle<cEvent>  shEvent;
 typedef schHandle<cEvent> schEvent;
-
 #endif /* _GREEKBOT_EVENT_H_ */
