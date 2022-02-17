@@ -62,5 +62,5 @@ cGateway::on_event(const cEvent& event) {
 		default:
 			return;
 	}
-	cUtils::PrintErr("Error parsing %s event", event.GetName());
+	throw std::runtime_error(cUtils::Format("Invalid %s event", event.GetName()));
 }

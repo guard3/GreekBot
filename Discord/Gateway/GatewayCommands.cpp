@@ -7,7 +7,7 @@ cGateway::resume() {
 
 void
 cGateway::identify() {
-	send(cUtils::Format(R"({"op":2,"d":{"token":"%s","intents":%d,"properties":{"$os":"%s","$browser":"GreekBot","$device":"GreekBot"}}})", GetToken(), m_intents, cUtils::GetOS()));
+	send(cUtils::Format(R"({"op":2,"d":{"token":"%s","intents":%d,"compress":true,"properties":{"$os":"%s","$browser":"GreekBot","$device":"GreekBot"}}})", GetToken(), m_intents, cUtils::GetOS()));
 }
 
 void

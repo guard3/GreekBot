@@ -80,7 +80,7 @@ cDatabase::cDatabase() {
 LABEL:
 	/* Open a database handle */
 	sqlite3* db;
-	int rc = SQLITE3_OPEN(db_filename, &db);
+	int rc = sqlite3_open_v2(db_filename, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, nullptr); //SQLITE3_OPEN(db_filename, &db);
 	free(db_filename);
 	/* If database handle is open, create leaderboard table */
 	if (rc == SQLITE_OK) {

@@ -52,19 +52,19 @@ private:
 	std::string m_http_auth; // The authorization parameter for HTTP requests 'Bot token'
 	eIntent     m_intents;   // The gateway intents
 	/* Session attributes */
-	std::string         m_session_id;        // The current session id, used for resuming; empty = no valid session
-	std::atomic_int64_t m_last_sequence = 0; // The last event sequence received, used for heartbeating; 0 = none received
+	std::string         m_session_id;    // The current session id, used for resuming; empty = no valid session
+	std::atomic_int64_t m_last_sequence; // The last event sequence received, used for heartbeating; 0 = none received
 	/* Heartbeating */
-	std::thread      m_heartbeat_thread;       // The heartbeating thread
-	std::atomic_bool m_heartbeat_exit = false; // Should the heartbeating thread exit?
-	std::atomic_bool m_heartbeat_ack = false;  // Is the heartbeat acknowledged?
+	std::thread      m_heartbeat_thread; // The heartbeating thread
+	std::atomic_bool m_heartbeat_exit;   // Should the heartbeating thread exit?
+	std::atomic_bool m_heartbeat_ack;    // Is the heartbeat acknowledged?
 	/* Json parsing for gateway events */
 	json::monotonic_resource m_mr;          // A monotonic memory resource for json parsing
 	json::stream_parser      m_json_parser; // The json parser
 	/* Websocket session */
-	cGatewaySession* m_session = nullptr;
+	cGatewaySession* m_session;
 	/* Session close reason */
-	int         m_close_code = -1;
+	int         m_close_code;
 	std::string m_close_msg;
 	/* Gateway commands */
 	void resume();
@@ -97,9 +97,10 @@ public:
 	virtual void OnInteractionCreate(chInteraction) {}
 	virtual void OnMessageCreate(chMessage) {}
 
-	cGateway(const char* token, eIntent intents) : m_http_auth(cUtils::Format("Bot %s", token)), m_intents(intents), m_json_parser(&m_mr) {}
+	cGateway(const char* token, eIntent intents);
 	cGateway(const cGateway&) = delete;
 	cGateway(cGateway&&) noexcept = delete;
+	~cGateway();
 
 	cGateway& operator=(cGateway) = delete;
 

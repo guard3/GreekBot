@@ -10,6 +10,8 @@ namespace asio  = boost::asio;
 #include "Gateway.h"
 #include "GatewayInfo.h"
 #include "Event.h"
+#include <iostream>
+#include <zlib.h>
 
 /* Gateway event/command opcodes */
 enum eGatewayOpcode {
@@ -30,6 +32,7 @@ enum eGatewayOpcode {
 class cGatewaySession final {
 private:
 	asio::ssl::context ctx; // The SSL context
+
 public:
 	asio::io_context         ioc;    // The IO context
 	asio::io_context::strand strand; // The strand for all async handlers
@@ -38,12 +41,24 @@ public:
 	std::deque<std::string> msg_queue; // A queue with all pending messages to be sent
 	beast::websocket::stream<beast::ssl_stream<beast::tcp_stream>> ws; // The websocket stream
 
-	cGatewaySession() : ctx(asio::ssl::context::tlsv13_client), strand(ioc), ws(ioc, ctx) {}
+	z_stream inflate_stream;   // The zlib inflate stream for decompressing gateway payloads
+	char inflate_buffer[4096]; // The buffer for storing decompressed data
+
+	cGatewaySession() : ctx(asio::ssl::context::tlsv13_client), strand(ioc), ws(ioc, ctx) {
+		memset(&inflate_stream, 0, sizeof(inflate_stream));
+		if (Z_OK != inflateInit(&inflate_stream))
+			throw std::runtime_error("Could not initialize inflate stream");
+	}
 	cGatewaySession(const cGatewaySession&) = delete;
 	cGatewaySession(cGatewaySession&&) = delete;
+	~cGatewaySession() { inflateEnd(&inflate_stream); }
 
 	cGatewaySession& operator=(cGatewaySession) = delete;
 };
+
+cGateway::cGateway(const char *token, eIntent intents) : m_http_auth(cUtils::Format("Bot %s", token)), m_intents(intents), m_last_sequence(0), m_heartbeat_exit(false), m_heartbeat_ack(false), m_session(nullptr), m_close_code(-1), m_json_parser(&m_mr) {}
+
+cGateway::~cGateway() { delete m_session; }
 
 void
 cGateway::send(std::string msg) {
@@ -59,24 +74,43 @@ cGateway::send(std::string msg) {
 
 void
 cGateway::on_read(beast::error_code ec, size_t size) {
-	/* If an error occurred, close the websocket stream */
-	if (ec) {
-		if (ec != beast::websocket::error::closed)
-			m_session->ws.close(beast::websocket::close_code::none, ec);
+	/* If an error occurred, return and let the websocket stream close */
+	if (ec)
 		return;
-	}
 	try {
-		/* Parse buffer contents as a json value */
-		m_json_parser.write((const char*)m_session->buffer.data().data(), size);
-		json::value v = m_json_parser.release();
+		/* Check for Z_SYNC_FLUSH suffix and decompress if necessary */
+		char* in = (char*)m_session->buffer.data().data();
+		if (size >= 4 ) {
+			if (0 == memcmp(in + (size - 4), "\x00\x00\xFF\xFF", 4)) {
+				m_session->inflate_stream.avail_in = size;
+				m_session->inflate_stream.next_in = (Byte*)in;
+				do {
+					m_session->inflate_stream.avail_out = 4096;
+					m_session->inflate_stream.next_out = (Byte*)m_session->inflate_buffer;
+					switch (inflate(&m_session->inflate_stream, Z_NO_FLUSH)) {
+						default:
+							throw std::runtime_error(m_session->inflate_stream.msg);
+						case Z_OK:
+						case Z_STREAM_END:
+							m_json_parser.write(m_session->inflate_buffer, 4096 - m_session->inflate_stream.avail_out);
+					}
+				} while (m_session->inflate_stream.avail_out == 0);
+				goto LABEL_PARSED;
+			}
+		}
+		/* If the payload isn't compressed, directly feed it into the json parser */
+		m_json_parser.write(in, size);
+	LABEL_PARSED:
 		/* Consume all read bytes from the dynamic buffer */
 		m_session->buffer.consume(size);
+		/* Release the parsed json value */
+		json::value v = m_json_parser.release();
 		/* Start the next asynchronous read operation to keep listening for more events */
 		m_session->ws.async_read(m_session->buffer, asio::bind_executor(m_session->strand, [this](beast::error_code ec, size_t size) { on_read(ec, size); }));
-		/* Process the event */
 #ifdef GW_LOG_LVL_2
 		cUtils::PrintLog((std::stringstream() << v).str().c_str());
 #endif
+		/* Process the event */
 		switch (v.at("op").as_int64()) {
 			case OP_DISPATCH:
 				/* Process event */
@@ -114,18 +148,17 @@ cGateway::on_read(beast::error_code ec, size_t size) {
 				break;
 		}
 	}
-	catch (...) {}
+	catch (const std::exception& e) {
+		cUtils::PrintErr("Error parsing received gateway payload: %s", e.what());
+	}
 	m_json_parser.reset(&m_mr);
 }
 
 void
 cGateway::on_write(beast::error_code ec, size_t size) {
-	/* If an error occurred, close the websocket stream */
-	if (ec) {
-		if (ec != beast::websocket::error::closed)
-			m_session->ws.close(beast::websocket::close_code::none, ec);
+	/* If an error occurred, return and let the websocket stream close */
+	if (ec)
 		return;
-	}
 	/* Pop the message that was just sent */
 	m_session->msg_queue.pop_front();
 	/* If the queue isn't clear, continue the asynchronous send operation */
@@ -141,10 +174,10 @@ cGateway::run_session(const char* url) {
 		host += 3;
 	else
 		host = url;
-	/* Create a new session */
-	m_session = new cGatewaySession();
 	/* Run */
 	try {
+		/* Create a new session */
+		m_session = new cGatewaySession();
 		/* Look up the domain name */
 		auto results = asio::ip::tcp::resolver(m_session->ioc).resolve(host, "https");
 		/* Set a timeout and make a connection to the resolved IP address */
@@ -164,7 +197,7 @@ cGateway::run_session(const char* url) {
 			r.set(beast::http::field::user_agent, "GreekBot");
 		}));
 		/* Perform websocket handshake */
-		m_session->ws.handshake(host_str, cUtils::Format("/?v=%d&encoding=json", DISCORD_API_VERSION));
+		m_session->ws.handshake(host_str, cUtils::Format("/?v=%d&encoding=json&compress=zlib-stream", DISCORD_API_VERSION));
 		/* Start the asynchronous read operation */
 		m_session->ws.async_read(m_session->buffer, asio::bind_executor(m_session->strand, [this](beast::error_code ec, size_t size) { on_read(ec, size); }));
 		m_session->ioc.run();
@@ -184,6 +217,7 @@ cGateway::run_session(const char* url) {
 	stop_heartbeating();
 	/* Delete session */
 	delete m_session;
+	m_session = nullptr;
 }
 
 uchGatewayInfo
