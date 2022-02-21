@@ -154,7 +154,7 @@ bool cDatabase::GetTop10(tRankQueryData& result) {
 				sqlite3_column_int64(stmt, 0),
 				sqlite3_column_int64(stmt, 1),
 				sqlite3_column_int64(stmt, 2),
-				sqlite3_column_int64(stmt, 4)
+				sqlite3_column_int64(stmt, 3)
 			);
 		}
 	}

@@ -174,17 +174,35 @@ cGreekBot::OnInteraction_top(chInteraction interaction) {
 			}
 		}
 
+		sResolvedLevel lvl = xp_to_level(d.GetXp());
+		const char* medal;
+		switch (d.GetRank()) {
+			case 1:  medal = "🥇"; break;
+			case 2:  medal = "🥈"; break;
+			case 3:  medal = "🥉"; break;
+			default: medal = "🏅"; break;
+		}
 		embeds.emplace_back(
 			cEmbed::CreateBuilder()
 				.SetAuthor(cUtils::Format("%s#%s", user->GetUsername(), user->GetDiscriminator()).c_str(), nullptr, user->GetAvatarUrl())
-				.SetTitle(cUtils::Format("🏅 Rank **#%d**\tLevel **TBA**", (int)d.GetRank()).c_str())
+				.SetTitle(cUtils::Format("%s Rank **#%" PRIi64 "**\tLevel **%" PRIi64 "**", medal, d.GetRank(), lvl.level).c_str())
 				.SetColor(color)
-				.AddField("XP Progress", "TBA", true)
+				.AddField("XP Progress", cUtils::Format("%" PRIi64 "/%" PRIi64, d.GetXp() - lvl.base_xp, lvl.next_xp - lvl.base_xp).c_str(), true)
 				.AddField("Total XP", std::to_string(d.GetXp()).c_str(), true)
 				.AddField("Messages", std::to_string(d.GetNumMessages()).c_str(), true)
 				.Build()
 		);
 	}
 	m_lmg.mutex.unlock();
-	EditInteractionResponse(interaction, str.c_str(), MESSAGE_FLAG_NONE, embeds, nullptr, nullptr, nullptr);
+	EditInteractionResponse(
+		interaction, str.c_str(), MESSAGE_FLAG_NONE, embeds, nullptr,
+		std::vector<cActionRow> {
+			cActionRow {
+				cButton<BUTTON_STYLE_SECONDARY> {
+					STR(CMP_ID_BUTTON_RANK_HELP),
+					"How does this work?"
+				}
+			}
+		}, nullptr
+	);
 }
