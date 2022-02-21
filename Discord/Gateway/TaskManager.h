@@ -2,6 +2,7 @@
 #ifndef _GREEKBOT_TASKMANAGER_H_
 #define _GREEKBOT_TASKMANAGER_H_
 #include <thread>
+#include <atomic>
 
 class cTask final {
 private:

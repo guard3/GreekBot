@@ -12,6 +12,7 @@
 #include "Guild.h"
 #include "GatewayInfo.h"
 #include "Discord.h"
+#include "TaskManager.h"
 
 class cGatewaySession;
 
@@ -63,6 +64,7 @@ private:
 	json::stream_parser      m_json_parser; // The json parser
 	/* Websocket session */
 	cGatewaySession* m_session;
+	cTaskManager m_task_manager;
 	/* Session close reason */
 	int         m_close_code;
 	std::string m_close_msg;

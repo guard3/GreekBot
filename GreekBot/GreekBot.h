@@ -31,9 +31,12 @@ private:
 		352001527780474881  // @Non Learner
 	};
 
-	uchGuild m_lmg_guild;
-	std::vector<cRole> m_lmg_roles;
-	std::vector<chRole> m_lmg_sorted_roles;
+	struct {
+		uchGuild guild;
+		std::vector<cRole> roles;
+		std::vector<chRole> sorted_roles;
+		std::mutex mutex;
+	} m_lmg;
 
 	/* Voice */
 	std::vector<uint64_t> m_lmg_voice_channels;
@@ -46,7 +49,6 @@ private:
 	void OnInteraction_connect(chInteraction interaction) {
 		chMember member = interaction->GetMember();
 		//member->
-
 	}
 
 	void lmg_update_proficiency_role(chMember member, eLmgProficiencyRoleId proficiency_role) {

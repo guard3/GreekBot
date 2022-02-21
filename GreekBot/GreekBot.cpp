@@ -5,45 +5,53 @@ void
 cGreekBot::OnGuildCreate(uhGuild guild) {
 	/* Make sure the guild is Learning Greek */
 	if (guild->GetId()->ToInt() == 350234668680871946) {
+		m_lmg.mutex.lock();
 		/* Save guild roles */
-		m_lmg_roles = std::move(guild->Roles);
-		m_lmg_sorted_roles.clear();
+		m_lmg.roles = std::move(guild->Roles);
+		m_lmg.sorted_roles.clear();
 		/* Save guild object */
-		m_lmg_guild = std::move(guild);
+		m_lmg.guild = std::move(guild);
+		m_lmg.mutex.unlock();
 	}
 }
 
 void
 cGreekBot::OnGuildRoleCreate(chSnowflake guild_id, hRole role) {
-	if (m_lmg_guild) {
-		if (*m_lmg_guild->GetId() == *guild_id) {
+	m_lmg.mutex.lock();
+	if (m_lmg.guild) {
+		if (*m_lmg.guild->GetId() == *guild_id) {
 			/* A new role was created in Learning Greek */
-			m_lmg_roles.push_back(std::move(*role));
-			m_lmg_sorted_roles.clear();
+			m_lmg.roles.push_back(std::move(*role));
+			m_lmg.sorted_roles.clear();
 		}
 	}
+	m_lmg.mutex.unlock();
 }
 
 void cGreekBot::OnGuildRoleUpdate(chSnowflake guild_id, hRole role) {
-	if (m_lmg_guild) {
-		if (*m_lmg_guild->GetId() == *guild_id) {
-			auto i = std::find_if(m_lmg_roles.begin(), m_lmg_roles.end(), [&role](const cRole& r) { return *r.GetId() == *role->GetId(); });
-			if (i != m_lmg_roles.end())
+	m_lmg.mutex.lock();
+	if (m_lmg.guild) {
+		if (*m_lmg.guild->GetId() == *guild_id) {
+			auto i = std::find_if(m_lmg.roles.begin(), m_lmg.roles.end(), [&role](const cRole& r) { return *r.GetId() == *role->GetId(); });
+			if (i != m_lmg.roles.end())
 				*i = std::move(*role);
-			m_lmg_sorted_roles.clear();
+			m_lmg.sorted_roles.clear();
 		}
 	}
+	m_lmg.mutex.unlock();
 }
 
 void
 cGreekBot::OnGuildRoleDelete(chSnowflake guild_id, chSnowflake role_id) {
-	if (m_lmg_guild) {
-		if (*m_lmg_guild->GetId() == *guild_id) {
-			auto i = std::find_if(m_lmg_roles.begin(), m_lmg_roles.end(), [&role_id](const cRole& r) { return *r.GetId() == *role_id; });
-			if (i != m_lmg_roles.end())
-				m_lmg_roles.erase(i);
+	m_lmg.mutex.lock();
+	if (m_lmg.guild) {
+		if (*m_lmg.guild->GetId() == *guild_id) {
+			auto i = std::find_if(m_lmg.roles.begin(), m_lmg.roles.end(), [&role_id](const cRole& r) { return *r.GetId() == *role_id; });
+			if (i != m_lmg.roles.end())
+				m_lmg.roles.erase(i);
 		}
 	}
+	m_lmg.mutex.unlock();
 }
 
 void

@@ -124,8 +124,8 @@ private:
 	int32_t m_value;
 
 public:
-	static inline constexpr int NO_COLOR = -1;
-	cColor() : m_value(-1) {}
+	static inline constexpr int32_t NO_COLOR = 0;
+	cColor() : m_value(NO_COLOR) {}
 	cColor(int v) : m_value(v) {}
 	cColor(const json::value& v) : cColor(v.as_int64()) {}
 
