@@ -70,31 +70,31 @@ private:
 	void OnInteraction_SelectMenu(chInteraction interaction) {
 		/* Acknowledge interaction */
 		AcknowledgeInteraction(interaction);
-		const char* value = interaction->GetData<INTERACTION_MESSAGE_COMPONENT>()->Values[0];
+		std::string value = interaction->GetData<INTERACTION_MESSAGE_COMPONENT>()->Values[0];
 		auto member = interaction->GetMember();
 
-		if (0 == strcmp(value, "opt_gr")) {
+		if (value == "opt_gr") {
 			lmg_update_proficiency_role(member, LMG_PROFICIENCY_NATIVE);
 		}
-		else if (0 == strcmp(value, "opt_a1")) {
+		else if (value == "opt_a1") {
 			lmg_update_proficiency_role(member, LMG_PROFICIENCY_BEGINNER);
 		}
-		else if (0 == strcmp(value, "opt_a2")) {
+		else if (value == "opt_a2") {
 			lmg_update_proficiency_role(member, LMG_PROFICIENCY_ELEMENTARY);
 		}
-		else if (0 == strcmp(value, "opt_b1")) {
+		else if (value == "opt_b1") {
 			lmg_update_proficiency_role(member, LMG_PROFICIENCY_INTERMEDIATE);
 		}
-		else if (0 == strcmp(value, "opt_b2")) {
+		else if (value == "opt_b2") {
 			lmg_update_proficiency_role(member, LMG_PROFICIENCY_UPPER_INTERMEDIATE);
 		}
-		else if (0 == strcmp(value, "opt_c1")) {
+		else if (value == "opt_c1") {
 			lmg_update_proficiency_role(member, LMG_PROFICIENCY_ADVANCED);
 		}
-		else if (0 == strcmp(value, "opt_c2")) {
+		else if (value == "opt_c2") {
 			lmg_update_proficiency_role(member, LMG_PROFICIENCY_FLUENT);
 		}
-		else if (0 == strcmp(value, "opt_no")) {
+		else if (value == "opt_no") {
 			lmg_update_proficiency_role(member, LMG_PROFICIENCY_NON_LEARNER);
 		}
 		/* Edit original interaction message */

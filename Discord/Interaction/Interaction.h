@@ -105,108 +105,88 @@ typedef  uhHandle<cApplicationCommandInteractionDataOption>  shApplicationComman
 typedef uchHandle<cApplicationCommandInteractionDataOption> schApplicationCommandInteractionDataOption;
 
 /* ================================================================================================= */
-class cApplicationCommandInteractionData {
+template<eInteractionType>
+class cInteractionData;
+
+template<>
+class cInteractionData<INTERACTION_APPLICATION_COMMAND> final {
 private:
 	cSnowflake              id;        // The id of the invoked command
 	std::string             name;      // The name of the invoked command
 	eApplicationCommandType type;      // The type of the invoked command
 	chSnowflake             target_id; // The id the of user or message targeted by a user or message command
 
-	std::vector<cApplicationCommandInteractionDataOption> options;
-
 public:
-	std::vector<chApplicationCommandInteractionDataOption> Options;
+	std::vector<cApplicationCommandInteractionDataOption> Options;
 
-	explicit cApplicationCommandInteractionData(const json::value&);
-	cApplicationCommandInteractionData(const cApplicationCommandInteractionData&);
-	cApplicationCommandInteractionData(cApplicationCommandInteractionData&&) noexcept;
-	~cApplicationCommandInteractionData();
+	cInteractionData(const json::object&);
+	cInteractionData(const json::value&);
 
-	cApplicationCommandInteractionData& operator=(cApplicationCommandInteractionData);
-
-	[[nodiscard]] chSnowflake             GetCommandId()   const noexcept { return &id;          }
-	[[nodiscard]] const char*             GetCommandName() const noexcept { return name.c_str(); }
-	[[nodiscard]] eApplicationCommandType GetCommandType() const noexcept { return type;         }
-	[[nodiscard]] chSnowflake             GetTargetId()    const noexcept { return target_id;    }
+	chSnowflake             GetCommandId()       const { return &id;             }
+	const char*             GetName()     const { return name.c_str();    }
+	eApplicationCommandType GetType()     const { return type;            }
+	chSnowflake             GetTargetId() const { return target_id; }
 };
-typedef   hHandle<cApplicationCommandInteractionData>   hApplicationCommandInteractionData;
-typedef  chHandle<cApplicationCommandInteractionData>  chApplicationCommandInteractionData;
-typedef  uhHandle<cApplicationCommandInteractionData>  uhApplicationCommandInteractionData;
-typedef uchHandle<cApplicationCommandInteractionData> uchApplicationCommandInteractionData;
-typedef  uhHandle<cApplicationCommandInteractionData>  shApplicationCommandInteractionData;
-typedef uchHandle<cApplicationCommandInteractionData> schApplicationCommandInteractionData;
 
-/* ================================================================================================= */
-class cMessageComponentInteractionData final {
+template<>
+class cInteractionData<INTERACTION_MESSAGE_COMPONENT> final {
 private:
-	const char*         custom_id; // The custom_id of the component
-	eComponentType component_type; // The type of the component
+	std::string    custom_id;
+	eComponentType component_type;
 
-	std::vector<std::string> values;
 public:
-	std::vector<const char*> Values; // The values the user selected (select menu)
+	std::vector<std::string> Values;
 
-	explicit cMessageComponentInteractionData(const json::value&);
-	cMessageComponentInteractionData(const cMessageComponentInteractionData&);
-	cMessageComponentInteractionData(cMessageComponentInteractionData&& o) noexcept;
-	~cMessageComponentInteractionData();
+	cInteractionData(const json::object&);
+	cInteractionData(const json::value&);
 
-	cMessageComponentInteractionData& operator=(cMessageComponentInteractionData o);
-
-	[[nodiscard]] const char*    GetCustomId()      const { return custom_id;      }
-	[[nodiscard]] eComponentType GetComponentType() const { return component_type; }
+	const char*    GetCustomId()      const { return custom_id.c_str(); }
+	eComponentType GetComponentType() const { return component_type;    }
 };
-typedef   hHandle<cMessageComponentInteractionData>   hMessageComponentInteractionData;
-typedef  chHandle<cMessageComponentInteractionData>  chMessageComponentInteractionData;
-typedef  uhHandle<cMessageComponentInteractionData>  uhMessageComponentInteractionData;
-typedef uchHandle<cMessageComponentInteractionData> uchMessageComponentInteractionData;
-typedef  uhHandle<cMessageComponentInteractionData>  uhMessageComponentInteractionData;
-typedef uchHandle<cMessageComponentInteractionData> uchMessageComponentInteractionData;
+template<eInteractionType e> using   hInteractionData =   hHandle<cInteractionData<e>>;
+template<eInteractionType e> using  chInteractionData =  chHandle<cInteractionData<e>>;
+template<eInteractionType e> using  uhInteractionData =  uhHandle<cInteractionData<e>>;
+template<eInteractionType e> using uchInteractionData = uchHandle<cInteractionData<e>>;
+template<eInteractionType e> using  shInteractionData =  shHandle<cInteractionData<e>>;
+template<eInteractionType e> using schInteractionData = schHandle<cInteractionData<e>>;
 
 /* ================================================================================================= */
-template<eInteractionType> struct _t2 {};
-template<> struct _t2<INTERACTION_APPLICATION_COMMAND> { typedef chApplicationCommandInteractionData Type; };
-template<> struct _t2<INTERACTION_MESSAGE_COMPONENT>   { typedef chMessageComponentInteractionData   Type; };
-template<eInteractionType t>
-using tInteractionDataType = typename _t2<t>::Type;
-
 class cInteraction final {
 private:
 	cSnowflake       id;
 	cSnowflake       application_id;
 	eInteractionType type;
 	void*            data;
-	chSnowflake      guild_id;
-	chSnowflake      channel_id;
-	chMember         member;
-	chUser           user;
+	uhUser           user;
+	uhMember         member;
+	uhSnowflake      guild_id;
+	uhSnowflake      channel_id;
 	std::string      token;
 	int              version;
 	uhMessage        message;
 
 public:
-	explicit cInteraction(const json::value& v);
+	cInteraction(const json::object& o);
+	cInteraction(const json::value& v);
 	cInteraction(const cInteraction&);
-	cInteraction(cInteraction&&) noexcept ;
+	cInteraction(cInteraction&&) noexcept;
 	~cInteraction();
 
 	cInteraction& operator=(cInteraction);
 	
-	[[nodiscard]] chSnowflake       GetId()            const { return &id;             }
-	[[nodiscard]] chSnowflake       GetApplicationId() const { return &application_id; }
-	[[nodiscard]] eInteractionType  GetType()          const { return type;            }
-	[[nodiscard]] chSnowflake       GetGuildId()       const { return guild_id;        }
-	[[nodiscard]] chSnowflake       GetChannelId()     const { return channel_id;      }
-	[[nodiscard]] chMember          GetMember()        const { return member;          }
-	[[nodiscard]] chUser            GetUser()          const { return user;            }
-	[[nodiscard]] const char*       GetToken()         const { return token.c_str();   }
-	[[nodiscard]] int               GetVersion()       const { return version;         }
-	chMessage GetMessage() const { return message.get(); }
+	const cSnowflake&  GetId()            const { return id;               }
+	const cSnowflake&  GetApplicationId() const { return application_id;   }
+	eInteractionType   GetType()          const { return type;             }
+	chUser             GetUser()          const { return user.get();       }
+	chMember           GetMember()        const { return member.get();     }
+	chSnowflake        GetGuildId()       const { return guild_id.get();   }
+	chSnowflake        GetChannelId()     const { return channel_id.get(); }
+	const std::string& GetToken()         const { return token;            }
+	int                GetVersion()       const { return version;          }
+	chMessage          GetMessage()       const { return message.get();    }
 
 	template<eInteractionType t>
-	[[nodiscard]] tInteractionDataType<t> GetData() const {
-		return t == type ? reinterpret_cast<tInteractionDataType<t>>(data) : nullptr;
-	}
+	chInteractionData<t> GetData() const { return t == type ? (chInteractionData<t>)data : nullptr;	}
 };
 typedef   hHandle<cInteraction>   hInteraction; // handle
 typedef  chHandle<cInteraction>  chInteraction; // const handle

@@ -150,7 +150,7 @@ bool (*cBot::ms_interaction_functions[IF_NUM])(const sIF_data*) {
 		}
 		obj["data"] = data->to_json();
 		char path[300];
-		sprintf(path, "%s/interactions/%s/%s/callback", DISCORD_API_ENDPOINT, data->interaction->GetId()->ToString(), data->interaction->GetToken());
+		sprintf(path, "%s/interactions/%s/%s/callback", DISCORD_API_ENDPOINT, data->interaction->GetId().ToString(), data->interaction->GetToken().c_str());
 		return -1 != cNet::PostHttpsRequest(DISCORD_API_HOST, path, data->http_auth, obj);
 	},
 	[](const sIF_data* data) -> bool {
@@ -158,7 +158,7 @@ bool (*cBot::ms_interaction_functions[IF_NUM])(const sIF_data*) {
 		if (data->interaction->GetType() == INTERACTION_PING)
 			return false;
 		char path[512];
-		sprintf(path, "%s/webhooks/%s/%s/messages/@original", DISCORD_API_ENDPOINT, data->interaction->GetApplicationId()->ToString(), data->interaction->GetToken());
+		sprintf(path, "%s/webhooks/%s/%s/messages/@original", DISCORD_API_ENDPOINT, data->interaction->GetApplicationId().ToString(), data->interaction->GetToken().c_str());
 		return -1 != cNet::PatchHttpsRequest(DISCORD_API_HOST, path, data->http_auth, data->to_json());
 	},
 	[](const sIF_data* data) -> bool {
@@ -167,7 +167,7 @@ bool (*cBot::ms_interaction_functions[IF_NUM])(const sIF_data*) {
 			return false;
 		return -1 != cNet::PostHttpsRequest(
 			DISCORD_API_HOST,
-			cUtils::Format("%s/webhooks/%s/%s", DISCORD_API_ENDPOINT, data->interaction->GetApplicationId()->ToString(), data->interaction->GetToken()).c_str(),
+			cUtils::Format("%s/webhooks/%s/%s", DISCORD_API_ENDPOINT, data->interaction->GetApplicationId().ToString(), data->interaction->GetToken().c_str()).c_str(),
 			data->http_auth,
 			data->to_json()
 		);
@@ -188,6 +188,6 @@ bool cBot::AcknowledgeInteraction(chInteraction interaction) {
 			break;
 	}
 	char path[300];
-	sprintf(path, "%s/interactions/%s/%s/callback", DISCORD_API_ENDPOINT, interaction->GetId()->ToString(), interaction->GetToken());
+	sprintf(path, "%s/interactions/%s/%s/callback", DISCORD_API_ENDPOINT, interaction->GetId().ToString(), interaction->GetToken().c_str());
 	return -1 != cNet::PostHttpsRequest(DISCORD_API_HOST, path, GetHttpAuthorization(), obj);
 }

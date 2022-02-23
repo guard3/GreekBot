@@ -9,7 +9,7 @@ cGreekBot::OnInteraction_avatar(chInteraction interaction) {
 	if (data->Options.empty())
 		user = interaction->GetUser() ? interaction->GetUser() : interaction->GetMember()->GetUser();
 	else
-		user = data->Options[0]->GetValue<APP_COMMAND_OPT_USER>();
+		user = data->Options[0].GetValue<APP_COMMAND_OPT_USER>();
 	/* Respond */
 	RespondToInteraction(interaction, user->GetAvatarUrl(), MESSAGE_FLAG_NONE, nullptr, nullptr, nullptr, nullptr);
 }
