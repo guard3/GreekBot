@@ -24,61 +24,53 @@ enum eEvent : uint32_t {
 };
 
 /* ================================================================================================= */
-class cReadyEventData final {
-private:
-	json::value m_data;
+namespace hidden {
+	template<eEvent, typename = void>
+	class event_data;
+/* ================================================================================================= */
+	template<>
+	class event_data<EVENT_READY> final {
+	public:
+		int v;
+		std::string session_id;
+		uchUser user;
 
-public:
-	cReadyEventData(json::value v) : m_data(std::move(v)) {}
+		event_data(const json::object& o) : v(o.at("v").as_int64()), session_id(o.at("session_id").as_string().c_str()), user(cHandle::MakeUnique<cUser>(o.at("user"))) {}
+		event_data(const json::value& v) : event_data(v.as_object()) {}
+	};
+/* ================================================================================================= */
+	template<eEvent e>
+	class event_data<e, std::enable_if_t<e == EVENT_GUILD_ROLE_CREATE || e == EVENT_GUILD_ROLE_UPDATE>> final {
+	public:
+		cSnowflake guild_id;
+		cRole      role;
 
-	// TODO: guilds, application
-	int         GetVersion()   const { return m_data.at("v").as_int64();                     }
-	const char* GetSessionId() const { return m_data.at("session_id").as_string().c_str();   }
-	uchUser     GetUser()      const { return cHandle::MakeUnique<cUser>(m_data.at("user")); }
-};
-typedef   hHandle<cReadyEventData>   hReadyEventData;
-typedef  chHandle<cReadyEventData>  chReadyEventData;
-typedef  uhHandle<cReadyEventData>  uhReadyEventData;
-typedef uchHandle<cReadyEventData> uchReadyEventData;
-typedef  shHandle<cReadyEventData>  shReadyEventData;
-typedef schHandle<cReadyEventData> schReadyEventData;
+		event_data(const json::object& o) : guild_id(o.at("guild_id")), role(o.at("role")) {}
+		event_data(const json::value& v) : event_data(v.as_object()) {}
+	};
+/* ================================================================================================= */
+	template<>
+	class event_data<EVENT_GUILD_ROLE_DELETE> final {
+	public:
+		cSnowflake guild_id, role_id;
 
-class cGuildRoleCreateUpdateEventData final {
-private:
-	cSnowflake guild_id;
-	cRole      role;
-public:
-	cGuildRoleCreateUpdateEventData(const json::value& v) : cGuildRoleCreateUpdateEventData(v.as_object()) {}
-	cGuildRoleCreateUpdateEventData(const json::object& o) : guild_id(o.at("guild_id")), role(o.at("role")) {}
+		event_data(const json::object& o) : guild_id(o.at("guild_id")), role_id(o.at("role_id")) {}
+		event_data(const json::value& v) : event_data(v.as_object()) {}
+	};
+/* ================================================================================================= */
+	template<eEvent e> struct map_event_data                           { typedef event_data<e> type; };
+	template<>         struct map_event_data<EVENT_GUILD_CREATE>       { typedef cGuild        type; };
+	template<>         struct map_event_data<EVENT_INTERACTION_CREATE> { typedef cInteraction  type; };
+	template<>         struct map_event_data<EVENT_MESSAGE_CREATE>     { typedef cMessage      type; };
+}
+template<eEvent e> using tEventData = typename hidden::map_event_data<e>::type;
 
-	hSnowflake GetGuildId() { return &guild_id; }
-	hRole      GetRole()    { return &role;     }
-};
-typedef   hHandle<cGuildRoleCreateUpdateEventData>   hGuildRoleCreateUpdateEventData;
-typedef  chHandle<cGuildRoleCreateUpdateEventData>  chGuildRoleCreateUpdateEventData;
-typedef  uhHandle<cGuildRoleCreateUpdateEventData>  uhGuildRoleCreateUpdateEventData;
-typedef uchHandle<cGuildRoleCreateUpdateEventData> uchGuildRoleCreateUpdateEventData;
-typedef  shHandle<cGuildRoleCreateUpdateEventData>  shGuildRoleCreateUpdateEventData;
-typedef schHandle<cGuildRoleCreateUpdateEventData> schGuildRoleCreateUpdateEventData;
-
-class cGuildRoleDeleteEventData final {
-private:
-	cSnowflake guild_id;
-	cSnowflake role_id;
-
-public:
-	cGuildRoleDeleteEventData(const json::value& v) : cGuildRoleDeleteEventData(v.as_object()) {}
-	cGuildRoleDeleteEventData(const json::object& o) : guild_id(o.at("guild_id")), role_id(o.at("role_id")) {}
-
-	hSnowflake GetGuildId() { return &guild_id; }
-	hSnowflake GetRoleId()  { return &role_id;  }
-};
-typedef   hHandle<cGuildRoleDeleteEventData>   hGuildRoleDeleteEventData;
-typedef  chHandle<cGuildRoleDeleteEventData>  chGuildRoleDeleteEventData;
-typedef  uhHandle<cGuildRoleDeleteEventData>  uhGuildRoleDeleteEventData;
-typedef uchHandle<cGuildRoleDeleteEventData> uchGuildRoleDeleteEventData;
-typedef  shHandle<cGuildRoleDeleteEventData>  shGuildRoleDeleteEventData;
-typedef schHandle<cGuildRoleDeleteEventData> schGuildRoleDeleteEventData;
+template<eEvent e> using   hEventData =   hHandle<tEventData<e>>;
+template<eEvent e> using  chEventData =  chHandle<tEventData<e>>;
+template<eEvent e> using  uhEventData =  uhHandle<tEventData<e>>;
+template<eEvent e> using uchEventData = uchHandle<tEventData<e>>;
+template<eEvent e> using  shEventData =  shHandle<tEventData<e>>;
+template<eEvent e> using schEventData = schHandle<tEventData<e>>;
 
 /* ================================================================================================= */
 class cEvent final {
@@ -87,16 +79,6 @@ private:
 	eEvent      m_type; // Event type
 	int64_t     m_seq;  // Event sequence - used for heartbeating
 	json::value m_data; // Event specific data
-
-	template<eEvent> struct data_type {};
-	template<> struct data_type<EVENT_READY>              { typedef cReadyEventData                 Type; };
-	template<> struct data_type<EVENT_GUILD_CREATE>       { typedef cGuild                          Type; };
-	template<> struct data_type<EVENT_GUILD_ROLE_CREATE>  { typedef cGuildRoleCreateUpdateEventData Type; };
-	template<> struct data_type<EVENT_GUILD_ROLE_UPDATE>  { typedef cGuildRoleCreateUpdateEventData Type; };
-	template<> struct data_type<EVENT_GUILD_ROLE_DELETE>  { typedef cGuildRoleDeleteEventData       Type; };
-	template<> struct data_type<EVENT_INTERACTION_CREATE> { typedef cInteraction                    Type; };
-	template<> struct data_type<EVENT_MESSAGE_CREATE>     { typedef cMessage                        Type; };
-	template<eEvent e> using tDataType = typename data_type<e>::Type;
 
 public:
 	cEvent(json::value&& v) : cEvent(v.as_object()) {}
@@ -107,7 +89,7 @@ public:
 	int64_t     GetSequence() const { return m_seq;          }
 
 	template<eEvent e>
-	uhHandle<tDataType<e>> GetData() const { return cHandle::MakeUniqueNoEx<tDataType<e>>(m_data); }
+	uhEventData<e> GetData() const { return cHandle::MakeUniqueNoEx<tEventData<e>>(m_data); }
 };
 typedef   hHandle<cEvent>   hEvent;
 typedef  chHandle<cEvent>  chEvent;

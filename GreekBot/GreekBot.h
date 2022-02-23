@@ -2,6 +2,7 @@
 #ifndef _GREEKBOT_GREEKBOT_H_
 #define _GREEKBOT_GREEKBOT_H_
 #include "Bot.h"
+#include <mutex>
 
 /* Define custom message component ids; used for responding to component interactions */
 #define CMP_ID_BUTTON_RANK_HELP 0

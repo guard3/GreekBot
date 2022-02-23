@@ -59,12 +59,12 @@ int cNet::GetHttpsRequest(const char* host, const char* path, const char* auth, 
 
 int cNet::PostHttpsRequest(const char *host, const char *path, const char *auth, const json::object& obj) {
 	std::string response;
-	return https_request(http::verb::post, host, path, auth, "application/json", (std::stringstream() << obj).str(), response);
+	return https_request(http::verb::post, host, path, auth, "application/json", json::serialize(obj), response);
 }
 
 int cNet::PatchHttpsRequest(const char *host, const char *path, const char *auth, const json::object &obj) {
 	std::string response;
-	return https_request(http::verb::patch, host, path, auth, "application/json", (std::stringstream() << obj).str(), response);
+	return https_request(http::verb::patch, host, path, auth, "application/json", json::serialize(obj), response);
 }
 
 int cNet::PutHttpsRequest(const char *host, const char *path, const char *auth) {

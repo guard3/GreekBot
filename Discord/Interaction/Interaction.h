@@ -38,6 +38,17 @@ enum eApplicationCommandOptionType {
 };
 
 /* ================================================================================================= */
+template<eApplicationCommandOptionType> struct _t {};
+template<> struct _t<APP_COMMAND_OPT_STRING>  { typedef const char* Type; };
+template<> struct _t<APP_COMMAND_OPT_INTEGER> { typedef int         Type; };
+template<> struct _t<APP_COMMAND_OPT_BOOLEAN> { typedef bool        Type; };
+template<> struct _t<APP_COMMAND_OPT_USER>    { typedef chUser      Type; };
+template<> struct _t<APP_COMMAND_OPT_CHANNEL> { typedef chSnowflake Type; };
+template<> struct _t<APP_COMMAND_OPT_ROLE>    { typedef chSnowflake Type; };
+template<> struct _t<APP_COMMAND_OPT_NUMBER>  { typedef double      Type; };
+template<eApplicationCommandOptionType t>
+using tValueType = typename _t<t>::Type;
+
 class cApplicationCommandInteractionDataOption final {
 private:
 	std::string                   name;
@@ -54,17 +65,6 @@ private:
 			chMember v_mbr;
 		} v_usr;
 	} value;
-
-	template<eApplicationCommandOptionType> struct _t {};
-	template<> struct _t<APP_COMMAND_OPT_STRING>  { typedef const char* Type; };
-	template<> struct _t<APP_COMMAND_OPT_INTEGER> { typedef int         Type; };
-	template<> struct _t<APP_COMMAND_OPT_BOOLEAN> { typedef bool        Type; };
-	template<> struct _t<APP_COMMAND_OPT_USER>    { typedef chUser      Type; };
-	template<> struct _t<APP_COMMAND_OPT_CHANNEL> { typedef chSnowflake Type; };
-	template<> struct _t<APP_COMMAND_OPT_ROLE>    { typedef chSnowflake Type; };
-	template<> struct _t<APP_COMMAND_OPT_NUMBER>  { typedef double      Type; };
-	template<eApplicationCommandOptionType t>
-	using tValueType = typename _t<t>::Type;
 	
 public:
 	cApplicationCommandInteractionDataOption(const json::value& v, const json::value* r);
@@ -86,10 +86,9 @@ public:
 		else if constexpr (t == APP_COMMAND_OPT_USER)    return t == type ?  value.v_usr.v_usr : nullptr;
 		else                                             return t == type ?  value.v_sfl       : nullptr;
 	}
-	template<eApplicationCommandOptionType t>
-	[[nodiscard]] tValueType<t> GetValue(chMember&) const noexcept { /* Expect compilation error for missing return value */ }
-	template<>
-	[[nodiscard]] tValueType<APP_COMMAND_OPT_USER> GetValue<APP_COMMAND_OPT_USER>(chMember& m) const noexcept {
+
+	template<eApplicationCommandOptionType t, typename = std::enable_if_t<t == APP_COMMAND_OPT_USER>>
+	tValueType<t> GetValue(chMember& m) const noexcept {
 		if (type == APP_COMMAND_OPT_USER) {
 			m = value.v_usr.v_mbr;
 			return value.v_usr.v_usr;
@@ -165,6 +164,12 @@ typedef  uhHandle<cMessageComponentInteractionData>  uhMessageComponentInteracti
 typedef uchHandle<cMessageComponentInteractionData> uchMessageComponentInteractionData;
 
 /* ================================================================================================= */
+template<eInteractionType> struct _t2 {};
+template<> struct _t2<INTERACTION_APPLICATION_COMMAND> { typedef chApplicationCommandInteractionData Type; };
+template<> struct _t2<INTERACTION_MESSAGE_COMPONENT>   { typedef chMessageComponentInteractionData   Type; };
+template<eInteractionType t>
+using tInteractionDataType = typename _t2<t>::Type;
+
 class cInteraction final {
 private:
 	cSnowflake       id;
@@ -178,12 +183,6 @@ private:
 	std::string      token;
 	int              version;
 	uhMessage        message;
-
-	template<eInteractionType> struct _t {};
-	template<> struct _t<INTERACTION_APPLICATION_COMMAND> { typedef chApplicationCommandInteractionData Type; };
-	template<> struct _t<INTERACTION_MESSAGE_COMPONENT>   { typedef chMessageComponentInteractionData   Type; };
-	template<eInteractionType t>
-	using tInteractionDataType = typename _t<t>::Type;
 
 public:
 	explicit cInteraction(const json::value& v);

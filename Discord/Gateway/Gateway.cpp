@@ -10,7 +10,6 @@ namespace asio  = boost::asio;
 #include "Gateway.h"
 #include "GatewayInfo.h"
 #include "Event.h"
-#include <iostream>
 #include <zlib.h>
 
 /* Gateway event/command opcodes */

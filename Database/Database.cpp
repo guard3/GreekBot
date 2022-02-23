@@ -65,7 +65,7 @@ cDatabase::cDatabase() {
 		if (len < 0) break;
 		if (len + sizeof(DB_FILENAME) < size) {
 			if (!(p = strrchr(db_filename, '/'))) break;
-			strcpy(p, DB_FILENAME);
+			strcpy(p + 1, DB_FILENAME);
 			goto LABEL_RESOLVED_DBNAME;
 		}
 	}

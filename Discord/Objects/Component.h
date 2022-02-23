@@ -26,14 +26,13 @@ public:
 	explicit cComponent(const json::value& v) : cComponent(static_cast<eComponentType>(v.at("type").as_int64())) {}
 	virtual ~cComponent() = default;
 
-	[[nodiscard]] eComponentType GetType() const { return type; }
+	eComponentType GetType() const { return type; }
 
-	[[nodiscard]] virtual json::object ToJson() const {
+	virtual json::object ToJson() const {
 		json::object obj;
 		obj["type"] = static_cast<int>(type);
 		return obj;
 	};
-	[[nodiscard]] std::string ToJsonString() const { return (std::stringstream() << ToJson()).str(); }
 };
 typedef   hHandle<cComponent>   hComponent;
 typedef  chHandle<cComponent>  chComponent;

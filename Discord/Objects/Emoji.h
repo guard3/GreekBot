@@ -24,11 +24,11 @@ public:
 		return *this;
 	}
 
-	[[nodiscard]] const char* GetName()    const { return name.c_str(); }
-	[[nodiscard]] chSnowflake GetId()      const { return id;           }
-	[[nodiscard]] bool        IsAnimated() const { return animated;     }
+	const char* GetName()    const { return name.c_str(); }
+	chSnowflake GetId()      const { return id;           }
+	bool        IsAnimated() const { return animated;     }
 
-	[[nodiscard]] json::object ToJson() const {
+	json::object ToJson() const {
 		json::object obj;
 		obj["name"] = name;
 		if (id)
@@ -36,7 +36,6 @@ public:
 		obj["animated"] = animated;
 		return obj;
 	}
-	[[nodiscard]] std::string ToJsonString() const { return (std::stringstream() << ToJson()).str(); }
 };
 typedef   hHandle<cEmoji>   hEmoji;
 typedef  chHandle<cEmoji>  chEmoji;
