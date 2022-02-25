@@ -1,13 +1,13 @@
 #pragma once
 #ifndef _GREEKBOT_GATEWAY_H_
 #define _GREEKBOT_GATEWAY_H_
-#include "Utils.h"
+#include "Common.h"
 #include "json.h"
 
 #include <thread>
 #include <atomic>
 
-#include "Types.h"
+#include "Common.h"
 #include "User.h"
 #include "Guild.h"
 #include "GatewayInfo.h"

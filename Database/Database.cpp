@@ -1,6 +1,5 @@
 #include "Database.h"
 #include "Queries.h"
-#include "Utils.h"
 #include <cstdlib>
 
 /* The filename of the database */
@@ -101,8 +100,8 @@ bool cDatabase::UpdateLeaderboard(chMessage msg) {
 	/* Execute QUERY_UPDATE_LB */
 	sqlite3_stmt* stmt;
 	if (SQLITE_OK == sqlite3_prepare_v2(ms_pDB, QUERY_UPDATE_LB, QRLEN_UPDATE_LB, &stmt, nullptr)) {
-		if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, msg->GetAuthor()->GetId()->ToInt())) {
-			if (SQLITE_OK == sqlite3_bind_int64(stmt, 2, msg->GetId()->GetTimestamp())) {
+		if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, msg->GetAuthor().GetId().ToInt())) {
+			if (SQLITE_OK == sqlite3_bind_int64(stmt, 2, msg->GetId().GetTimestamp())) {
 				if (SQLITE_DONE == sqlite3_step(stmt)) {
 					sqlite3_finalize(stmt);
 					return true;
@@ -118,7 +117,7 @@ bool cDatabase::UpdateLeaderboard(chMessage msg) {
 bool cDatabase::GetUserRank(chUser user, tRankQueryData& result) {
 	sqlite3_stmt* stmt;
 	if (SQLITE_OK == sqlite3_prepare_v2(ms_pDB, QUERY_GET_RANK, QRLEN_GET_RANK, &stmt, nullptr)) {
-		if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, user->GetId()->ToInt())) {
+		if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, user->GetId().ToInt())) {
 			tRankQueryData res;
 			switch (sqlite3_step(stmt)) {
 				case SQLITE_ROW:
@@ -126,7 +125,7 @@ bool cDatabase::GetUserRank(chUser user, tRankQueryData& result) {
 					res.reserve(1);
 					res.emplace_back(
 						sqlite3_column_int64(stmt, 0),
-						*user->GetId(),
+						user->GetId(),
 						sqlite3_column_int64(stmt, 1),
 						sqlite3_column_int64(stmt, 2)
 					);

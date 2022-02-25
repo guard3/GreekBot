@@ -1,8 +1,19 @@
 #pragma once
-#ifndef _GREEKBOT_TYPES_H_
-#define _GREEKBOT_TYPES_H_
-#include "json.h"
+#ifndef _GREEKBOT_COMMON_H_
+#define _GREEKBOT_COMMON_H_
+#include <memory>
+#include <type_traits>
+#include <random>
+#include <string>
 #include <cinttypes>
+#include <cstring>
+
+/* Boost Json forward declarations */
+namespace boost::json {
+	class value;
+	class object;
+}
+namespace json = boost::json;
 
 /* ========== Handle types ========== */
 template<typename T> // handle
@@ -10,7 +21,7 @@ using   hHandle = T*;
 template<typename T> // const handle
 using  chHandle = const T*; // ch: const handle
 template<typename T> // unique handle
-using  uhHandle = std::unique_ptr<T>;//std::remove_const_t<T>>;
+using  uhHandle = std::unique_ptr<T>;
 template<typename T> // unique const handle
 using uchHandle = std::unique_ptr<const T>;
 template<typename T> // shared handle
@@ -49,7 +60,7 @@ public:
 			return MakeUnique<T>(std::forward<Args>(args)...);
 		}
 		catch (...) {
-			return uhHandle<T>();
+			return {};
 		}
 	}
 	template<typename T, typename... Args>
@@ -58,7 +69,7 @@ public:
 			return MakeShared<T>(std::forward<Args>(args)...);
 		}
 		catch (...) {
-			return shHandle<T>();
+			return {};
 		}
 	}
 	template<typename T, typename... Args>
@@ -88,7 +99,7 @@ public:
 	cSnowflake() noexcept : m_int(0), m_str("0") {}
 	cSnowflake(uint64_t i) noexcept : m_int(i) { sprintf(m_str, "%" PRIu64, i); }
 	cSnowflake(const char* str) noexcept : m_int(strtoull(str, nullptr, 10)) { strcpy(m_str, str); }
-	cSnowflake(const json::value& v) : cSnowflake(v.as_string().c_str()) {}
+	cSnowflake(const json::value& v);
 
 	bool operator==(const cSnowflake& o) const { return m_int == o.m_int; }
 	bool operator!=(const cSnowflake& o) const { return m_int != o.m_int; }
@@ -123,7 +134,7 @@ public:
 	static inline constexpr int32_t NO_COLOR = 0;
 	cColor() : m_value(NO_COLOR) {}
 	cColor(int32_t v) : m_value(v) {}
-	cColor(const json::value& v) : cColor(v.as_int64()) {}
+	cColor(const json::value&);
 
 	uint8_t GetRed()   const { return (m_value >> 16) & 0xFF; }
 	uint8_t GetGreen() const { return (m_value >>  8) & 0xFF; }
@@ -135,4 +146,62 @@ public:
 	bool operator!() const { return m_value == NO_COLOR; }
 };
 
-#endif /* _GREEKBOT_TYPES_H_ */
+namespace hidden {
+	template<typename T, typename = void> struct d;
+	template<typename T> struct d<T, std::enable_if_t<std::is_integral_v<T>>>       { typedef std::uniform_int_distribution<T>  type; };
+	template<typename T> struct d<T, std::enable_if_t<std::is_floating_point_v<T>>> { typedef std::uniform_real_distribution<T> type; };
+	template<typename T> using distribution = typename d<T>::type;
+	template<typename T> using range = typename distribution<T>::param_type;
+}
+
+/* A helper class with various useful functions */
+class cUtils final {
+private:
+	/* Static random generators */
+	static std::random_device ms_rd;
+	static std::mt19937       ms_gen;
+	static std::mt19937_64    ms_gen64;
+
+	template<typename T>
+	static auto resolve_fargs(T&& arg) { return arg; }
+	static auto resolve_fargs(std::string&& str) { return str.c_str(); }
+	static auto resolve_fargs(const std::string& str) { return str.c_str(); }
+
+	static void print(FILE*, const char*, const char*, ...);
+	static std::string format(const char*, ...);
+	/* Private constructor */
+	cUtils() = default;
+
+public:
+	/* Random functions */
+	template<typename T1, typename T2, typename R = std::common_type_t<T1, T2>>
+	static R Random(T1 a, T2 b) {
+		/* Static uniform distribution */
+		static hidden::distribution<R> dist;
+		/* Generate random number */
+		if constexpr(sizeof(R) < 8)
+			return dist(ms_gen,   hidden::range<R>(a, b));
+		else
+			return dist(ms_gen64, hidden::range<R>(a, b));
+	}
+	/* Logger functions */
+	template<typename... Args>
+	static void PrintErr(const char* fmt, Args&&... args) {
+		print(stderr, "[ERR] ", fmt, resolve_fargs(std::forward<Args>(args))...);
+	}
+	template<typename... Args>
+	static void PrintLog(const char* fmt, Args&&... args) {
+		print(stdout, "[ERR] ", fmt, resolve_fargs(std::forward<Args>(args))...);
+	}
+	static void PrintErr(const std::string& str) { PrintErr(str.c_str()); }
+	static void PrintLog(const std::string& str) { PrintLog(str.c_str()); }
+	/* C style formatting for std::string */
+	template<typename... Args>
+	static std::string Format(const char* fmt, Args&&... args) {
+		return format(fmt, resolve_fargs(std::forward<Args>(args))...);
+	}
+	/* Resolving the OS we're running on */
+	static const char* GetOS();
+};
+
+#endif /* _GREEKBOT_COMMON_H_ */

@@ -58,13 +58,13 @@ private:
 		roles.reserve(member->Roles.size());
 		/* Copy all existing roles except proficiency roles */
 		cSnowflake *proficiency_roles_begin = m_lmg_proficiency_roles, *proficiency_roles_end = m_lmg_proficiency_roles + LMG_NUM_PROFICIENCY_ROLES;
-		for (chSnowflake p : member->Roles) {
-			if (proficiency_roles_end == std::find_if(proficiency_roles_begin, proficiency_roles_end, [&](const cSnowflake& s) { return s.ToInt() == p->ToInt(); }))
-				roles.push_back(p);
+		for (auto& id : member->Roles) {
+			if (proficiency_roles_end == std::find_if(proficiency_roles_begin, proficiency_roles_end, [&](const cSnowflake& s) { return s == id; }))
+				roles.push_back(&id);
 		}
 		/* Add specified proficiency role */
 		roles.push_back(&m_lmg_proficiency_roles[proficiency_role]);
-		UpdateGuildMemberRoles(m_lmg_id, *member->GetUser()->GetId(), roles);
+		UpdateGuildMemberRoles(m_lmg_id, member->GetUser()->GetId(), roles);
 	}
 
 	void OnInteraction_SelectMenu(chInteraction interaction) {

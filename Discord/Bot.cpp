@@ -1,10 +1,9 @@
 #include "Bot.h"
-#include "Utils.h"
 #include "Discord.h"
 #include "Net.h"
 
 void cBot::OnReady(uchUser user) {
-	cUtils::PrintLog("Connected as: %s#%s %s", user->GetUsername(), user->GetDiscriminator(), user->GetId()->ToString());
+	cUtils::PrintLog("Connected as: %s#%s %s", user->GetUsername(), user->GetDiscriminator(), user->GetId().ToString());
 	delete m_user;
 	m_user = user.release();
 }
@@ -43,32 +42,6 @@ cBot::get_guild_member(const cSnowflake &guild_id, const cSnowflake &user_id) {
 		catch (...) {}
 	}
 	return {};
-}
-
-std::vector<uchRole>
-cBot::GetGuildMemberRoles(const cSnowflake &guild_id, chMember member, chUser user) {
-	chUser u;
-#if 0
-	if ((u = member->GetUser()));
-	else if ((u = user));
-	else return {};
-#else
-	if (!(u = member->GetUser())) {
-		if (!(u = user))
-			return {};
-	}
-#endif
-
-	std::vector<uchRole> result;
-	std::vector<uchRole> guild_roles = GetGuildRoles(guild_id);
-	for (auto& r : guild_roles) {
-		if (r->GetId()->ToInt() == guild_id.ToInt())
-			result.push_back(std::move(r));
-		else if (member->Roles.end() != std::find_if(member->Roles.begin(), member->Roles.end(), [&](const chSnowflake& s) { return s->ToInt() == r->GetId()->ToInt(); })) {
-			result.push_back(std::move(r));
-		}
-	}
-	return result;
 }
 
 void cBot::AddGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake &role_id) {

@@ -11,5 +11,8 @@ cInteractionData<INTERACTION_APPLICATION_COMMAND>::cInteractionData(const json::
 }
 cInteractionData<INTERACTION_APPLICATION_COMMAND>::cInteractionData(const json::value& v) : cInteractionData(v.as_object()) {}
 
-cInteractionData<INTERACTION_MESSAGE_COMPONENT>::cInteractionData(const json::object& o) : custom_id(o.at("custom_id").as_string().c_str()), component_type((eComponentType)o.at("component_type").as_int64()), Values(json::value_to<std::vector<std::string>>(o.at("values"))) {}
+cInteractionData<INTERACTION_MESSAGE_COMPONENT>::cInteractionData(const json::object& o) : custom_id(o.at("custom_id").as_string().c_str()), component_type((eComponentType)o.at("component_type").as_int64()) {
+	if (auto p = o.if_contains("values"))
+		Values = json::value_to<std::vector<std::string>>(*p);
+}
 cInteractionData<INTERACTION_MESSAGE_COMPONENT>::cInteractionData(const json::value& v) : cInteractionData(v.as_object()) {}

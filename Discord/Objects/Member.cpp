@@ -1,65 +1,39 @@
 #include "Member.h"
+#include "json.h"
 
-cMember::cMember(const json::value& v) {
-	/* Initialize user */
-	uhUser u_user;
-	if (auto c = v.as_object().if_contains("user"))
-		u_user = cHandle::MakeUniqueNoEx<cUser>(*c);
-	/* Initialize nick */
-	uhHandle<char[]> u_nick;
-	try {
-		auto& s = v.at("nick").as_string();
-		u_nick = cHandle::MakeUnique<char[]>(s.size() + 1);
-		strcpy(u_nick.get(), s.c_str());
-	}
-	catch (...) {}
-	/* Initialize roles */
-	auto& a = v.at("roles").as_array();
-	roles.reserve(a.size());
+cMember::cMember(const json::object& o) : joined_at(o.at("joined_at").as_string().c_str()) {
+	auto& a = o.at("roles").as_array();
 	Roles.reserve(a.size());
-	for (auto& e : a) {
-		roles.emplace_back(e);
-		Roles.push_back(&roles.back());
+	for (auto& v : a)
+		Roles.emplace_back(v);
+	const json::value* v;
+	if ((v = o.if_contains("user")))
+		user = cHandle::MakeUnique<cUser>(*v);
+	if ((v = o.if_contains("nick"))) {
+		if (auto s = v->if_string())
+			nick = s->c_str();
 	}
-	/* Copy pointers */
-	user = u_user.release();
-	nick = u_nick.release();
-}
-
-cMember::cMember(const cMember& o) : roles(o.roles) {
-	/* Initialize user */
-	uhUser u_user = o.user ? cHandle::MakeUnique<cUser>(*o.user) : uhUser();
-	/* Initialize nickname */
-	uhHandle<char[]> u_nick;
-	if (o.nick) {
-		u_nick = cHandle::MakeUnique<char[]>(strlen(o.nick) + 1);
-		strcpy(u_nick.get(), o.nick);
+	if ((v = o.if_contains("premium_since"))) {
+		if (auto s = v->if_string())
+			premium_since = s->c_str();
 	}
-	/* Initialize roles */
-	Roles.reserve(roles.size());
-	for (auto& e : roles)
-		Roles.push_back(&e);
-	/* Copy pointers */
-	user = u_user.release();
-	nick = u_nick.release();
+	deaf = (v = o.if_contains("deaf")) && v->as_bool();
+	mute = (v = o.if_contains("mute")) && v->as_bool();
 }
 
-cMember::cMember(cMember &&o) noexcept : roles(std::move(o.roles)), Roles(std::move(o.Roles)) {
-	user = o.user;
-	nick = o.nick;
-	o.user = nullptr;
-	o.nick = nullptr;
+cMember::cMember(const json::value& v) : cMember(v.as_object()) {}
+
+cMember::cMember(const cMember& o) : nick(o.nick), joined_at(o.joined_at), premium_since(o.premium_since), deaf(o.deaf), mute(o.mute), Roles(o.Roles) {
+	if (o.user) user = cHandle::MakeUnique<cUser>(*o.user);
 }
 
-cMember::~cMember() {
-	delete   user;
-	delete[] nick;
-}
-
-cMember& cMember::operator=(cMember o) {
-	std::swap(user, o.user);
-	std::swap(nick, o.nick);
-	roles.swap(o.roles);
-	Roles.swap(o.Roles);
+cMember& cMember::operator=(const cMember& o) {
+	if (o.user) user = cHandle::MakeUnique<cUser>(*o.user);
+	nick          = o.nick;
+	joined_at     = o.joined_at;
+	premium_since = o.premium_since;
+	deaf          = o.deaf;
+	mute          = o.mute;
+	Roles         = o.Roles;
 	return *this;
 }

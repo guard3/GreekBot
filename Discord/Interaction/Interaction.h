@@ -1,7 +1,7 @@
 #pragma once
 #ifndef _GREEKBOT_INTERACTION_H_
 #define _GREEKBOT_INTERACTION_H_
-#include "Types.h"
+#include "Common.h"
 #include "json.h"
 #include "User.h"
 #include "Member.h"
@@ -122,10 +122,10 @@ public:
 	cInteractionData(const json::object&);
 	cInteractionData(const json::value&);
 
-	chSnowflake             GetCommandId()       const { return &id;             }
-	const char*             GetName()     const { return name.c_str();    }
-	eApplicationCommandType GetType()     const { return type;            }
-	chSnowflake             GetTargetId() const { return target_id; }
+	const cSnowflake&       GetCommandId() const { return id;        }
+	const std::string&      GetName()      const { return name;      }
+	eApplicationCommandType GetType()      const { return type;      }
+	chSnowflake             GetTargetId()  const { return target_id; }
 };
 
 template<>

@@ -4,7 +4,7 @@
 void
 cGreekBot::OnGuildCreate(uhGuild guild) {
 	/* Make sure the guild is Learning Greek */
-	if (guild->GetId()->ToInt() == 350234668680871946) {
+	if (guild->GetId() == m_lmg_id) {
 		m_lmg.mutex.lock();
 		/* Save guild roles */
 		m_lmg.roles = std::move(guild->Roles);
@@ -17,47 +17,41 @@ cGreekBot::OnGuildCreate(uhGuild guild) {
 
 void
 cGreekBot::OnGuildRoleCreate(chSnowflake guild_id, hRole role) {
-	m_lmg.mutex.lock();
-	if (m_lmg.guild) {
-		if (*m_lmg.guild->GetId() == *guild_id) {
-			/* A new role was created in Learning Greek */
-			m_lmg.roles.push_back(std::move(*role));
-			m_lmg.sorted_roles.clear();
-		}
+	if (*guild_id == m_lmg_id) {
+		/* A new role was created in Learning Greek */
+		m_lmg.mutex.lock();
+		m_lmg.roles.push_back(std::move(*role));
+		m_lmg.sorted_roles.clear();
+		m_lmg.mutex.unlock();
 	}
-	m_lmg.mutex.unlock();
 }
 
 void cGreekBot::OnGuildRoleUpdate(chSnowflake guild_id, hRole role) {
-	m_lmg.mutex.lock();
-	if (m_lmg.guild) {
-		if (*m_lmg.guild->GetId() == *guild_id) {
-			auto i = std::find_if(m_lmg.roles.begin(), m_lmg.roles.end(), [&role](const cRole& r) { return *r.GetId() == *role->GetId(); });
-			if (i != m_lmg.roles.end())
-				*i = std::move(*role);
-			m_lmg.sorted_roles.clear();
-		}
+	if (*guild_id == m_lmg_id) {
+		m_lmg.mutex.lock();
+		auto i = std::find_if(m_lmg.roles.begin(), m_lmg.roles.end(), [&role](const cRole& r) { return r.GetId() == role->GetId(); });
+		if (i != m_lmg.roles.end())
+			*i = std::move(*role);
+		m_lmg.sorted_roles.clear();
+		m_lmg.mutex.unlock();
 	}
-	m_lmg.mutex.unlock();
 }
 
 void
 cGreekBot::OnGuildRoleDelete(chSnowflake guild_id, chSnowflake role_id) {
-	m_lmg.mutex.lock();
-	if (m_lmg.guild) {
-		if (*m_lmg.guild->GetId() == *guild_id) {
-			auto i = std::find_if(m_lmg.roles.begin(), m_lmg.roles.end(), [&role_id](const cRole& r) { return *r.GetId() == *role_id; });
-			if (i != m_lmg.roles.end())
-				m_lmg.roles.erase(i);
-		}
+	if (*guild_id == m_lmg_id) {
+		m_lmg.mutex.lock();
+		auto i = std::find_if(m_lmg.roles.begin(), m_lmg.roles.end(), [&role_id](const cRole& r) { return r.GetId() == *role_id; });
+		if (i != m_lmg.roles.end())
+			m_lmg.roles.erase(i);
+		m_lmg.mutex.unlock();
 	}
-	m_lmg.mutex.unlock();
 }
 
 void
 cGreekBot::OnInteractionCreate(chInteraction interaction) {
 	if (auto data = interaction->GetData<INTERACTION_APPLICATION_COMMAND>()) {
-		switch (data->GetCommandId()->ToInt()) {
+		switch (data->GetCommandId().ToInt()) {
 			case 878391425568473098:
 				/* avatar */
 				OnInteraction_avatar(interaction);
@@ -100,9 +94,9 @@ void
 cGreekBot::OnMessageCreate(chMessage msg) {
 	/* Update leaderboard for Learning Greek */
 	if (chSnowflake guild_id = msg->GetGuildId()) {
-		if (guild_id->ToInt() == m_lmg_id.ToInt()) {
+		if (*guild_id == m_lmg_id) {
 			/* Ignore messages of bots and system users */
-			if (chUser author = msg->GetAuthor(); author->IsBotUser() || author->IsSystemUser())
+			if (msg->GetAuthor().IsBotUser() || msg->GetAuthor().IsSystemUser())
 				return;
 			/* Update leaderboard */
 			cDatabase::UpdateLeaderboard(msg);

@@ -1,7 +1,8 @@
 #pragma once
 #ifndef _GREEKBOT_DISCORD_H_
 #define _GREEKBOT_DISCORD_H_
-#include "Types.h"
+#include "Common.h"
+#include "json.h"
 
 #define _STR(x) #x
 #define STR(x) _STR(x)

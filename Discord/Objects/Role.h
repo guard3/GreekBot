@@ -1,9 +1,7 @@
 #pragma once
 #ifndef _GREEKBOT_ROLE_H_
 #define _GREEKBOT_ROLE_H_
-#include "Types.h"
-#include "Utils.h"
-#include "Discord.h"
+#include "Common.h"
 
 enum ePermission : uint64_t {
 	PERM_CREATE_INSTANT_INVITE      = 0x0000000000000001, // Allows creation of instant invites
@@ -58,7 +56,7 @@ private:
 	//premium subscriber
 
 public:
-	cRoleTags(const json::value& v) : cRoleTags(v.as_object()) {}
+	cRoleTags(const json::value&);
 	cRoleTags(const json::object&);
 	cRoleTags(const cRoleTags&);
 	cRoleTags(cRoleTags&&) = default;
@@ -90,21 +88,21 @@ private:
 	uhRoleTags  tags;
 
 public:
-	cRole(const json::value& v) : cRole(v.as_object()) {}
+	cRole(const json::value&);
 	cRole(const json::object&);
 	cRole(const cRole&);
 	cRole(cRole&&) = default;
 
 	cRole& operator=(cRole o);
 
-	chSnowflake GetId()           const { return &id;          }
-	const char* GetName()         const { return name.c_str(); }
-	cColor      GetColor()        const { return color;        }
-	int         GetPosition()     const { return position;     }
-	ePermission GetPermissions()  const { return permissions;  }
-	chRoleTags  GetTags()         const { return tags.get();   }
-	const char* GetIconUrl()      const { return icon.empty() ? nullptr : icon.c_str(); }
-	const char* GetUnicodeEmoji() const { return unicode_emoji.empty() ? nullptr : unicode_emoji.c_str(); }
+	const cSnowflake&  GetId()           const { return id;            }
+	const std::string& GetName()         const { return name;          }
+	cColor             GetColor()        const { return color;         }
+	int                GetPosition()     const { return position;      }
+	ePermission        GetPermissions()  const { return permissions;   }
+	chRoleTags         GetTags()         const { return tags.get();    }
+	const std::string& GetIconUrl()      const { return icon;          }
+	const std::string& GetUnicodeEmoji() const { return unicode_emoji; }
 
 	bool IsHoisted()     const { return hoist;       }
 	bool IsManaged()     const { return managed;     }

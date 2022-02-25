@@ -1,4 +1,5 @@
 #include "Message.h"
+#include "json.h"
 
 cMessage::cMessage(const json::object &o) : id(o.at("id")), channel_id(o.at("channel_id")), author(o.at("author")), content(o.at("content").as_string().c_str()), timestamp(o.at("timestamp").as_string().c_str()), type((eMessageType)o.at("type").as_int64()) {
 	/* Parse guild_id */
@@ -18,11 +19,11 @@ cMessage::cMessage(const json::object &o) : id(o.at("id")), channel_id(o.at("cha
 		Embeds.emplace_back(v);
 }
 
+cMessage::cMessage(const json::value &v) : cMessage(v.as_object()) {}
+
 cMessage::cMessage(const cMessage &o) : id(o.id), channel_id(o.channel_id), author(o.author), content(o.content), timestamp(o.timestamp), edited_timestamp(o.edited_timestamp), type(o.type), flags(o.flags), Embeds(o.Embeds) {
-	if (o.guild_id)
-		guild_id = cHandle::MakeUnique<cSnowflake>(*o.guild_id);
-	if (o.member)
-		member = cHandle::MakeUnique<cMember>(*o.member);
+	if (o.guild_id) guild_id = cHandle::MakeUnique<cSnowflake>(*o.guild_id);
+	if (o.member  ) member   = cHandle::MakeUnique<cMember   >(*o.member  );
 }
 
 cMessage&

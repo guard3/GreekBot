@@ -10,7 +10,7 @@
 #include "User.h"
 #include "Guild.h"
 
-class cBot : public cGateway {//cGateway {
+class cBot : public cGateway {
 private:
 	chUser m_user = nullptr;
 
@@ -95,21 +95,6 @@ public:
 	// TODO: Rate limit
 	template<typename T>
 	std::vector<uchRole> GetGuildRoles(T&& guild_id) { return get_guild_roles(resolve_snowflake(std::forward<T>(guild_id))); }
-
-	std::vector<uchRole> GetGuildMemberRoles(const cSnowflake& guild_id, chMember member, chUser user = nullptr);
-	cColor GetGuildMemberColor(const cSnowflake& guild_id, chMember member, chUser user = nullptr) {
-		auto v = GetGuildMemberRoles(guild_id, member, user);
-		if (v.empty())
-			return {};
-
-		auto i = v.begin();
-		chRole top_role = i++->get();
-		do {
-			if ((*i)->GetPosition() > top_role->GetPosition())
-				top_role = i->get();
-		} while (++i != v.end());
-		return top_role->GetColor();
-	}
 
 	template<typename TSnowflake1, typename TSnowflake2>
 	uchMember GetGuildMember(TSnowflake1&& guild_id, TSnowflake2 user_id) {

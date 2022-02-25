@@ -53,7 +53,7 @@ cGreekBot::OnInteraction_rank(chInteraction interaction) {
 			interaction, nullptr, MESSAGE_FLAG_NONE,
 			std::vector<cEmbed> {
 				cEmbed::CreateBuilder()
-					.SetAuthor(cUtils::Format("%s#%s", user->GetUsername(), user->GetDiscriminator()).c_str(), nullptr, user->GetAvatarUrl())
+					.SetAuthor((user->GetUsername() + '#' + user->GetDiscriminator()).c_str(), nullptr, user->GetAvatarUrl().c_str())
 					.SetDescription(cUtils::Format("User is not a member of **Learning Greek**%s", db_result.empty() ? "." : " anymore.").c_str())
 					.SetColor(0x0096FF)
 					.Build()
@@ -71,7 +71,7 @@ cGreekBot::OnInteraction_rank(chInteraction interaction) {
 	/* Calculate member color */
 	cColor color;
 	for (auto& r : m_lmg.sorted_roles) {
-		if (std::find_if(member->Roles.begin(), member->Roles.end(), [&r](const chSnowflake& a) { return *r->GetId() == *a;}) != member->Roles.end()) {
+		if (std::find_if(member->Roles.begin(), member->Roles.end(), [&r](const cSnowflake& id) { return r->GetId() == id;}) != member->Roles.end()) {
 			if (r->GetColor()) {
 				color = r->GetColor();
 				break;
@@ -79,7 +79,7 @@ cGreekBot::OnInteraction_rank(chInteraction interaction) {
 		}
 	}
 	m_lmg.mutex.unlock();
-	cEmbedBuilder builder = cEmbed::CreateBuilder().SetColor(color).SetAuthor(cUtils::Format("%s#%s", user->GetUsername(), user->GetDiscriminator()).c_str(), nullptr, user->GetAvatarUrl());
+	cEmbedBuilder builder = cEmbed::CreateBuilder().SetColor(color).SetAuthor(user->GetUsername() + '#' + user->GetDiscriminator(), "", user->GetAvatarUrl());
 	if (db_result.empty()) {
 		/* User not registered in the leaderboard */
 		EditInteractionResponse(
@@ -104,10 +104,10 @@ cGreekBot::OnInteraction_rank(chInteraction interaction) {
 		interaction, nullptr, MESSAGE_FLAG_NONE,
 		std::vector<cEmbed> {
 			builder
-				.SetTitle(cUtils::Format("%s Rank **#%" PRIi64 "**    Level **%" PRIi64 "**", medal, res.GetRank(), lvl.level).c_str())
-				.AddField("XP Progress", cUtils::Format("%" PRIi64 "/%" PRIi64, res.GetXp() - lvl.base_xp, lvl.next_xp - lvl.base_xp).c_str(), true)
-				.AddField("Total XP", std::to_string(res.GetXp()).c_str(), true)
-				.AddField("Messages", std::to_string(res.GetNumMessages()).c_str(), true)
+				.SetTitle(cUtils::Format("%s Rank **#%" PRIi64 "**    Level **%" PRIi64 "**", medal, res.GetRank(), lvl.level))
+				.AddField("XP Progress", cUtils::Format("%" PRIi64 "/%" PRIi64, res.GetXp() - lvl.base_xp, lvl.next_xp - lvl.base_xp), true)
+				.AddField("Total XP", std::to_string(res.GetXp()), true)
+				.AddField("Messages", std::to_string(res.GetNumMessages()), true)
 				.Build()
 		}, nullptr,
 		std::vector<cActionRow> {
@@ -151,7 +151,7 @@ cGreekBot::OnInteraction_top(chInteraction interaction) {
 	chMember  member;
 	chUser    user;
 	for (auto &d: db_result) {
-		if (*d.GetUserId() == *interaction->GetMember()->GetUser()->GetId()) {
+		if (*d.GetUserId() == interaction->GetMember()->GetUser()->GetId()) {
 			member = interaction->GetMember();
 			user = member->GetUser();
 		}
@@ -166,7 +166,7 @@ cGreekBot::OnInteraction_top(chInteraction interaction) {
 
 		cColor color;
 		for (auto& r : m_lmg.sorted_roles) {
-			if (std::find_if(member->Roles.begin(), member->Roles.end(), [&r](const chSnowflake& a) { return *r->GetId() == *a;}) != member->Roles.end()) {
+			if (std::find_if(member->Roles.begin(), member->Roles.end(), [&r](const cSnowflake& id) { return r->GetId() == id;}) != member->Roles.end()) {
 				if (r->GetColor()) {
 					color = r->GetColor();
 					break;
@@ -184,12 +184,12 @@ cGreekBot::OnInteraction_top(chInteraction interaction) {
 		}
 		embeds.emplace_back(
 			cEmbed::CreateBuilder()
-				.SetAuthor(cUtils::Format("%s#%s", user->GetUsername(), user->GetDiscriminator()).c_str(), nullptr, user->GetAvatarUrl())
-				.SetTitle(cUtils::Format("%s Rank **#%" PRIi64 "**\tLevel **%" PRIi64 "**", medal, d.GetRank(), lvl.level).c_str())
+				.SetAuthor(user->GetUsername() + '#' + user->GetDiscriminator(), "", user->GetAvatarUrl())
+				.SetTitle(cUtils::Format("%s Rank **#%" PRIi64 "**\tLevel **%" PRIi64 "**", medal, d.GetRank(), lvl.level))
 				.SetColor(color)
-				.AddField("XP Progress", cUtils::Format("%" PRIi64 "/%" PRIi64, d.GetXp() - lvl.base_xp, lvl.next_xp - lvl.base_xp).c_str(), true)
-				.AddField("Total XP", std::to_string(d.GetXp()).c_str(), true)
-				.AddField("Messages", std::to_string(d.GetNumMessages()).c_str(), true)
+				.AddField("XP Progress", cUtils::Format("%" PRIi64 "/%" PRIi64, d.GetXp() - lvl.base_xp, lvl.next_xp - lvl.base_xp), true)
+				.AddField("Total XP", std::to_string(d.GetXp()), true)
+				.AddField("Messages", std::to_string(d.GetNumMessages()), true)
 				.Build()
 		);
 	}

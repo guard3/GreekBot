@@ -1,7 +1,7 @@
 #pragma once
 #ifndef _GREEKBOT_COMPONENT_H_
 #define _GREEKBOT_COMPONENT_H_
-#include "Types.h"
+#include "Common.h"
 #include "Emoji.h"
 
 enum eComponentType {

@@ -1,6 +1,6 @@
 #ifndef _GREEKBOT_EMOJI_H_
 #define _GREEKBOT_EMOJI_H_
-#include "Types.h"
+#include "Common.h"
 
 class cEmoji final {
 private:

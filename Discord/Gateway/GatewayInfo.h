@@ -1,7 +1,7 @@
 #pragma once
 #ifndef _GREEKBOT_GATEWAYINFO_H_
 #define _GREEKBOT_GATEWAYINFO_H_
-#include "Types.h"
+#include "Common.h"
 
 class cSessionStartLimit final {
 private:
