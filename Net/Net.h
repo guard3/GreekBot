@@ -1,7 +1,7 @@
 #pragma once
 #ifndef _GREEKBOT_NET_H_
 #define _GREEKBOT_NET_H_
-#include "json.h"
+#include "Common.h"
 
 class cNet final {
 private:

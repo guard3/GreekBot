@@ -49,8 +49,8 @@ cEmbedFooter::cEmbedFooter(const json::value &v) : cEmbedFooter(v.as_object()) {
 json::object
 cEmbedFooter::ToJson() const {
 	return {
-		{ "text", text },
-		{ "icon_url", icon_url}
+		{ "text",     text     },
+		{ "icon_url", icon_url }
 	};
 }
 
@@ -117,10 +117,10 @@ cBaseEmbed::operator=(const cBaseEmbed &o) {
 	url         = o.url;
 	timestamp   = o.timestamp;
 	Fields      = o.Fields;
-	if (o.thumbnail) thumbnail = cHandle::MakeUnique<cEmbedMedia >(*o.thumbnail);
-	if (o.image    ) image     = cHandle::MakeUnique<cEmbedMedia >(*o.image    );
-	if (o.footer   ) footer    = cHandle::MakeUnique<cEmbedFooter>(*o.footer   );
-	if (o.author   ) author    = cHandle::MakeUnique<cEmbedAuthor>(*o.author   );
+	thumbnail   = o.thumbnail ? cHandle::MakeUnique<cEmbedMedia >(*o.thumbnail) : uhEmbedMedia();
+	image       = o.image     ? cHandle::MakeUnique<cEmbedMedia >(*o.image    ) : uhEmbedMedia();
+	footer      = o.footer    ? cHandle::MakeUnique<cEmbedFooter>(*o.footer   ) : uhEmbedFooter();
+	author      = o.author    ? cHandle::MakeUnique<cEmbedAuthor>(*o.author   ) : uhEmbedAuthor();
 	return *this;
 }
 
@@ -150,13 +150,12 @@ cEmbed::CreateBuilder() { return {}; }
 json::object
 cEmbed::ToJson() const {
 	json::object obj {
-		{ "title",       title       },
-		{ "description", description },
-		{ "url",         url         },
-		{ "timestamp",   timestamp   }
+		{ "color",       color.ToInt() },
+		{ "title",       title         },
+		{ "description", description   },
+		{ "url",         url           },
+		{ "timestamp",   timestamp     }
 	};
-	if (color)
-		obj["color"] = color.ToInt();
 	if (thumbnail)
 		obj["thumbnail"] = thumbnail->ToJson();
 	if (image)
@@ -165,12 +164,10 @@ cEmbed::ToJson() const {
 		obj["footer"] = footer->ToJson();
 	if (author)
 		obj["author"] = author->ToJson();
-	{
-		json::array a;
-		a.reserve(Fields.size());
-		for (auto& f : Fields)
-			a.push_back(f.ToJson());
-		obj["fields"] = std::move(a);
-	}
+	json::array a;
+	a.reserve(Fields.size());
+	for (auto& f : Fields)
+		a.push_back(f.ToJson());
+	obj["fields"] = std::move(a);
 	return obj;
 }

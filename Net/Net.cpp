@@ -1,6 +1,6 @@
 #include "Net.h"
 #include "beast.h"
-#include <iostream>
+#include "json.h"
 
 static int https_request(http::verb method, const char* host, const char* path, const char* auth, const char* content_type, std::string content, std::string& response) {
 	/* Ensure non null arguments */

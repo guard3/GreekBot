@@ -28,7 +28,7 @@ cMember::cMember(const cMember& o) : nick(o.nick), joined_at(o.joined_at), premi
 }
 
 cMember& cMember::operator=(const cMember& o) {
-	if (o.user) user = cHandle::MakeUnique<cUser>(*o.user);
+	user          = o.user ? cHandle::MakeUnique<cUser>(*o.user) : uhUser();
 	nick          = o.nick;
 	joined_at     = o.joined_at;
 	premium_since = o.premium_since;
