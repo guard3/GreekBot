@@ -2,30 +2,17 @@
 #ifndef _GREEKBOT_GATEWAY_H_
 #define _GREEKBOT_GATEWAY_H_
 #include "Common.h"
-#include "json.h"
-
+#include "User.h"
+#include "Guild.h"
+#include "Interaction.h"
+#include "Discord.h"
+#include "TaskManager.h"
 #include <thread>
 #include <atomic>
 
-#include "Common.h"
-#include "User.h"
-#include "Guild.h"
-#include "GatewayInfo.h"
-#include "Discord.h"
-#include "TaskManager.h"
-
 class cGatewaySession;
-
-class cUser;
-typedef uchHandle<cUser> uchUser;
-class cInteraction;
-typedef chHandle<cInteraction> chInteraction;
-class cMessage;
-typedef chHandle<cMessage> chMessage;
-
 class cEvent;
 class cGatewayInfo;
-typedef uchHandle<cGatewayInfo> uchGatewayInfo;
 
 enum eIntent {
 	INTENT_GUILDS                    = 1 << 0,
@@ -65,9 +52,6 @@ private:
 	/* Websocket session */
 	cGatewaySession* m_session;
 	cTaskManager m_task_manager;
-	/* Session close reason */
-	int         m_close_code;
-	std::string m_close_msg;
 	/* Gateway commands */
 	void resume();
 	void identify();
@@ -80,8 +64,8 @@ private:
 	void on_read(boost::system::error_code, size_t);
 	void on_write(boost::system::error_code, size_t);
 	/* A method that initiates the gateway connection */
-	void run_session(const char* url);
-	uchGatewayInfo get_gateway_info(cDiscordError&);
+	void run_session(const std::string& url);
+	cGatewayInfo get_gateway_info();
 	/* A method that's invoked for every gateway event */
 	void on_event(const cEvent& event);
 

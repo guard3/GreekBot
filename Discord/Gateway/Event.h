@@ -84,9 +84,9 @@ public:
 	cEvent(json::value&& v) : cEvent(v.as_object()) {}
 	cEvent(json::object& o);
 	
-	eEvent      GetType()     const { return m_type;         }
-	const char* GetName()     const { return m_name.c_str(); }
-	int64_t     GetSequence() const { return m_seq;          }
+	eEvent             GetType()     const noexcept { return m_type; }
+	const std::string& GetName()     const noexcept { return m_name; }
+	int64_t            GetSequence() const noexcept { return m_seq;  }
 
 	template<eEvent e>
 	uhEventData<e> GetData() const { return cHandle::MakeUniqueNoEx<tEventData<e>>(m_data); }

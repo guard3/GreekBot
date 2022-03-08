@@ -9,9 +9,14 @@
 #include <cstring>
 
 /* Boost Json forward declarations */
-namespace boost::json {
-	class value;
-	class object;
+namespace boost {
+	namespace json {
+		class value;
+		class object;
+	}
+	namespace system {
+		class system_error;
+	}
 }
 namespace json = boost::json;
 
@@ -165,9 +170,10 @@ private:
 	template<typename T>
 	static auto resolve_fargs(T&& arg) { return arg; }
 	static auto resolve_fargs(std::string&& str) { return str.c_str(); }
+	static auto resolve_fargs(std::string& str) { return str.c_str(); }
 	static auto resolve_fargs(const std::string& str) { return str.c_str(); }
 
-	static void print(FILE*, const char*, const char*, ...);
+	static void print(FILE*, const char*, char, const char*, ...);
 	static std::string format(const char*, ...);
 	/* Private constructor */
 	cUtils() = default;
@@ -185,16 +191,18 @@ public:
 			return dist(ms_gen64, hidden::range<R>(a, b));
 	}
 	/* Logger functions */
-	template<typename... Args>
+	template<char nl = '\n', typename... Args>
 	static void PrintErr(const char* fmt, Args&&... args) {
-		print(stderr, "[ERR] ", fmt, resolve_fargs(std::forward<Args>(args))...);
+		print(stderr, "[ERR] ", nl, fmt, resolve_fargs(std::forward<Args>(args))...);
 	}
-	template<typename... Args>
+	template<char nl = '\n', typename... Args>
 	static void PrintLog(const char* fmt, Args&&... args) {
-		print(stdout, "[ERR] ", fmt, resolve_fargs(std::forward<Args>(args))...);
+		print(stdout, "[LOG] ", nl, fmt, resolve_fargs(std::forward<Args>(args))...);
 	}
-	static void PrintErr(const std::string& str) { PrintErr(str.c_str()); }
-	static void PrintLog(const std::string& str) { PrintLog(str.c_str()); }
+	template<char nl = '\n'>
+	static void PrintErr(const std::string& str) { PrintErr<nl>(str.c_str()); }
+	template<char nl = '\n'>
+	static void PrintLog(const std::string& str) { PrintLog<nl>(str.c_str()); }
 	/* C style formatting for std::string */
 	template<typename... Args>
 	static std::string Format(const char* fmt, Args&&... args) {

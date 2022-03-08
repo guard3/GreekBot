@@ -11,13 +11,13 @@ std::mt19937       cUtils::ms_gen(ms_rd());
 std::mt19937_64    cUtils::ms_gen64(ms_rd());
 
 void
-cUtils::print(FILE* f, const char* comment, const char* fmt, ...) {
+cUtils::print(FILE* f, const char* comment, char nl, const char* fmt, ...) {
 	fputs(comment, f);
 	va_list args;
 	va_start(args, fmt);
 	vfprintf(f, fmt, args);
 	va_end(args);
-	fputc('\n', f);
+	fputc(nl, f);
 }
 
 std::string

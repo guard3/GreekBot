@@ -16,4 +16,6 @@ namespace net = boost::asio;
 namespace ssl = net::ssl;
 using tcp = net::ip::tcp;
 
+namespace asio = boost::asio;
+
 #endif /* _GREEKBOT_BEAST_H_*/

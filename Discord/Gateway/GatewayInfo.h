@@ -8,19 +8,13 @@ private:
 	int m_values[4];
 	
 public:
-	/* Construct from a JSON - throws exceptions */
-	explicit cSessionStartLimit(const json::value& v) : m_values {
-		static_cast<int>(v.at("total"          ).as_int64()),
-		static_cast<int>(v.at("remaining"      ).as_int64()),
-		static_cast<int>(v.at("reset_after"    ).as_int64()),
-		static_cast<int>(v.at("max_concurrency").as_int64())
-	} {}
-	
-	/* Attributes */
-	int GetTotal()          const { return m_values[0]; }
-	int GetRemaining()      const { return m_values[1]; }
-	int GetResetAfter()     const { return m_values[2]; }
-	int GetMaxConcurrency() const { return m_values[3]; }
+	explicit cSessionStartLimit(const json::object&);
+	explicit cSessionStartLimit(const json::value&);
+
+	int GetTotal()          const noexcept { return m_values[0]; }
+	int GetRemaining()      const noexcept { return m_values[1]; }
+	int GetResetAfter()     const noexcept { return m_values[2]; }
+	int GetMaxConcurrency() const noexcept { return m_values[3]; }
 };
 typedef   hHandle<cSessionStartLimit>   hSessionStartLimit;
 typedef  chHandle<cSessionStartLimit>  chSessionStartLimit;
@@ -36,13 +30,12 @@ private:
 	cSessionStartLimit session_start_limit;
 	
 public:
-	/* Construct from a JSON - throws exceptions */
-	explicit cGatewayInfo(const json::value& v) : url(v.at("url").as_string().c_str()), shards(static_cast<int>(v.at("shards").as_int64())), session_start_limit(v.at("session_start_limit")) {}
+	explicit cGatewayInfo(const json::object&);
+	explicit cGatewayInfo(const json::value&);
 
-	/* Attributes */
-	const char         *GetUrl()               const { return url.c_str();          }
-	int                 GetShards()            const { return shards;               }
-	chSessionStartLimit GetSessionStartLimit() const { return &session_start_limit; }
+	const std::string&        GetUrl()               const noexcept { return url;                 }
+	int                       GetShards()            const noexcept { return shards;              }
+	const cSessionStartLimit& GetSessionStartLimit() const noexcept { return session_start_limit; }
 };
 typedef   hHandle<cGatewayInfo>   hGatewayInfo;
 typedef  chHandle<cGatewayInfo>  chGatewayInfo;
