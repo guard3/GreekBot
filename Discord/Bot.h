@@ -9,6 +9,7 @@
 #include <vector>
 #include "User.h"
 #include "Guild.h"
+#include "Net.h"
 
 class cBot : public cGateway {
 private:
@@ -74,7 +75,6 @@ private:
 	}
 
 	std::vector<uchRole> get_guild_roles(const cSnowflake& guild_id);
-	uchMember get_guild_member(const cSnowflake& guild_id, const cSnowflake& user_id);
 
 protected:
 	using cGateway::OnInteractionCreate;
@@ -96,10 +96,7 @@ public:
 	template<typename T>
 	std::vector<uchRole> GetGuildRoles(T&& guild_id) { return get_guild_roles(resolve_snowflake(std::forward<T>(guild_id))); }
 
-	template<typename TSnowflake1, typename TSnowflake2>
-	uchMember GetGuildMember(TSnowflake1&& guild_id, TSnowflake2 user_id) {
-		return get_guild_member(resolve_snowflake(std::forward<TSnowflake1>(guild_id)), resolve_snowflake(std::forward<TSnowflake2>(user_id)));
-	}
+	uchMember GetGuildMember(const cSnowflake& guild_id, const cSnowflake& user_id);
 	void AddGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake& role_id);
 	void RemoveGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake& role_id);
 	void UpdateGuildMemberRoles(const cSnowflake& guild_id, const cSnowflake& user_id, const std::vector<chSnowflake>& role_ids);

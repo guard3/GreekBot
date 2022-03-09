@@ -30,18 +30,13 @@ cBot::get_guild_roles(const cSnowflake& guild_id) {
 }
 
 uchMember
-cBot::get_guild_member(const cSnowflake &guild_id, const cSnowflake &user_id) {
-	std::string response;
-	if (200 == cNet::GetHttpsRequest(DISCORD_API_HOST, cUtils::Format("%s/guilds/%s/members/%s", DISCORD_API_ENDPOINT, guild_id.ToString(), user_id.ToString()).c_str(), GetHttpAuthorization(), response)) {
-		try {
-			json::monotonic_resource mr;
-			json::parser p(&mr);
-			p.write(response);
-			return cHandle::MakeUnique<cMember>(p.release());
-		}
-		catch (...) {}
+cBot::GetGuildMember(const cSnowflake &guild_id, const cSnowflake &user_id) {
+	try {
+		return cHandle::MakeUnique<cMember>(cNet::HttpGet(cUtils::Format("%s/guilds/%s/members/%s", DISCORD_API_ENDPOINT, guild_id.ToString(), user_id.ToString()), GetHttpAuthorization()));
 	}
-	return {};
+	catch (const boost::system::system_error& e) {
+		throw xSystemError(e);
+	}
 }
 
 void cBot::AddGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake &role_id) {

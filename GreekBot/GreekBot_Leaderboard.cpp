@@ -1,20 +1,46 @@
 #include "GreekBot.h"
 #include "Database.h"
 
-/* Resolve level info from XP */
-struct sResolvedLevel {
-	int64_t level;   // Current level
-	int64_t base_xp; // Current level's base XP
-	int64_t next_xp; // Next level's base XP
-};
-static sResolvedLevel xp_to_level(int64_t xp) {
-	sResolvedLevel result { 0, 0, 100 };
-	while (result.next_xp < xp) {
-		result.level++;
-		result.base_xp = result.next_xp;
-		result.next_xp += 5 * result.level * result.level + 50 * result.level + 100;
+/* Helper functions that create embeds */
+static cEmbed make_no_xp_embed(const cUser& user, cColor color) {
+	return cEmbed::CreateBuilder()
+		.SetAuthor(user.GetUsername() + '#' + user.GetDiscriminator(), "", user.GetAvatarUrl())
+		.SetDescription("User has no XP yet.")
+		.SetColor(color)
+		.Build();
+}
+static cEmbed make_no_member_embed(const cUser& user, bool bAnymore) {
+	return cEmbed::CreateBuilder()
+		.SetAuthor(user.GetUsername() + '#' + user.GetDiscriminator(), "", user.GetAvatarUrl())
+		.SetDescription(cUtils::Format("User is not a member of **Learning Greek**%s", bAnymore ? " anymore." : "."))
+		.SetColor(0x0096FF)
+		.Build();
+}
+static cEmbed make_embed(const cUser& user, const cMember& member, cColor color, int64_t rank, int64_t xp, int64_t num_msg) {
+	/* Choose a medal emoji depending on the user's rank */
+	const char* medal;
+	switch (rank) {
+		case 1:  medal = "🥇"; break;
+		case 2:  medal = "🥈"; break;
+		case 3:  medal = "🥉"; break;
+		default: medal = "🏅"; break;
 	}
-	return result;
+	/* Resolve user's leaderboard level */
+	int64_t level = 0, base_xp = 0, next_xp = 100;
+	while (next_xp < xp) {
+		level++;
+		base_xp = next_xp;
+		next_xp += 5 * level * level + 50 * level + 100;
+	}
+	/* Create embed */
+	return cEmbed::CreateBuilder()
+		.SetAuthor(user.GetUsername() + '#' + user.GetDiscriminator(), "", user.GetAvatarUrl())
+		.SetTitle(cUtils::Format("%s Rank **#%" PRIi64 "**\tLevel **%" PRIi64 "**", medal, rank, level))
+		.SetColor(color)
+		.AddField("XP Progress", cUtils::Format("%" PRIi64 "/%" PRIi64, xp - base_xp, next_xp - base_xp), true)
+		.AddField("Total XP", std::to_string(xp), true)
+		.AddField("Messages", std::to_string(num_msg), true)
+		.Build();
 }
 
 void
@@ -51,158 +77,96 @@ cGreekBot::OnInteraction_rank(chInteraction interaction) {
 	if (!member) {
 		EditInteractionResponse(
 			interaction, nullptr, MESSAGE_FLAG_NONE,
-			std::vector<cEmbed> {
-				cEmbed::CreateBuilder()
-					.SetAuthor((user->GetUsername() + '#' + user->GetDiscriminator()).c_str(), nullptr, user->GetAvatarUrl().c_str())
-					.SetDescription(cUtils::Format("User is not a member of **Learning Greek**%s", db_result.empty() ? "." : " anymore.").c_str())
-					.SetColor(0x0096FF)
-					.Build()
-			}, nullptr, nullptr, nullptr
-		);
-		return;
-	}
-	/* Sort guild roles based on position */
-	m_lmg.mutex.lock();
-	if (m_lmg.sorted_roles.empty()) {
-		for (auto& r : m_lmg.roles)
-			m_lmg.sorted_roles.push_back(&r);
-		std::sort(m_lmg.sorted_roles.begin(), m_lmg.sorted_roles.end(), [](chRole a, chRole b) { return a->GetPosition() > b->GetPosition(); });
-	}
-	/* Calculate member color */
-	cColor color;
-	for (auto& r : m_lmg.sorted_roles) {
-		if (std::find_if(member->Roles.begin(), member->Roles.end(), [&r](const cSnowflake& id) { return r->GetId() == id;}) != member->Roles.end()) {
-			if (r->GetColor()) {
-				color = r->GetColor();
-				break;
-			}
-		}
-	}
-	m_lmg.mutex.unlock();
-	cEmbedBuilder builder = cEmbed::CreateBuilder().SetColor(color).SetAuthor(user->GetUsername() + '#' + user->GetDiscriminator(), "", user->GetAvatarUrl());
-	if (db_result.empty()) {
-		/* User not registered in the leaderboard */
-		EditInteractionResponse(
-			interaction, nullptr, MESSAGE_FLAG_NONE,
-			std::vector<cEmbed> { builder.SetDescription("User has no XP yet").Build() },
+			std::vector<cEmbed> { make_no_member_embed(*user, !db_result.empty()) },
 			nullptr, nullptr, nullptr
 		);
 		return;
 	}
-	/* Calculate level */
-	auto& res = db_result[0];
-	sResolvedLevel lvl = xp_to_level(res.GetXp());
-	/* Respond to interaction */
-	const char* medal;
-	switch (res.GetRank()) {
-		case 1:  medal = "🥇"; break;
-		case 2:  medal = "🥈"; break;
-		case 3:  medal = "🥉"; break;
-		default: medal = "🏅"; break;
+	/* Respond */
+	cColor color = get_lmg_member_color(*member);
+	if (db_result.empty()) {
+		/* User not registered in the leaderboard */
+		EditInteractionResponse(
+			interaction, nullptr, MESSAGE_FLAG_NONE,
+			std::vector<cEmbed> { make_no_xp_embed(*user, color) },
+			nullptr, nullptr, nullptr
+		);
 	}
-	EditInteractionResponse(
-		interaction, nullptr, MESSAGE_FLAG_NONE,
-		std::vector<cEmbed> {
-			builder
-				.SetTitle(cUtils::Format("%s Rank **#%" PRIi64 "**    Level **%" PRIi64 "**", medal, res.GetRank(), lvl.level))
-				.AddField("XP Progress", cUtils::Format("%" PRIi64 "/%" PRIi64, res.GetXp() - lvl.base_xp, lvl.next_xp - lvl.base_xp), true)
-				.AddField("Total XP", std::to_string(res.GetXp()), true)
-				.AddField("Messages", std::to_string(res.GetNumMessages()), true)
-				.Build()
-		}, nullptr,
-		std::vector<cActionRow> {
-			cActionRow {
-				cButton<BUTTON_STYLE_SECONDARY> {
-					STR(CMP_ID_BUTTON_RANK_HELP),
-					"How does this work?"
+	else {
+		/* Respond to interaction with a proper embed */
+		auto &res = db_result[0];
+		EditInteractionResponse(
+			interaction, nullptr, MESSAGE_FLAG_NONE,
+			std::vector<cEmbed> {
+				make_embed(*user, *member, color, res.GetRank(), res.GetXp(), res.GetNumMessages())
+			}, nullptr,
+			std::vector<cActionRow>{
+				cActionRow{
+					cButton<BUTTON_STYLE_SECONDARY>{
+						STR(CMP_ID_BUTTON_RANK_HELP),
+						"How does this work?"
+					}
 				}
-			}
-		}, nullptr
-	);
+			}, nullptr
+		);
+	}
 }
 
 void
 cGreekBot::OnInteraction_top(chInteraction interaction) {
-	/* Acknowledge interaction */
-	AcknowledgeInteraction(interaction);
-	/* Get data from the database */
-	tRankQueryData db_result;
-	if (!cDatabase::GetTop10(db_result)) {
-		EditInteractionResponse(interaction, "Hmm... Looks like I've run into some trouble. Try again later!", MESSAGE_FLAG_NONE, nullptr, nullptr, nullptr, nullptr);
-		return;
-	}
-	if (db_result.empty()) {
-		EditInteractionResponse(interaction, "I don't have any data yet. Start talking!", MESSAGE_FLAG_NONE, nullptr, nullptr, nullptr, nullptr);
-		return;
-	}
-	/* Sort guild roles based on position */
-	m_lmg.mutex.lock();
-	if (m_lmg.sorted_roles.empty()) {
-		for (auto& r : m_lmg.roles)
-			m_lmg.sorted_roles.push_back(&r);
-		std::sort(m_lmg.sorted_roles.begin(), m_lmg.sorted_roles.end(), [](chRole a, chRole b) { return a->GetPosition() > b->GetPosition(); });
-	}
-	/* Display data */
-	std::string str;
-	std::vector<cEmbed> embeds;
-	embeds.reserve(db_result.size());
-	uchMember u_member;
-	uchUser   u_user;
-	chMember  member;
-	chUser    user;
-	for (auto &d: db_result) {
-		if (*d.GetUserId() == interaction->GetMember()->GetUser()->GetId()) {
-			member = interaction->GetMember();
-			user = member->GetUser();
+	try {
+		/* Acknowledge interaction */
+		AcknowledgeInteraction(interaction);
+		/* Get data from the database */
+		tRankQueryData db_result;
+		if (!cDatabase::GetTop10(db_result)) {
+			EditInteractionResponse(interaction, "Hmm... Looks like I've run into some trouble. Try again later!", MESSAGE_FLAG_NONE, nullptr, nullptr, nullptr, nullptr);
+			return;
 		}
-		else if ((u_member = GetGuildMember(m_lmg.guild->GetId(), d.GetUserId()))) {
-			/* Try to resolve member object */
-			member = u_member.get();
-			user = member->GetUser();
+		if (db_result.empty()) {
+			EditInteractionResponse(interaction, "I don't have any data yet. Start talking!", MESSAGE_FLAG_NONE, nullptr, nullptr, nullptr, nullptr);
+			return;
 		}
-		else {
-			/* If user isn't a member anymore... TBA */
-		}
-
-		cColor color;
-		for (auto& r : m_lmg.sorted_roles) {
-			if (std::find_if(member->Roles.begin(), member->Roles.end(), [&r](const cSnowflake& id) { return r->GetId() == id;}) != member->Roles.end()) {
-				if (r->GetColor()) {
-					color = r->GetColor();
-					break;
+		/* Prepare embeds */
+		std::vector<cEmbed> embeds;
+		embeds.reserve(db_result.size());
+		uchMember u_member;
+		chMember member;
+		chUser user;
+		for (auto &d: db_result) {
+			try {
+				/* Get member info */
+				if (*d.GetUserId() == interaction->GetMember()->GetUser()->GetId()) {
+					member = interaction->GetMember();
+					user = member->GetUser();
 				}
+				else {
+					u_member = GetGuildMember(m_lmg_id, *d.GetUserId());
+					member = u_member.get();
+					user = member->GetUser();
+				}
+				embeds.push_back(make_embed(*user, *member, get_lmg_member_color(*member), d.GetRank(), d.GetXp(), d.GetNumMessages()));
+			}
+			catch (const xDiscordError& e) {
+				/* User isn't a member anymore */
+				// TODO: get user object
+				embeds.push_back(make_no_member_embed(*user, true));
 			}
 		}
-
-		sResolvedLevel lvl = xp_to_level(d.GetXp());
-		const char* medal;
-		switch (d.GetRank()) {
-			case 1:  medal = "🥇"; break;
-			case 2:  medal = "🥈"; break;
-			case 3:  medal = "🥉"; break;
-			default: medal = "🏅"; break;
-		}
-		embeds.emplace_back(
-			cEmbed::CreateBuilder()
-				.SetAuthor(user->GetUsername() + '#' + user->GetDiscriminator(), "", user->GetAvatarUrl())
-				.SetTitle(cUtils::Format("%s Rank **#%" PRIi64 "**\tLevel **%" PRIi64 "**", medal, d.GetRank(), lvl.level))
-				.SetColor(color)
-				.AddField("XP Progress", cUtils::Format("%" PRIi64 "/%" PRIi64, d.GetXp() - lvl.base_xp, lvl.next_xp - lvl.base_xp), true)
-				.AddField("Total XP", std::to_string(d.GetXp()), true)
-				.AddField("Messages", std::to_string(d.GetNumMessages()), true)
-				.Build()
+		/* Respond to interaction */
+		EditInteractionResponse(
+			interaction, "", MESSAGE_FLAG_NONE, embeds, nullptr,
+			std::vector<cActionRow>{
+				cActionRow{
+					cButton<BUTTON_STYLE_SECONDARY>{
+						STR(CMP_ID_BUTTON_RANK_HELP),
+						"How does this work?"
+					}
+				}
+			}, nullptr
 		);
 	}
-	m_lmg.mutex.unlock();
-	EditInteractionResponse(
-		interaction, str.c_str(), MESSAGE_FLAG_NONE, embeds, nullptr,
-		std::vector<cActionRow> {
-			cActionRow {
-				cButton<BUTTON_STYLE_SECONDARY> {
-					STR(CMP_ID_BUTTON_RANK_HELP),
-					"How does this work?"
-				}
-			}
-		}, nullptr
-	);
+	catch (const std::exception& e) {
+		cUtils::PrintErr("OnInteraction_top: %s", e.what());
+	}
 }

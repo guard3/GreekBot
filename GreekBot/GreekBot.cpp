@@ -1,6 +1,27 @@
 #include "GreekBot.h"
 #include "Database.h"
 
+cColor
+cGreekBot::get_lmg_member_color(const cMember& member) {
+	/* Make sure roles are sorted based on position */
+	m_lmg.mutex.lock();
+	if (m_lmg.sorted_roles.empty()) {
+		for (auto &r: m_lmg.roles)
+			m_lmg.sorted_roles.push_back(&r);
+		std::sort(m_lmg.sorted_roles.begin(), m_lmg.sorted_roles.end(), [](chRole a, chRole b) { return a->GetPosition() > b->GetPosition(); });
+	}
+	/* Find the member's color */
+	cColor color;
+	for (auto& r : m_lmg.sorted_roles) {
+		if (std::find_if(member.Roles.begin(), member.Roles.end(), [&r](const cSnowflake &id) { return r->GetId() == id; }) != member.Roles.end()) {
+			if ((color = r->GetColor()))
+				break;
+		}
+	}
+	m_lmg.mutex.unlock();
+	return color;
+}
+
 void
 cGreekBot::OnGuildCreate(uhGuild guild) {
 	/* Make sure the guild is Learning Greek */

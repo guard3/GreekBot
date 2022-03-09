@@ -39,6 +39,8 @@ private:
 		std::mutex mutex;
 	} m_lmg;
 
+	cColor get_lmg_member_color(const cMember&);
+
 	/* Voice */
 	std::vector<uint64_t> m_lmg_voice_channels;
 	std::vector<std::vector<uint64_t>> m_lmg_users_connected_to_voice;
