@@ -45,9 +45,10 @@ private:
 	
 public:
 	static json::value HttpGet(const std::string& path, const std::string& auth);
-	static int   PostHttpsRequest(const char* host, const char* path, const char* auth, const json::object& obj);
-	static int  PatchHttpsRequest(const char* host, const char* path, const char* auth, const json::object& obj);
-	static int    PutHttpsRequest(const char* host, const char* path, const char* auth);
-	static int DeleteHttpsRequest(const char* host, const char* path, const char* auth);
+	static void        HttpPost(const std::string& path, const std::string& auth, const json::object& obj);
+	static json::value HttpPatch(const std::string& path, const std::string& auth, const json::object& obj);
+	static json::value HttpPut(const std::string& path, const std::string& auth);
+	static json::value HttpPut(const std::string& path, const std::string& auth, const json::object& obj);
+	static json::value HttpDelete(const std::string& path, const std::string& auth);
 };
 #endif /* _GREEKBOT_NET_H_ */

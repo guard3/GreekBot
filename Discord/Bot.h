@@ -50,10 +50,10 @@ private:
 		json::object to_json() const;
 	};
 
-	static bool(*ms_interaction_functions[IF_NUM])(const sIF_data*);
+	static void(*ms_interaction_functions[IF_NUM])(const sIF_data*);
 
 	template<typename TEmbed, typename TMentions, typename TComponent, typename TAttachment>
-	bool exec_if(eIF func, chInteraction interaction, const char* content, eMessageFlag flags, const TEmbed& embeds, const TMentions& allowed_mentions, const TComponent& components, const TAttachment& attachments) {
+	void exec_if(eIF func, chInteraction interaction, const char* content, eMessageFlag flags, const TEmbed& embeds, const TMentions& allowed_mentions, const TComponent& components, const TAttachment& attachments) {
 		/* Resolve embed array */
 		chEmbed embed_args; int32_t embed_size;
 		resolve_args(embeds, embed_args, embed_size);
@@ -62,7 +62,7 @@ private:
 		resolve_args(components, component_args, component_size);
 		/* Run appropriate function */
 		sIF_data func_data { GetHttpAuthorization(), interaction, content, flags, embed_args, embed_size, component_args, component_size };
-		return ms_interaction_functions[func](&func_data);
+		ms_interaction_functions[func](&func_data);
 	}
 
 	template<typename T>
@@ -99,14 +99,12 @@ public:
 	void RemoveGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake& role_id);
 	void UpdateGuildMemberRoles(const cSnowflake& guild_id, const cSnowflake& user_id, const std::vector<chSnowflake>& role_ids);
 
-	bool AcknowledgeInteraction(chInteraction interaction);
+	void AcknowledgeInteraction(chInteraction interaction);
 	template<typename... Args>
-	bool RespondToInteraction(Args&&... args) { return exec_if(IF_RESPOND, std::forward<Args>(args)...); }
+	void RespondToInteraction(Args&&... args) { return exec_if(IF_RESPOND, std::forward<Args>(args)...); }
 	template<typename... Args>
-	bool EditInteractionResponse(Args&&... args) { return exec_if(IF_EDIT_OG_MSG, std::forward<Args>(args)...); }
+	void EditInteractionResponse(Args&&... args) { return exec_if(IF_EDIT_OG_MSG, std::forward<Args>(args)...); }
 	template<typename... Args>
-	bool SendInteractionFollowupMessage(Args&&... args) { return exec_if(IF_FOLLOWUP, std::forward<Args>(args)...); }
+	void SendInteractionFollowupMessage(Args&&... args) { return exec_if(IF_FOLLOWUP, std::forward<Args>(args)...); }
 };
-
-
 #endif /* _GREEKBOT_BOT_H_ */

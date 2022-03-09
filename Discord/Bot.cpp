@@ -44,33 +44,34 @@ cBot::GetGuildMember(const cSnowflake &guild_id, const cSnowflake &user_id) {
 	}
 }
 
-void cBot::AddGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake &role_id) {
-	char path[300];
-	sprintf(path, "%s/guilds/%s/members/%s/roles/%s", DISCORD_API_ENDPOINT, guild_id.ToString(), user_id.ToString(), role_id.ToString());
-	cDiscord::PutHttpsRequest(DISCORD_API_HOST, path, GetHttpAuthorization());
+void
+cBot::AddGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake &role_id) {
+	cDiscord::HttpPut(cUtils::Format("/guilds/%s/members/%s/roles/%s", guild_id.ToString(), user_id.ToString(), role_id.ToString()), GetHttpAuthorization());
 }
 
-void cBot::RemoveGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake &role_id) {
-	char path[300];
-	sprintf(path, "%s/guilds/%s/members/%s/roles/%s", DISCORD_API_ENDPOINT, guild_id.ToString(), user_id.ToString(), role_id.ToString());
-	cDiscord::DeleteHttpsRequest(DISCORD_API_HOST, path, GetHttpAuthorization());
+void
+cBot::RemoveGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake &role_id) {
+	cDiscord::HttpDelete(cUtils::Format("/guilds/%s/members/%s/roles/%s", guild_id.ToString(), user_id.ToString(), role_id.ToString()), GetHttpAuthorization());
 }
 
-void cBot::UpdateGuildMemberRoles(const cSnowflake& guild_id, const cSnowflake& user_id, const std::vector<chSnowflake>& role_ids) {
-	/* Prepare json response */
-	json::object obj;
-	{
-		json::array a;
-		a.reserve(role_ids.size());
-		for (chSnowflake s : role_ids)
-			a.push_back(s->ToString());
-		obj["roles"] = std::move(a);
+void
+cBot::UpdateGuildMemberRoles(const cSnowflake& guild_id, const cSnowflake& user_id, const std::vector<chSnowflake>& role_ids) {
+	try {
+		/* Prepare json response */
+		json::object obj;
+		{
+			json::array a;
+			a.reserve(role_ids.size());
+			for (chSnowflake s: role_ids)
+				a.push_back(s->ToString());
+			obj["roles"] = std::move(a);
+		}
+		/* Resolve api path */
+		cDiscord::HttpPatch(cUtils::Format("/guilds/%s/members/%s", guild_id.ToString(), user_id.ToString()), GetHttpAuthorization(), obj);
 	}
-	/* Resolve api path */
-	char path[80];
-	sprintf(path, "%s/guilds/%s/members/%s", DISCORD_API_ENDPOINT, guild_id.ToString(), user_id.ToString());
-	/* Perform http request */
-	cDiscord::PatchHttpsRequest(DISCORD_API_HOST, path, GetHttpAuthorization(), obj);
+	catch (const boost::system::system_error& e) {
+		throw xSystemError(e);
+	}
 }
 
 /* Interaction related functions */
@@ -107,13 +108,13 @@ json::object cBot::sIF_data::to_json() const {
 	return obj;
 }
 
-bool (*cBot::ms_interaction_functions[IF_NUM])(const sIF_data*) {
-	[](const sIF_data* data) -> bool {
+void (*cBot::ms_interaction_functions[IF_NUM])(const sIF_data*) {
+	[](const sIF_data* data) {
 		/* Respond to interaction */
 		json::object obj;
 		switch (data->interaction->GetType()) {
 			case INTERACTION_PING:
-				return false;
+				return;
 			case INTERACTION_APPLICATION_COMMAND:
 				obj["type"] = INTERACTION_CALLBACK_CHANNEL_MESSAGE_WITH_SOURCE;
 				break;
@@ -122,32 +123,26 @@ bool (*cBot::ms_interaction_functions[IF_NUM])(const sIF_data*) {
 				break;
 		}
 		obj["data"] = data->to_json();
-		char path[300];
-		sprintf(path, "%s/interactions/%s/%s/callback", DISCORD_API_ENDPOINT, data->interaction->GetId().ToString(), data->interaction->GetToken().c_str());
-		return -1 != cDiscord::PostHttpsRequest(DISCORD_API_HOST, path, data->http_auth, obj);
+		cDiscord::HttpPost(cUtils::Format("/interactions/%s/%s/callback", data->interaction->GetId().ToString(), data->interaction->GetToken()), data->http_auth, obj);
 	},
-	[](const sIF_data* data) -> bool {
+	[](const sIF_data* data) {
 		/* Edit interaction response */
-		if (data->interaction->GetType() == INTERACTION_PING)
-			return false;
-		char path[512];
-		sprintf(path, "%s/webhooks/%s/%s/messages/@original", DISCORD_API_ENDPOINT, data->interaction->GetApplicationId().ToString(), data->interaction->GetToken().c_str());
-		return -1 != cDiscord::PatchHttpsRequest(DISCORD_API_HOST, path, data->http_auth, data->to_json());
+		if (data->interaction->GetType() != INTERACTION_PING) {
+			chInteraction i = data->interaction;
+			cDiscord::HttpPatch(cUtils::Format("/webhooks/%s/%s/messages/@original", i->GetApplicationId().ToString(), i->GetToken()), data->http_auth, data->to_json());
+		}
 	},
-	[](const sIF_data* data) -> bool {
+	[](const sIF_data* data) {
 		/* Send followup message */
-		if (data->interaction->GetType() == INTERACTION_PING)
-			return false;
-		return -1 != cDiscord::PostHttpsRequest(
-			DISCORD_API_HOST,
-			cUtils::Format("%s/webhooks/%s/%s", DISCORD_API_ENDPOINT, data->interaction->GetApplicationId().ToString(), data->interaction->GetToken().c_str()).c_str(),
-			data->http_auth,
-			data->to_json()
-		);
+		if (data->interaction->GetType() != INTERACTION_PING) {
+			chInteraction i = data->interaction;
+			cDiscord::HttpPost(cUtils::Format("/webhooks/%s/%s", i->GetApplicationId().ToString(), i->GetToken()), data->http_auth, data->to_json());
+		}
 	}
 };
 
-bool cBot::AcknowledgeInteraction(chInteraction interaction) {
+void
+cBot::AcknowledgeInteraction(chInteraction interaction) {
 	json::object obj;
 	switch (interaction->GetType()) {
 		case INTERACTION_PING:
@@ -160,7 +155,5 @@ bool cBot::AcknowledgeInteraction(chInteraction interaction) {
 			obj["type"] = INTERACTION_CALLBACK_DEFERRED_UPDATE_MESSAGE;
 			break;
 	}
-	char path[300];
-	sprintf(path, "%s/interactions/%s/%s/callback", DISCORD_API_ENDPOINT, interaction->GetId().ToString(), interaction->GetToken().c_str());
-	return -1 != cDiscord::PostHttpsRequest(DISCORD_API_HOST, path, GetHttpAuthorization(), obj);
+	cDiscord::HttpPost(cUtils::Format("/interactions/%s/%s/callback", interaction->GetId().ToString(), interaction->GetToken()), GetHttpAuthorization(), obj);
 }

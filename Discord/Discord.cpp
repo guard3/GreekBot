@@ -1,121 +1,7 @@
 #include "Discord.h"
 #include "beast_http.h"
 #include "json.h"
-
 #include <tuple>
-
-/* TODO: remove these later */
-namespace http = beast::http;
-namespace net = asio;
-namespace ssl = asio::ssl;
-using tcp = net::ip::tcp;
-
-static int https_request(http::verb method, const char* host, const char* path, const char* auth, const char* content_type, std::string content, std::string& response) {
-	/* Ensure non null arguments */
-	if (!host) host = "";
-	if (!path) path = "/";
-
-	try {
-		/* The IO context for net operations */
-		net::io_context ioc;
-
-		/* The SSL context */
-		ssl::context ctx(ssl::context::tlsv13_client);
-
-		/* TODO: Fix certificates and shit */
-		//ctx.set_verify_mode(ssl::verify_peer);
-
-		/* Create a SSL stream and connect to host */
-		beast::ssl_stream<beast::tcp_stream> stream(ioc, ctx);
-		if (SSL_set_tlsext_host_name(stream.native_handle(), host)) {
-			beast::get_lowest_layer(stream).connect(tcp::resolver(ioc).resolve(host, "https"));
-
-			/* Perform SSL handshake */
-			stream.handshake(ssl::stream_base::client);
-
-			/* Make the GET HTTP request */
-			http::request<http::string_body> request(method, path, 11);
-			request.set(http::field::host, host);
-			request.set(http::field::user_agent, "GreekBot");
-			if (auth)
-				request.set(http::field::authorization, auth);
-			if (content_type)
-				request.set(http::field::content_type, content_type);
-			request.set(http::field::content_length, std::to_string(content.length()));
-			request.body() = std::move(content);
-			http::write(stream, request);
-
-			/* Read the request response */
-			beast::flat_buffer buffer;
-			http::response<http::string_body> res;
-			http::read(stream, buffer, res);
-			response = std::move(res.body());
-
-			/* Shut down the stream */
-			beast::error_code e;
-			stream.shutdown(e);
-			return res.result_int();
-		}
-	}
-	catch (...) {}
-	return -1;
-}
-
-int cDiscord::PostHttpsRequest(const char *host, const char *path, const char *auth, const json::object& obj) {
-	std::string response;
-	return https_request(http::verb::post, host, path, auth, "application/json", json::serialize(obj), response);
-}
-
-int cDiscord::PatchHttpsRequest(const char *host, const char *path, const char *auth, const json::object &obj) {
-	std::string response;
-	return https_request(http::verb::patch, host, path, auth, "application/json", json::serialize(obj), response);
-}
-
-int cDiscord::PutHttpsRequest(const char *host, const char *path, const char *auth) {
-	std::string response;
-	return https_request(http::verb::put, host, path, auth, nullptr, std::string(), response);
-}
-
-int cDiscord::DeleteHttpsRequest(const char* host, const char* path, const char* auth) {
-	std::string response;
-	return https_request(http::verb::delete_, host, path, auth, nullptr, std::string(), response);
-}
-
-static std::tuple<beast::http::status, json::value> http_request(http::verb method, const std::string& path, const std::string& auth, const json::object* content) {
-	/* The IO context for net operations */
-	net::io_context ioc;
-	/* The SSL context */
-	ssl::context ctx(ssl::context::tlsv13_client);
-	/* TODO: Fix certificates and shit */
-	//ctx.set_verify_mode(ssl::verify_peer);
-	/* Create an SSL stream and connect to host */
-	beast::ssl_stream<beast::tcp_stream> stream(ioc, ctx);
-	beast::get_lowest_layer(stream).connect(tcp::resolver(ioc).resolve(DISCORD_API_HOST, "https"));
-	/* Perform SSL handshake */
-	stream.handshake(ssl::stream_base::client);
-	/* Prepare the HTTP request */
-	http::request<http::string_body> request(method, DISCORD_API_ENDPOINT + path, 11);
-	request.set(http::field::host, DISCORD_API_HOST);
-	request.set(http::field::user_agent, "GreekBot");
-	request.set(http::field::authorization, auth);
-	if (content) {
-		std::string str = json::serialize(*content);
-		request.set(beast::http::field::content_type, "application/json");
-		request.set(beast::http::field::content_length, std::to_string(str.length()));
-		request.body() = std::move(str);
-	}
-	else request.set(beast::http::field::content_length, "0");
-	http::write(stream, request);
-	/* Read the request response */
-	beast::flat_buffer buffer;
-	http::response<http::string_body> res;
-	http::read(stream, buffer, res);
-	/* Shut down the stream */
-	beast::error_code e;
-	stream.shutdown(e);
-	auto f = res.find(beast::http::field::content_type);
-	return { res.result(), f == res.end() ? json::value() : f->value() == "application/json" ? json::parse(res.body()) : json::object() };
-}
 
 xSystemError::xSystemError(const json::object& o) : std::runtime_error([](const json::value* v) -> const char* {
 	if (const json::string* s; v && (s = v->if_string()))
@@ -140,6 +26,43 @@ xDiscordError::xDiscordError(const json::object& o) : xSystemError(o) {
 
 xDiscordError::xDiscordError(const json::value& v) : xDiscordError(v.as_object()) {}
 
+static std::tuple<beast::http::status, json::value> http_request(beast::http::verb method, const std::string& path, const std::string& auth, const json::object* content) {
+	/* The IO context for net operations */
+	asio::io_context ioc;
+	/* The SSL context */
+	asio::ssl::context ctx(asio::ssl::context::tlsv13_client);
+	/* TODO: Fix certificates and shit */
+	//ctx.set_verify_mode(ssl::verify_peer);
+	/* Create an SSL stream and connect to host */
+	beast::ssl_stream<beast::tcp_stream> stream(ioc, ctx);
+	beast::get_lowest_layer(stream).connect(asio::ip::tcp::resolver(ioc).resolve(DISCORD_API_HOST, "https"));
+	/* Perform SSL handshake */
+	stream.handshake(asio::ssl::stream_base::client);
+	/* Prepare the HTTP request */
+	beast::http::request<beast::http::string_body> request(method, DISCORD_API_ENDPOINT + path, 11);
+	request.set(beast::http::field::host, DISCORD_API_HOST);
+	request.set(beast::http::field::user_agent, "GreekBot");
+	request.set(beast::http::field::authorization, auth);
+	if (content) {
+		std::string str = json::serialize(*content);
+		request.set(beast::http::field::content_type, "application/json");
+		request.set(beast::http::field::content_length, std::to_string(str.length()));
+		request.body() = std::move(str);
+	}
+	else request.set(beast::http::field::content_length, "0");
+	beast::http::write(stream, request);
+	/* Read the request response */
+	beast::flat_buffer buffer;
+	beast::http::response<beast::http::string_body> res;
+	beast::http::read(stream, buffer, res);
+	/* Shut down the stream */
+	beast::error_code e;
+	stream.shutdown(e);
+	auto f = res.find(beast::http::field::content_type);
+	return { res.result(), f == res.end() ? json::value() : f->value() == "application/json" ? json::parse(res.body()) : json::object() };
+}
+
+
 static json::value discord_http_request(beast::http::verb method, const std::string& path, const std::string& auth, const json::object* content) {
 	try {
 		/* Perform the http request */
@@ -163,6 +86,32 @@ static json::value discord_http_request(beast::http::verb method, const std::str
 	}
 }
 
-json::value cDiscord::HttpGet(const std::string &path, const std::string &auth) {
+json::value
+cDiscord::HttpGet(const std::string &path, const std::string &auth) {
 	return discord_http_request(beast::http::verb::get, path, auth, nullptr);
+}
+
+void
+cDiscord::HttpPost(const std::string &path, const std::string &auth, const json::object &obj) {
+	discord_http_request(beast::http::verb::post, path, auth, &obj);
+}
+
+json::value
+cDiscord::HttpPatch(const std::string &path, const std::string &auth, const json::object &obj) {
+	return discord_http_request(beast::http::verb::patch, path, auth, &obj);
+}
+
+json::value
+cDiscord::HttpPut(const std::string &path, const std::string &auth) {
+	return discord_http_request(beast::http::verb::put, path, auth, nullptr);
+}
+
+json::value
+cDiscord::HttpPut(const std::string &path, const std::string &auth, const json::object& obj) {
+	return discord_http_request(beast::http::verb::put, path, auth, &obj);
+}
+
+json::value
+cDiscord::HttpDelete(const std::string &path, const std::string &auth) {
+	return discord_http_request(beast::http::verb::delete_, path, auth, nullptr);
 }
