@@ -130,32 +130,26 @@ cGreekBot::OnInteraction_top(chInteraction interaction) {
 		/* Prepare embeds */
 		std::vector<cEmbed> embeds;
 		embeds.reserve(db_result.size());
-		uchMember u_member;
-		chMember member;
-		chUser user;
 		for (auto &d: db_result) {
 			try {
-				/* Get member info */
+				/* Get member info and create embeds */
 				if (*d.GetUserId() == interaction->GetMember()->GetUser()->GetId()) {
-					member = interaction->GetMember();
-					user = member->GetUser();
+					chMember member = interaction->GetMember();
+					embeds.push_back(make_embed(*member->GetUser(), *member, get_lmg_member_color(*member), d.GetRank(), d.GetXp(), d.GetNumMessages()));
 				}
 				else {
-					u_member = GetGuildMember(m_lmg_id, *d.GetUserId());
-					member = u_member.get();
-					user = member->GetUser();
+					cMember member = GetGuildMember(m_lmg_id, *d.GetUserId());
+					embeds.push_back(make_embed(*member.GetUser(), member, get_lmg_member_color(member), d.GetRank(), d.GetXp(), d.GetNumMessages()));
 				}
-				embeds.push_back(make_embed(*user, *member, get_lmg_member_color(*member), d.GetRank(), d.GetXp(), d.GetNumMessages()));
 			}
 			catch (const xDiscordError& e) {
 				/* User isn't a member anymore */
-				// TODO: get user object
-				embeds.push_back(make_no_member_embed(*user, true));
+				embeds.push_back(make_no_member_embed(GetUser(*d.GetUserId()), true));
 			}
 		}
 		/* Respond to interaction */
 		EditInteractionResponse(
-			interaction, "", MESSAGE_FLAG_NONE, embeds, nullptr,
+			interaction, nullptr, MESSAGE_FLAG_NONE, embeds, nullptr,
 			std::vector<cActionRow>{
 				cActionRow{
 					cButton<BUTTON_STYLE_SECONDARY>{

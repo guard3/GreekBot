@@ -8,6 +8,17 @@
 #include <cinttypes>
 #include <cstring>
 
+#define _STR(x) #x
+#define STR(x) _STR(x)
+
+#define DISCORD_API_VERSION     9
+#define DISCORD_API_HOST        "discord.com"
+#define DISCORD_API_ENDPOINT    "/api/v" STR(DISCORD_API_VERSION)
+
+#define DISCORD_IMAGE_BASE_URL "https://cdn.discordapp.com/"
+
+using namespace std::literals;
+
 /* Boost Json forward declarations */
 namespace boost {
 	namespace json {

@@ -5,7 +5,6 @@
 #include "User.h"
 #include "Guild.h"
 #include "Interaction.h"
-#include "Discord.h"
 #include "TaskManager.h"
 #include <thread>
 #include <atomic>

@@ -9,7 +9,7 @@
 #include <vector>
 #include "User.h"
 #include "Guild.h"
-#include "Net.h"
+#include "Discord.h"
 
 class cBot : public cGateway {
 private:
@@ -92,11 +92,9 @@ public:
 
 	chUser GetUser() const { return m_user; }
 
-	// TODO: Rate limit
-	template<typename T>
-	std::vector<uchRole> GetGuildRoles(T&& guild_id) { return get_guild_roles(resolve_snowflake(std::forward<T>(guild_id))); }
-
-	uchMember GetGuildMember(const cSnowflake& guild_id, const cSnowflake& user_id);
+	cUser GetUser(const cSnowflake& user_id);
+	cMember GetGuildMember(const cSnowflake& guild_id, const cSnowflake& user_id);
+	std::vector<cRole> GetGuildRoles(const cSnowflake& guild_id);
 	void AddGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake& role_id);
 	void RemoveGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake& role_id);
 	void UpdateGuildMemberRoles(const cSnowflake& guild_id, const cSnowflake& user_id, const std::vector<chSnowflake>& role_ids);

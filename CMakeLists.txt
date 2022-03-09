@@ -7,7 +7,7 @@ if (MSVC)
     add_definitions(/bigobj)
 endif()
 
-add_executable(GreekBot main.cpp boost/beast.h boost/json.h Discord/Bot.cpp Discord/Bot.h Discord/Discord.cpp Discord/Discord.h Discord/Gateway/Event.cpp Discord/Gateway/Event.h Discord/Common.h Discord/Gateway/GatewayInfo.h Discord/Interaction/Interaction.cpp Discord/Interaction/Interaction.h Discord/Objects/Member.cpp Discord/Objects/Member.h Discord/Objects/User.cpp Discord/Objects/User.h Net/Net.cpp Net/Net.h Discord/Objects/Component.h Discord/Objects/Emoji.h Discord/Interaction/ApplicationCommandInteractionDataOption.cpp Discord/Objects/Guild.h Discord/Objects/Channel.h Discord/Objects/Message.h Database/Database.h Database/Database.cpp Discord/Objects/Embed.h Discord/Objects/Embed.cpp Discord/Objects/Role.h Discord/Objects/Role.cpp GreekBot/GreekBot.h GreekBot/GreekBot.cpp GreekBot/GreekBot_Leaderboard.cpp GreekBot/GreekBot_Avatar.cpp GreekBot/GreekBot_Role.cpp GreekBot/GreekBot_Button.cpp Discord/Objects/Message.cpp Discord/Gateway/TaskManager.h Discord/Gateway/Gateway.h Discord/Gateway/Gateway.cpp Discord/Gateway/GatewayCommands.cpp Discord/Gateway/GatewayEvents.cpp Discord/Interaction/InteractionData.cpp Discord/Common.cpp Discord/Objects/Guild.cpp Discord/Gateway/GatewayInfo.cpp)
+add_executable(GreekBot main.cpp boost/beast_websocket.h boost/json.h Discord/Bot.cpp Discord/Bot.h Discord/Gateway/Event.cpp Discord/Gateway/Event.h Discord/Common.h Discord/Gateway/GatewayInfo.h Discord/Interaction/Interaction.cpp Discord/Interaction/Interaction.h Discord/Objects/Member.cpp Discord/Objects/Member.h Discord/Objects/User.cpp Discord/Objects/User.h Discord/Discord.cpp Discord/Discord.h Discord/Objects/Component.h Discord/Objects/Emoji.h Discord/Interaction/ApplicationCommandInteractionDataOption.cpp Discord/Objects/Guild.h Discord/Objects/Channel.h Discord/Objects/Message.h Database/Database.h Database/Database.cpp Discord/Objects/Embed.h Discord/Objects/Embed.cpp Discord/Objects/Role.h Discord/Objects/Role.cpp GreekBot/GreekBot.h GreekBot/GreekBot.cpp GreekBot/GreekBot_Leaderboard.cpp GreekBot/GreekBot_Avatar.cpp GreekBot/GreekBot_Role.cpp GreekBot/GreekBot_Button.cpp Discord/Objects/Message.cpp Discord/Gateway/TaskManager.h Discord/Gateway/Gateway.h Discord/Gateway/Gateway.cpp Discord/Gateway/GatewayCommands.cpp Discord/Gateway/GatewayEvents.cpp Discord/Interaction/InteractionData.cpp Discord/Common.cpp Discord/Objects/Guild.cpp Discord/Gateway/GatewayInfo.cpp boost/beast_http.h)
 
 target_include_directories(
     GreekBot PRIVATE
@@ -18,7 +18,6 @@ target_include_directories(
     ${PROJECT_SOURCE_DIR}/Discord/Interaction
     ${PROJECT_SOURCE_DIR}/Discord/Voice
     ${PROJECT_SOURCE_DIR}/GreekBot
-    ${PROJECT_SOURCE_DIR}/Net
     ${PROJECT_SOURCE_DIR}/Database
 )
 

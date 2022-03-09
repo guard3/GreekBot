@@ -1,5 +1,5 @@
 #include "Role.h"
-#include "Discord.h"
+#include "json.h"
 
 cRoleTags::cRoleTags(const json::object &o) {
 	if (auto p = o.if_contains("bot_id"))

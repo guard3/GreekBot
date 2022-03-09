@@ -1,17 +1,10 @@
-/* Includes for Beast and Asio */
-#include <boost/beast/core.hpp>
-#include <boost/beast/ssl.hpp>
-#include <boost/beast/websocket.hpp>
-#include <boost/asio.hpp>
-namespace beast = boost::beast;
-namespace asio  = boost::asio;
-
-#include <deque>
 #include "Gateway.h"
 #include "GatewayInfo.h"
 #include "Event.h"
+#include "Discord.h"
+#include "beast_websocket.h"
+#include <deque>
 #include <zlib.h>
-#include "Net.h"
 
 /* Gateway close error exception */
 class xGatewayError : public xSystemError {
@@ -250,7 +243,7 @@ cGateway::run_session(const std::string& url) {
 cGatewayInfo
 cGateway::get_gateway_info() {
 	try {
-		return cGatewayInfo(cNet::HttpGet(DISCORD_API_GATEWAY_BOT, GetHttpAuthorization()));
+		return cGatewayInfo(cDiscord::HttpGet("/gateway/bot", GetHttpAuthorization()));
 	}
 	catch (boost::system::system_error& e) {
 		throw xSystemError(e);

@@ -14,6 +14,7 @@ private:
 	// other stuff unimplemented
 	
 public:
+	explicit cUser(const json::object&);
 	explicit cUser(const json::value&);
 	
 	const cSnowflake&  GetId()            const { return id;            }
