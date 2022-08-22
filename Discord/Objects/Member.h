@@ -1,34 +1,35 @@
 #pragma once
 #ifndef _GREEKBOT_MEMBER_H_
 #define _GREEKBOT_MEMBER_H_
-#include "Types.h"
 #include "User.h"
 #include <vector>
 
 class cMember final {
 private:
-	hUser user;
-	const char* nick;
-	std::vector<cSnowflake> roles;
-	// joined_at
-	// premium_since
-	// deaf
-	// mute
+	uhUser user;
+	std::string nick, joined_at, premium_since;
+	bool deaf, mute;
 	// pending
 	// permissions
 
 public:
-	std::vector<chSnowflake> Roles;
-	
-	explicit cMember(const json::value&);
+	std::vector<cSnowflake> Roles;
+
+	cMember(const json::object&);
+	cMember(const json::value&);
 	cMember(const cMember&);
-	cMember(cMember&& o) noexcept;
-	~cMember();
+	cMember(cMember&& o) = default;
 
-	cMember& operator=(cMember o);
+	cMember& operator=(const cMember&);
+	cMember& operator=(cMember&&) = default;
 
-	[[nodiscard]] chUser      GetUser()     const { return user; }
-	[[nodiscard]] const char* GetNickname() const { return nick; }
+	chUser             GetUser()         const { return user.get();    }
+	const std::string& GetNickname()     const { return nick;          }
+	const std::string& GetMemberSince()  const { return joined_at;     }
+	const std::string& GetPremiumSince() const { return premium_since; }
+
+	bool IsDeaf() const { return deaf; }
+	bool IsMute() const { return mute; }
 };
 typedef   hHandle<cMember>   hMember;
 typedef  chHandle<cMember>  chMember;

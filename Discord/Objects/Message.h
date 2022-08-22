@@ -70,22 +70,22 @@ public:
 	std::vector<cEmbed> Embeds;
 
 	cMessage(const json::object&);
-	cMessage(const json::value& v) : cMessage(v.as_object()) {}
+	cMessage(const json::value& v);
 	cMessage(const cMessage& o);
 	cMessage(cMessage&&) = default;
 
 	cMessage& operator=(cMessage o);
 
-	chSnowflake  GetId()        const { return &id;               }
-	chSnowflake  GetChannelId() const { return &channel_id;       }
-	chSnowflake  GetGuildId()   const { return guild_id.get();    }
-	chUser       GetAuthor()    const { return &author;           }
-	chMember     GetMember()    const { return member.get();      }
-	const char  *GetContent()   const { return content.c_str();   }
-	const char  *GetTimestamp() const { return timestamp.c_str(); }
-	const char  *GetEditedTimestamp() const { return edited_timestamp.empty() ? nullptr : edited_timestamp.c_str(); }
-	eMessageType GetType()      const { return type;              }
-	eMessageFlag GetFlags()     const { return flags;             }
+	const cSnowflake&  GetId()              const { return id;               }
+	const cSnowflake&  GetChannelId()       const { return channel_id;       }
+	chSnowflake        GetGuildId()         const { return guild_id.get();   }
+	const cUser&       GetAuthor()          const { return author;           }
+	chMember           GetMember()          const { return member.get();     }
+	const std::string& GetContent()         const { return content;          }
+	const std::string& GetTimestamp()       const { return timestamp;        }
+	const std::string& GetEditedTimestamp() const { return edited_timestamp; }
+	eMessageType       GetType()            const { return type;             }
+	eMessageFlag       GetFlags()           const { return flags;            }
 };
 typedef   hHandle<cMessage>   hMessage;
 typedef  chHandle<cMessage>  chMessage;

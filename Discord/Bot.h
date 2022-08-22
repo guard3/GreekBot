@@ -9,8 +9,9 @@
 #include <vector>
 #include "User.h"
 #include "Guild.h"
+#include "Discord.h"
 
-class cBot : public cGateway {//cGateway {
+class cBot : public cGateway {
 private:
 	chUser m_user = nullptr;
 
@@ -49,10 +50,10 @@ private:
 		json::object to_json() const;
 	};
 
-	static bool(*ms_interaction_functions[IF_NUM])(const sIF_data*);
+	static void(*ms_interaction_functions[IF_NUM])(const sIF_data*);
 
 	template<typename TEmbed, typename TMentions, typename TComponent, typename TAttachment>
-	bool exec_if(eIF func, chInteraction interaction, const char* content, eMessageFlag flags, const TEmbed& embeds, const TMentions& allowed_mentions, const TComponent& components, const TAttachment& attachments) {
+	void exec_if(eIF func, chInteraction interaction, const char* content, eMessageFlag flags, const TEmbed& embeds, const TMentions& allowed_mentions, const TComponent& components, const TAttachment& attachments) {
 		/* Resolve embed array */
 		chEmbed embed_args; int32_t embed_size;
 		resolve_args(embeds, embed_args, embed_size);
@@ -61,7 +62,7 @@ private:
 		resolve_args(components, component_args, component_size);
 		/* Run appropriate function */
 		sIF_data func_data { GetHttpAuthorization(), interaction, content, flags, embed_args, embed_size, component_args, component_size };
-		return ms_interaction_functions[func](&func_data);
+		ms_interaction_functions[func](&func_data);
 	}
 
 	template<typename T>
@@ -74,7 +75,6 @@ private:
 	}
 
 	std::vector<uchRole> get_guild_roles(const cSnowflake& guild_id);
-	uchMember get_guild_member(const cSnowflake& guild_id, const cSnowflake& user_id);
 
 protected:
 	using cGateway::OnInteractionCreate;
@@ -92,41 +92,19 @@ public:
 
 	chUser GetUser() const { return m_user; }
 
-	// TODO: Rate limit
-	template<typename T>
-	std::vector<uchRole> GetGuildRoles(T&& guild_id) { return get_guild_roles(resolve_snowflake(std::forward<T>(guild_id))); }
-
-	std::vector<uchRole> GetGuildMemberRoles(const cSnowflake& guild_id, chMember member, chUser user = nullptr);
-	cColor GetGuildMemberColor(const cSnowflake& guild_id, chMember member, chUser user = nullptr) {
-		auto v = GetGuildMemberRoles(guild_id, member, user);
-		if (v.empty())
-			return {};
-
-		auto i = v.begin();
-		chRole top_role = i++->get();
-		do {
-			if ((*i)->GetPosition() > top_role->GetPosition())
-				top_role = i->get();
-		} while (++i != v.end());
-		return top_role->GetColor();
-	}
-
-	template<typename TSnowflake1, typename TSnowflake2>
-	uchMember GetGuildMember(TSnowflake1&& guild_id, TSnowflake2 user_id) {
-		return get_guild_member(resolve_snowflake(std::forward<TSnowflake1>(guild_id)), resolve_snowflake(std::forward<TSnowflake2>(user_id)));
-	}
+	cUser GetUser(const cSnowflake& user_id);
+	cMember GetGuildMember(const cSnowflake& guild_id, const cSnowflake& user_id);
+	std::vector<cRole> GetGuildRoles(const cSnowflake& guild_id);
 	void AddGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake& role_id);
 	void RemoveGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake& role_id);
 	void UpdateGuildMemberRoles(const cSnowflake& guild_id, const cSnowflake& user_id, const std::vector<chSnowflake>& role_ids);
 
-	bool AcknowledgeInteraction(chInteraction interaction);
+	void AcknowledgeInteraction(chInteraction interaction);
 	template<typename... Args>
-	bool RespondToInteraction(Args&&... args) { return exec_if(IF_RESPOND, std::forward<Args>(args)...); }
+	void RespondToInteraction(Args&&... args) { return exec_if(IF_RESPOND, std::forward<Args>(args)...); }
 	template<typename... Args>
-	bool EditInteractionResponse(Args&&... args) { return exec_if(IF_EDIT_OG_MSG, std::forward<Args>(args)...); }
+	void EditInteractionResponse(Args&&... args) { return exec_if(IF_EDIT_OG_MSG, std::forward<Args>(args)...); }
 	template<typename... Args>
-	bool SendInteractionFollowupMessage(Args&&... args) { return exec_if(IF_FOLLOWUP, std::forward<Args>(args)...); }
+	void SendInteractionFollowupMessage(Args&&... args) { return exec_if(IF_FOLLOWUP, std::forward<Args>(args)...); }
 };
-
-
 #endif /* _GREEKBOT_BOT_H_ */

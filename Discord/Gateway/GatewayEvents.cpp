@@ -12,8 +12,8 @@ cGateway::on_event(const cEvent& event) {
 	switch (event.GetType()) {
 		case EVENT_READY:
 			if (auto e = event.GetData<EVENT_READY>()) {
-				m_session_id = e->GetSessionId();
-				OnReady(e->GetUser());
+				m_session_id = std::move(e->session_id);
+				OnReady(std::move(e->user));
 				return;
 			}
 			break;
@@ -27,7 +27,7 @@ cGateway::on_event(const cEvent& event) {
 
 		case EVENT_GUILD_ROLE_CREATE:
 			if (auto e = event.GetData<EVENT_GUILD_ROLE_CREATE>()) {
-				m_task_manager.CreateTask([this](auto e) { OnGuildRoleCreate(e->GetGuildId(), e->GetRole()); }, std::move(e));
+				m_task_manager.CreateTask([this, e = std::move(e)]() { OnGuildRoleCreate(&e->guild_id, &e->role); });
 				//OnGuildRoleCreate(e->GetGuildId(), e->GetRole());
 				return;
 			}
@@ -35,7 +35,7 @@ cGateway::on_event(const cEvent& event) {
 
 		case EVENT_GUILD_ROLE_UPDATE:
 			if (auto e = event.GetData<EVENT_GUILD_ROLE_UPDATE>()) {
-				m_task_manager.CreateTask([this](auto e) { OnGuildRoleUpdate(e->GetGuildId(), e->GetRole()); }, std::move(e));
+				m_task_manager.CreateTask([this, e = std::move(e)]() { OnGuildRoleUpdate(&e->guild_id, &e->role); });
 				//OnGuildRoleUpdate(e->GetGuildId(), e->GetRole());
 				return;
 			}
@@ -44,7 +44,7 @@ cGateway::on_event(const cEvent& event) {
 		case EVENT_GUILD_ROLE_DELETE:
 			if (auto e = event.GetData<EVENT_GUILD_ROLE_DELETE>()) {
 				//OnGuildRoleDelete(e->GetGuildId(), e->GetRoleId());
-				m_task_manager.CreateTask([this](auto e) { OnGuildRoleDelete(e->GetGuildId(), e->GetRoleId()); }, std::move(e));
+				m_task_manager.CreateTask([this, e = std::move(e)]() { OnGuildRoleDelete(&e->guild_id, &e->role_id); });
 				return;
 			}
 			break;

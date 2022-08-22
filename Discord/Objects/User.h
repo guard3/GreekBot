@@ -1,8 +1,7 @@
 #pragma once
 #ifndef _GREEKBOT_USER_H_
 #define _GREEKBOT_USER_H_
-#include "Types.h"
-#include "json.h"
+#include "Common.h"
 
 class cUser final {
 private:
@@ -15,15 +14,16 @@ private:
 	// other stuff unimplemented
 	
 public:
+	explicit cUser(const json::object&);
 	explicit cUser(const json::value&);
 	
-	chSnowflake GetId()            const { return &id;                   }
-	const char* GetUsername()      const { return username.c_str();      }
-	const char* GetDiscriminator() const { return discriminator.c_str(); }
-	const char* GetAvatarUrl()     const { return avatar.c_str();                }
+	const cSnowflake&  GetId()            const { return id;            }
+	const std::string& GetUsername()      const { return username;      }
+	const std::string& GetDiscriminator() const { return discriminator; }
+	const std::string& GetAvatarUrl()     const { return avatar;        }
 
-	bool        IsBotUser()        const { return bot;                   }
-	bool        IsSystemUser()     const { return system;                }
+	bool IsBotUser()    const { return bot;    }
+	bool IsSystemUser() const { return system; }
 };
 typedef   hHandle<cUser>   hUser;
 typedef  chHandle<cUser>  chUser;

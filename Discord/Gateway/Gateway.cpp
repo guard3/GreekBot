@@ -1,17 +1,22 @@
-/* Includes for Beast and Asio */
-#include <boost/beast/core.hpp>
-#include <boost/beast/ssl.hpp>
-#include <boost/beast/websocket.hpp>
-#include <boost/asio.hpp>
-namespace beast = boost::beast;
-namespace asio  = boost::asio;
-
-#include <deque>
 #include "Gateway.h"
 #include "GatewayInfo.h"
 #include "Event.h"
-#include <iostream>
+#include "Discord.h"
+#include "beast_websocket.h"
+#include <deque>
 #include <zlib.h>
+
+/* Gateway close error exception */
+class xGatewayError : public xSystemError {
+public:
+	explicit xGatewayError(const std::string& what, int code = 0) : xSystemError(what, code) {}
+	explicit xGatewayError(const char*        what, int code = 0) : xSystemError(what, code) {}
+	xGatewayError(const xGatewayError&) = default;
+	xGatewayError(xGatewayError&&)      = default;
+
+	xGatewayError& operator=(const xGatewayError&) = default;
+	xGatewayError& operator=(xGatewayError&&)      = default;
+};
 
 /* Gateway event/command opcodes */
 enum eGatewayOpcode {
@@ -56,7 +61,7 @@ public:
 	cGatewaySession& operator=(cGatewaySession) = delete;
 };
 
-cGateway::cGateway(const char *token, eIntent intents) : m_http_auth(cUtils::Format("Bot %s", token)), m_intents(intents), m_last_sequence(0), m_heartbeat_exit(false), m_heartbeat_ack(false), m_session(nullptr), m_close_code(-1), m_json_parser(&m_mr) {}
+cGateway::cGateway(const char *token, eIntent intents) : m_http_auth(cUtils::Format("Bot %s", token)), m_intents(intents), m_last_sequence(0), m_heartbeat_exit(false), m_heartbeat_ack(false), m_session(nullptr), /*m_close_code(-1),*/ m_json_parser(&m_mr) {}
 
 cGateway::~cGateway() { delete m_session; }
 
@@ -167,13 +172,13 @@ cGateway::on_write(beast::error_code ec, size_t size) {
 }
 
 void
-cGateway::run_session(const char* url) {
+cGateway::run_session(const std::string& url) {
 	/* Resolve host */
-	const char* host = strstr(url, "://");
-	if (host)
-		host += 3;
-	else
-		host = url;
+	auto f = url.find("://");
+	std::string host = f == std::string::npos ? url : url.substr(f + 3);
+	/* The websocket close code and reason */
+	int         close_code;
+	std::string close_msg;
 	/* Run */
 	try {
 		/* Create a new session */
@@ -183,109 +188,105 @@ cGateway::run_session(const char* url) {
 		/* Set a timeout and make a connection to the resolved IP address */
 		beast::get_lowest_layer(m_session->ws).expires_after(std::chrono::seconds(30));
 		auto ep = beast::get_lowest_layer(m_session->ws).connect(results);
+		/* Append resolved port number to host name */
+		host = cUtils::Format("%s:%d", host, ep.port());
 		/* Set a timeout and perform an SSL handshake */
 		beast::get_lowest_layer(m_session->ws).expires_after(std::chrono::seconds(30));
 		m_session->ws.next_layer().handshake(asio::ssl::stream_base::client);
 		/* Use the recommended timout period for the websocket stream */
 		beast::get_lowest_layer(m_session->ws).expires_never();
 		m_session->ws.set_option(beast::websocket::stream_base::timeout::suggested(beast::role_type::client));
-		/* Append resolved port number to host name */
-		std::string host_str = cUtils::Format("%s:%d", host, ep.port());
 		/* Set HTTP header fields for the handshake */
 		m_session->ws.set_option(beast::websocket::stream_base::decorator([&](beast::websocket::request_type& r) {
-			r.set(beast::http::field::host, host_str);
+			r.set(beast::http::field::host, host);
 			r.set(beast::http::field::user_agent, "GreekBot");
 		}));
 		/* Perform websocket handshake */
-		m_session->ws.handshake(host_str, cUtils::Format("/?v=%d&encoding=json&compress=zlib-stream", DISCORD_API_VERSION));
+		m_session->ws.handshake(host, cUtils::Format("/?v=%d&encoding=json&compress=zlib-stream", DISCORD_API_VERSION));
 		/* Start the asynchronous read operation */
 		m_session->ws.async_read(m_session->buffer, asio::bind_executor(m_session->strand, [this](beast::error_code ec, size_t size) { on_read(ec, size); }));
 		m_session->ioc.run();
 		/* When the websocket stream closes, save the reason */
-		m_close_code = m_session->ws.reason().code;
-		m_close_msg  = m_session->ws.reason().reason.c_str();
+		close_code = m_session->ws.reason().code;
+		close_msg  = m_session->ws.reason().reason.c_str();
 	}
 	catch (const std::exception& e) {
-		m_close_code = -1;
-		m_close_msg  = e.what();
+		close_code = -1;
+		close_msg  = e.what();
 	}
 	catch (...) {
-		m_close_code = -1;
-		m_close_msg = "An error occurred";
+		close_code = -1;
+		close_msg = "An error occurred";
 	}
 	/* Stop heartbeating */
 	stop_heartbeating();
 	/* Delete session */
 	delete m_session;
 	m_session = nullptr;
+	/* If the websocket close reason doesn't permit reconnecting, throw */
+	switch (const char* reason; close_code) {
+		case -1:
+			reason = "Error establishing connection: ";
+			goto LABEL_THROW;
+		case 4004:
+		case 4010:
+		case 4011:
+		case 4012:
+		case 4013:
+		case 4014:
+			reason = "Closing connection: ";
+		LABEL_THROW:
+			throw xGatewayError(reason + close_msg, close_code);
+	}
 }
 
-uchGatewayInfo
-cGateway::get_gateway_info(cDiscordError& error) {
+cGatewayInfo
+cGateway::get_gateway_info() {
 	try {
-		/* The JSON parser */
-		json::monotonic_resource mr;
-		json::stream_parser p(&mr);
-		/* The http request response */
-		std::string http_response;
-		/* Return gateway info if http request is successful */
-		if (200 == cDiscord::GetHttpsRequest(DISCORD_API_GATEWAY_BOT, GetHttpAuthorization(), http_response, error)) {
-			p.write(http_response);
-			return cHandle::MakeUnique<cGatewayInfo>(p.release());
-		}
+		return cGatewayInfo(cDiscord::HttpGet("/gateway/bot", GetHttpAuthorization()));
 	}
-	catch (...) {
-		error = cDiscordError::MakeError<DISCORD_ERROR_GENERIC>();
+	catch (boost::system::system_error& e) {
+		throw xSystemError(e);
 	}
-	return {};
 }
 
 void
 cGateway::Run() {
-	cDiscordError e;
-	for (uchGatewayInfo g;;) {
-		/* Get gateway info - retry with a timeout if any error occurs */
-		for (int timeout = 5, tick; ; timeout += 5) {
-			g = get_gateway_info(e);
-			if (!e) break;
-			switch (timeout) {
+	/* Show a message at exit */
+	class _ { public: ~_() { cUtils::PrintLog("Exiting..."); } } show_message_at_exit;
+	/* Start the gateway loop */
+	for (int timeout = 0;;) {
+		try {
+			/* Retrieve gateway info */
+			cGatewayInfo g = get_gateway_info();
+			/* Connect to the gateway and run for a session */
+			run_session(g.GetUrl());
+			/* Reset error timeout */
+			timeout = 0;
+		}
+		catch (const xGatewayError& e) {
+			cUtils::PrintErr(e.what());
+			return;
+		}
+		catch (const xDiscordError& e) {
+			cUtils::PrintErr("Couldn't retrieve gateway info");
+			cUtils::PrintErr(e.what());
+			break;
+		}
+		catch (const xSystemError& e) {
+			switch (timeout += 5) {
 				case 20:
-					fputc('\n', stderr);
-					goto LABEL_RETURN;
+					cUtils::PrintErr("");
+					cUtils::PrintErr(e.what());
+					return;
 				case 5:
 					cUtils::PrintErr("Couldn't retrieve gateway info");
 				default:
-					if (e.GetType() == DISCORD_ERROR_HTTP) {
-						cUtils::PrintErr(e.Get()->GetMessage());
-						cUtils::PrintErr("Error code: %d", e.Get()->GetCode());
-						goto LABEL_RETURN;
-					}
-					tick = timeout;
-					do {
-						fprintf(stderr, "[ERR] Retrying in %ds \r", tick);
+					for (int tick = timeout; tick >= 0; --tick) {
+						cUtils::PrintErr<'\r'>("Retrying in %ds ", tick);
 						std::this_thread::sleep_for(std::chrono::seconds(1));
-					} while (tick--);
+					}
 			}
 		}
-		/* Connect to the gateway and run for a session */
-		run_session(g->GetUrl());
-		/* Handle session close codes */
-		switch (const char* fmt; m_close_code) {
-			case -1:
-				fmt = "Error establishing connection: %s";
-				goto LABEL_MSG;
-			case 4004:
-			case 4010:
-			case 4011:
-			case 4012:
-			case 4013:
-			case 4014:
-				fmt = "Closing connection: %s";
-			LABEL_MSG:
-				cUtils::PrintErr(fmt, m_close_msg.c_str());
-				return;
-		}
 	}
-LABEL_RETURN:
-	cUtils::PrintLog("Exiting...");
 }

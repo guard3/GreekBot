@@ -1,6 +1,6 @@
 #ifndef _GREEKBOT_CHANNEL_H_
 #define _GREEKBOT_CHANNEL_H_
-#include "Types.h"
+#include "Common.h"
 
 enum eChannelType {
 	CHANNEL_GUILD_TEXT,

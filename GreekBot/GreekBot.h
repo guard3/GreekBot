@@ -2,6 +2,7 @@
 #ifndef _GREEKBOT_GREEKBOT_H_
 #define _GREEKBOT_GREEKBOT_H_
 #include "Bot.h"
+#include <mutex>
 
 /* Define custom message component ids; used for responding to component interactions */
 #define CMP_ID_BUTTON_RANK_HELP 0
@@ -38,6 +39,8 @@ private:
 		std::mutex mutex;
 	} m_lmg;
 
+	cColor get_lmg_member_color(const cMember&);
+
 	/* Voice */
 	std::vector<uint64_t> m_lmg_voice_channels;
 	std::vector<std::vector<uint64_t>> m_lmg_users_connected_to_voice;
@@ -57,43 +60,43 @@ private:
 		roles.reserve(member->Roles.size());
 		/* Copy all existing roles except proficiency roles */
 		cSnowflake *proficiency_roles_begin = m_lmg_proficiency_roles, *proficiency_roles_end = m_lmg_proficiency_roles + LMG_NUM_PROFICIENCY_ROLES;
-		for (chSnowflake p : member->Roles) {
-			if (proficiency_roles_end == std::find_if(proficiency_roles_begin, proficiency_roles_end, [&](const cSnowflake& s) { return s.ToInt() == p->ToInt(); }))
-				roles.push_back(p);
+		for (auto& id : member->Roles) {
+			if (proficiency_roles_end == std::find_if(proficiency_roles_begin, proficiency_roles_end, [&](const cSnowflake& s) { return s == id; }))
+				roles.push_back(&id);
 		}
 		/* Add specified proficiency role */
 		roles.push_back(&m_lmg_proficiency_roles[proficiency_role]);
-		UpdateGuildMemberRoles(m_lmg_id, *member->GetUser()->GetId(), roles);
+		UpdateGuildMemberRoles(m_lmg_id, member->GetUser()->GetId(), roles);
 	}
 
 	void OnInteraction_SelectMenu(chInteraction interaction) {
 		/* Acknowledge interaction */
 		AcknowledgeInteraction(interaction);
-		const char* value = interaction->GetData<INTERACTION_MESSAGE_COMPONENT>()->Values[0];
+		std::string value = interaction->GetData<INTERACTION_MESSAGE_COMPONENT>()->Values[0];
 		auto member = interaction->GetMember();
 
-		if (0 == strcmp(value, "opt_gr")) {
+		if (value == "opt_gr") {
 			lmg_update_proficiency_role(member, LMG_PROFICIENCY_NATIVE);
 		}
-		else if (0 == strcmp(value, "opt_a1")) {
+		else if (value == "opt_a1") {
 			lmg_update_proficiency_role(member, LMG_PROFICIENCY_BEGINNER);
 		}
-		else if (0 == strcmp(value, "opt_a2")) {
+		else if (value == "opt_a2") {
 			lmg_update_proficiency_role(member, LMG_PROFICIENCY_ELEMENTARY);
 		}
-		else if (0 == strcmp(value, "opt_b1")) {
+		else if (value == "opt_b1") {
 			lmg_update_proficiency_role(member, LMG_PROFICIENCY_INTERMEDIATE);
 		}
-		else if (0 == strcmp(value, "opt_b2")) {
+		else if (value == "opt_b2") {
 			lmg_update_proficiency_role(member, LMG_PROFICIENCY_UPPER_INTERMEDIATE);
 		}
-		else if (0 == strcmp(value, "opt_c1")) {
+		else if (value == "opt_c1") {
 			lmg_update_proficiency_role(member, LMG_PROFICIENCY_ADVANCED);
 		}
-		else if (0 == strcmp(value, "opt_c2")) {
+		else if (value == "opt_c2") {
 			lmg_update_proficiency_role(member, LMG_PROFICIENCY_FLUENT);
 		}
-		else if (0 == strcmp(value, "opt_no")) {
+		else if (value == "opt_no") {
 			lmg_update_proficiency_role(member, LMG_PROFICIENCY_NON_LEARNER);
 		}
 		/* Edit original interaction message */
