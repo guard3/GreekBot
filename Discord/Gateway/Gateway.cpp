@@ -34,13 +34,13 @@ enum eGatewayOpcode {
 };
 
 /* A class with all asio and beast related objects to avoid including boost everywhere */
+//#define STRAND
 class cGatewaySession final {
 private:
 	asio::ssl::context ctx; // The SSL context
 
 public:
-	asio::io_context         ioc;    // The IO context
-	asio::io_context::strand strand; // The strand for all async handlers
+	asio::io_context ioc;    // The IO context
 
 	beast::flat_buffer      buffer;    // A buffer for reading from the websocket
 	std::deque<std::string> msg_queue; // A queue with all pending messages to be sent
@@ -49,7 +49,7 @@ public:
 	z_stream inflate_stream;   // The zlib inflate stream for decompressing gateway payloads
 	char inflate_buffer[4096]; // The buffer for storing decompressed data
 
-	cGatewaySession() : ctx(asio::ssl::context::tlsv13_client), strand(ioc), ws(ioc, ctx) {
+	cGatewaySession() : ctx(asio::ssl::context::tlsv13_client), ws(ioc, ctx) {
 		memset(&inflate_stream, 0, sizeof(inflate_stream));
 		if (Z_OK != inflateInit(&inflate_stream))
 			throw std::runtime_error("Could not initialize inflate stream");
@@ -67,14 +67,14 @@ cGateway::~cGateway() { delete m_session; }
 
 void
 cGateway::send(std::string msg) {
-	/* Make sure we're running on one strand */
-	if (!m_session->strand.running_in_this_thread())
-		return asio::post(m_session->strand, [this, s = std::move(msg)] { send(s); });
+	/* Make sure we're running on the io_context's implicit strand */
+	if (!m_session->ioc.get_executor().running_in_this_thread())
+		return asio::post(m_session->ioc, [this, s = std::move(msg)] { send(s); });
 	/* Push the new message at the end of the message queue */
 	m_session->msg_queue.push_back(std::move(msg));
 	/* If there's no other message in the queue, start the asynchronous send operation */
 	if (m_session->msg_queue.size() == 1)
-		m_session->ws.async_write(asio::buffer(m_session->msg_queue.front()), asio::bind_executor(m_session->strand, [this](beast::error_code ec, size_t size) { on_write(ec, size); }));
+		m_session->ws.async_write(asio::buffer(m_session->msg_queue.front()), [this](beast::error_code ec, size_t size) { on_write(ec, size); });
 }
 
 void
@@ -111,9 +111,9 @@ cGateway::on_read(beast::error_code ec, size_t size) {
 		/* Release the parsed json value */
 		json::value v = m_json_parser.release();
 		/* Start the next asynchronous read operation to keep listening for more events */
-		m_session->ws.async_read(m_session->buffer, asio::bind_executor(m_session->strand, [this](beast::error_code ec, size_t size) { on_read(ec, size); }));
+		m_session->ws.async_read(m_session->buffer, [this](beast::error_code ec, size_t size) { on_read(ec, size); });
 #ifdef GW_LOG_LVL_2
-		cUtils::PrintLog((std::stringstream() << v).str().c_str());
+		cUtils::PrintLog(json::serialize(v));
 #endif
 		/* Process the event */
 		switch (v.at("op").as_int64()) {
@@ -162,13 +162,12 @@ cGateway::on_read(beast::error_code ec, size_t size) {
 void
 cGateway::on_write(beast::error_code ec, size_t size) {
 	/* If an error occurred, return and let the websocket stream close */
-	if (ec)
-		return;
+	if (ec) return;
 	/* Pop the message that was just sent */
 	m_session->msg_queue.pop_front();
 	/* If the queue isn't clear, continue the asynchronous send operation */
 	if (!m_session->msg_queue.empty())
-		m_session->ws.async_write(asio::buffer(m_session->msg_queue.front()), asio::bind_executor(m_session->strand, [this](beast::error_code ec, size_t size) { on_write(ec, size); }));
+		m_session->ws.async_write(asio::buffer(m_session->msg_queue.front()), [this](beast::error_code ec, size_t size) { on_write(ec, size); });
 }
 
 void
@@ -204,7 +203,7 @@ cGateway::run_session(const std::string& url) {
 		/* Perform websocket handshake */
 		m_session->ws.handshake(host, cUtils::Format("/?v=%d&encoding=json&compress=zlib-stream", DISCORD_API_VERSION));
 		/* Start the asynchronous read operation */
-		m_session->ws.async_read(m_session->buffer, asio::bind_executor(m_session->strand, [this](beast::error_code ec, size_t size) { on_read(ec, size); }));
+		m_session->ws.async_read(m_session->buffer, [this](beast::error_code ec, size_t size) { on_read(ec, size); });
 		m_session->ioc.run();
 		/* When the websocket stream closes, save the reason */
 		close_code = m_session->ws.reason().code;
