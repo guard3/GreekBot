@@ -5,9 +5,10 @@
 #include "beast.h"
 #include <deque>
 #include <zlib.h>
-#include "TaskManager.h"
+#include "Task.h"
 #include <thread>
 #include <atomic>
+#include <tuple>
 
 #define INFLATE_BUFFER_SIZE 4096
 
@@ -47,10 +48,18 @@ private:
 	/* The parent gateway object through which events are handled */
 	cGateway* m_parent;
 	/* The contexts for asio */
-	asio::io_context   m_ioc;
-	asio::ssl::context m_ctx;
+	asio::io_context   m_ws_ioc;   // IO context for websocket
+	asio::io_context   m_http_ioc; // IO context for http
+	asio::ssl::context m_ctx;      // SLL context
+	/* Resolvers */
+	asio::ip::tcp::resolver m_ws_resolver;
+	asio::ip::tcp::resolver m_http_resolver;
+	/* Work guard to prevent the http io_context from running out of work */
+	asio::executor_work_guard<asio::io_context::executor_type> m_work;
+	std::thread m_work_thread;
 
 	beast::flat_buffer      m_buffer;    // A buffer for reading from the websocket
+	beast::flat_buffer      m_http_buffer;
 	std::deque<std::string> m_queue; // A queue with all pending messages to be sent
 	uhHandle<beast::websocket::stream<beast::ssl_stream<beast::tcp_stream>>> m_ws; // The websocket stream
 
@@ -89,6 +98,7 @@ private:
 	cGatewayInfo get_gateway_info();
 	/* A method that's invoked for every gateway event */
 	void on_event(const cEvent& event);
+
 public:
 	implementation(cGateway*, const char*, eIntent);
 	implementation(const implementation&) = delete;
@@ -96,6 +106,8 @@ public:
 	~implementation();
 
 	implementation& operator=(implementation) = delete;
+
+	cTask2<json::value> DiscordRequest(beast::http::verb method, const std::string& target, const json::object* obj, std::initializer_list<cHttpField> fields);
 
 	const char* GetHttpAuthorization() const noexcept { return m_http_auth.c_str(); }
 	const char* GetToken() const noexcept { return m_http_auth.c_str() + 4; }

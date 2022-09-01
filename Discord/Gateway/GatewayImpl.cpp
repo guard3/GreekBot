@@ -6,6 +6,10 @@
 cGateway::implementation::implementation(cGateway* p, const char* t, eIntent i) :
 		m_parent(p),
 		m_ctx(asio::ssl::context::tlsv13_client),
+		m_ws_resolver(m_ws_ioc),
+		m_http_resolver(m_http_ioc),
+		m_work(asio::make_work_guard(m_http_ioc)),
+		m_work_thread([this]() { m_http_ioc.run(); }),
 		m_http_auth(cUtils::Format("Bot %s", t)),
 		m_intents(i),
 		m_last_sequence(0),
@@ -20,13 +24,20 @@ cGateway::implementation::implementation(cGateway* p, const char* t, eIntent i) 
 	if (Z_OK != inflateInit(&m_inflate_stream))
 		throw std::runtime_error("Could not initialize inflate stream");
 }
-cGateway::implementation::~implementation() { inflateEnd(&m_inflate_stream); }
+cGateway::implementation::~implementation() {
+	/* Deinitialize the zlib inflate stream */
+	inflateEnd(&m_inflate_stream);
+	/* Allow m_http_ioc.run() to exit */
+	m_work.reset();
+	/* Join the worker thread */
+	m_work_thread.join();
+}
 /* ================================================================================================================== */
 void
 cGateway::implementation::send(std::string msg) {
 	/* Make sure we're running on the io_context's implicit strand */
-	if (!m_ioc.get_executor().running_in_this_thread())
-		return asio::post(m_ioc, [this, s = std::move(msg)] { send(s); });
+	if (!m_ws_ioc.get_executor().running_in_this_thread())
+		return asio::post(m_ws_ioc, [this, s = std::move(msg)] { send(s); });
 	/* Push the new message at the end of the message queue */
 	m_queue.push_back(std::move(msg));
 	/* If there's no other message in the queue, start the asynchronous send operation */
@@ -141,13 +152,11 @@ cGateway::implementation::run_session(const std::string& url) {
 	std::string close_msg;
 	/* Run */
 	try {
-		/* Look up the domain name */
-		auto results = asio::ip::tcp::resolver(m_ioc).resolve(host, "https");
 		/* Create a websocket stream */
-		m_ws = cHandle::MakeUnique<beast::websocket::stream<beast::ssl_stream<beast::tcp_stream>>>(m_ioc, m_ctx);
+		m_ws = cHandle::MakeUnique<beast::websocket::stream<beast::ssl_stream<beast::tcp_stream>>>(m_ws_ioc, m_ctx);
 		/* Set a timeout and make a connection to the resolved IP address */
 		beast::get_lowest_layer(*m_ws).expires_after(std::chrono::seconds(30));
-		auto ep = beast::get_lowest_layer(*m_ws).connect(results);
+		auto ep = beast::get_lowest_layer(*m_ws).connect(m_ws_resolver.resolve(host, "https"));
 		/* Append resolved port number to host name */
 		host = cUtils::Format("%s:%d", host, ep.port());
 		/* Set a timeout and perform an SSL handshake */
@@ -165,7 +174,7 @@ cGateway::implementation::run_session(const std::string& url) {
 		m_ws->handshake(host, cUtils::Format("/?v=%d&encoding=json&compress=zlib-stream", DISCORD_API_VERSION));
 		/* Start the asynchronous read operation */
 		m_ws->async_read(m_buffer, [this](beast::error_code ec, size_t size) { on_read(ec, size); });
-		m_ioc.run();
+		m_ws_ioc.run();
 		/* When the websocket stream closes, save the reason */
 		close_code = m_ws->reason().code;
 		close_msg  = m_ws->reason().reason.c_str();

@@ -2,6 +2,7 @@
 #ifndef _GREEKBOT_GATEWAY_H_
 #define _GREEKBOT_GATEWAY_H_
 #include "Common.h"
+#include "Task.h"
 #include "User.h"
 #include "Guild.h"
 #include "Interaction.h"
@@ -26,6 +27,15 @@ enum eIntent {
 inline eIntent operator|(eIntent a, eIntent b) { return (eIntent)((int)a | (int)b); }
 inline eIntent operator&(eIntent a, eIntent b) { return (eIntent)((int)a & (int)b); }
 
+class cHttpField final {
+private:
+	const char *m_name, *m_value;
+public:
+	cHttpField(const char* n, const char* v) : m_name(n), m_value(v) {}
+	const char* GetName()  const noexcept { return m_name;  }
+	const char* GetValue() const noexcept { return m_value; }
+};
+
 class cGateway {
 private:
 	class implementation;
@@ -35,7 +45,21 @@ protected:
 	const char* GetHttpAuthorization() const noexcept;
 
 public:
+	cGateway(const char* token, eIntent intents);
+	cGateway(const cGateway&) = delete;
+	cGateway(cGateway&&) noexcept = delete;
+	~cGateway();
+
+	cGateway& operator=(cGateway) = delete;
+
 	const char* GetToken() const noexcept;
+
+	cTask2<json::value> DiscordGet   (const std::string& path,                          std::initializer_list<cHttpField> fields = {});
+	cTask2<json::value> DiscordPost  (const std::string& path, const json::object& obj, std::initializer_list<cHttpField> fields = {});
+	cTask2<json::value> DiscordPatch (const std::string& path, const json::object& obj, std::initializer_list<cHttpField> fields = {});
+	cTask2<json::value> DiscordPut   (const std::string& path,                          std::initializer_list<cHttpField> fields = {});
+	cTask2<json::value> DiscordPut   (const std::string& path, const json::object& obj, std::initializer_list<cHttpField> fields = {});
+	cTask2<json::value> DiscordDelete(const std::string& path,                          std::initializer_list<cHttpField> fields = {});
 
 	virtual void OnReady(uchUser) {}
 	virtual void OnGuildCreate(uhGuild) {}
@@ -44,13 +68,6 @@ public:
 	virtual void OnGuildRoleDelete(chSnowflake guild_id, chSnowflake role_id) {}
 	virtual void OnInteractionCreate(chInteraction) {}
 	virtual void OnMessageCreate(chMessage) {}
-
-	cGateway(const char* token, eIntent intents);
-	cGateway(const cGateway&) = delete;
-	cGateway(cGateway&&) noexcept = delete;
-	~cGateway();
-
-	cGateway& operator=(cGateway) = delete;
 
 	void Run();
 };

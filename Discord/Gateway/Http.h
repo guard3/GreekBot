@@ -15,72 +15,7 @@ namespace beast = boost::beast;
 namespace asio  = boost::asio;
 
 #include "Common.h"
-// TODO: move those to common.h
-template<typename T = void>
-class cTask2 final {
-public:
-	struct promise_type;
-
-	bool await_ready() { return m_handle.done(); }
-	void await_suspend(std::coroutine_handle<> h);
-	T    await_resume();
-
-private:
-	struct promise_type_base {
-		std::coroutine_handle<> caller; // The task coroutine caller
-		std::exception_ptr      except; // Any unhandled exception that might occur
-
-		std::suspend_never initial_suspend() const noexcept { return {}; }
-		std::suspend_never   final_suspend() const noexcept { return {}; }
-		void unhandled_exception() noexcept {
-			/* Capture the unhandled exception to be rethrown on resume */
-			except = std::current_exception();
-			/* The caller at this point is suspended, so we resume it */
-			if (caller) caller();
-		}
-	};
-
-	std::coroutine_handle<promise_type> m_handle;
-
-	cTask2(auto&& h) : m_handle(std::forward<std::coroutine_handle<promise_type>>(h)) {}
-};
-
-template<typename T>
-struct cTask2<T>::promise_type : promise_type_base {
-	T value;
-	cTask2<T> get_return_object() { return std::coroutine_handle<promise_type>::from_promise(*this); }
-	void return_value(auto&& v) {
-		/* Save the return value */
-		value = std::forward<T>(v);
-		/* Resume the caller */
-		if (this->caller) this->caller();
-	}
-};
-
-template<>
-struct cTask2<void>::promise_type : promise_type_base {
-	cTask2<void> get_return_object() { return std::coroutine_handle<promise_type>::from_promise(*this); }
-	void return_void() {
-		/* Resume the caller */
-		if (this->caller) this->caller();
-	}
-};
-
-template<typename T>
-inline void cTask2<T>::await_suspend(std::coroutine_handle<> h) { m_handle.promise().caller = h; }
-
-template<typename T>
-inline T cTask2<T>::await_resume() {
-	if (m_handle.promise().except)
-		std::rethrow_exception(m_handle.promise().except);
-	return std::move(m_handle.promise().value);
-}
-
-template<>
-inline void cTask2<void>::await_resume() {
-	if (m_handle.promise().except)
-		std::rethrow_exception(m_handle.promise().except);
-}
+#include "Task.h"
 
 #if 0
 template<typename T>
@@ -180,7 +115,7 @@ private:
 	/* The io and ssl contexts */
 	asio::io_context   m_ioc;
 	asio::ssl::context m_ctx;
-	/* A work guard to prevent m_ioc.run() from running out of work */
+	/* A work guard to prevent m_ws_ioc.run() from running out of work */
 	asio::executor_work_guard<asio::io_context::executor_type> m_work;
 	/* A buffer to receive http responses */
 	beast::flat_buffer m_buffer;
