@@ -34,8 +34,7 @@ enum eGatewayOpcode {
 };
 
 /* A class with all asio and beast related objects to avoid including boost everywhere */
-//#define STRAND
-class cGatewaySession final {
+class cGateway::implementation final {
 private:
 	asio::ssl::context ctx; // The SSL context
 
