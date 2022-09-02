@@ -107,7 +107,7 @@ public:
 	const char* GetValue() const noexcept { return m_value; }
 };
 
-typedef cTask2<std::tuple<unsigned int, std::string>> tHttpTask;
+typedef cTask<std::tuple<unsigned int, std::string>> tHttpTask;
 typedef std::initializer_list<cHttpField> tHttpFields;
 
 class cHttp {
@@ -135,7 +135,7 @@ public:
 		m_run_thread.join();
 	}
 
-	cTask2<> Test() {
+	cTask<> Test() {
 		unsigned int s;
 		std::string str;
 		std::tie(s, str) = co_await Get("discord.com", "/api/gateway");

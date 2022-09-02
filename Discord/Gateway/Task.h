@@ -6,7 +6,7 @@
 #include <coroutine>
 
 template<typename T = void>
-class cTask2 final {
+class cTask final {
 public:
 	struct promise_type;
 
@@ -31,24 +31,24 @@ private:
 
 	std::coroutine_handle<promise_type> m_handle;
 
-	cTask2(auto&& h) : m_handle(std::forward<std::coroutine_handle<promise_type>>(h)) {}
+	cTask(auto&& h) : m_handle(std::forward<std::coroutine_handle<promise_type>>(h)) {}
 };
 
 template<typename T>
-struct cTask2<T>::promise_type : promise_type_base {
-	T value;
-	cTask2<T> get_return_object() { return std::coroutine_handle<promise_type>::from_promise(*this); }
+struct cTask<T>::promise_type : promise_type_base {
+	std::unique_ptr<T> value;
+	cTask<T> get_return_object() { return std::coroutine_handle<promise_type>::from_promise(*this); }
 	void return_value(auto&& v) {
 		/* Save the return value */
-		value = std::forward<T>(v);
+		value = std::make_unique<T>(std::forward<T>(v));
 		/* Resume the caller */
 		if (this->caller) this->caller();
 	}
 };
 
 template<>
-struct cTask2<void>::promise_type : promise_type_base {
-	cTask2<void> get_return_object() { return std::coroutine_handle<promise_type>::from_promise(*this); }
+struct cTask<void>::promise_type : promise_type_base {
+	cTask<void> get_return_object() { return std::coroutine_handle<promise_type>::from_promise(*this); }
 	void return_void() {
 		/* Resume the caller */
 		if (this->caller) this->caller();
@@ -56,33 +56,33 @@ struct cTask2<void>::promise_type : promise_type_base {
 };
 
 template<typename T>
-inline void cTask2<T>::await_suspend(std::coroutine_handle<> h) { m_handle.promise().caller = h; }
+inline void cTask<T>::await_suspend(std::coroutine_handle<> h) { m_handle.promise().caller = h; }
 
 template<typename T>
-inline T cTask2<T>::await_resume() {
+inline T cTask<T>::await_resume() {
 	if (m_handle.promise().except)
 		std::rethrow_exception(m_handle.promise().except);
-	return std::move(m_handle.promise().value);
+	return std::move(*m_handle.promise().value);
 }
 
 template<>
-inline void cTask2<void>::await_resume() {
+inline void cTask<void>::await_resume() {
 	if (m_handle.promise().except)
 		std::rethrow_exception(m_handle.promise().except);
 }
 
 /* TODO: Delete this when done */
-class cTask final {
+class cTasky final {
 private:
-	cTask*      m_next;   // The next node in the task list
+	cTasky*      m_next;   // The next node in the task list
 	std::thread m_thread; // The task thread
 
 public:
 	template<typename Function, typename... Args>
-	cTask(cTask* next, Function&& f, Args&&... args) : m_next(next), m_thread(std::forward<Function>(f), std::forward<Args>(args)...) {}
-	cTask(const cTask&) = delete;
-	cTask(cTask&&) = delete;
-	~cTask() {
+	cTasky(cTasky* next, Function&& f, Args&&... args) : m_next(next), m_thread(std::forward<Function>(f), std::forward<Args>(args)...) {}
+	cTasky(const cTasky&) = delete;
+	cTasky(cTasky&&) = delete;
+	~cTasky() {
 		delete m_next;
 		if (m_thread.joinable())
 			m_thread.join();
@@ -90,9 +90,9 @@ public:
 };
 
 class cTaskManager final {
-	friend class cTask;
+	friend class cTasky;
 private:
-	std::atomic<cTask*> m_head;
+	std::atomic<cTasky*> m_head;
 	std::atomic<bool>   m_bRun;
 	std::thread         m_thread;
 
@@ -110,8 +110,8 @@ public:
 
 	template<typename Function, typename... Args>
 	cTaskManager& CreateTask(Function&& f, Args&&... args) {
-		cTask* p = m_head.exchange(nullptr);
-		m_head.exchange(new cTask(p, std::forward<Function>(f), std::forward<Args>(args)...));
+		cTasky* p = m_head.exchange(nullptr);
+		m_head.exchange(new cTasky(p, std::forward<Function>(f), std::forward<Args>(args)...));
 		return *this;
 	}
 };

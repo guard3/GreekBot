@@ -54,12 +54,12 @@ public:
 
 	const char* GetToken() const noexcept;
 
-	cTask2<json::value> DiscordGet   (const std::string& path,                          std::initializer_list<cHttpField> fields = {});
-	cTask2<json::value> DiscordPost  (const std::string& path, const json::object& obj, std::initializer_list<cHttpField> fields = {});
-	cTask2<json::value> DiscordPatch (const std::string& path, const json::object& obj, std::initializer_list<cHttpField> fields = {});
-	cTask2<json::value> DiscordPut   (const std::string& path,                          std::initializer_list<cHttpField> fields = {});
-	cTask2<json::value> DiscordPut   (const std::string& path, const json::object& obj, std::initializer_list<cHttpField> fields = {});
-	cTask2<json::value> DiscordDelete(const std::string& path,                          std::initializer_list<cHttpField> fields = {});
+	cTask<json::value> DiscordGet   (const std::string& path, std::initializer_list<cHttpField> fields = {});
+	cTask<json::value> DiscordPost  (const std::string& path, const json::object& obj, std::initializer_list<cHttpField> fields = {});
+	cTask<json::value> DiscordPatch (const std::string& path, const json::object& obj, std::initializer_list<cHttpField> fields = {});
+	cTask<json::value> DiscordPut   (const std::string& path, std::initializer_list<cHttpField> fields = {});
+	cTask<json::value> DiscordPut   (const std::string& path, const json::object& obj, std::initializer_list<cHttpField> fields = {});
+	cTask<json::value> DiscordDelete(const std::string& path, std::initializer_list<cHttpField> fields = {});
 
 	virtual void OnReady(uchUser) {}
 	virtual void OnGuildCreate(uhGuild) {}

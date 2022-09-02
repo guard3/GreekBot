@@ -87,7 +87,7 @@ public:
 	}
 };
 
-cTask2<json::value>
+cTask<json::value>
 cGateway::implementation::DiscordRequest(beast::http::verb m, const std::string& t, const json::object* o, std::initializer_list<cHttpField> f) {
 	/* Perform the http request */
 	beast::http::status status;
