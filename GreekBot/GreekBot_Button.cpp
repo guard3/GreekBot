@@ -1,9 +1,9 @@
 #include "GreekBot.h"
 
-void
-cGreekBot::OnInteraction_button(chInteraction interaction) {
+cTask<>
+cGreekBot::OnInteraction_button(const cInteraction& i) {
 	try {
-		auto embeds = interaction->GetMessage()->Embeds;
+		auto embeds = i.GetMessage()->Embeds;
 		cEmbed e = cEmbed::CreateBuilder()
 			.SetColor(embeds.back().GetColor())
 			.SetTitle("How it works")
@@ -13,7 +13,7 @@ cGreekBot::OnInteraction_button(chInteraction interaction) {
 			embeds[9] = std::move(e);
 		else
 			embeds.push_back(std::move(e));
-		RespondToInteraction(interaction, nullptr, MESSAGE_FLAG_NONE, embeds, nullptr, std::vector<cActionRow>(), nullptr);
+		co_await RespondToInteraction(i, MESSAGE_FLAG_NONE, {.embeds = std::move(embeds)});
 	}
 	catch (const std::exception& e) {
 		cUtils::PrintErr("OnInteraction_button: %s", e.what());

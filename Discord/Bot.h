@@ -12,10 +12,45 @@
 #include "Discord.h"
 
 struct cMessageOptions {
-	bool no_content = false;
-	bool no_components = false;
+	bool clear_content = false;
+	bool clear_components = false;
+	bool clear_embeds = false;
 	std::string content;
 	std::vector<cActionRow> components;
+	std::vector<cEmbed> embeds;
+
+	json::object ToJson(eMessageFlag flags) const {
+		json::object obj {
+			{   "tts", (bool)(flags & MESSAGE_FLAG_TTS) },
+			{ "flags", (int)(flags & (MESSAGE_FLAG_EPHEMERAL | MESSAGE_FLAG_SUPPRESS_EMBEDS)) }
+		};
+		/* Set content */
+		if (clear_content)
+			obj["content"] = "";
+		else if (!content.empty())
+			obj["content"] = content;
+		/* Set components */
+		if (clear_components)
+			obj["components"] = json::array();
+		else if (!components.empty()) {
+			json::array a;
+			a.reserve(components.size());
+			for (auto& c : components)
+				a.push_back(c.ToJson());
+			obj["components"] = std::move(a);
+		}
+		/* Set embeds */
+		if (clear_embeds)
+			obj["embeds"] = json::array();
+		else if (!embeds.empty()) {
+			json::array a;
+			a.reserve(embeds.size());
+			for (auto& e : embeds)
+				a.push_back(e.ToJson());
+			obj["embeds"] = std::move(a);
+		}
+		return obj;
+	};
 };
 
 class cBot : public cGateway {
@@ -23,63 +58,6 @@ private:
 	chUser m_user = nullptr;
 
 	void OnReady(uchUser user) override;
-
-	template<typename T>
-	void resolve_args(const std::vector<T>& v, const T*& ptr, int32_t& sz) {
-		if (v.empty()) {
-			ptr = nullptr;
-			sz = 0;
-		}
-		else {
-			ptr = &v[0];
-			sz = v.size();
-		}
-	}
-	template<typename T, size_t size>
-	void resolve_args(const T(&a)[size], const T*& ptr, int32_t & sz) { ptr = a; sz = size; }
-	template<typename T>
-	void resolve_args(std::nullptr_t n, const T*& ptr, int32_t& sz) { ptr = nullptr; sz = -1; }
-
-	enum eIF {
-		IF_RESPOND,
-		IF_EDIT_OG_MSG,
-		IF_FOLLOWUP,
-		IF_NUM
-	};
-	struct sIF_data {
-		const char*   http_auth;
-		chInteraction interaction; // The interaction we're working with
-		const char*   content;
-		eMessageFlag  flags;
-		chEmbed       embeds;     int32_t num_embeds;     // embeds array
-		chActionRow   components; int32_t num_components; // components array
-
-		json::object to_json() const;
-	};
-
-	static void(*ms_interaction_functions[IF_NUM])(const sIF_data*);
-
-	template<typename TEmbed, typename TMentions, typename TComponent, typename TAttachment>
-	void exec_if(eIF func, chInteraction interaction, const char* content, eMessageFlag flags, const TEmbed& embeds, const TMentions& allowed_mentions, const TComponent& components, const TAttachment& attachments) {
-		/* Resolve embed array */
-		chEmbed embed_args; int32_t embed_size;
-		resolve_args(embeds, embed_args, embed_size);
-		/* Resolve component array */
-		chActionRow component_args; int32_t component_size;
-		resolve_args(components, component_args, component_size);
-		/* Run appropriate function */
-		sIF_data func_data { GetHttpAuthorization(), interaction, content, flags, embed_args, embed_size, component_args, component_size };
-		ms_interaction_functions[func](&func_data);
-	}
-
-	template<typename T>
-	cSnowflake resolve_snowflake(T&& arg) {
-		if constexpr(cHandle::IsHandleType<T>) {
-			static_assert(std::is_same_v<cHandle::RemoveHandleCV<T>, cSnowflake>);
-			return *arg;
-		}
-		else return arg;
-	}
 
 	std::vector<uchRole> get_guild_roles(const cSnowflake& guild_id);
 
@@ -104,18 +82,11 @@ public:
 	std::vector<cRole> GetGuildRoles(const cSnowflake& guild_id);
 	void AddGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake& role_id);
 	void RemoveGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake& role_id);
-	void UpdateGuildMemberRoles(const cSnowflake& guild_id, const cSnowflake& user_id, const std::vector<chSnowflake>& role_ids);
+	cTask<> UpdateGuildMemberRoles(const cSnowflake& guild_id, const cSnowflake& user_id, const std::vector<chSnowflake>& role_ids);
 
-	void AcknowledgeInteraction(chInteraction interaction);
-	template<typename... Args>
-	void RespondToInteraction(Args&&... args) { return exec_if(IF_RESPOND, std::forward<Args>(args)...); }
-	template<typename... Args>
-	void EditInteractionResponse(Args&&... args) { return exec_if(IF_EDIT_OG_MSG, std::forward<Args>(args)...); }
-	template<typename... Args>
-	void SendInteractionFollowupMessage(Args&&... args) { return exec_if(IF_FOLLOWUP, std::forward<Args>(args)...); }
-
-	cTask<> AcknowledgeInteractionAsync(const cInteraction& i);
-	cTask<> RespondToInteractionAsync(const cInteraction& interaction, eMessageFlag flags, const cMessageOptions& options = {});
-	cTask<> EditInteractionResponseAsync(const cInteraction& interaction, eMessageFlag flags, const cMessageOptions& options = {});
+	cTask<> AcknowledgeInteraction(const cInteraction& interaction);
+	cTask<> RespondToInteraction(const cInteraction& interaction, eMessageFlag flags, const cMessageOptions& options = {});
+	cTask<> EditInteractionResponse(const cInteraction& interaction, eMessageFlag flags, const cMessageOptions& options = {});
+	cTask<> SendInteractionFollowupMessage(const cInteraction& interaction, eMessageFlag flags, const cMessageOptions& options = {});
 };
 #endif /* _GREEKBOT_BOT_H_ */

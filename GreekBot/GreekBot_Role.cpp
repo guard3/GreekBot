@@ -2,7 +2,7 @@
 
 cTask<>
 cGreekBot::OnInteraction_role(const cInteraction& interaction) try {
-	co_await RespondToInteractionAsync(
+	co_await RespondToInteraction(
 		interaction,
 		MESSAGE_FLAG_EPHEMERAL,
 		{

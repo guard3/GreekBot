@@ -19,32 +19,39 @@ cGateway::implementation::on_event(const cEvent& event) {
 			break;
 		case EVENT_GUILD_CREATE:
 			if (auto e = event.GetData<EVENT_GUILD_CREATE>()) {
-				m_task_manager.CreateTask([this](auto e) { m_parent->OnGuildCreate(std::move(e)); }, std::move(e));
-				//OnGuildCreate(std::move(e));
+				asio::post(m_http_ioc, [this, e = std::move(e)]() mutable -> cTask<> {
+					co_await m_parent->OnGuildCreate(std::move(e));
+				});
 				return;
 			}
 			break;
 
 		case EVENT_GUILD_ROLE_CREATE:
 			if (auto e = event.GetData<EVENT_GUILD_ROLE_CREATE>()) {
-				m_task_manager.CreateTask([this, e = std::move(e)]() { m_parent->OnGuildRoleCreate(&e->guild_id, &e->role); });
-				//OnGuildRoleCreate(e->GetGuildId(), e->GetRole());
+				asio::post(m_http_ioc, [this, e = std::move(e)]() mutable -> cTask<> {
+					auto p = std::move(e);
+					co_await m_parent->OnGuildRoleCreate(p->guild_id, p->role);
+				});
 				return;
 			}
 			break;
 
 		case EVENT_GUILD_ROLE_UPDATE:
 			if (auto e = event.GetData<EVENT_GUILD_ROLE_UPDATE>()) {
-				m_task_manager.CreateTask([this, e = std::move(e)]() { m_parent->OnGuildRoleUpdate(&e->guild_id, &e->role); });
-				//OnGuildRoleUpdate(e->GetGuildId(), e->GetRole());
+				asio::post(m_http_ioc, [this, e = std::move(e)]() mutable -> cTask<> {
+					auto p = std::move(e);
+					co_await m_parent->OnGuildRoleUpdate(p->guild_id, p->role);
+				});
 				return;
 			}
 			break;
 
 		case EVENT_GUILD_ROLE_DELETE:
 			if (auto e = event.GetData<EVENT_GUILD_ROLE_DELETE>()) {
-				//OnGuildRoleDelete(e->GetGuildId(), e->GetRoleId());
-				m_task_manager.CreateTask([this, e = std::move(e)]() { m_parent->OnGuildRoleDelete(&e->guild_id, &e->role_id); });
+				asio::post(m_http_ioc, [this, e = std::move(e)]() mutable -> cTask<> {
+					auto p = std::move(e);
+					co_await m_parent->OnGuildRoleDelete(p->guild_id, p->role_id);
+				});
 				return;
 			}
 			break;
@@ -61,7 +68,6 @@ cGateway::implementation::on_event(const cEvent& event) {
 
 		case EVENT_MESSAGE_CREATE:
 			if (auto e = event.GetData<EVENT_MESSAGE_CREATE>()) {
-				//OnMessageCreate(e.get());
 				m_task_manager.CreateTask([this, e = std::move(e)]() { m_parent->OnMessageCreate(e.get()); });
 				return;
 			}

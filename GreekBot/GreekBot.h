@@ -33,10 +33,9 @@ private:
 	};
 
 	struct {
-		uchGuild guild;
+		uhGuild guild;
 		std::vector<cRole> roles;
 		std::vector<chRole> sorted_roles;
-		std::mutex mutex;
 	} m_lmg;
 
 	cColor get_lmg_member_color(const cMember&);
@@ -45,15 +44,7 @@ private:
 	std::vector<uint64_t> m_lmg_voice_channels;
 	std::vector<std::vector<uint64_t>> m_lmg_users_connected_to_voice;
 
-	cTask<> OnInteraction_avatar(const cInteraction&);
-	cTask<> OnInteraction_role(const cInteraction&);
-
-	void OnInteraction_connect(chInteraction interaction) {
-		chMember member = interaction->GetMember();
-		//member->
-	}
-
-	void lmg_update_proficiency_role(chMember member, eLmgProficiencyRoleId proficiency_role) {
+	cTask<> lmg_update_proficiency_role(chMember member, eLmgProficiencyRoleId proficiency_role) {
 		/* The new roles for the member */
 		std::vector<chSnowflake> roles;
 		roles.reserve(member->Roles.size());
@@ -65,51 +56,54 @@ private:
 		}
 		/* Add specified proficiency role */
 		roles.push_back(&m_lmg_proficiency_roles[proficiency_role]);
-		UpdateGuildMemberRoles(m_lmg_id, member->GetUser()->GetId(), roles);
+		co_await UpdateGuildMemberRoles(m_lmg_id, member->GetUser()->GetId(), roles);
 	}
 
 	cTask<> OnInteraction_SelectMenu(const cInteraction& i) {
 		/* Acknowledge interaction */
-		co_await AcknowledgeInteractionAsync(i);
+		co_await AcknowledgeInteraction(i);
 		std::string value = i.GetData<INTERACTION_MESSAGE_COMPONENT>()->Values[0];
 		auto member = i.GetMember();
 
 		if (value == "opt_gr") {
-			lmg_update_proficiency_role(member, LMG_PROFICIENCY_NATIVE);
+			co_await lmg_update_proficiency_role(member, LMG_PROFICIENCY_NATIVE);
 		}
 		else if (value == "opt_a1") {
-			lmg_update_proficiency_role(member, LMG_PROFICIENCY_BEGINNER);
+			co_await lmg_update_proficiency_role(member, LMG_PROFICIENCY_BEGINNER);
 		}
 		else if (value == "opt_a2") {
-			lmg_update_proficiency_role(member, LMG_PROFICIENCY_ELEMENTARY);
+			co_await lmg_update_proficiency_role(member, LMG_PROFICIENCY_ELEMENTARY);
 		}
 		else if (value == "opt_b1") {
-			lmg_update_proficiency_role(member, LMG_PROFICIENCY_INTERMEDIATE);
+			co_await lmg_update_proficiency_role(member, LMG_PROFICIENCY_INTERMEDIATE);
 		}
 		else if (value == "opt_b2") {
-			lmg_update_proficiency_role(member, LMG_PROFICIENCY_UPPER_INTERMEDIATE);
+			co_await lmg_update_proficiency_role(member, LMG_PROFICIENCY_UPPER_INTERMEDIATE);
 		}
 		else if (value == "opt_c1") {
-			lmg_update_proficiency_role(member, LMG_PROFICIENCY_ADVANCED);
+			co_await lmg_update_proficiency_role(member, LMG_PROFICIENCY_ADVANCED);
 		}
 		else if (value == "opt_c2") {
-			lmg_update_proficiency_role(member, LMG_PROFICIENCY_FLUENT);
+			co_await lmg_update_proficiency_role(member, LMG_PROFICIENCY_FLUENT);
 		}
 		else if (value == "opt_no") {
-			lmg_update_proficiency_role(member, LMG_PROFICIENCY_NON_LEARNER);
+			co_await lmg_update_proficiency_role(member, LMG_PROFICIENCY_NON_LEARNER);
 		}
 		/* Edit original interaction message */
-		co_await EditInteractionResponseAsync(i, MESSAGE_FLAG_EPHEMERAL, { .content = "Role assigned!" });
+		co_await EditInteractionResponse(i, MESSAGE_FLAG_EPHEMERAL,
+										 {.content = "Role assigned!", .clear_components = true});
 	}
 
-	void OnInteraction_rank(chInteraction interaction);
-	void OnInteraction_top(chInteraction interaction);
-	void OnInteraction_button(chInteraction interaction);
+	cTask<> OnInteraction_avatar(const cInteraction&);
+	cTask<> OnInteraction_role(const cInteraction&);
+	cTask<> OnInteraction_rank(const cInteraction&);
+	cTask<> OnInteraction_top(const cInteraction&);
+	cTask<> OnInteraction_button(const cInteraction&);
 
-	void OnGuildCreate(uhGuild guild) override;
-	void OnGuildRoleCreate(chSnowflake guild_id, hRole role) override;
-	void OnGuildRoleUpdate(chSnowflake guild_id, hRole role) override;
-	void OnGuildRoleDelete(chSnowflake guild_id, chSnowflake role_id) override;
+	cTask<> OnGuildCreate(uhGuild guild) override;
+	cTask<> OnGuildRoleCreate(cSnowflake& guild_id, cRole& role) override;
+	cTask<> OnGuildRoleUpdate(cSnowflake& guild_id, cRole& role) override;
+	cTask<> OnGuildRoleDelete(cSnowflake& guild_id, cSnowflake& role_id) override;
 	cTask<> OnInteractionCreate(const cInteraction&) override;
 	void OnMessageCreate(chMessage msg) override;
 

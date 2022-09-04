@@ -62,10 +62,10 @@ public:
 	cTask<json::value> DiscordDelete(const std::string& path, std::initializer_list<cHttpField> fields = {});
 
 	virtual void OnReady(uchUser) {}
-	virtual void OnGuildCreate(uhGuild) {}
-	virtual void OnGuildRoleCreate(chSnowflake guild_id, hRole role) {}
-	virtual void OnGuildRoleUpdate(chSnowflake guild_id, hRole role) {}
-	virtual void OnGuildRoleDelete(chSnowflake guild_id, chSnowflake role_id) {}
+	virtual cTask<> OnGuildCreate(uhGuild) { co_return; }
+	virtual cTask<> OnGuildRoleCreate(cSnowflake& guild_id, cRole& role) { co_return; }
+	virtual cTask<> OnGuildRoleUpdate(cSnowflake& guild_id, cRole& role) { co_return; }
+	virtual cTask<> OnGuildRoleDelete(cSnowflake& guild_id, cSnowflake& role_id) { co_return; }
 	virtual cTask<> OnInteractionCreate(const cInteraction&) { co_return; }
 	virtual void OnMessageCreate(chMessage) {}
 
