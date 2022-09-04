@@ -33,7 +33,7 @@ namespace hidden {
 	public:
 		int v;
 		std::string session_id;
-		uchUser user;
+		uhUser user;
 
 		event_data(const json::object& o) : v(o.at("v").as_int64()), session_id(o.at("session_id").as_string().c_str()), user(cHandle::MakeUnique<cUser>(o.at("user"))) {}
 		event_data(const json::value& v) : event_data(v.as_object()) {}

@@ -1,10 +1,11 @@
 #include "Bot.h"
 #include "Discord.h"
 
-void cBot::OnReady(uchUser user) {
+cTask<>
+cBot::OnReady(uhUser user) {
 	cUtils::PrintLog("Connected as: %s#%s %s", user->GetUsername(), user->GetDiscriminator(), user->GetId().ToString());
-	delete m_user;
-	m_user = user.release();
+	m_user = std::move(user);
+	co_return;
 }
 
 std::vector<cRole>
@@ -24,24 +25,20 @@ cBot::GetGuildRoles(const cSnowflake& guild_id) {
 	}
 }
 
-cUser
-cBot::GetUser(const cSnowflake &user_id) {
-	try {
-		return cUser(cDiscord::HttpGet("/users/"s + user_id.ToString(), GetHttpAuthorization()));
-	}
-	catch (const boost::system::system_error& e) {
-		throw xSystemError(e);
-	}
+cTask<cUser>
+cBot::GetUser(const cSnowflake &user_id) try {
+	co_return cUser(co_await DiscordGet("/users/"s + user_id.ToString()));
+}
+catch (const boost::system::system_error& e) {
+	throw xSystemError(e);
 }
 
-cMember
-cBot::GetGuildMember(const cSnowflake &guild_id, const cSnowflake &user_id) {
-	try {
-		return cMember(cDiscord::HttpGet(cUtils::Format("/guilds/%s/members/%s", guild_id.ToString(), user_id.ToString()), GetHttpAuthorization()));
-	}
-	catch (const boost::system::system_error& e) {
-		throw xSystemError(e);
-	}
+cTask<cMember>
+cBot::GetGuildMember(const cSnowflake &guild_id, const cSnowflake &user_id) try {
+	co_return cMember(co_await DiscordGet(cUtils::Format("/guilds/%s/members/%s", guild_id.ToString(), user_id.ToString())));
+}
+catch (const boost::system::system_error& e) {
+	throw xSystemError(e);
 }
 
 void

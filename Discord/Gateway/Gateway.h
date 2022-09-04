@@ -61,7 +61,7 @@ public:
 	cTask<json::value> DiscordPut   (const std::string& path, const json::object& obj, std::initializer_list<cHttpField> fields = {});
 	cTask<json::value> DiscordDelete(const std::string& path, std::initializer_list<cHttpField> fields = {});
 
-	virtual void OnReady(uchUser) {}
+	virtual cTask<> OnReady(uhUser) { co_return; }
 	virtual cTask<> OnGuildCreate(uhGuild) { co_return; }
 	virtual cTask<> OnGuildRoleCreate(cSnowflake& guild_id, cRole& role) { co_return; }
 	virtual cTask<> OnGuildRoleUpdate(cSnowflake& guild_id, cRole& role) { co_return; }

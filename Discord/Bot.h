@@ -55,9 +55,9 @@ struct cMessageOptions {
 
 class cBot : public cGateway {
 private:
-	chUser m_user = nullptr;
+	uhUser m_user;
 
-	void OnReady(uchUser user) override;
+	cTask<> OnReady(uhUser) override;
 
 	std::vector<uchRole> get_guild_roles(const cSnowflake& guild_id);
 
@@ -71,14 +71,13 @@ protected:
 	
 public:
 	explicit cBot(const char* token, eIntent intents) : cGateway(token, intents) {}
-	~cBot() { delete m_user; }
 
 	using cGateway::GetToken;
 
-	chUser GetUser() const { return m_user; }
+	chUser GetUser() const { return m_user.get(); }
 
-	cUser GetUser(const cSnowflake& user_id);
-	cMember GetGuildMember(const cSnowflake& guild_id, const cSnowflake& user_id);
+	cTask<cUser> GetUser(const cSnowflake& user_id);
+	cTask<cMember> GetGuildMember(const cSnowflake& guild_id, const cSnowflake& user_id);
 	std::vector<cRole> GetGuildRoles(const cSnowflake& guild_id);
 	void AddGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake& role_id);
 	void RemoveGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake& role_id);

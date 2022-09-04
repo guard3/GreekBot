@@ -13,7 +13,9 @@ cGateway::implementation::on_event(const cEvent& event) {
 		case EVENT_READY:
 			if (auto e = event.GetData<EVENT_READY>()) {
 				m_session_id = std::move(e->session_id);
-				m_parent->OnReady(std::move(e->user));
+				asio::post(m_http_ioc, [this, u = std::move(e->user)]() mutable -> cTask<> {
+					co_await m_parent->OnReady(std::move(u));
+				});
 				return;
 			}
 			break;

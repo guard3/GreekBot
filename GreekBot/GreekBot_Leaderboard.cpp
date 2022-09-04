@@ -130,14 +130,14 @@ cGreekBot::OnInteraction_top(const cInteraction& i) {
 					embeds.push_back(make_embed(*member->GetUser(), *member, get_lmg_member_color(*member), d.GetRank(), d.GetXp(), d.GetNumMessages()));
 				}
 				else {
-					cMember member = GetGuildMember(m_lmg_id, *d.GetUserId());
+					cMember member = co_await GetGuildMember(m_lmg_id, *d.GetUserId());
 					embeds.push_back(make_embed(*member.GetUser(), member, get_lmg_member_color(member), d.GetRank(), d.GetXp(), d.GetNumMessages()));
 				}
+				continue;
 			}
-			catch (const xDiscordError& e) {
-				/* User isn't a member anymore */
-				embeds.push_back(make_no_member_embed(GetUser(*d.GetUserId()), true));
-			}
+			catch (const xDiscordError& e) {}
+			/* User isn't a member anymore */
+			embeds.push_back(make_no_member_embed(co_await GetUser(*d.GetUserId()), true));
 		}
 		/* Respond to interaction */
 		co_await EditInteractionResponse(i, MESSAGE_FLAG_NONE, {
