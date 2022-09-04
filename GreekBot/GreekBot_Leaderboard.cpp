@@ -62,8 +62,7 @@ cGreekBot::OnInteraction_rank(const cInteraction& i) {
 			co_return;
 		}
 		if (user->IsSystemUser()) {
-			co_await RespondToInteraction(i, MESSAGE_FLAG_NONE,
-										  {.content = "Ranking isn't available for system users."});
+			co_await RespondToInteraction(i, MESSAGE_FLAG_NONE, {.content = "Ranking isn't available for system users."});
 			co_return;
 		}
 		/* Acknowledge interaction while we're looking through the database */
@@ -71,14 +70,12 @@ cGreekBot::OnInteraction_rank(const cInteraction& i) {
 		/* Get user's ranking info from the database */
 		tRankQueryData db_result;
 		if (!cDatabase::GetUserRank(user, db_result)) {
-			co_await EditInteractionResponse(i, MESSAGE_FLAG_EPHEMERAL,
-											 {.content = "Hmm... Looks like I've run into some trouble. Try again later!"});
+			co_await EditInteractionResponse(i, MESSAGE_FLAG_EPHEMERAL, {.content = "Hmm... Looks like I've run into some trouble. Try again later!"});
 			co_return;
 		}
 		/* Make sure that the selected user is a member of Learning Greek */
 		if (!member) {
-			co_await EditInteractionResponse(i, MESSAGE_FLAG_NONE,
-											 {.embeds {make_no_member_embed(*user, !db_result.empty())}});
+			co_await EditInteractionResponse(i, MESSAGE_FLAG_NONE, {.embeds {make_no_member_embed(*user, !db_result.empty())}});
 			co_return;
 		}
 		/* Respond */
@@ -115,13 +112,11 @@ cGreekBot::OnInteraction_top(const cInteraction& i) {
 		/* Get data from the database */
 		tRankQueryData db_result;
 		if (!cDatabase::GetTop10(db_result)) {
-			co_await EditInteractionResponse(i, MESSAGE_FLAG_NONE,
-											 {.content = "Hmm... Looks like I've run into some trouble. Try again later!"});
+			co_await EditInteractionResponse(i, MESSAGE_FLAG_NONE, {.content = "Hmm... Looks like I've run into some trouble. Try again later!"});
 			co_return;
 		}
 		if (db_result.empty()) {
-			co_await EditInteractionResponse(i, MESSAGE_FLAG_NONE,
-											 {.content = "I don't have any data yet. Start talking!"});
+			co_await EditInteractionResponse(i, MESSAGE_FLAG_NONE, {.content = "I don't have any data yet. Start talking!"});
 			co_return;
 		}
 		/* Prepare embeds */
