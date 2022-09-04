@@ -66,7 +66,7 @@ public:
 	virtual void OnGuildRoleCreate(chSnowflake guild_id, hRole role) {}
 	virtual void OnGuildRoleUpdate(chSnowflake guild_id, hRole role) {}
 	virtual void OnGuildRoleDelete(chSnowflake guild_id, chSnowflake role_id) {}
-	virtual void OnInteractionCreate(chInteraction) {}
+	virtual cTask<> OnInteractionCreate(const cInteraction&) { co_return; }
 	virtual void OnMessageCreate(chMessage) {}
 
 	void Run();

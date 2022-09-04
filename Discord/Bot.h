@@ -11,6 +11,13 @@
 #include "Guild.h"
 #include "Discord.h"
 
+struct cMessageOptions {
+	bool no_content = false;
+	bool no_components = false;
+	std::string content;
+	std::vector<cActionRow> components;
+};
+
 class cBot : public cGateway {
 private:
 	chUser m_user = nullptr;
@@ -106,5 +113,9 @@ public:
 	void EditInteractionResponse(Args&&... args) { return exec_if(IF_EDIT_OG_MSG, std::forward<Args>(args)...); }
 	template<typename... Args>
 	void SendInteractionFollowupMessage(Args&&... args) { return exec_if(IF_FOLLOWUP, std::forward<Args>(args)...); }
+
+	cTask<> AcknowledgeInteractionAsync(const cInteraction& i);
+	cTask<> RespondToInteractionAsync(const cInteraction& interaction, eMessageFlag flags, const cMessageOptions& options = {});
+	cTask<> EditInteractionResponseAsync(const cInteraction& interaction, eMessageFlag flags, const cMessageOptions& options = {});
 };
 #endif /* _GREEKBOT_BOT_H_ */

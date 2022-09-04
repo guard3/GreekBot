@@ -45,9 +45,8 @@ private:
 	std::vector<uint64_t> m_lmg_voice_channels;
 	std::vector<std::vector<uint64_t>> m_lmg_users_connected_to_voice;
 
-	void OnInteraction_avatar(chInteraction interaction);
-
-	void OnInteraction_role(chInteraction interaction);
+	cTask<> OnInteraction_avatar(const cInteraction&);
+	cTask<> OnInteraction_role(const cInteraction&);
 
 	void OnInteraction_connect(chInteraction interaction) {
 		chMember member = interaction->GetMember();
@@ -69,11 +68,11 @@ private:
 		UpdateGuildMemberRoles(m_lmg_id, member->GetUser()->GetId(), roles);
 	}
 
-	void OnInteraction_SelectMenu(chInteraction interaction) {
+	cTask<> OnInteraction_SelectMenu(const cInteraction& i) {
 		/* Acknowledge interaction */
-		AcknowledgeInteraction(interaction);
-		std::string value = interaction->GetData<INTERACTION_MESSAGE_COMPONENT>()->Values[0];
-		auto member = interaction->GetMember();
+		co_await AcknowledgeInteractionAsync(i);
+		std::string value = i.GetData<INTERACTION_MESSAGE_COMPONENT>()->Values[0];
+		auto member = i.GetMember();
 
 		if (value == "opt_gr") {
 			lmg_update_proficiency_role(member, LMG_PROFICIENCY_NATIVE);
@@ -100,7 +99,7 @@ private:
 			lmg_update_proficiency_role(member, LMG_PROFICIENCY_NON_LEARNER);
 		}
 		/* Edit original interaction message */
-		EditInteractionResponse(interaction, "Role assigned!", MESSAGE_FLAG_EPHEMERAL, nullptr, nullptr, std::vector<cActionRow>(), nullptr);
+		co_await EditInteractionResponseAsync(i, MESSAGE_FLAG_EPHEMERAL, { .content = "Role assigned!" });
 	}
 
 	void OnInteraction_rank(chInteraction interaction);
@@ -111,7 +110,7 @@ private:
 	void OnGuildRoleCreate(chSnowflake guild_id, hRole role) override;
 	void OnGuildRoleUpdate(chSnowflake guild_id, hRole role) override;
 	void OnGuildRoleDelete(chSnowflake guild_id, chSnowflake role_id) override;
-	void OnInteractionCreate(chInteraction interaction) override;
+	cTask<> OnInteractionCreate(const cInteraction&) override;
 	void OnMessageCreate(chMessage msg) override;
 
 public:

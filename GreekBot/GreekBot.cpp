@@ -69,46 +69,47 @@ cGreekBot::OnGuildRoleDelete(chSnowflake guild_id, chSnowflake role_id) {
 	}
 }
 
-void
-cGreekBot::OnInteractionCreate(chInteraction interaction) {
-	if (auto data = interaction->GetData<INTERACTION_APPLICATION_COMMAND>()) {
+cTask<>
+cGreekBot::OnInteractionCreate(const cInteraction& interaction) {
+	if (auto data = interaction.GetData<INTERACTION_APPLICATION_COMMAND>()) {
 		switch (data->GetCommandId().ToInt()) {
 			case 878391425568473098:
 				/* avatar */
-				OnInteraction_avatar(interaction);
+				co_await OnInteraction_avatar(interaction);
 				break;
 			case 874634186374414356:
 				/* role */
-				OnInteraction_role(interaction);
+				co_await OnInteraction_role(interaction);
 				break;
 			case 938199801420456066:
 				/* rank */
-				OnInteraction_rank(interaction);
+				OnInteraction_rank(&interaction);
 				break;
 			case 938863857466757131:
 				/* top */
-				OnInteraction_top(interaction);
+				OnInteraction_top(&interaction);
 				break;
 			case 904462004071313448:
 				/* connect */
-				OnInteraction_connect(interaction);
+				OnInteraction_connect(&interaction);
 				break;
 		}
 	}
-	else if (auto data = interaction->GetData<INTERACTION_MESSAGE_COMPONENT>()) {
+	else if (auto data = interaction.GetData<INTERACTION_MESSAGE_COMPONENT>()) {
 		switch (data->GetComponentType()) {
 			case COMPONENT_BUTTON:
 				switch (strtol(data->GetCustomId(), nullptr, 10)) {
 					case CMP_ID_BUTTON_RANK_HELP:
-						OnInteraction_button(interaction);
+						OnInteraction_button(&interaction);
 						break;
 				}
 				break;
 			case COMPONENT_SELECT_MENU:
-				OnInteraction_SelectMenu(interaction);
+				co_await OnInteraction_SelectMenu(interaction);
 				break;
 		}
 	}
+	co_return;
 }
 
 void

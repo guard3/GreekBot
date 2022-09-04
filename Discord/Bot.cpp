@@ -157,3 +157,74 @@ cBot::AcknowledgeInteraction(chInteraction interaction) {
 	}
 	cDiscord::HttpPost(cUtils::Format("/interactions/%s/%s/callback", interaction->GetId().ToString(), interaction->GetToken()), GetHttpAuthorization(), obj);
 }
+
+cTask<>
+cBot::AcknowledgeInteractionAsync(const cInteraction& interaction) {
+	json::object obj;
+	switch (interaction.GetType()) {
+		case INTERACTION_PING:
+			obj["type"] = INTERACTION_CALLBACK_PONG;
+			break;
+		case INTERACTION_APPLICATION_COMMAND:
+			obj["type"] = INTERACTION_CALLBACK_DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE;
+			break;
+		case INTERACTION_MESSAGE_COMPONENT:
+			obj["type"] = INTERACTION_CALLBACK_DEFERRED_UPDATE_MESSAGE;
+			break;
+	}
+	co_await DiscordPost(cUtils::Format("/interactions/%s/%s/callback", interaction.GetId().ToString(), interaction.GetToken()), obj);
+}
+cTask<>
+cBot::RespondToInteractionAsync(const cInteraction& interaction, eMessageFlag flags, const cMessageOptions& options) {
+	json::object obj;
+	switch (interaction.GetType()) {
+		case INTERACTION_PING:
+			co_return;
+		case INTERACTION_APPLICATION_COMMAND:
+			obj["type"] = INTERACTION_CALLBACK_CHANNEL_MESSAGE_WITH_SOURCE;
+			break;
+		case INTERACTION_MESSAGE_COMPONENT:
+			obj["type"] = INTERACTION_CALLBACK_UPDATE_MESSAGE;
+			break;
+	}
+	{
+		json::object o{
+			{   "tts", (bool)(flags & MESSAGE_FLAG_TTS) },
+			{ "flags", (int)(flags & (MESSAGE_FLAG_EPHEMERAL | MESSAGE_FLAG_SUPPRESS_EMBEDS)) }
+		};
+		if (!options.content.empty())
+			o["content"] = options.content;
+		if (!options.components.empty()) {
+			json::array a;
+			a.reserve(options.components.size());
+			for (auto& c : options.components)
+				a.push_back(c.ToJson());
+			o["components"] = std::move(a);
+		}
+		obj["data"] = std::move(o);
+	}
+	co_await DiscordPost(cUtils::Format("/interactions/%s/%s/callback", interaction.GetId().ToString(), interaction.GetToken()), obj);
+}
+cTask<>
+cBot::EditInteractionResponseAsync(const cInteraction &interaction, eMessageFlag flags, const cMessageOptions &options) {
+	if (interaction.GetType() != INTERACTION_PING) {
+		json::object o{
+				{   "tts", (bool)(flags & MESSAGE_FLAG_TTS) },
+				{ "flags", (int)(flags & (MESSAGE_FLAG_EPHEMERAL | MESSAGE_FLAG_SUPPRESS_EMBEDS)) }
+		};
+		if (!options.content.empty())
+			o["content"] = options.content;
+		if (!options.components.empty()) {
+			json::array a;
+			a.reserve(options.components.size());
+			for (auto& c : options.components)
+				a.push_back(c.ToJson());
+			o["components"] = std::move(a);
+		}
+		auto m = cUtils::Format("/webhooks/%s/%s/messages/@original", interaction.GetApplicationId().ToString(), interaction.GetToken());
+		//cUtils::PrintLog("PATCH");
+		//cUtils::PrintLog(m);
+		//cUtils::PrintLog(json::serialize(o));
+		cUtils::PrintLog(json::serialize(co_await DiscordPatch(m, o)));
+	}
+}

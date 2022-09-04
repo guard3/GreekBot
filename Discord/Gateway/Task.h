@@ -5,6 +5,7 @@
 #include <atomic>
 #include <coroutine>
 
+/* TODO: Resume awaiter and return value on final_suspend() */
 template<typename T = void>
 class cTask final {
 public:
