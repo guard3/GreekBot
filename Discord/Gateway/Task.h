@@ -5,7 +5,6 @@
 #include <atomic>
 #include <coroutine>
 
-/* TODO: Resume awaiter and return value on final_suspend() */
 template<typename T = void>
 class cTask final {
 public:
@@ -16,44 +15,42 @@ public:
 	T    await_resume();
 
 private:
+	typedef std::coroutine_handle<promise_type> coro_t;
 	struct promise_type_base {
 		std::coroutine_handle<> caller; // The task coroutine caller
 		std::exception_ptr      except; // Any unhandled exception that might occur
 
-		std::suspend_never initial_suspend() const noexcept { return {}; }
-		std::suspend_never   final_suspend() const noexcept { return {}; }
-		void unhandled_exception() noexcept {
-			/* Capture the unhandled exception to be rethrown on resume */
-			except = std::current_exception();
-			/* The caller at this point is suspended, so we resume it */
-			if (caller) caller();
+		cTask get_return_object() { return coro_t::from_promise(static_cast<promise_type&>(*this)); }
+		auto initial_suspend() noexcept { return std::suspend_never{}; }
+		auto   final_suspend() noexcept {
+			struct awaitable {
+				std::coroutine_handle<>& caller;
+				bool await_ready() noexcept { return false; }
+				bool await_suspend(std::coroutine_handle<> h) noexcept {
+					if (caller) caller();
+					return true;
+				}
+				void await_resume() noexcept {}
+			};
+			return awaitable{caller};
 		}
+		void unhandled_exception() noexcept { except = std::current_exception(); }
 	};
 
-	std::coroutine_handle<promise_type> m_handle;
+	coro_t m_handle;
 
-	cTask(auto&& h) : m_handle(std::forward<std::coroutine_handle<promise_type>>(h)) {}
+	cTask(auto&& h) : m_handle(std::forward<coro_t>(h)) {}
 };
 
 template<typename T>
 struct cTask<T>::promise_type : promise_type_base {
 	std::unique_ptr<T> value;
-	cTask<T> get_return_object() { return std::coroutine_handle<promise_type>::from_promise(*this); }
-	void return_value(auto&& v) {
-		/* Save the return value */
-		value = std::make_unique<T>(std::forward<T>(v));
-		/* Resume the caller */
-		if (this->caller) this->caller();
-	}
+	void return_value(auto&& v) { value = std::make_unique<T>(std::forward<T>(v)); }
 };
 
 template<>
 struct cTask<void>::promise_type : promise_type_base {
-	cTask<void> get_return_object() { return std::coroutine_handle<promise_type>::from_promise(*this); }
-	void return_void() {
-		/* Resume the caller */
-		if (this->caller) this->caller();
-	}
+	void return_void() {}
 };
 
 template<typename T>
@@ -61,15 +58,18 @@ inline void cTask<T>::await_suspend(std::coroutine_handle<> h) { m_handle.promis
 
 template<typename T>
 inline T cTask<T>::await_resume() {
-	if (m_handle.promise().except)
-		std::rethrow_exception(m_handle.promise().except);
-	return std::move(*m_handle.promise().value);
+	auto e = std::move(m_handle.promise().except);
+	auto p = std::move(m_handle.promise().value);
+	m_handle.destroy();
+	if (e) std::rethrow_exception(e);
+	return *p;
 }
 
 template<>
 inline void cTask<void>::await_resume() {
-	if (m_handle.promise().except)
-		std::rethrow_exception(m_handle.promise().except);
+	auto e = std::move(m_handle.promise().except);
+	m_handle.destroy();
+	if (e) std::rethrow_exception(e);
 }
 
 /* TODO: Delete this when done */
