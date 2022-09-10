@@ -219,6 +219,17 @@ cGateway::implementation::get_gateway_info() {
 	}
 }
 /* ================================================================================================================== */
+cTask<>
+cGateway::implementation::ResumeOnEventThread() {
+	struct awaitable {
+		asio::io_context& ioc;
+		bool await_ready() { return ioc.get_executor().running_in_this_thread(); }
+		void await_suspend(std::coroutine_handle<> h) { asio::post(ioc, [h]() { h(); }); }
+		void await_resume() {}
+	};
+	co_await awaitable{m_http_ioc};
+}
+/* ================================================================================================================== */
 void
 cGateway::implementation::Run() {
 	/* Show a message at exit */

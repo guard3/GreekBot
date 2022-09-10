@@ -74,10 +74,8 @@ private:
 	std::atomic_bool m_heartbeat_exit;   // Should the heartbeating thread exit?
 	std::atomic_bool m_heartbeat_ack;    // Is the heartbeat acknowledged?
 	/* Json parsing for gateway events */
-	json::monotonic_resource m_mr;          // A monotonic memory resource for json parsing
+	json::monotonic_resource m_mr;     // A monotonic memory resource for json parsing
 	json::stream_parser      m_parser; // The json parser
-	/* Websocket session */
-	cTaskManager m_task_manager; // TODO: replace this shit with coroutines
 	/* Zlib stuff for decompressing websocket messages */
 	z_stream m_inflate_stream;
 	Byte     m_inflate_buffer[INFLATE_BUFFER_SIZE];
@@ -111,6 +109,9 @@ public:
 
 	const char* GetHttpAuthorization() const noexcept { return m_http_auth.c_str(); }
 	const char* GetToken() const noexcept { return m_http_auth.c_str() + 4; }
+
+	cTask<> ResumeOnEventThread();
+
 	void Run();
 };
 #endif /* _GREEKBOT_GATEWAYIMPL_H_ */

@@ -108,16 +108,16 @@ cGreekBot::OnInteractionCreate(const cInteraction& interaction) {
 	co_return;
 }
 
-void
-cGreekBot::OnMessageCreate(chMessage msg) {
+cTask<>
+cGreekBot::OnMessageCreate(cMessage& msg) {
 	/* Update leaderboard for Learning Greek */
-	if (chSnowflake guild_id = msg->GetGuildId()) {
+	if (chSnowflake guild_id = msg.GetGuildId()) {
 		if (*guild_id == m_lmg_id) {
 			/* Ignore messages of bots and system users */
-			if (msg->GetAuthor().IsBotUser() || msg->GetAuthor().IsSystemUser())
-				return;
+			if (msg.GetAuthor().IsBotUser() || msg.GetAuthor().IsSystemUser())
+				co_return;
 			/* Update leaderboard */
-			cDatabase::UpdateLeaderboard(msg);
+			co_await cDatabase::UpdateLeaderboard(msg);
 		}
 	}
 }

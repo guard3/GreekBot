@@ -70,7 +70,10 @@ cGateway::implementation::on_event(const cEvent& event) {
 
 		case EVENT_MESSAGE_CREATE:
 			if (auto e = event.GetData<EVENT_MESSAGE_CREATE>()) {
-				m_task_manager.CreateTask([this, e = std::move(e)]() { m_parent->OnMessageCreate(e.get()); });
+				asio::post(m_http_ioc, [this, e = std::move(e)]() mutable -> cTask<> {
+					auto m = std::move(e);
+					co_await m_parent->OnMessageCreate(*m);
+				});
 				return;
 			}
 			break;

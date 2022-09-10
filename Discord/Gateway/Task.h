@@ -1,9 +1,8 @@
 #pragma once
 #ifndef _GREEKBOT_TASKMANAGER_H_
 #define _GREEKBOT_TASKMANAGER_H_
-#include <thread>
-#include <atomic>
 #include <coroutine>
+#include <exception>
 
 template<typename T = void>
 class cTask final {
@@ -15,12 +14,12 @@ public:
 	T    await_resume();
 
 private:
-	typedef std::coroutine_handle<promise_type> coro_t;
+	typedef std::coroutine_handle<promise_type> tCoro;
 	struct promise_type_base {
 		std::coroutine_handle<> caller; // The task coroutine caller
 		std::exception_ptr      except; // Any unhandled exception that might occur
 
-		cTask get_return_object() { return coro_t::from_promise(static_cast<promise_type&>(*this)); }
+		cTask get_return_object() { return tCoro::from_promise(static_cast<promise_type&>(*this)); }
 		auto initial_suspend() noexcept { return std::suspend_never{}; }
 		auto   final_suspend() noexcept {
 			struct awaitable {
@@ -37,9 +36,9 @@ private:
 		void unhandled_exception() noexcept { except = std::current_exception(); }
 	};
 
-	coro_t m_handle;
+	tCoro m_handle;
 
-	cTask(auto&& h) : m_handle(std::forward<coro_t>(h)) {}
+	cTask(auto&& h) : m_handle(std::forward<tCoro>(h)) {}
 };
 
 template<typename T>
@@ -62,7 +61,7 @@ inline T cTask<T>::await_resume() {
 	auto p = std::move(m_handle.promise().value);
 	m_handle.destroy();
 	if (e) std::rethrow_exception(e);
-	return *p;
+	return std::move(*p);
 }
 
 template<>
@@ -71,49 +70,4 @@ inline void cTask<void>::await_resume() {
 	m_handle.destroy();
 	if (e) std::rethrow_exception(e);
 }
-
-/* TODO: Delete this when done */
-class cTasky final {
-private:
-	cTasky*      m_next;   // The next node in the task list
-	std::thread m_thread; // The task thread
-
-public:
-	template<typename Function, typename... Args>
-	cTasky(cTasky* next, Function&& f, Args&&... args) : m_next(next), m_thread(std::forward<Function>(f), std::forward<Args>(args)...) {}
-	cTasky(const cTasky&) = delete;
-	cTasky(cTasky&&) = delete;
-	~cTasky() {
-		delete m_next;
-		if (m_thread.joinable())
-			m_thread.join();
-	}
-};
-
-class cTaskManager final {
-	friend class cTasky;
-private:
-	std::atomic<cTasky*> m_head;
-	std::atomic<bool>   m_bRun;
-	std::thread         m_thread;
-
-public:
-	cTaskManager() : m_head(nullptr), m_bRun(true) { m_thread = std::thread([this]() { while (m_bRun.load()) delete m_head.exchange(nullptr); }); }
-	cTaskManager(const cTaskManager&) = delete;
-	cTaskManager(cTaskManager&&) = delete;
-	~cTaskManager() {
-		m_bRun.store(false);
-		m_thread.join();
-		delete m_head.load();
-	}
-
-	cTaskManager& operator=(cTaskManager) = delete;
-
-	template<typename Function, typename... Args>
-	cTaskManager& CreateTask(Function&& f, Args&&... args) {
-		cTasky* p = m_head.exchange(nullptr);
-		m_head.exchange(new cTasky(p, std::forward<Function>(f), std::forward<Args>(args)...));
-		return *this;
-	}
-};
 #endif /* _GREEKBOT_TASKMANAGER_H_ */

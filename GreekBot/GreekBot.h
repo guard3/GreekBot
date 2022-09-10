@@ -105,7 +105,7 @@ private:
 	cTask<> OnGuildRoleUpdate(cSnowflake& guild_id, cRole& role) override;
 	cTask<> OnGuildRoleDelete(cSnowflake& guild_id, cSnowflake& role_id) override;
 	cTask<> OnInteractionCreate(const cInteraction&) override;
-	void OnMessageCreate(chMessage msg) override;
+	cTask<> OnMessageCreate(cMessage& msg) override;
 
 public:
 	explicit cGreekBot(const char* token) : cBot(token, INTENT_GUILD_INTEGRATIONS | INTENT_GUILD_MESSAGES | INTENT_GUILDS) {}

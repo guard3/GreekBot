@@ -1,6 +1,10 @@
 #include "Database.h"
 #include "Queries.h"
 #include <cstdlib>
+#include <sqlite3.h>
+#include <thread>
+#include <mutex>
+#include <deque>
 
 /* The filename of the database */
 #define DB_FILENAME "database.db"
@@ -20,6 +24,7 @@
 #endif
 
 cDatabase cDatabase::ms_instance;
+sqlite3* cDatabase::ms_pDB;
 
 cDatabase::cDatabase() {
 	/* Get the path of the database file */
@@ -96,22 +101,90 @@ LABEL_RESOLVED_DBNAME:
 	exit(EXIT_FAILURE);
 }
 
-bool cDatabase::UpdateLeaderboard(chMessage msg) {
-	/* Execute QUERY_UPDATE_LB */
-	sqlite3_stmt* stmt;
-	if (SQLITE_OK == sqlite3_prepare_v2(ms_pDB, QUERY_UPDATE_LB, QRLEN_UPDATE_LB, &stmt, nullptr)) {
-		if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, msg->GetAuthor().GetId().ToInt())) {
-			if (SQLITE_OK == sqlite3_bind_int64(stmt, 2, msg->GetId().GetTimestamp())) {
-				if (SQLITE_DONE == sqlite3_step(stmt)) {
-					sqlite3_finalize(stmt);
-					return true;
-				}
-			}
+cDatabase::~cDatabase() { sqlite3_close(ms_pDB); }
+
+class cTaskManager final {
+private:
+	static cTaskManager ms_instance;
+	static inline std::deque<std::function<void()>> ms_queue;
+	static inline std::thread ms_thread;
+	static inline std::mutex ms_mutex;
+
+	static void thread_func() {
+		for (;;) {
+			ms_queue.front()();
+			ms_mutex.lock();
+			ms_queue.pop_front();
+			if (ms_queue.empty())
+				break;
+			ms_mutex.unlock();
 		}
+		ms_mutex.unlock();
 	}
-	sqlite3_finalize(stmt);
-	cUtils::PrintErr("Database error: %s", sqlite3_errmsg(ms_pDB));
-	return false;
+
+	cTaskManager() = default;
+
+public:
+	cTaskManager(const cTaskManager&) = delete;
+	cTaskManager(cTaskManager&&) = delete;
+	~cTaskManager() {
+		if (ms_thread.joinable())
+			ms_thread.join();
+	}
+
+	static void CreateTask(std::function<void()> func) {
+		ms_mutex.lock();
+		ms_queue.push_back(func);
+		if (ms_queue.size() == 1) {
+			ms_mutex.unlock();
+			if (ms_thread.joinable())
+				ms_thread.join();
+			ms_thread = std::thread(thread_func);
+			return;
+		}
+		ms_mutex.unlock();
+	}
+} cTaskManager::ms_instance;
+
+cTask<>
+cDatabase::UpdateLeaderboard(const cMessage& msg) {
+	class awaitable {
+	private:
+		const cMessage& m_msg;
+		std::exception_ptr m_except;
+
+	public:
+		awaitable(const cMessage& msg) : m_msg(msg) {}
+
+		bool await_ready() { return false; }
+		void await_suspend(std::coroutine_handle<> h) {
+			cTaskManager::CreateTask([this, h]() {
+				/* Execute QUERY_UPDATE_LB */
+				int rc;
+				sqlite3_stmt* stmt;
+				if (SQLITE_OK == (rc = sqlite3_prepare_v2(ms_pDB, QUERY_UPDATE_LB, QRLEN_UPDATE_LB, &stmt, nullptr))) {
+					if (SQLITE_OK == (rc = sqlite3_bind_int64(stmt, 1, m_msg.GetAuthor().GetId().ToInt()))) {
+						if (SQLITE_OK == (rc = sqlite3_bind_int64(stmt, 2, m_msg.GetId().GetTimestamp()))) {
+							if (SQLITE_DONE == (rc = sqlite3_step(stmt))) {
+								cUtils::PrintLog("UPDATE LEADERBOARD SUCCESS!");
+								goto LABEL_DONE;
+							}
+						}
+					}
+				}
+				m_except = std::make_exception_ptr(xDatabaseError(rc, sqlite3_errmsg(ms_pDB)));
+			LABEL_DONE:
+				sqlite3_finalize(stmt);
+				h();
+			});
+		}
+		void await_resume() {
+			if (m_except)
+				std::rethrow_exception(m_except);
+		}
+	};
+
+	co_await awaitable(msg);
 }
 
 bool cDatabase::GetUserRank(chUser user, tRankQueryData& result) {
