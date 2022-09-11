@@ -38,17 +38,4 @@ public:
 
 	const char* errors() const noexcept { return m_errors.c_str(); }
 };
-
-class cDiscord final {
-private:
-	cDiscord() = default;
-	
-public:
-	static json::value HttpGet(const std::string& path, const std::string& auth);
-	static void        HttpPost(const std::string& path, const std::string& auth, const json::object& obj);
-	static json::value HttpPatch(const std::string& path, const std::string& auth, const json::object& obj);
-	static json::value HttpPut(const std::string& path, const std::string& auth);
-	static json::value HttpPut(const std::string& path, const std::string& auth, const json::object& obj);
-	static json::value HttpDelete(const std::string& path, const std::string& auth);
-};
 #endif /* _GREEKBOT_NET_H_ */

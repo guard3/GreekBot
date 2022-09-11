@@ -78,9 +78,9 @@ public:
 
 	cTask<cUser> GetUser(const cSnowflake& user_id);
 	cTask<cMember> GetGuildMember(const cSnowflake& guild_id, const cSnowflake& user_id);
-	std::vector<cRole> GetGuildRoles(const cSnowflake& guild_id);
-	void AddGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake& role_id);
-	void RemoveGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake& role_id);
+	cTask<std::vector<cRole>> GetGuildRoles(const cSnowflake& guild_id);
+	cTask<> AddGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake& role_id);
+	cTask<> RemoveGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake& role_id);
 	cTask<> UpdateGuildMemberRoles(const cSnowflake& guild_id, const cSnowflake& user_id, const std::vector<chSnowflake>& role_ids);
 
 	cTask<> AcknowledgeInteraction(const cInteraction& interaction);

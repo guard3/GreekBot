@@ -212,7 +212,15 @@ cGateway::implementation::run_session(const std::string& url) {
 cGatewayInfo
 cGateway::implementation::get_gateway_info() {
 	try {
-		return cGatewayInfo(cDiscord::HttpGet("/gateway/bot", GetHttpAuthorization()));
+		/* Get gateway info object synchronously */
+		std::atomic_bool bDone = false;
+		json::value v;
+		[&]() -> cTask<> {
+			v = co_await m_parent->DiscordGet("/gateway/bot");
+			bDone = true;
+		}();
+		while (!bDone);
+		return cGatewayInfo(v);
 	}
 	catch (boost::system::system_error& e) {
 		throw xSystemError(e);

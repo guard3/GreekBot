@@ -68,11 +68,8 @@ cGreekBot::OnInteraction_rank(const cInteraction& i) {
 		/* Acknowledge interaction while we're looking through the database */
 		co_await AcknowledgeInteraction(i);
 		/* Get user's ranking info from the database */
-		tRankQueryData db_result;
-		if (!cDatabase::GetUserRank(user, db_result)) {
-			co_await EditInteractionResponse(i, MESSAGE_FLAG_EPHEMERAL, {.content = "Hmm... Looks like I've run into some trouble. Try again later!"});
-			co_return;
-		}
+		tRankQueryData db_result = co_await cDatabase::GetUserRank(*user);
+		co_await ResumeOnEventThread();
 		/* Make sure that the selected user is a member of Learning Greek */
 		if (!member) {
 			co_await EditInteractionResponse(i, MESSAGE_FLAG_NONE, {.embeds {make_no_member_embed(*user, !db_result.empty())}});
@@ -110,15 +107,12 @@ cGreekBot::OnInteraction_top(const cInteraction& i) {
 		/* Acknowledge interaction */
 		co_await AcknowledgeInteraction(i);
 		/* Get data from the database */
-		tRankQueryData db_result;
-		if (!cDatabase::GetTop10(db_result)) {
-			co_await EditInteractionResponse(i, MESSAGE_FLAG_NONE, {.content = "Hmm... Looks like I've run into some trouble. Try again later!"});
-			co_return;
-		}
+		tRankQueryData db_result = co_await cDatabase::GetTop10();
 		if (db_result.empty()) {
 			co_await EditInteractionResponse(i, MESSAGE_FLAG_NONE, {.content = "I don't have any data yet. Start talking!"});
 			co_return;
 		}
+		co_await ResumeOnEventThread();
 		/* Prepare embeds */
 		std::vector<cEmbed> embeds;
 		embeds.reserve(db_result.size());

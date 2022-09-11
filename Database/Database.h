@@ -6,13 +6,13 @@
 #include <vector>
 #include <stdexcept>
 
+class sqlite3;
 class xDatabaseError : public std::runtime_error {
 private:
 	int m_code;
 
 public:
-	xDatabaseError(int code, const char* what) : std::runtime_error(what), m_code(code) {}
-	xDatabaseError(int code, const std::string& what) : std::runtime_error(what), m_code(code) {}
+	explicit xDatabaseError(sqlite3*);
 
 	int code() const noexcept { return m_code; }
 };
@@ -35,15 +35,6 @@ public:
 };
 typedef std::vector<cRankQueryDataElement> tRankQueryData;
 
-struct test {
-	int64_t rank;
-	int64_t id;
-	int64_t xp;
-	int64_t num_msg;
-};
-
-class sqlite3;
-
 class cDatabase final {
 private:
 	static cDatabase ms_instance;
@@ -60,8 +51,8 @@ public:
 	cDatabase& operator=(cDatabase) = delete;
 
 	static cTask<> UpdateLeaderboard(const cMessage&);
-	static bool GetUserRank(chUser user, tRankQueryData& result);
-	static bool GetTop10(tRankQueryData& result);
+	static cTask<tRankQueryData> GetUserRank(const cUser&);
+	static cTask<tRankQueryData> GetTop10();
 };
 
 #endif /* _GREEKBOT_DATABASE_H_ */

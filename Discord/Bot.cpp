@@ -8,17 +8,17 @@ cBot::OnReady(uhUser user) {
 	co_return;
 }
 
-std::vector<cRole>
+cTask<std::vector<cRole>>
 cBot::GetGuildRoles(const cSnowflake& guild_id) {
 	try {
-		json::value v = cDiscord::HttpGet(cUtils::Format("/guilds/%s/roles", guild_id.ToString()), GetHttpAuthorization());
+		json::value v = co_await DiscordGet(cUtils::Format("/guilds/%s/roles", guild_id.ToString()));
 		auto& a = v.as_array();
 		std::vector<cRole> result;
 		result.reserve(a.size());
 		for (auto& e : a) {
 			result.emplace_back(e);
 		}
-		return result;
+		co_return result;
 	}
 	catch (const boost::system::system_error& e) {
 		throw xSystemError(e);
@@ -41,14 +41,14 @@ catch (const boost::system::system_error& e) {
 	throw xSystemError(e);
 }
 
-void
+cTask<>
 cBot::AddGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake &role_id) {
-	cDiscord::HttpPut(cUtils::Format("/guilds/%s/members/%s/roles/%s", guild_id.ToString(), user_id.ToString(), role_id.ToString()), GetHttpAuthorization());
+	co_await DiscordPut(cUtils::Format("/guilds/%s/members/%s/roles/%s", guild_id.ToString(), user_id.ToString(), role_id.ToString()));
 }
 
-void
+cTask<>
 cBot::RemoveGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake &role_id) {
-	cDiscord::HttpDelete(cUtils::Format("/guilds/%s/members/%s/roles/%s", guild_id.ToString(), user_id.ToString(), role_id.ToString()), GetHttpAuthorization());
+	co_await DiscordDelete(cUtils::Format("/guilds/%s/members/%s/roles/%s", guild_id.ToString(), user_id.ToString(), role_id.ToString()));
 }
 
 cTask<>

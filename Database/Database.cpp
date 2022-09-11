@@ -23,6 +23,8 @@
 	#endif
 #endif
 
+xDatabaseError::xDatabaseError(sqlite3* db) : std::runtime_error(sqlite3_errmsg(db)), m_code(sqlite3_extended_errcode(db)) {}
+
 cDatabase cDatabase::ms_instance;
 sqlite3* cDatabase::ms_pDB;
 
@@ -160,19 +162,16 @@ cDatabase::UpdateLeaderboard(const cMessage& msg) {
 		void await_suspend(std::coroutine_handle<> h) {
 			cTaskManager::CreateTask([this, h]() {
 				/* Execute QUERY_UPDATE_LB */
-				int rc;
 				sqlite3_stmt* stmt;
-				if (SQLITE_OK == (rc = sqlite3_prepare_v2(ms_pDB, QUERY_UPDATE_LB, QRLEN_UPDATE_LB, &stmt, nullptr))) {
-					if (SQLITE_OK == (rc = sqlite3_bind_int64(stmt, 1, m_msg.GetAuthor().GetId().ToInt()))) {
-						if (SQLITE_OK == (rc = sqlite3_bind_int64(stmt, 2, m_msg.GetId().GetTimestamp()))) {
-							if (SQLITE_DONE == (rc = sqlite3_step(stmt))) {
-								cUtils::PrintLog("UPDATE LEADERBOARD SUCCESS!");
+				if (SQLITE_OK == sqlite3_prepare_v2(ms_pDB, QUERY_UPDATE_LB, QRLEN_UPDATE_LB, &stmt, nullptr)) {
+					if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, m_msg.GetAuthor().GetId().ToInt())) {
+						if (SQLITE_OK == sqlite3_bind_int64(stmt, 2, m_msg.GetId().GetTimestamp())) {
+							if (SQLITE_DONE == sqlite3_step(stmt))
 								goto LABEL_DONE;
-							}
 						}
 					}
 				}
-				m_except = std::make_exception_ptr(xDatabaseError(rc, sqlite3_errmsg(ms_pDB)));
+				m_except = std::make_exception_ptr(xDatabaseError(ms_pDB));
 			LABEL_DONE:
 				sqlite3_finalize(stmt);
 				h();
@@ -187,54 +186,88 @@ cDatabase::UpdateLeaderboard(const cMessage& msg) {
 	co_await awaitable(msg);
 }
 
-bool cDatabase::GetUserRank(chUser user, tRankQueryData& result) {
-	sqlite3_stmt* stmt;
-	if (SQLITE_OK == sqlite3_prepare_v2(ms_pDB, QUERY_GET_RANK, QRLEN_GET_RANK, &stmt, nullptr)) {
-		if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, user->GetId().ToInt())) {
-			tRankQueryData res;
-			switch (sqlite3_step(stmt)) {
-				case SQLITE_ROW:
-					/* Statement returned data for the user */
-					res.reserve(1);
-					res.emplace_back(
-						sqlite3_column_int64(stmt, 0),
-						user->GetId(),
-						sqlite3_column_int64(stmt, 1),
-						sqlite3_column_int64(stmt, 2)
-					);
-				case SQLITE_DONE:
-					/* Statement didn't return, no user data found */
-					sqlite3_finalize(stmt);
-					result = std::move(res);
-					return true;
-			}
+cTask<tRankQueryData>
+cDatabase::GetUserRank(const cUser& user) {
+	class awaitable {
+	private:
+		const cUser& m_user;
+		std::exception_ptr m_except;
+		tRankQueryData m_result;
+
+	public:
+		awaitable(const cUser& u) : m_user(u) {}
+
+		bool await_ready() { return false; }
+		void await_suspend(std::coroutine_handle<> h) {
+			cTaskManager::CreateTask([this, h]() {
+				sqlite3_stmt* stmt;
+				if (SQLITE_OK == sqlite3_prepare_v2(ms_pDB, QUERY_GET_RANK, QRLEN_GET_RANK, &stmt, nullptr)) {
+					if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, m_user.GetId().ToInt())) {
+						switch (sqlite3_step(stmt)) {
+							case SQLITE_ROW:
+								/* Statement returned data for the user */
+								m_result.emplace_back(
+									sqlite3_column_int64(stmt, 0),
+									m_user.GetId(),
+									sqlite3_column_int64(stmt, 1),
+									sqlite3_column_int64(stmt, 2)
+								);
+							case SQLITE_DONE:
+								/* Statement didn't return, no user data found */
+								goto LABEL_DONE;
+						}
+					}
+				}
+				m_except = std::make_exception_ptr(xDatabaseError(ms_pDB));
+			LABEL_DONE:
+				sqlite3_finalize(stmt);
+				h();
+			});
 		}
-	}
-	sqlite3_finalize(stmt);
-	cUtils::PrintErr("Database error: %s", sqlite3_errmsg(ms_pDB));
-	return false;
+		tRankQueryData await_resume() {
+			if (m_except)
+				std::rethrow_exception(m_except);
+			return std::move(m_result);
+		}
+	};
+	co_return co_await awaitable(user);
 }
 
-bool cDatabase::GetTop10(tRankQueryData& result) {
-	int rc;
-	tRankQueryData res;
-	sqlite3_stmt* stmt;
-	if (SQLITE_OK == (rc = sqlite3_prepare_v2(ms_pDB, QUERY_GET_TOP_10, QRLEN_GET_TOP_10, &stmt, nullptr))) {
-		res.reserve(10);
-		while (SQLITE_ROW == (rc = sqlite3_step(stmt))) {
-			res.emplace_back(
-				sqlite3_column_int64(stmt, 0),
-				sqlite3_column_int64(stmt, 1),
-				sqlite3_column_int64(stmt, 2),
-				sqlite3_column_int64(stmt, 3)
-			);
+cTask<tRankQueryData>
+cDatabase::GetTop10() {
+	class awaitable {
+	private:
+		std::exception_ptr m_except;
+		tRankQueryData m_result;
+
+	public:
+		bool await_ready() { return false; }
+		void await_suspend(std::coroutine_handle<> h) {
+			cTaskManager::CreateTask([this, h]() {
+				int rc;
+				sqlite3_stmt* stmt;
+				if (SQLITE_OK == (rc = sqlite3_prepare_v2(ms_pDB, QUERY_GET_TOP_10, QRLEN_GET_TOP_10, &stmt, nullptr))) {
+					m_result.reserve(10);
+					while (SQLITE_ROW == (rc = sqlite3_step(stmt))) {
+						m_result.emplace_back(
+							sqlite3_column_int64(stmt, 0),
+							sqlite3_column_int64(stmt, 1),
+							sqlite3_column_int64(stmt, 2),
+							sqlite3_column_int64(stmt, 3)
+						);
+					}
+				}
+				sqlite3_finalize(stmt);
+				if (rc != SQLITE_DONE)
+					m_except = std::make_exception_ptr(xDatabaseError(ms_pDB));
+				h();
+			});
 		}
-	}
-	sqlite3_finalize(stmt);
-	if (rc == SQLITE_DONE) {
-		result = std::move(res);
-		return true;
-	}
-	cUtils::PrintErr("Database error: %s", sqlite3_errmsg(ms_pDB));
-	return false;
+		tRankQueryData await_resume() {
+			if (m_except)
+				std::rethrow_exception(m_except);
+			return std::move(m_result);
+		}
+	};
+	co_return co_await awaitable();
 }
