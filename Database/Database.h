@@ -1,22 +1,19 @@
 #pragma once
 #ifndef _GREEKBOT_DATABASE_H_
 #define _GREEKBOT_DATABASE_H_
-#include "Message.h"
-#include "Task.h"
-#include <vector>
 #include <stdexcept>
-
-class sqlite3;
+#include <coroutine>
+#include <vector>
+#include "Message.h"
+/* ================================================================================================================== */
 class xDatabaseError : public std::runtime_error {
 private:
 	int m_code;
-
 public:
-	explicit xDatabaseError(sqlite3*);
-
+	xDatabaseError();
 	int code() const noexcept { return m_code; }
 };
-
+/* ================================================================================================================== */
 class cRankQueryDataElement final {
 private:
 	int64_t rank;
@@ -34,25 +31,94 @@ public:
 	chSnowflake GetUserId() const { return &id; }
 };
 typedef std::vector<cRankQueryDataElement> tRankQueryData;
-
+/* ================================================================================================================== */
+template<typename T = void>
+class cDatabaseTask;
+/* ================================================================================================================== */
 class cDatabase final {
 private:
 	static cDatabase ms_instance;
-
-	static sqlite3* ms_pDB;
-
 	cDatabase();
-
 public:
 	cDatabase(const cDatabase&) = delete;
-	cDatabase(cDatabase&&) = delete;
 	~cDatabase();
 
-	cDatabase& operator=(cDatabase) = delete;
+	cDatabase& operator=(const cDatabase&) = delete;
 
-	static cTask<> UpdateLeaderboard(const cMessage&);
-	static cTask<tRankQueryData> GetUserRank(const cUser&);
-	static cTask<tRankQueryData> GetTop10();
+	static cDatabaseTask<> UpdateLeaderboard(const cMessage&);
+	static cDatabaseTask<tRankQueryData> GetUserRank(const cUser&);
+	static cDatabaseTask<tRankQueryData> GetTop10();
 };
+/* ================================================================================================================== */
+template<>
+class cDatabaseTask<void> {
+protected:
+	std::function<void(std::coroutine_handle<>)> m_func;
+	std::exception_ptr m_except;
 
+	template<typename F> requires std::is_invocable_r_v<void, F, std::coroutine_handle<>>
+	cDatabaseTask(F&& f) : m_func(std::forward<F>(f)) {}
+
+public:
+	template<typename F> requires std::is_invocable_r_v<void, F>
+	cDatabaseTask(F&& f) : m_func([this, f = std::forward<F>(f)](std::coroutine_handle<> h) {
+		try {
+			f();
+		}
+		catch (...) {
+			m_except = std::current_exception();
+		}
+		h();
+	}) {}
+
+	constexpr bool await_ready() noexcept { return false; }
+	void await_suspend(std::coroutine_handle<> h);
+	void await_resume() { if (m_except) std::rethrow_exception(m_except); }
+};
+/* ================================================================================================================== */
+template<std::default_initializable T>
+class cDatabaseTask<T> : public cDatabaseTask<void> {
+private:
+	T m_result;
+
+public:
+	template<typename F> requires std::is_invocable_r_v<void, F>
+	cDatabaseTask(F&& f) : cDatabaseTask<void>([this, f = std::forward<F>(f)](std::coroutine_handle<> h) {
+		try {
+			m_result = f();
+		}
+		catch (...) {
+			m_except = std::current_exception();
+		}
+		h();
+	}) {}
+
+	T await_resume() {
+		cDatabaseTask<void>::await_resume();
+		return std::move(m_result);
+	}
+};
+/* ================================================================================================================== */
+template<typename T>
+class cDatabaseTask : public cDatabaseTask<void> {
+private:
+	uhHandle<T> m_result;
+
+public:
+	template<typename F> requires std::is_invocable_r_v<void, F>
+	cDatabaseTask(F&& f) : cDatabaseTask<void>([this, f = std::forward<F>(f)](std::coroutine_handle<> h) {
+		try {
+			m_result = cHandle::MakeUnique<T>(f());
+		}
+		catch (...) {
+			m_except = std::current_exception();
+		}
+		h();
+	}) {}
+
+	T await_resume() {
+		cDatabaseTask<void>::await_resume();
+		return std::move(*m_result);
+	}
+};
 #endif /* _GREEKBOT_DATABASE_H_ */
