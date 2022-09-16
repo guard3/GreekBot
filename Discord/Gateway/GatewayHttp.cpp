@@ -1,14 +1,15 @@
 #include "GatewayImpl.h"
 #include "json.h"
 
-class discord_http_request final {
+class cGateway::implementation::discord_request final {
 private:
+	cGateway::implementation* m_parent;
 	/* Return value */
 	std::tuple<beast::http::status, json::value> m_result;
 	/* Necessary references */
-	asio::io_context& m_ioc;
-	asio::ssl::context& m_ctx;
-	beast::flat_buffer& m_buffer;
+	//asio::io_context& m_ioc;
+	//asio::ssl::context& m_ctx;
+	//beast::flat_buffer& m_buffer;
 	asio::ip::tcp::resolver m_resolver;
 	beast::ssl_stream<beast::tcp_stream> m_stream;
 	beast::http::request<beast::http::string_body> m_request;
@@ -17,13 +18,13 @@ private:
 	beast::error_code m_ec;
 
 public:
-	template<typename... Args>
-	discord_http_request(beast::http::verb method, const std::string& target, const std::string& auth, const json::object* obj, std::initializer_list<cHttpField> fields, asio::io_context& ioc, asio::ssl::context& ctx, beast::flat_buffer& buff) :
-		m_ioc(ioc),
-		m_ctx(ctx),
-		m_buffer(buff),
-		m_resolver(m_ioc),
-		m_stream(m_ioc, m_ctx),
+	discord_request(cGateway::implementation* this_, beast::http::verb method, const std::string& target, const json::object* obj, std::vector<cHttpField> fields) :
+		//m_ioc(ioc),
+		//m_ctx(ctx),
+		//m_buffer(buff),
+		m_parent(this_),
+		m_resolver(this_->m_http_ioc),
+		m_stream(this_->m_http_ioc, this_->m_ctx),
 		m_request(method, DISCORD_API_ENDPOINT + target, 11) {
 		/* Insert the rest */
 		for (const cHttpField& f : fields)
@@ -31,7 +32,8 @@ public:
 		/* Insert the necessary fields here */
 		m_request.set(beast::http::field::host, DISCORD_API_HOST);
 		m_request.set(beast::http::field::user_agent, "GreekBot");
-		m_request.set(beast::http::field::authorization, auth);
+		m_request.set(beast::http::field::authorization, this_->m_http_auth);
+		m_request.set(beast::http::field::accept, "application/json");
 		if (obj) {
 			m_request.set(beast::http::field::content_type, "application/json");
 			m_request.body() = json::serialize(*obj);
@@ -65,8 +67,8 @@ public:
 							handle();
 							return;
 						}
-						beast::http::async_read(m_stream, m_buffer, m_response, [this, handle](beast::error_code ec, size_t bytes_read) {
-							m_buffer.consume(bytes_read);
+						beast::http::async_read(m_stream, m_parent->m_http_buffer, m_response, [this, handle](beast::error_code ec, size_t bytes_read) {
+							m_parent->m_http_buffer.consume(bytes_read);
 							if (ec)
 								m_ec = ec;
 							else {
@@ -87,27 +89,80 @@ public:
 	}
 };
 
+class cGateway::implementation::retry_discord_request {
+private:
+	cGateway::implementation* m_parent;
+
+	beast::http::verb m_method;
+	const std::string& m_target;
+	const json::object* m_object;
+	const std::vector<cHttpField>& m_fields;
+
+	std::chrono::time_point<std::chrono::steady_clock> m_target_time;
+	uhHandle<cTask<json::value>> m_result;
+	std::exception_ptr m_except;
+
+public:
+	retry_discord_request(cGateway::implementation* this_, double w, beast::http::verb m, const std::string& t, const json::object* o, const std::vector<cHttpField>& f) :
+		m_parent(this_),
+		m_method(m),
+		m_target(t),
+		m_object(o),
+		m_fields(f),
+		m_target_time(std::chrono::steady_clock::now() + std::chrono::milliseconds((int64_t)(w * 1000.0))) {
+		cUtils::PrintLog("Rate limited! Waiting for %dms", (int)(w * 1000.0));
+	}
+
+	bool await_ready() noexcept { return false; }
+	bool await_suspend(std::coroutine_handle<> h) noexcept {
+		try {
+			/* Postpone the next request until enough time has passed */
+			if (std::chrono::steady_clock::now() < m_target_time) {
+				asio::post(m_parent->m_http_ioc, [this, h]() { await_suspend(h); });
+				return true;
+			}
+			/* Start and return the request task */
+			m_result = cHandle::MakeUnique<cTask<json::value>>(m_parent->DiscordRequest(m_method, m_target, m_object, m_fields));
+		}
+		catch (...) {
+			m_except = std::current_exception();
+			h();
+		}
+		return false;
+	}
+	cTask<json::value> await_resume() {
+		if (m_except) std::rethrow_exception(m_except);
+		return std::move(*m_result);
+	}
+};
+
 cTask<json::value>
-cGateway::implementation::DiscordRequest(beast::http::verb m, const std::string& t, const json::object* o, std::initializer_list<cHttpField> f) {
+cGateway::implementation::DiscordRequest(beast::http::verb m, const std::string& t, const json::object* o, const std::vector<cHttpField>& f) {
 	/* Perform the http request */
 	beast::http::status status;
 	json::value result;
-	try {
-		std::tie(status, result) = co_await discord_http_request(m, t, m_http_auth, o, f, m_http_ioc, m_ctx, m_http_buffer);
-		/* If request was successful, return received json value */
-		if (beast::http::to_status_class(status) == beast::http::status_class::successful)
-			co_return result;
-	}
-	catch (const boost::system::system_error& e) {
-		/* An HTTP or JSON parsing error occurred */
-		throw xSystemError(e.what(), e.code().value());
-	}
-	/* TODO: make this async */
-	/* If we're being rate limited, wait and try again */
-	if (status == beast::http::status::too_many_requests) {
-		std::this_thread::sleep_for(std::chrono::milliseconds((uint64_t)(result.at("retry_after").as_double() * 1000.0)));
-		co_return co_await DiscordRequest(m, t, o, f);
-	}
+	std::tie(status, result) = co_await discord_request(this, m, t, o, f);
+	/* If request was successful, return received json value */
+	if (beast::http::to_status_class(status) == beast::http::status_class::successful)
+		co_return result;
+	/* If we're being rate limited, try again later */
+	if (status == beast::http::status::too_many_requests)
+		co_return co_await co_await retry_discord_request(this, result.at("retry_after").as_double(), m, t, o, f);
 	/* If all else fails, throw */
+	throw xDiscordError(result);
+}
+
+cTask<json::value>
+cGateway::implementation::DiscordRequestNoRetry(beast::http::verb m, const std::string& t, const json::object* o, std::initializer_list<cHttpField> f) {
+	/* Perform the http request */
+	beast::http::status status;
+	json::value result;
+	std::tie(status, result) = co_await discord_request(this, m, t, o, f);
+	/* If request was successful, return received json value */
+	if (beast::http::to_status_class(status) == beast::http::status_class::successful)
+		co_return result;
+	/* Throw appropriate exception */
+	if (status == beast::http::status::too_many_requests)
+		throw std::runtime_error("RATE LIMITED");
 	throw xDiscordError(result);
 }

@@ -1,0 +1,14 @@
+{
+	"name": "prune",
+	"description": "Kick inactive members without a role",
+	"default_member_permissions": "2",
+	"options": [
+		{
+			"type": 4,
+			"name": "days",
+			"description": "Kick members last seen for a set number of days",
+			"min_value": 1,
+			"max_value": 30
+		}
+	]
+}

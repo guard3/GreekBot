@@ -126,3 +126,13 @@ cBot::SendInteractionFollowupMessage(const cInteraction& interaction, eMessageFl
 	if (interaction.GetType() != INTERACTION_PING)
 		co_await DiscordPost(cUtils::Format("/webhooks/%s/%s", interaction.GetApplicationId().ToString(), interaction.GetToken()), options.ToJson(flags));
 }
+
+cTask<int>
+cBot::BeginGuildPrune(const cSnowflake &id, int days, const std::string &reason) {
+	json::object obj {
+			{"days", days}
+	};
+	cUtils::PrintErr(json::serialize(obj));
+	auto response = co_await DiscordPost(cUtils::Format("/guilds/%s/prune", id.ToString()), {{ "days", days }});
+	co_return response.at("pruned").as_int64();
+}

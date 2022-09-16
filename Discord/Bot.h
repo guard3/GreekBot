@@ -87,5 +87,7 @@ public:
 	cTask<> RespondToInteraction(const cInteraction& interaction, eMessageFlag flags, const cMessageOptions& options = {});
 	cTask<> EditInteractionResponse(const cInteraction& interaction, eMessageFlag flags, const cMessageOptions& options = {});
 	cTask<> SendInteractionFollowupMessage(const cInteraction& interaction, eMessageFlag flags, const cMessageOptions& options = {});
+
+	cTask<int> BeginGuildPrune(const cSnowflake& id, int days, const std::string& reason = {});
 };
 #endif /* _GREEKBOT_BOT_H_ */

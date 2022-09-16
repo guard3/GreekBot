@@ -85,6 +85,10 @@ cGreekBot::OnInteractionCreate(const cInteraction& interaction) {
 				/* top */
 				co_await OnInteraction_top(interaction);
 				break;
+			case 1020026874119864381:
+				/* prune */
+				co_await OnInteraction_prune(interaction);
+				break;
 			case 904462004071313448:
 				/* connect */
 				//OnInteraction_connect(&interaction);

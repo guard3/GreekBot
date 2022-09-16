@@ -90,8 +90,7 @@ private:
 			co_await lmg_update_proficiency_role(member, LMG_PROFICIENCY_NON_LEARNER);
 		}
 		/* Edit original interaction message */
-		co_await EditInteractionResponse(i, MESSAGE_FLAG_EPHEMERAL,
-										 {.content = "Role assigned!", .clear_components = true});
+		co_await EditInteractionResponse(i, MESSAGE_FLAG_EPHEMERAL, {.content = "Role assigned!", .clear_components = true});
 	}
 
 	cTask<> OnInteraction_avatar(const cInteraction&);
@@ -99,6 +98,7 @@ private:
 	cTask<> OnInteraction_rank(const cInteraction&);
 	cTask<> OnInteraction_top(const cInteraction&);
 	cTask<> OnInteraction_button(const cInteraction&);
+	cTask<> OnInteraction_prune(const cInteraction&);
 
 	cTask<> OnGuildCreate(uhGuild guild) override;
 	cTask<> OnGuildRoleCreate(cSnowflake& guild_id, cRole& role) override;

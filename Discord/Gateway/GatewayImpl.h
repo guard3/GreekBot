@@ -97,6 +97,9 @@ private:
 	/* A method that's invoked for every gateway event */
 	void on_event(const cEvent& event);
 
+	class discord_request;
+	class retry_discord_request;
+
 public:
 	implementation(cGateway*, const char*, eIntent);
 	implementation(const implementation&) = delete;
@@ -105,7 +108,8 @@ public:
 
 	implementation& operator=(implementation) = delete;
 
-	cTask<json::value> DiscordRequest(beast::http::verb method, const std::string& target, const json::object* obj, std::initializer_list<cHttpField> fields);
+	cTask<json::value> DiscordRequest(beast::http::verb method, const std::string& target, const json::object* obj, const std::vector<cHttpField>& fields);
+	cTask<json::value> DiscordRequestNoRetry(beast::http::verb method, const std::string& target, const json::object* obj, std::initializer_list<cHttpField> fields);
 
 	const char* GetHttpAuthorization() const noexcept { return m_http_auth.c_str(); }
 	const char* GetToken() const noexcept { return m_http_auth.c_str() + 4; }
