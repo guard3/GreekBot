@@ -1,7 +1,6 @@
 #ifndef _GREEKBOT_GATEWAYIMPL_H_
 #define _GREEKBOT_GATEWAYIMPL_H_
 #include "Gateway.h"
-#include "Discord.h"
 #include "beast.h"
 #include <deque>
 #include <zlib.h>
@@ -108,8 +107,8 @@ public:
 
 	implementation& operator=(implementation) = delete;
 
-	cTask<json::value> DiscordRequest(beast::http::verb method, const std::string& target, const json::object* obj, const std::vector<cHttpField>& fields);
-	cTask<json::value> DiscordRequestNoRetry(beast::http::verb method, const std::string& target, const json::object* obj, std::initializer_list<cHttpField> fields);
+	cTask<json::value> DiscordRequest(beast::http::verb method, const std::string& target, const json::object* obj, const tHttpFields& fields);
+	cTask<json::value> DiscordRequestNoRetry(beast::http::verb method, const std::string& target, const json::object* obj, const tHttpFields& fields);
 
 	const char* GetHttpAuthorization() const noexcept { return m_http_auth.c_str(); }
 	const char* GetToken() const noexcept { return m_http_auth.c_str() + 4; }

@@ -1,6 +1,6 @@
 #pragma once
-#ifndef _GREEKBOT_TASKMANAGER_H_
-#define _GREEKBOT_TASKMANAGER_H_
+#ifndef GREEKBOT_TASK_H
+#define GREEKBOT_TASK_H
 #include <coroutine>
 #include <exception>
 
@@ -38,7 +38,7 @@ private:
 
 	tCoro m_handle;
 
-	cTask(auto&& h) : m_handle(std::forward<tCoro>(h)) {}
+	cTask(tCoro h) : m_handle(h) {}
 };
 
 template<typename T>
@@ -70,4 +70,4 @@ inline void cTask<void>::await_resume() {
 	m_handle.destroy();
 	if (e) std::rethrow_exception(e);
 }
-#endif /* _GREEKBOT_TASKMANAGER_H_ */
+#endif /* GREEKBOT_TASK_H */

@@ -5,28 +5,33 @@ cGateway::cGateway(const char* t, eIntent i) : m_pImpl(cHandle::MakeUnique<imple
 cGateway::~cGateway() = default;
 /* ================================================================================================================== */
 cTask<json::value>
-cGateway::DiscordGet(const std::string& t, std::initializer_list<cHttpField> f) {
+cGateway::DiscordGet(const std::string& t, const tHttpFields& f) {
 	return m_pImpl->DiscordRequest(beast::http::verb::get, t, nullptr, f);
 }
 cTask<json::value>
-cGateway::DiscordPost(const std::string& t, const json::object& obj, std::initializer_list<cHttpField> f) {
-	return m_pImpl->DiscordRequest(beast::http::verb::post, t, &obj, f);
+cGateway::DiscordPost(const std::string& t, const json::object& o, const tHttpFields& f) {
+	return m_pImpl->DiscordRequest(beast::http::verb::post, t, &o, f);
 }
 cTask<json::value>
-cGateway::DiscordPatch(const std::string& t, const json::object& obj, std::initializer_list<cHttpField> f) {
-	return m_pImpl->DiscordRequest(beast::http::verb::patch, t, &obj, f);
+cGateway::DiscordPatch(const std::string& t, const json::object& o, const tHttpFields& f) {
+	return m_pImpl->DiscordRequest(beast::http::verb::patch, t, &o, f);
 }
 cTask<json::value>
-cGateway::DiscordPut(const std::string& t, std::initializer_list<cHttpField> f) {
+cGateway::DiscordPut(const std::string& t, const tHttpFields& f) {
 	return m_pImpl->DiscordRequest(beast::http::verb::put, t, nullptr, f);
 }
 cTask<json::value>
-cGateway::DiscordPut(const std::string& t, const json::object& obj, std::initializer_list<cHttpField> f) {
-	return m_pImpl->DiscordRequest(beast::http::verb::put, t, &obj, f);
+cGateway::DiscordPut(const std::string& t, const json::object& o, const tHttpFields& f) {
+	return m_pImpl->DiscordRequest(beast::http::verb::put, t, &o, f);
 }
 cTask<json::value>
-cGateway::DiscordDelete(const std::string& t, std::initializer_list<cHttpField> f) {
+cGateway::DiscordDelete(const std::string& t, const tHttpFields& f) {
 	return m_pImpl->DiscordRequest(beast::http::verb::delete_, t, nullptr, f);
+}
+/* ================================================================================================================== */
+cTask<json::value>
+cGateway::DiscordPostNoRetry(const std::string& t, const json::object& o, const tHttpFields& f) {
+	return m_pImpl->DiscordRequestNoRetry(beast::http::verb::post, t, &o, f);
 }
 /* ================================================================================================================== */
 cTask<>

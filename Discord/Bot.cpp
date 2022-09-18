@@ -1,5 +1,4 @@
 #include "Bot.h"
-#include "Discord.h"
 
 cTask<>
 cBot::OnReady(uhUser user) {
@@ -10,35 +9,24 @@ cBot::OnReady(uhUser user) {
 
 cTask<std::vector<cRole>>
 cBot::GetGuildRoles(const cSnowflake& guild_id) {
-	try {
-		json::value v = co_await DiscordGet(cUtils::Format("/guilds/%s/roles", guild_id.ToString()));
-		auto& a = v.as_array();
-		std::vector<cRole> result;
-		result.reserve(a.size());
-		for (auto& e : a) {
-			result.emplace_back(e);
-		}
-		co_return result;
+	json::value v = co_await DiscordGet(cUtils::Format("/guilds/%s/roles", guild_id.ToString()));
+	auto& a = v.as_array();
+	std::vector<cRole> result;
+	result.reserve(a.size());
+	for (auto& e : a) {
+		result.emplace_back(e);
 	}
-	catch (const boost::system::system_error& e) {
-		throw xSystemError(e);
-	}
+	co_return result;
 }
 
 cTask<cUser>
-cBot::GetUser(const cSnowflake &user_id) try {
+cBot::GetUser(const cSnowflake &user_id) {
 	co_return cUser(co_await DiscordGet("/users/"s + user_id.ToString()));
-}
-catch (const boost::system::system_error& e) {
-	throw xSystemError(e);
 }
 
 cTask<cMember>
-cBot::GetGuildMember(const cSnowflake &guild_id, const cSnowflake &user_id) try {
+cBot::GetGuildMember(const cSnowflake &guild_id, const cSnowflake &user_id) {
 	co_return cMember(co_await DiscordGet(cUtils::Format("/guilds/%s/members/%s", guild_id.ToString(), user_id.ToString())));
-}
-catch (const boost::system::system_error& e) {
-	throw xSystemError(e);
 }
 
 cTask<>
@@ -53,22 +41,17 @@ cBot::RemoveGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_i
 
 cTask<>
 cBot::UpdateGuildMemberRoles(const cSnowflake& guild_id, const cSnowflake& user_id, const std::vector<chSnowflake>& role_ids) {
-	try {
-		/* Prepare json response */
-		json::object obj;
-		{
-			json::array a;
-			a.reserve(role_ids.size());
-			for (chSnowflake s: role_ids)
-				a.push_back(s->ToString());
-			obj["roles"] = std::move(a);
-		}
-		/* Resolve api path */
-		co_await DiscordPatch(cUtils::Format("/guilds/%s/members/%s", guild_id.ToString(), user_id.ToString()), obj);
+	/* Prepare json response */
+	json::object obj;
+	{
+		json::array a;
+		a.reserve(role_ids.size());
+		for (chSnowflake s: role_ids)
+			a.push_back(s->ToString());
+		obj["roles"] = std::move(a);
 	}
-	catch (const boost::system::system_error& e) {
-		throw xSystemError(e);
-	}
+	/* Resolve api path */
+	co_await DiscordPatch(cUtils::Format("/guilds/%s/members/%s", guild_id.ToString(), user_id.ToString()), obj);
 }
 
 /* Interaction related functions */
@@ -128,11 +111,10 @@ cBot::SendInteractionFollowupMessage(const cInteraction& interaction, eMessageFl
 }
 
 cTask<int>
-cBot::BeginGuildPrune(const cSnowflake &id, int days, const std::string &reason) {
-	json::object obj {
-			{"days", days}
-	};
-	cUtils::PrintErr(json::serialize(obj));
-	auto response = co_await DiscordPost(cUtils::Format("/guilds/%s/prune", id.ToString()), {{ "days", days }});
+cBot::BeginGuildPrune(const cSnowflake &id, int days, std::string reason) {
+	tHttpFields fields;
+	if (!reason.empty())
+		fields.emplace_back("X-Audit-Log-Reason", std::move(reason));
+	auto response = co_await DiscordPostNoRetry(cUtils::Format("/guilds/%s/prune", id.ToString()), {{ "days", days }}, fields);
 	co_return response.at("pruned").as_int64();
 }

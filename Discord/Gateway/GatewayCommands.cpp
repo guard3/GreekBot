@@ -25,16 +25,16 @@ cGateway::implementation::start_heartbeating(int64_t interval) {
 	m_heartbeat_thread = std::thread([this](int64_t interval_int) {
 		auto interval = std::chrono::milliseconds(interval_int);
 		/* Wait for a random amount of time */
-		auto later = std::chrono::system_clock::now() + std::chrono::milliseconds(cUtils::Random(0, interval_int));
-		while (std::chrono::system_clock::now() < later) {
+		auto later = std::chrono::steady_clock::now() + std::chrono::milliseconds(cUtils::Random(0, interval_int));
+		while (std::chrono::steady_clock::now() < later) {
 			if (m_heartbeat_exit.load())
 				return;
 		}
 		/* Begin the heartbeating loop */
 		do {
 			heartbeat();
-			later = std::chrono::system_clock::now() + interval;
-			while (std::chrono::system_clock::now() < later) {
+			later = std::chrono::steady_clock::now() + interval;
+			while (std::chrono::steady_clock::now() < later) {
 				if (m_heartbeat_exit.load())
 					return;
 			}

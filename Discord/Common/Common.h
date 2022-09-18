@@ -7,6 +7,7 @@
 #include <string>
 #include <cinttypes>
 #include <cstring>
+#include "Exception.h"
 
 #define _STR(x) #x
 #define STR(x) _STR(x)

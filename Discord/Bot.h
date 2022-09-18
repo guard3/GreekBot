@@ -9,7 +9,6 @@
 #include <vector>
 #include "User.h"
 #include "Guild.h"
-#include "Discord.h"
 
 struct cMessageOptions {
 	bool clear_content = false;
@@ -88,6 +87,6 @@ public:
 	cTask<> EditInteractionResponse(const cInteraction& interaction, eMessageFlag flags, const cMessageOptions& options = {});
 	cTask<> SendInteractionFollowupMessage(const cInteraction& interaction, eMessageFlag flags, const cMessageOptions& options = {});
 
-	cTask<int> BeginGuildPrune(const cSnowflake& id, int days, const std::string& reason = {});
+	cTask<int> BeginGuildPrune(const cSnowflake& id, int days, std::string reason = {});
 };
 #endif /* _GREEKBOT_BOT_H_ */

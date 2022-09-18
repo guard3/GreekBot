@@ -13,6 +13,13 @@ cGreekBot::OnInteraction_prune(const cInteraction& i) {
 	if (!options.empty())
 		days = options[0].GetValue<APP_COMMAND_OPT_INTEGER>();
 
-	int pruned = co_await BeginGuildPrune(*pGuildId, days, "Failed to get a rank");
-	co_await EditInteractionResponse(i, MESSAGE_FLAG_EPHEMERAL, { .content = cUtils::Format("Pruned **%d** member%s for **%d** days of inactivity.", pruned, pruned == 1 ? "" : "s", days) });
+	int64_t retry_after;
+	try {
+		int pruned = co_await BeginGuildPrune(*pGuildId, days, "Failed to get a rank");
+		co_return co_await EditInteractionResponse(i, MESSAGE_FLAG_EPHEMERAL, {.content = cUtils::Format("Pruned **%d** member%s for **%d** day%s of inactivity.", pruned, pruned == 1 ? "" : "s", days, days == 1 ? "" : "s")});
+	}
+	catch (const xRateLimitError& e) {
+		retry_after = e.retry_after();
+	}
+	co_await EditInteractionResponse(i, MESSAGE_FLAG_NONE, { .content = cUtils::Format("Rate limited. Try again after **%dms**.", retry_after) });
 }
