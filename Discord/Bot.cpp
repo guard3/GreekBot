@@ -2,7 +2,7 @@
 
 cTask<>
 cBot::OnReady(uhUser user) {
-	cUtils::PrintLog("Connected as: %s#%s %s", user->GetUsername(), user->GetDiscriminator(), user->GetId().ToString());
+	cUtils::PrintMsg("Connected as: %s#%s %s", user->GetUsername(), user->GetDiscriminator(), user->GetId().ToString());
 	m_user = std::move(user);
 	co_return;
 }

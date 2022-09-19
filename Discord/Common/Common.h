@@ -2,12 +2,13 @@
 #ifndef _GREEKBOT_COMMON_H_
 #define _GREEKBOT_COMMON_H_
 #include <memory>
-#include <type_traits>
+//#include <type_traits>
 #include <random>
 #include <string>
 #include <cinttypes>
 #include <cstring>
 #include "Exception.h"
+#include "Utils.h"
 
 #define _STR(x) #x
 #define STR(x) _STR(x)
@@ -21,14 +22,10 @@
 using namespace std::literals;
 
 /* Boost Json forward declarations */
-namespace boost {
-	namespace json {
-		class value;
-		class object;
-	}
-	namespace system {
-		class system_error;
-	}
+namespace boost::json {
+	class value;
+
+	class object;
 }
 namespace json = boost::json;
 
@@ -50,16 +47,6 @@ using schHandle = std::shared_ptr<const T>;
 class cHandle final {
 private:
 	cHandle() = default;
-
-	template<typename T> struct is_handle              : std::false_type {};
-	template<typename T> struct is_handle<T*>          : std::true_type  {};
-	template<typename T> struct is_handle<uhHandle<T>> : std::true_type  {};
-	template<typename T> struct is_handle<shHandle<T>> : std::true_type  {};
-
-	template<typename T> struct remove_h { typedef T Type; };
-	template<typename T> struct remove_h<hHandle<T>> { typedef T Type; };
-	template<typename T> struct remove_h<uhHandle<T>> { typedef T Type; };
-	template<typename T> struct remove_h<shHandle<T>> { typedef T Type; };
 
 public:
 	template<typename T, typename... Args>
@@ -93,17 +80,6 @@ public:
 	static uchHandle<T> MakeUniqueConstNoEx(Args&&... args) { return MakeUniqueNoEx<T>(std::forward<Args>(args)...); }
 	template<typename T, typename... Args>
 	static schHandle<T> MakeSharedConstNoEx(Args&&... args) { return MakeSharedNoEx<T>(std::forward<Args>(args)...); }
-
-	template<typename T>
-	static inline constexpr bool IsHandleType = is_handle<T>::value;
-	template<typename T>
-	using RemoveHandle = typename remove_h<std::remove_cv_t<T>>::Type;
-	template<typename T>
-	using RemoveHandleC = std::remove_const_t<RemoveHandle<T>>;
-	template<typename T>
-	using RemoveHandleV = std::remove_volatile_t<RemoveHandle<T>>;
-	template<typename T>
-	using RemoveHandleCV = std::remove_cv_t<RemoveHandle<T>>;
 };
 
 /* ========== Discord snowflake ========== */
@@ -162,66 +138,4 @@ public:
 	operator bool() const { return m_value != NO_COLOR; }
 	bool operator!() const { return m_value == NO_COLOR; }
 };
-
-namespace hidden {
-	template<typename T, typename = void> struct d;
-	template<typename T> struct d<T, std::enable_if_t<std::is_integral_v<T>>>       { typedef std::uniform_int_distribution<T>  type; };
-	template<typename T> struct d<T, std::enable_if_t<std::is_floating_point_v<T>>> { typedef std::uniform_real_distribution<T> type; };
-	template<typename T> using distribution = typename d<T>::type;
-	template<typename T> using range = typename distribution<T>::param_type;
-}
-
-/* A helper class with various useful functions */
-class cUtils final {
-private:
-	/* Static random generators */
-	static std::random_device ms_rd;
-	static std::mt19937       ms_gen;
-	static std::mt19937_64    ms_gen64;
-
-	template<typename T>
-	static auto resolve_fargs(T&& arg) { return arg; }
-	static auto resolve_fargs(std::string&& str) { return str.c_str(); }
-	static auto resolve_fargs(std::string& str) { return str.c_str(); }
-	static auto resolve_fargs(const std::string& str) { return str.c_str(); }
-
-	static void print(FILE*, const char*, char, const char*, ...);
-	static std::string format(const char*, ...);
-	/* Private constructor */
-	cUtils() = default;
-
-public:
-	/* Random functions */
-	template<typename T1, typename T2, typename R = std::common_type_t<T1, T2>>
-	static R Random(T1 a, T2 b) {
-		/* Static uniform distribution */
-		static hidden::distribution<R> dist;
-		/* Generate random number */
-		if constexpr(sizeof(R) < 8)
-			return dist(ms_gen,   hidden::range<R>(a, b));
-		else
-			return dist(ms_gen64, hidden::range<R>(a, b));
-	}
-	/* Logger functions */
-	template<char nl = '\n', typename... Args>
-	static void PrintErr(const char* fmt, Args&&... args) {
-		print(stderr, "[ERR] ", nl, fmt, resolve_fargs(std::forward<Args>(args))...);
-	}
-	template<char nl = '\n', typename... Args>
-	static void PrintLog(const char* fmt, Args&&... args) {
-		print(stdout, "[LOG] ", nl, fmt, resolve_fargs(std::forward<Args>(args))...);
-	}
-	template<char nl = '\n'>
-	static void PrintErr(const std::string& str) { PrintErr<nl>(str.c_str()); }
-	template<char nl = '\n'>
-	static void PrintLog(const std::string& str) { PrintLog<nl>(str.c_str()); }
-	/* C style formatting for std::string */
-	template<typename... Args>
-	static std::string Format(const char* fmt, Args&&... args) {
-		return format(fmt, resolve_fargs(std::forward<Args>(args))...);
-	}
-	/* Resolving the OS we're running on */
-	static const char* GetOS();
-};
-
 #endif /* _GREEKBOT_COMMON_H_ */
