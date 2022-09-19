@@ -3,27 +3,43 @@
 #define GREEKBOT_TASK_H
 #include <coroutine>
 #include <exception>
+#include <concepts>
+#include <memory>
+
+namespace discord::detail {
+	template<typename> struct promise;
+	template<typename> struct promise_base;
+}
 
 template<typename T = void>
 class cTask final {
 public:
-	struct promise_type;
+	typedef discord::detail::promise<T> promise_type;
 
 	bool await_ready() { return m_handle.done(); }
 	void await_suspend(std::coroutine_handle<> h);
 	T    await_resume();
 
 private:
-	typedef std::coroutine_handle<promise_type> tCoro;
-	struct promise_type_base {
+	template<typename>
+	friend class discord::detail::promise_base;
+	std::coroutine_handle<promise_type> m_handle;
+
+	cTask(std::coroutine_handle<promise_type> h) : m_handle(h) {}
+};
+
+namespace discord::detail {
+/* ================================================================================================================== */
+	template<typename R>
+	struct promise_base {
 		std::coroutine_handle<> caller; // The task coroutine caller
 		std::exception_ptr      except; // Any unhandled exception that might occur
 
-		cTask get_return_object() { return tCoro::from_promise(static_cast<promise_type&>(*this)); }
+		cTask<R> get_return_object() { return std::coroutine_handle<promise<R>>::from_promise(static_cast<promise<R>&>(*this)); }
 		auto initial_suspend() noexcept { return std::suspend_never{}; }
 		auto   final_suspend() noexcept {
 			struct awaitable {
-				std::coroutine_handle<>& caller;
+				std::coroutine_handle<> caller;
 				bool await_ready() noexcept { return false; }
 				bool await_suspend(std::coroutine_handle<> h) noexcept {
 					if (caller) caller();
@@ -35,22 +51,24 @@ private:
 		}
 		void unhandled_exception() noexcept { except = std::current_exception(); }
 	};
-
-	tCoro m_handle;
-
-	cTask(tCoro h) : m_handle(h) {}
-};
-
-template<typename T>
-struct cTask<T>::promise_type : promise_type_base {
-	std::unique_ptr<T> value;
-	void return_value(auto&& v) { value = std::make_unique<T>(std::forward<T>(v)); }
-};
-
-template<>
-struct cTask<void>::promise_type : promise_type_base {
-	void return_void() {}
-};
+/* ================================================================================================================== */
+	template<typename R>
+	struct promise : promise_base<R> {
+		std::unique_ptr<R> value; // By default, an object might not be default-initializable, so we use a pointer
+		void return_value(auto&& v) { value = std::make_unique<R>(std::forward<R>(v)); }
+	};
+/* ================================================================================================================== */
+	template<typename R> requires std::default_initializable<R> && std::movable<R>
+	struct promise<R> : promise_base<R> {
+		R value;
+		void return_value(auto&& v) { value = std::forward<R>(v); }
+	};
+/* ================================================================================================================== */
+	template<>
+	struct promise<void> : promise_base<void> {
+		void return_void() {}
+	};
+}
 
 template<typename T>
 inline void cTask<T>::await_suspend(std::coroutine_handle<> h) { m_handle.promise().caller = h; }
@@ -58,10 +76,13 @@ inline void cTask<T>::await_suspend(std::coroutine_handle<> h) { m_handle.promis
 template<typename T>
 inline T cTask<T>::await_resume() {
 	auto e = std::move(m_handle.promise().except);
-	auto p = std::move(m_handle.promise().value);
+	auto v = std::move(m_handle.promise().value);
 	m_handle.destroy();
 	if (e) std::rethrow_exception(e);
-	return std::move(*p);
+	if constexpr (std::default_initializable<T> && std::movable<T>)
+		return std::move(v);
+	else
+		return std::move(*v);
 }
 
 template<>
