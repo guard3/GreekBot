@@ -1,0 +1,38 @@
+{
+	"name": "ban",
+	"description": "Ban a member.",
+	"default_member_permissions": "4",
+	"dm_permission": false,
+	"options": [
+		{
+			"name": "user",
+			"type": 6,
+			"description": "The user to be banned",
+			"required": true
+		},
+		{
+			"name": "delete",
+			"type": 3,
+			"description": "How much of their recent message history to delete",
+			"choices": [
+				{
+					"name": "Previous hour",
+					"value": "0"
+				},
+				{
+					"name": "Previous day",
+					"value": "1"
+				},
+				{
+					"name": "Previous week",
+					"value": "3"
+				}
+			]
+		},
+		{
+			"name": "reason",
+			"type": 3,
+			"description": "The reason for the ban; the user will be notified in DM"
+		}
+	]
+}

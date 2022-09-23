@@ -2,7 +2,7 @@
 #ifndef _GREEKBOT_COMMON_H_
 #define _GREEKBOT_COMMON_H_
 #include <memory>
-//#include <type_traits>
+#include <chrono>
 #include <random>
 #include <string>
 #include <cinttypes>
@@ -81,8 +81,39 @@ public:
 	template<typename T, typename... Args>
 	static schHandle<T> MakeSharedConstNoEx(Args&&... args) { return MakeSharedNoEx<T>(std::forward<Args>(args)...); }
 };
-
-/* ========== Discord snowflake ========== */
+/* ========== Discord time point ==================================================================================== */
+class cDiscordClock;
+template<typename Duration>
+using tDiscordTime = std::chrono::time_point<cDiscordClock, Duration>;
+/* ========== Custom clock starting from Discord Epoch (1-1-2015) =================================================== */
+class cDiscordClock final {
+public:
+	/* Necessary attributes to meet requirements for 'Clock' */
+	typedef std::chrono::milliseconds duration;
+	typedef duration::rep rep;
+	typedef duration::period period;
+	typedef std::chrono::time_point<cDiscordClock> time_point;
+	static inline constexpr bool is_steady = false;
+	/* Converting to and from std::chrono::system_clock time_points similar to std::chrono::utc_clock */
+	template<typename Duration>
+	static time_point from_sys(const std::chrono::sys_time<Duration>& p) noexcept {
+		using namespace std::chrono;
+		return time_point(duration_cast<milliseconds>(p.time_since_epoch()) - 1420070400000ms);
+	}
+	template<typename Duration>
+	static auto to_sys(const tDiscordTime<Duration>& p) noexcept {
+		using namespace std::chrono;
+		typedef std::common_type_t<Duration, system_clock::duration> tCommon;
+		return sys_time<tCommon>(duration_cast<tCommon>(p.time_since_epoch() + 1420070400000ms));
+	}
+	/* Get current time starting from Discord Epoch */
+	static time_point now() noexcept { return from_sys(std::chrono::system_clock::now()); }
+};
+/* ========== Discord time point family ============================================================================= */
+using tDiscordDays         = tDiscordTime<std::chrono::days>;
+using tDiscordSeconds      = tDiscordTime<std::chrono::seconds>;
+using tDiscordMilliseconds = tDiscordTime<std::chrono::milliseconds>;
+/* ========== Discord snowflake ===================================================================================== */
 class cSnowflake final {
 private:
 	char     m_str[24]; // The snowflake as a string
@@ -94,22 +125,22 @@ public:
 	cSnowflake(const char* str) noexcept : m_int(strtoull(str, nullptr, 10)) { strcpy(m_str, str); }
 	cSnowflake(const json::value& v);
 
-	bool operator==(const cSnowflake& o) const { return m_int == o.m_int; }
-	bool operator!=(const cSnowflake& o) const { return m_int != o.m_int; }
-	bool operator< (const cSnowflake& o) const { return m_int <  o.m_int; }
-	bool operator> (const cSnowflake& o) const { return m_int >  o.m_int; }
-	bool operator<=(const cSnowflake& o) const { return m_int <= o.m_int; }
-	bool operator>=(const cSnowflake& o) const { return m_int >= o.m_int; }
+	bool operator==(const cSnowflake& o) const noexcept { return m_int == o.m_int; }
+	bool operator!=(const cSnowflake& o) const noexcept { return m_int != o.m_int; }
+	bool operator< (const cSnowflake& o) const noexcept { return m_int <  o.m_int; }
+	bool operator> (const cSnowflake& o) const noexcept { return m_int >  o.m_int; }
+	bool operator<=(const cSnowflake& o) const noexcept { return m_int <= o.m_int; }
+	bool operator>=(const cSnowflake& o) const noexcept { return m_int >= o.m_int; }
 
 	/* Attributes */
-	const char *ToString() const { return m_str; }
-	uint64_t    ToInt()    const { return m_int; }
+	const char *ToString() const noexcept { return m_str; }
+	uint64_t       ToInt() const noexcept { return m_int; }
 	
 	/* Snowflake components - https://discord.com/developers/docs/reference#snowflakes */
-	time_t GetTimestamp()         const { return (m_int >> 22) / 1000 + 1420070400; }
-	int    GetInternalWorkerID()  const { return (m_int >> 17) & 0x1F;              }
-	int    GetInternalProcessID() const { return (m_int >> 12) & 0x1F;              }
-	int    GetIncrement()         const { return  m_int        & 0xFFF;             }
+	tDiscordMilliseconds GetTimestamp() const noexcept { return tDiscordMilliseconds(std::chrono::milliseconds(m_int >> 22)); }
+	int           GetInternalWorkerID() const noexcept { return (int)((m_int >> 17) & 0x01F); }
+	int          GetInternalProcessID() const noexcept { return (int)((m_int >> 12) & 0x01F); }
+	int                  GetIncrement() const noexcept { return (int) (m_int        & 0xFFF); }
 };
 typedef   hHandle<cSnowflake>   hSnowflake; // handle
 typedef  chHandle<cSnowflake>  chSnowflake; // const handle

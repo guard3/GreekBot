@@ -99,6 +99,7 @@ private:
 	cTask<> OnInteraction_top(const cInteraction&);
 	cTask<> OnInteraction_button(const cInteraction&);
 	cTask<> OnInteraction_prune(const cInteraction&);
+	cTask<> OnInteraction_ban(const cInteraction&);
 
 	cTask<> OnGuildCreate(uhGuild guild) override;
 	cTask<> OnGuildRoleCreate(cSnowflake& guild_id, cRole& role) override;
