@@ -111,7 +111,7 @@ cGateway::implementation::on_read(beast::error_code ec, size_t bytes_read) {
 				break;
 			case OP_HELLO:
 				/* Immediately start heartbeating */
-				start_heartbeating(v.at("d").at("heartbeat_interval").as_int64());
+				start_heartbeating(chrono::milliseconds(v.at("d").at("heartbeat_interval").as_int64()));
 				/* If there is an active session, try to resume, otherwise identify */
 				m_session_id.empty() ? identify() : resume();
 				break;

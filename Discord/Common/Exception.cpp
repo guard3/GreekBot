@@ -16,5 +16,5 @@ xDiscordError::xDiscordError(const json::object& o):
 xRateLimitError::xRateLimitError(const json::value& v) : xRateLimitError(v.as_object()) {}
 xRateLimitError::xRateLimitError(const json::object& o):
 	std::runtime_error(o.at("message").as_string().c_str()),
-	m_retry_after((int64_t)(o.at("retry_after").as_double() * 1000.0)),
+	m_retry_after(chrono::duration_cast<chrono::milliseconds>(chrono::duration<double>(o.at("retry_after").as_double()))),
 	m_global(o.at("global").as_bool()) {}

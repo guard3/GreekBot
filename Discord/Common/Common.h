@@ -10,6 +10,8 @@
 #include "Exception.h"
 #include "Utils.h"
 
+namespace chrono = std::chrono;
+
 #define _STR(x) #x
 #define STR(x) _STR(x)
 

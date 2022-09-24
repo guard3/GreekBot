@@ -92,7 +92,7 @@ private:
 	const json::object* m_object;
 	const tHttpFields&  m_fields;
 
-	std::chrono::time_point<std::chrono::steady_clock> m_target_time;
+	chrono::time_point<chrono::steady_clock> m_target_time;
 	uhHandle<cTask<json::value>> m_result;
 	std::exception_ptr m_except;
 
@@ -113,13 +113,13 @@ private:
 	}
 
 public:
-	retry_discord_request(cGateway::implementation* this_, int64_t r, beast::http::verb m, const std::string& t, const json::object* o, const tHttpFields& f) :
+	retry_discord_request(cGateway::implementation* this_, chrono::milliseconds r, beast::http::verb m, const std::string& t, const json::object* o, const tHttpFields& f) :
 		m_parent(this_),
 		m_method(m),
 		m_target(t),
 		m_object(o),
 		m_fields(f),
-		m_target_time(std::chrono::steady_clock::now() + std::chrono::milliseconds(r)) {
+		m_target_time(chrono::steady_clock::now() + r) {
 		cUtils::PrintLog("Rate limited! Waiting for %dms", r);
 	}
 
@@ -133,7 +133,7 @@ public:
 
 cTask<json::value>
 cGateway::implementation::DiscordRequest(beast::http::verb m, const std::string& t, const json::object* o, const tHttpFields& f) {
-	int64_t retry_after;
+	chrono::milliseconds retry_after;
 	try {
 		co_return co_await DiscordRequestNoRetry(m, t, o, f);
 	}

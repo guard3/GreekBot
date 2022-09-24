@@ -83,7 +83,7 @@ private:
 	void resume();
 	void identify();
 	void heartbeat();
-	void start_heartbeating(int64_t);
+	void start_heartbeating(chrono::milliseconds);
 	void stop_heartbeating();
 	/* Websocket message queuing */
 	void send(std::string);
