@@ -118,3 +118,22 @@ cBot::BeginGuildPrune(const cSnowflake &id, int days, std::string reason) {
 	auto response = co_await DiscordPostNoRetry(cUtils::Format("/guilds/%s/prune", id.ToString()), {{ "days", days }}, fields);
 	co_return response.at("pruned").as_int64();
 }
+
+cTask<cChannel>
+cBot::CreateDM(const cSnowflake& recipient_id) {
+	co_return cChannel {
+		co_await DiscordPost("/users/@me/channels", {{ "recipient_id", recipient_id.ToString() }})
+	};
+}
+
+cTask<cMessage>
+cBot::CreateMessage(const cSnowflake& channel_id, eMessageFlag flags, const cMessageOptions& options) {
+	co_return cMessage {
+		co_await DiscordPost(cUtils::Format("/channels/%s/messages", channel_id.ToString()), options.ToJson(flags))
+	};
+}
+
+cTask<cMessage>
+cBot::CreateDMMessage(const cSnowflake& recipient_id, eMessageFlag flags, const cMessageOptions& options) {
+	co_return co_await CreateMessage((co_await CreateDM(recipient_id)).GetId(), flags, options);
+}

@@ -9,6 +9,7 @@
 #include <vector>
 #include "User.h"
 #include "Guild.h"
+#include "Channel.h"
 
 struct cMessageOptions {
 	bool clear_content = false;
@@ -58,8 +59,6 @@ private:
 
 	cTask<> OnReady(uhUser) override;
 
-	std::vector<uchRole> get_guild_roles(const cSnowflake& guild_id);
-
 protected:
 	using cGateway::OnInteractionCreate;
 	using cGateway::OnGuildCreate;
@@ -88,5 +87,10 @@ public:
 	cTask<> SendInteractionFollowupMessage(const cInteraction& interaction, eMessageFlag flags, const cMessageOptions& options = {});
 
 	cTask<int> BeginGuildPrune(const cSnowflake& id, int days, std::string reason = {});
+
+	cTask<cChannel> CreateDM(const cSnowflake& recipient_id);
+	cTask<cMessage> CreateMessage(const cSnowflake& channel_id, eMessageFlag flags, const cMessageOptions& options = {});
+
+	cTask<cMessage> CreateDMMessage(const cSnowflake& recipient_id, eMessageFlag flags, const cMessageOptions& options = {});
 };
 #endif /* _GREEKBOT_BOT_H_ */

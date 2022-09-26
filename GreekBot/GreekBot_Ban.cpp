@@ -2,6 +2,7 @@
 
 cTask<>
 cGreekBot::OnInteraction_ban(const cInteraction& i) {
+	co_await AcknowledgeInteraction(i);
 	/* Collect interaction options */
 	chSnowflake guild_id = i.GetGuildId();
 	if (!guild_id)
@@ -32,5 +33,10 @@ cGreekBot::OnInteraction_ban(const cInteraction& i) {
 	std::string reason = options.size() > 2 ? options[2].GetValue<APP_COMMAND_OPT_STRING>() : "Unspecified";
 
 	/* Acknowledge the interaction first */
-	co_await RespondToInteraction(i, MESSAGE_FLAG_NONE, {.content = cUtils::Format("Inshallah I'll ban <@%s> with reason: %s", user->GetId().ToString(), reason)});
+
+	co_await CreateDMMessage(user->GetId(), MESSAGE_FLAG_NONE, {
+		.content = cUtils::Format("You've been banned from *guild name tba* with reason:\n```%s```", reason)
+	});
+	co_await EditInteractionResponse(i, MESSAGE_FLAG_NONE, {.content = "Soon:tm:"});
+
 }
