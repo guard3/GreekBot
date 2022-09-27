@@ -40,7 +40,24 @@ cGreekBot::OnInteraction_ban(const cInteraction& i) {
 			co_await CreateDMMessage(user->GetId(), MESSAGE_FLAG_NONE, {
 				.content = cUtils::Format("You've been banned from **%s** with reason:\n```%s```", m_guilds.at(*pGuildId)->GetName(), reason)
 			});
-			co_await EditInteractionResponse(i, MESSAGE_FLAG_NONE, {.content = "Soon:tm:"});
+			co_await CreateGuildBan(*pGuildId, user->GetId(), delete_messages, reason);
+
+			/* TODO: std::string for cButton, like plz */
+			std::string custom_id = cUtils::Format("ban_%s", user->GetId().ToString());
+			co_await EditInteractionResponse(i, MESSAGE_FLAG_NONE, {
+				.content = "Soon:tm:",
+				.components = {
+					cActionRow {
+						cButton<BUTTON_STYLE_DANGER> {
+							custom_id.c_str(),
+							"Revoke ban"
+						}
+					}
+				},
+				.embeds = {
+					cEmbed::CreateBuilder().SetAuthor(cUtils::Format("%s#%s was banned", user->GetUsername(), user->GetDiscriminator()), {}, user->GetAvatarUrl()).AddField("Reason", reason).Build()
+				}
+			});
 			co_return;
 		}
 	}

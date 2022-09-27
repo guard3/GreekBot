@@ -137,3 +137,11 @@ cTask<cMessage>
 cBot::CreateDMMessage(const cSnowflake& recipient_id, eMessageFlag flags, const cMessageOptions& options) {
 	co_return co_await CreateMessage((co_await CreateDM(recipient_id)).GetId(), flags, options);
 }
+
+cTask<>
+cBot::CreateGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, chrono::seconds delete_message_seconds, const std::string& reason) {
+	tHttpFields fields;
+	if (!reason.empty())
+		fields.emplace_back("X-Audit-Log-Reason", reason);
+	co_await DiscordPut(cUtils::Format("/guilds/%s/bans/%s", guild_id.ToString(), user_id.ToString()), {{ "delete_message_seconds", delete_message_seconds.count() }}, fields);
+}

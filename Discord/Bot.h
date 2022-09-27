@@ -92,5 +92,6 @@ public:
 	cTask<cMessage> CreateMessage(const cSnowflake& channel_id, eMessageFlag flags, const cMessageOptions& options = {});
 
 	cTask<cMessage> CreateDMMessage(const cSnowflake& recipient_id, eMessageFlag flags, const cMessageOptions& options = {});
+	cTask<> CreateGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, chrono::seconds delete_message_seconds = chrono::seconds(0), const std::string& reason = {});
 };
 #endif /* _GREEKBOT_BOT_H_ */
