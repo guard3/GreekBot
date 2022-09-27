@@ -2,41 +2,48 @@
 
 cTask<>
 cGreekBot::OnInteraction_ban(const cInteraction& i) {
+	/* Acknowledge the interaction first */
 	co_await AcknowledgeInteraction(i);
 	/* Collect interaction options */
-	chSnowflake guild_id = i.GetGuildId();
-	if (!guild_id)
-		co_return;
+	try {
+		if (chSnowflake pGuildId = i.GetGuildId(); pGuildId) {
+			/* Parse options */
+			chUser user = nullptr;
+			chrono::seconds delete_messages = chrono::days(7);
+			std::string reason = "Unspecified";
+			auto &options = i.GetData<INTERACTION_APPLICATION_COMMAND>()->Options;
+			for (auto& opt : options) {
+				if (0 == strcmp(opt.GetName(), "user"))
+					user = opt.GetValue<APP_COMMAND_OPT_USER>();
+				else if (0 == strcmp(opt.GetName(), "delete")) {
+					/* Convert the received value to int */
+					int value = cUtils::ParseInt(options[1].GetValue<APP_COMMAND_OPT_STRING>());
+					/* Deduce delete messages duration */
+					switch (value) {
+						case 0:
+							delete_messages = chrono::hours(1);
+							break;
+						case 1:
+							delete_messages = chrono::days(1);
+							break;
+						default:
+							break;
+					}
+				}
+				else if (0 == strcmp(opt.GetName(), "reason"))
+					reason = opt.GetValue<APP_COMMAND_OPT_STRING>();
+			}
+			/* Making sure we're not banning ourselves */
+			if (user->GetId() == GetUser()->GetId())
+				co_return co_await EditInteractionResponse(i, MESSAGE_FLAG_NONE, { .content = "Pfffff, as if I'm gonna ban myself. Shame!" });
 
-	auto& options = i.GetData<INTERACTION_APPLICATION_COMMAND>()->Options;
-	chUser user = options[0].GetValue<APP_COMMAND_OPT_USER>();
-	int delete_seconds = 604800; // 7 days by default
-	if (options.size() > 1) {
-		/* Convert the received value to int */
-		char* end;
-		const char* s = options[1].GetValue<APP_COMMAND_OPT_STRING>();
-		unsigned long long value = strtoull(s, &end, 10);
-		if (*end)
+			co_await CreateDMMessage(user->GetId(), MESSAGE_FLAG_NONE, {
+				.content = cUtils::Format("You've been banned from **%s** with reason:\n```%s```", m_guilds.at(*pGuildId)->GetName(), reason)
+			});
+			co_await EditInteractionResponse(i, MESSAGE_FLAG_NONE, {.content = "Soon:tm:"});
 			co_return;
-		/* Deduce delete messages duration */
-		switch (value) {
-			case 0:
-				delete_seconds = 3600; // 1 hour
-				break;
-			case 1:
-				delete_seconds = 24 * 3600; // 24 hours
-				break;
-			default:
-				break;
 		}
 	}
-	std::string reason = options.size() > 2 ? options[2].GetValue<APP_COMMAND_OPT_STRING>() : "Unspecified";
-
-	/* Acknowledge the interaction first */
-
-	co_await CreateDMMessage(user->GetId(), MESSAGE_FLAG_NONE, {
-		.content = cUtils::Format("You've been banned from *guild name tba* with reason:\n```%s```", reason)
-	});
-	co_await EditInteractionResponse(i, MESSAGE_FLAG_NONE, {.content = "Soon:tm:"});
-
+	catch (...) {}
+	co_await EditInteractionResponse(i, MESSAGE_FLAG_NONE, { .content = "An unexpected error has occurred, please try again later." });
 }

@@ -214,11 +214,20 @@ cGateway::implementation::get_gateway_info() {
 	/* Get gateway info object synchronously */
 	std::atomic_bool bDone = false;
 	json::value v;
+	std::exception_ptr except;
 	[&]() -> cTask<> {
-		v = co_await m_parent->DiscordGet("/gateway/bot");
-		bDone = true;
+		try {
+			v = co_await m_parent->DiscordGet("/gateway/bot");
+			bDone = true;
+		}
+		catch (...) {
+			except = std::current_exception();
+		}
 	}();
-	while (!bDone);
+	do {
+		if (except)
+			std::rethrow_exception(except);
+	} while (!bDone);
 	return cGatewayInfo(v);
 }
 /* ================================================================================================================== */

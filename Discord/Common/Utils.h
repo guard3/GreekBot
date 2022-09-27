@@ -4,6 +4,7 @@
 #include <random>
 #include <string>
 #include <concepts>
+#include <cstdlib>
 
 namespace discord::detail {
 	/* Generic random distribution types */
@@ -14,15 +15,13 @@ namespace discord::detail {
 	}
 	template<typename T> using distribution = typename distribution_detail::d<T>::type;
 	template<typename T> using range        = typename distribution<T>::param_type;
-	/* Convert std::string-like args to c-strings */
-	namespace va_arg_detail {
-		template<typename S> concept string_like = requires(S&& s) { { s.c_str() } -> std::convertible_to<const char*>; };
-
-		template<typename T>    struct a    { static auto get(T &&arg) { return arg; } };
-		template<string_like S> struct a<S> { static auto get(S &&arg) { return static_cast<const char*>(arg.c_str()); } };
-	}
-	template<typename T> static inline auto resolve_va_arg(T&& arg) { return va_arg_detail::a<T>::get(std::forward<T>(arg)); }
 }
+
+class xNumberFormatError : public std::invalid_argument {
+public:
+	explicit xNumberFormatError(const char* str) : std::invalid_argument(str) {}
+	explicit xNumberFormatError(const std::string& str) : xNumberFormatError(str.c_str()) {}
+};
 
 /* A helper class with various useful functions */
 class cUtils final {
@@ -33,6 +32,14 @@ private:
 	/* Non templated static functions */
 	static void print(FILE*, const char*, char, const char*, ...);
 	static std::string format(const char*, ...);
+
+	template<typename T>
+	static auto resolve_va_arg(T&& arg) {
+		if constexpr (requires { {arg.c_str()} -> std::convertible_to<const char*>; })
+			return static_cast<const char*>(arg.c_str());
+		else
+			return arg;
+	}
 	/* Private constructor */
 	cUtils() = default;
 public:
@@ -72,8 +79,45 @@ public:
 		using namespace discord::detail;
 		return format(resolve_va_arg(std::forward<Args>(args))...);
 	}
+	/* Converting a string to int */
+	template<std::integral Result = int, typename String>
+	static Result ParseInt(String &&str) {
+		Result result;
+		/* Resolve string argument */
+		const char* s;
+		if constexpr (requires { { str.c_str() } -> std::convertible_to<const char*>; })
+			s = static_cast<const char*>(str.c_str());
+		else
+			s = str;
+		/* Clear errno */
+		errno = 0;
+		/* Parse string */
+		char* end;
+		if constexpr (std::same_as<Result, long long>)
+			result = strtoll(s, &end, 10);
+		else if constexpr (std::same_as<Result, unsigned long long>)
+			result = strtoull(s, &end, 10);
+		else if constexpr (std::unsigned_integral<Result>) {
+			auto r = strtoul(s, &end, 10);
+			result = static_cast<Result>(r);
+			if (result != r) goto LABEL_THROW_RANGE;
+		}
+		else {
+			auto r = strtol(s, &end, 10);
+			result = static_cast<Result>(r);
+			if (result != r) goto LABEL_THROW_RANGE;
+		}
+		/* Check for range errors */
+		if (errno == ERANGE) {
+			LABEL_THROW_RANGE:
+			throw xNumberFormatError("Parsed number is out of range");
+		}
+		/* Check for success */
+		if (*end)
+			throw xNumberFormatError("String can't be parsed into an integer");
+		return result;
+	}
 	/* Resolving the OS we're running on */
 	static const char* GetOS();
 };
-
 #endif //GREEKBOT_UTILS_H

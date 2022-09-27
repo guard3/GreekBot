@@ -28,8 +28,9 @@ cGreekBot::OnGuildCreate(uhGuild guild) {
 		m_lmg.roles = std::move(guild->Roles);
 		m_lmg.sorted_roles.clear();
 		/* Save guild object */
-		m_lmg.guild = std::move(guild);
+		m_lmg.guild = cHandle::MakeUnique<cGuild>(*guild);
 	}
+	m_guilds[guild->GetId()] = std::move(guild);
 	co_return;
 }
 
@@ -71,28 +72,22 @@ cGreekBot::OnInteractionCreate(const cInteraction& interaction) {
 		switch (data->GetCommandId().ToInt()) {
 			case 878391425568473098:
 				/* avatar */
-				co_await OnInteraction_avatar(interaction);
-				break;
+				co_return co_await OnInteraction_avatar(interaction);
 			case 874634186374414356:
 				/* role */
-				co_await OnInteraction_role(interaction);
-				break;
+				co_return co_await OnInteraction_role(interaction);
 			case 938199801420456066:
 				/* rank */
-				co_await OnInteraction_rank(interaction);
-				break;
+				co_return co_await OnInteraction_rank(interaction);
 			case 938863857466757131:
 				/* top */
-				co_await OnInteraction_top(interaction);
-				break;
+				co_return co_await OnInteraction_top(interaction);
 			case 1020026874119864381:
 				/* prune */
-				co_await OnInteraction_prune(interaction);
-				break;
+				co_return co_await OnInteraction_prune(interaction);
 			case 1022285237260140674:
 				/* ban */
-				co_await OnInteraction_ban(interaction);
-				break;
+				co_return co_await OnInteraction_ban(interaction);
 			case 904462004071313448:
 				/* connect */
 				//OnInteraction_connect(&interaction);

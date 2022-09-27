@@ -7,6 +7,17 @@
 /* Define custom message component ids; used for responding to component interactions */
 #define CMP_ID_BUTTON_RANK_HELP 0
 
+/* Specialize std::hash for cSnowflake to use in unordered maps */
+namespace std {
+	template<>
+	class hash<cSnowflake> {
+	public:
+		size_t operator()(const cSnowflake& snowflake) const {
+			return hash<uint64_t>()(snowflake.ToInt());
+		}
+	};
+}
+
 class cGreekBot final : public cBot {
 private:
 	enum eLmgProficiencyRoleId {
@@ -37,6 +48,8 @@ private:
 		std::vector<cRole> roles;
 		std::vector<chRole> sorted_roles;
 	} m_lmg;
+
+	std::unordered_map<cSnowflake, uhGuild> m_guilds;
 
 	cColor get_lmg_member_color(const cMember&);
 
