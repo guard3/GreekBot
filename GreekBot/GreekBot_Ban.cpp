@@ -45,7 +45,6 @@ cGreekBot::OnInteraction_ban(const cInteraction& i) {
 			/* TODO: std::string for cButton, like plz */
 			std::string custom_id = cUtils::Format("ban_%s", user->GetId().ToString());
 			co_await EditInteractionResponse(i, MESSAGE_FLAG_NONE, {
-				.content = "Soon:tm:",
 				.components = {
 					cActionRow {
 						cButton<BUTTON_STYLE_DANGER> {
@@ -63,4 +62,33 @@ cGreekBot::OnInteraction_ban(const cInteraction& i) {
 	}
 	catch (...) {}
 	co_await EditInteractionResponse(i, MESSAGE_FLAG_NONE, { .content = "An unexpected error has occurred, please try again later." });
+}
+
+cTask<>
+cGreekBot::OnInteraction_unban(const cInteraction& i, const cSnowflake& user_id) {
+	if (chMember member = i.GetMember()) {
+		/* Make sure that the invoking user has the appropriate permissions */
+		if (!(member->GetPermissions() & PERM_BAN_MEMBERS)) {
+			co_await RespondToInteraction(i, MESSAGE_FLAG_NONE);
+			co_return co_await SendInteractionFollowupMessage(i, MESSAGE_FLAG_EPHEMERAL, {
+				.content = "You can't do that. You're missing the `BAN_MEMBERS` permission."
+			});
+		}
+		if (chSnowflake pGuildId = i.GetGuildId()) {
+			co_await AcknowledgeInteraction(i);
+			try {
+				co_await RemoveGuildBan(*pGuildId, user_id);
+			}
+			catch (xDiscordError& e) {
+				/* Ban not found */
+			}
+			co_await EditInteractionResponse(i, MESSAGE_FLAG_NONE, {
+				.clear_components = true,
+				.embeds {
+					cEmbed::CreateBuilder().SetDescription("User was unbanned").Build()
+				}
+			});
+			co_return;
+		}
+	}
 }

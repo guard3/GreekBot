@@ -145,3 +145,11 @@ cBot::CreateGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, chro
 		fields.emplace_back("X-Audit-Log-Reason", reason);
 	co_await DiscordPut(cUtils::Format("/guilds/%s/bans/%s", guild_id.ToString(), user_id.ToString()), {{ "delete_message_seconds", delete_message_seconds.count() }}, fields);
 }
+
+cTask<>
+cBot::RemoveGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, const std::string& reason) {
+	tHttpFields fields;
+	if (!reason.empty())
+		fields.emplace_back("X-Audit-Log-Reason", reason);
+	co_await DiscordDelete(cUtils::Format("/guilds/%s/bans/%s", guild_id.ToString(), user_id.ToString()), fields);
+}

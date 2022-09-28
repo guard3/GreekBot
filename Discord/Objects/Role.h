@@ -4,6 +4,7 @@
 #include "Common.h"
 
 enum ePermission : uint64_t {
+	PERM_NONE = 0,
 	PERM_CREATE_INSTANT_INVITE      = 0x0000000000000001, // Allows creation of instant invites
 	PERM_KICK_MEMBERS               = 0x0000000000000002, // Allows kicking members
 	PERM_BAN_MEMBERS                = 0x0000000000000004, // Allows banning members

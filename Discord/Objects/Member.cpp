@@ -17,6 +17,7 @@ cMember::cMember(const json::object& o) : joined_at(o.at("joined_at").as_string(
 		if (auto s = v->if_string())
 			premium_since = s->c_str();
 	}
+	permissions = (v = o.if_contains("permissions")) ? (ePermission)cUtils::ParseInt<int64_t>(v->as_string()) : PERM_NONE;
 	deaf = (v = o.if_contains("deaf")) && v->as_bool();
 	mute = (v = o.if_contains("mute")) && v->as_bool();
 }

@@ -97,10 +97,16 @@ cGreekBot::OnInteractionCreate(const cInteraction& interaction) {
 	else if (auto data = interaction.GetData<INTERACTION_MESSAGE_COMPONENT>()) {
 		switch (data->GetComponentType()) {
 			case COMPONENT_BUTTON:
-				switch (strtol(data->GetCustomId(), nullptr, 10)) {
-					case CMP_ID_BUTTON_RANK_HELP:
-						co_await OnInteraction_button(interaction);
-						break;
+				/* Check custom id */
+				if (0 == strncmp("ban_", data->GetCustomId(), 4)) {
+					co_return co_await OnInteraction_unban(interaction, data->GetCustomId() + 4);
+				}
+				else {
+					switch (strtol(data->GetCustomId(), nullptr, 10)) {
+						case CMP_ID_BUTTON_RANK_HELP:
+							co_await OnInteraction_button(interaction);
+							break;
+					}
 				}
 				break;
 			case COMPONENT_SELECT_MENU:
