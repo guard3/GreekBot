@@ -17,7 +17,7 @@ cGreekBot::OnInteraction_ban(const cInteraction& i) {
 					user = opt.GetValue<APP_COMMAND_OPT_USER>();
 				else if (0 == strcmp(opt.GetName(), "delete")) {
 					/* Convert the received value to int */
-					int value = cUtils::ParseInt(options[1].GetValue<APP_COMMAND_OPT_STRING>());
+					int value = cUtils::ParseInt(opt.GetValue<APP_COMMAND_OPT_STRING>());
 					/* Deduce delete messages duration */
 					switch (value) {
 						case 0:
@@ -43,7 +43,8 @@ cGreekBot::OnInteraction_ban(const cInteraction& i) {
 			co_await CreateGuildBan(*pGuildId, user->GetId(), delete_messages, reason);
 
 			/* TODO: std::string for cButton, like plz */
-			std::string custom_id = cUtils::Format("ban_%s", user->GetId().ToString());
+			uint64_t user_id_int = user->GetId().ToInt();
+			std::string custom_id = "BAN#" + cUtils::Base64Encode(&user_id_int, sizeof(user_id_int));
 			co_await EditInteractionResponse(i, MESSAGE_FLAG_NONE, {
 				.components = {
 					cActionRow {

@@ -40,6 +40,8 @@ private:
 		else
 			return arg;
 	}
+
+	static std::vector<uint8_t> base64_decode(const char*, size_t);
 	/* Private constructor */
 	cUtils() = default;
 public:
@@ -116,6 +118,14 @@ public:
 		if (*end)
 			throw xNumberFormatError("String can't be parsed into an integer");
 		return result;
+	}
+	/* Base64 encode/decode */
+	static std::string Base64Encode(const void* data, size_t size);
+	static std::vector<uint8_t> Base64Decode(const std::string& str) {
+		return base64_decode(str.data(), str.length());
+	}
+	static std::vector<uint8_t> Base64Decode(const char* str) {
+		return base64_decode(str, strlen(str));
 	}
 	/* Resolving the OS we're running on */
 	static const char* GetOS();
