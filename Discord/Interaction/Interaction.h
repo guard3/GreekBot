@@ -140,8 +140,8 @@ public:
 	cInteractionData(const json::object&);
 	cInteractionData(const json::value&);
 
-	const char*    GetCustomId()      const { return custom_id.c_str(); }
-	eComponentType GetComponentType() const { return component_type;    }
+	const std::string&  GetCustomId() const noexcept { return custom_id;      }
+	eComponentType GetComponentType() const noexcept { return component_type; }
 };
 template<eInteractionType e> using   hInteractionData =   hHandle<cInteractionData<e>>;
 template<eInteractionType e> using  chInteractionData =  chHandle<cInteractionData<e>>;

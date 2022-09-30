@@ -98,12 +98,12 @@ cGreekBot::OnInteractionCreate(const cInteraction& interaction) {
 		switch (data->GetComponentType()) {
 			case COMPONENT_BUTTON:
 				/* Check custom id */
-				if (0 == strncmp("BAN#", data->GetCustomId(), 4)) {
-					auto id = cUtils::Base64Decode(data->GetCustomId() + 4);
+				if (data->GetCustomId().starts_with("BAN#")) {
+					auto id = cUtils::Base64Decode(data->GetCustomId().substr(4));
 					co_return co_await OnInteraction_unban(interaction, *(uint64_t*)id.data());
 				}
 				else {
-					switch (strtol(data->GetCustomId(), nullptr, 10)) {
+					switch (cUtils::ParseInt(data->GetCustomId())) {
 						case CMP_ID_BUTTON_RANK_HELP:
 							co_await OnInteraction_button(interaction);
 							break;
