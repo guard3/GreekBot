@@ -144,14 +144,13 @@ cGateway::implementation::on_write(beast::error_code ec, size_t size) {
 /* ================================================================================================================== */
 void
 cGateway::implementation::run_session(const std::string& url) {
-	/* Resolve host */
-	auto f = url.find("://");
-	std::string host = f == std::string::npos ? url : url.substr(f + 3);
 	/* The websocket close code and reason */
-	int         close_code;
+	int         close_code = -1;
 	std::string close_msg;
-	/* Run */
 	try {
+		/* Resolve host from url */
+		auto f = url.find("://");
+		std::string host = f == std::string::npos ? url : url.substr(f + 3);
 		/* Create a websocket stream */
 		m_ws = cHandle::MakeUnique<beast::websocket::stream<beast::ssl_stream<beast::tcp_stream>>>(m_ws_ioc, m_ctx);
 		/* Set a timeout and make a connection to the resolved IP address */
@@ -180,13 +179,13 @@ cGateway::implementation::run_session(const std::string& url) {
 		close_msg  = m_ws->reason().reason.c_str();
 	}
 	catch (const std::exception& e) {
-		close_code = -1;
-		close_msg  = e.what();
+		close_msg = e.what();
 	}
 	catch (...) {
-		close_code = -1;
 		close_msg = "An error occurred";
 	}
+	/* Reset the websocket context for a subsequent run() call */
+	m_ws_ioc.restart();
 	/* Stop heartbeating */
 	stop_heartbeating();
 	/* If the websocket close reason doesn't permit reconnecting, throw */
@@ -218,16 +217,15 @@ cGateway::implementation::get_gateway_info() {
 	[&]() -> cTask<> {
 		try {
 			v = co_await m_parent->DiscordGet("/gateway/bot");
-			bDone = true;
 		}
 		catch (...) {
 			except = std::current_exception();
 		}
+		bDone = true;
 	}();
-	do {
-		if (except)
-			std::rethrow_exception(except);
-	} while (!bDone);
+	/* Wait for the asynchronous task to finish */
+	while(!bDone);
+	if (except) std::rethrow_exception(except);
 	return cGatewayInfo(v);
 }
 /* ================================================================================================================== */
