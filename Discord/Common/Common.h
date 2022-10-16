@@ -9,6 +9,7 @@
 #include <cstring>
 #include "Exception.h"
 #include "Utils.h"
+#include "Kwarg.h"
 
 namespace chrono = std::chrono;
 
@@ -170,5 +171,45 @@ public:
 	operator int() const { return m_value; }
 	operator bool() const { return m_value != NO_COLOR; }
 	bool operator!() const { return m_value == NO_COLOR; }
+};
+
+enum eGlobalKey {
+	KW_COLOR,
+	KW_TITLE,
+	KW_DESCRIPTION,
+	KW_URL,
+	KW_ICON_URL,
+	KW_TIMESTAMP,
+};
+KW_DECLARE(color, KW_COLOR, cColor)
+KW_DECLARE(title, KW_TITLE, std::string)
+KW_DECLARE(description, KW_DESCRIPTION, std::string)
+KW_DECLARE(url, KW_URL, std::string)
+KW_DECLARE(icon_url, KW_ICON_URL, std::string)
+KW_DECLARE(timestamp, KW_TIMESTAMP, std::string)
+
+template<typename T>
+class cOption {
+private:
+	T    m_value;
+	bool m_deleted;
+
+public:
+	template<typename... Args>
+	cOption(Args&&... args) : m_value(std::forward<Args>(args)...), m_deleted(false) {}
+	cOption(std::nullptr_t arg) : m_deleted(true) {}
+	cOption(const cOption&) = default;
+	cOption(cOption&&) noexcept = default;
+
+	cOption& operator=(const cOption&) = default;
+	cOption& operator=(cOption&&) noexcept = default;
+
+	const T& Get() const noexcept { return m_value; }
+	T Move() noexcept {
+		m_deleted = false;
+		return std::move(m_value);
+	}
+
+	bool IsDeleted() const noexcept { return m_deleted; }
 };
 #endif /* _GREEKBOT_COMMON_H_ */

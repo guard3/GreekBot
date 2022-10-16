@@ -2,21 +2,27 @@
 #include "Database.h"
 
 /* Helper functions that create embeds */
-static cEmbed make_no_xp_embed(const cUser& user, cColor color) {
-	return cEmbed::CreateBuilder()
-		.SetAuthor(user.GetUsername() + '#' + user.GetDiscriminator(), "", user.GetAvatarUrl())
-		.SetDescription("User has no XP yet.")
-		.SetColor(color)
-		.Build();
+static cEmbed make_no_xp_embed(const cUser& user, cColor c) {
+	return {
+		author={
+			user.GetUsername() + '#' + user.GetDiscriminator(),
+			icon_url=user.GetAvatarUrl()
+		},
+		description="User has no XP yet.",
+		color=c
+	};
 }
 static cEmbed make_no_member_embed(const cUser& user, bool bAnymore) {
-	return cEmbed::CreateBuilder()
-		.SetAuthor(user.GetUsername() + '#' + user.GetDiscriminator(), "", user.GetAvatarUrl())
-		.SetDescription(cUtils::Format("User is not a member of **Learning Greek**%s", bAnymore ? " anymore." : "."))
-		.SetColor(0x0096FF)
-		.Build();
+	return {
+		author={
+			user.GetUsername() + '#' + user.GetDiscriminator(),
+			icon_url=user.GetAvatarUrl()
+		},
+		description=cUtils::Format("User is not a member of **Learning Greek**%s", bAnymore ? " anymore." : "."),
+		color=0x0096FF
+	};
 }
-static cEmbed make_embed(const cUser& user, const cMember& member, cColor color, int64_t rank, int64_t xp, int64_t num_msg) {
+static cEmbed make_embed(const cUser& user, const cMember& member, cColor c, int64_t rank, int64_t xp, int64_t num_msg) {
 	/* Choose a medal emoji depending on the user's rank */
 	const char* medal;
 	switch (rank) {
@@ -33,14 +39,19 @@ static cEmbed make_embed(const cUser& user, const cMember& member, cColor color,
 		next_xp += 5 * level * level + 50 * level + 100;
 	}
 	/* Create embed */
-	return cEmbed::CreateBuilder()
-		.SetAuthor(user.GetUsername() + '#' + user.GetDiscriminator(), "", user.GetAvatarUrl())
-		.SetTitle(cUtils::Format("%s Rank **#%" PRIi64 "**\tLevel **%" PRIi64 "**", medal, rank, level))
-		.SetColor(color)
-		.AddField("XP Progress", cUtils::Format("%" PRIi64 "/%" PRIi64, xp - base_xp, next_xp - base_xp), true)
-		.AddField("Total XP", std::to_string(xp), true)
-		.AddField("Messages", std::to_string(num_msg), true)
-		.Build();
+	return {
+		author={
+			user.GetUsername() + '#' + user.GetDiscriminator(),
+			icon_url = user.GetAvatarUrl()
+		},
+		title=cUtils::Format("%s Rank **#%" PRIi64 "**\tLevel **%" PRIi64 "**", medal, rank, level),
+		color=c,
+		fields={
+			{ "XP Progress", cUtils::Format("%" PRIi64 "/%" PRIi64, xp - base_xp, next_xp - base_xp), true},
+			{ "Total XP", std::to_string(xp), true },
+			{ "Messages", std::to_string(num_msg), true }
+		}
+	};
 }
 
 cTask<>

@@ -4,11 +4,11 @@ cTask<>
 cGreekBot::OnInteraction_button(const cInteraction& i) {
 	try {
 		auto embeds = i.GetMessage()->Embeds;
-		cEmbed e = cEmbed::CreateBuilder()
-			.SetColor(embeds.back().GetColor())
-			.SetTitle("How it works")
-			.SetDescription("Every minute that you're messaging, you randomly gain between 15 and 25 **XP**.")
-			.Build();
+		cEmbed e {
+			color=embeds.back().GetColor(),
+			title="How it works",
+			description="Every minute that you're messaging, you randomly gain between 15 and 25 **XP**."
+		};
 		if (embeds.size() == 10)
 			embeds[9] = std::move(e);
 		else

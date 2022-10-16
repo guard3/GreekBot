@@ -54,9 +54,13 @@ cGreekBot::OnInteraction_ban(const cInteraction& i) {
 						}
 					}
 				},
-				.embeds = {
-					cEmbed::CreateBuilder().SetAuthor(cUtils::Format("%s#%s was banned", user->GetUsername(), user->GetDiscriminator()), {}, user->GetAvatarUrl()).AddField("Reason", reason).Build()
-				}
+				.embeds = {{
+					author={
+						cUtils::Format("%s#%s was banned", user->GetUsername(), user->GetDiscriminator()),
+						icon_url=user->GetAvatarUrl()
+					},
+					fields={{"Reason", reason}}
+				}}
 			});
 			co_return;
 		}
@@ -81,13 +85,15 @@ cGreekBot::OnInteraction_unban(const cInteraction& i, const cSnowflake& user_id)
 				co_await RemoveGuildBan(*pGuildId, user_id);
 			}
 			catch (xDiscordError& e) {
-				/* Ban not found */
+				/* Ban not found, but that's fine */
 			}
+			auto e = i.GetMessage()->Embeds[0];
+			auto& s = e.GetAuthor()->GetName();
+			s.erase(s.end()-11, s.end());
+			e.SetFields(nullptr).SetDescription("User was unbanned");
 			co_await EditInteractionResponse(i, MESSAGE_FLAG_NONE, {
 				.clear_components = true,
-				.embeds {
-					cEmbed::CreateBuilder().SetDescription("User was unbanned").Build()
-				}
+				.embeds { std::move(e) }
 			});
 			co_return;
 		}
