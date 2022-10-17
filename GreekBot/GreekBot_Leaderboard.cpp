@@ -65,7 +65,8 @@ cGreekBot::OnInteraction_rank(const cInteraction& i) {
 			member = i.GetMember();
 			user = member->GetUser();
 		} else {
-			user = data->Options[0].GetValue<APP_COMMAND_OPT_USER>(member);
+			user = &data->Options[0].GetValue<APP_CMD_OPT_USER>();
+			member = data->Options[0].GetMember();
 		}
 		/* Don't display data for bot users */
 		if (user->IsBotUser()) {

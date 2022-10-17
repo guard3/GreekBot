@@ -11,7 +11,7 @@ cGreekBot::OnInteraction_prune(const cInteraction& i) {
 	int days = 2;
 	auto& options = i.GetData<INTERACTION_APPLICATION_COMMAND>()->Options;
 	if (!options.empty())
-		days = options[0].GetValue<APP_COMMAND_OPT_INTEGER>();
+		days = options[0].GetValue<APP_CMD_OPT_INTEGER>();
 
 	chrono::milliseconds retry_after;
 	try {

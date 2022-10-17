@@ -13,11 +13,11 @@ cGreekBot::OnInteraction_ban(const cInteraction& i) {
 			std::string reason = "Unspecified";
 			auto &options = i.GetData<INTERACTION_APPLICATION_COMMAND>()->Options;
 			for (auto& opt : options) {
-				if (0 == strcmp(opt.GetName(), "user"))
-					user = opt.GetValue<APP_COMMAND_OPT_USER>();
-				else if (0 == strcmp(opt.GetName(), "delete")) {
+				if (opt.GetName() == "user")
+					user = &opt.GetValue<APP_CMD_OPT_USER>();
+				else if (opt.GetName() == "delete") {
 					/* Convert the received value to int */
-					int value = cUtils::ParseInt(opt.GetValue<APP_COMMAND_OPT_STRING>());
+					int value = cUtils::ParseInt(opt.GetValue<APP_CMD_OPT_STRING>());
 					/* Deduce delete messages duration */
 					switch (value) {
 						case 0:
@@ -30,8 +30,8 @@ cGreekBot::OnInteraction_ban(const cInteraction& i) {
 							break;
 					}
 				}
-				else if (0 == strcmp(opt.GetName(), "reason"))
-					reason = opt.GetValue<APP_COMMAND_OPT_STRING>();
+				else if (opt.GetName() == "reason")
+					reason = opt.GetValue<APP_CMD_OPT_STRING>();
 			}
 			/* Making sure we're not banning ourselves */
 			if (user->GetId() == GetUser()->GetId())
