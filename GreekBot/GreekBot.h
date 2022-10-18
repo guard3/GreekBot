@@ -6,6 +6,8 @@
 
 /* Define custom message component ids; used for responding to component interactions */
 #define CMP_ID_BUTTON_RANK_HELP 0
+#define CMP_ID_BUTTON_TURK_A 1000
+#define CMP_ID_BUTTON_TURK_B 1001
 
 /* Specialize std::hash for cSnowflake to use in unordered maps */
 namespace std {
@@ -112,7 +114,7 @@ private:
 	cTask<> OnInteraction_top(const cInteraction&);
 	cTask<> OnInteraction_button(const cInteraction&);
 	cTask<> OnInteraction_prune(const cInteraction&);
-	cTask<> OnInteraction_ban(const cInteraction&);
+	cTask<> OnInteraction_ban(const cInteraction&, const char* image_url);
 	cTask<> OnInteraction_unban(const cInteraction&, const cSnowflake& user_id);
 
 	cTask<> OnGuildCreate(uhGuild guild) override;

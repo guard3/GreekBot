@@ -85,12 +85,9 @@ cGreekBot::OnInteractionCreate(const cInteraction& interaction) {
 			case 1020026874119864381:
 				/* prune */
 				co_return co_await OnInteraction_prune(interaction);
-			case 1022285237260140674:
+			case 1031907652541890621:
 				/* ban */
-				co_return co_await OnInteraction_ban(interaction);
-			case 1031245847133949973:
-				/* ban2 */
-				co_return co_await OnInteraction_ban(interaction);
+				co_return co_await OnInteraction_ban(interaction, nullptr);
 			case 904462004071313448:
 				/* connect */
 				//OnInteraction_connect(&interaction);
@@ -102,13 +99,18 @@ cGreekBot::OnInteractionCreate(const cInteraction& interaction) {
 			case COMPONENT_BUTTON:
 				/* Check custom id */
 				if (data->GetCustomId().starts_with("BAN#")) {
-					auto id = cUtils::Base64Decode(data->GetCustomId().substr(4));
-					co_return co_await OnInteraction_unban(interaction, *(uint64_t*)id.data());
+					co_return co_await OnInteraction_unban(interaction, data->GetCustomId().c_str() + 4);
 				}
 				else {
 					switch (cUtils::ParseInt(data->GetCustomId())) {
 						case CMP_ID_BUTTON_RANK_HELP:
 							co_await OnInteraction_button(interaction);
+							break;
+						case CMP_ID_BUTTON_TURK_A:
+							co_await OnInteraction_ban(interaction, "https://cdn.discordapp.com/attachments/355242373380308993/875731671423516692/image0.png");
+							break;
+						case CMP_ID_BUTTON_TURK_B:
+							co_await OnInteraction_ban(interaction, "https://cdn.discordapp.com/attachments/355242373380308993/835936970991075420/1588162009.png");
 							break;
 					}
 				}
