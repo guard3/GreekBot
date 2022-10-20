@@ -99,6 +99,24 @@ cBot::RespondToInteraction(const cInteraction& interaction, eMessageFlag flags, 
 	});
 }
 cTask<>
+cBot::RespondToInteraction(const cInteraction& i, const cMessageParams& params) {
+	int callback;
+	switch (i.GetType()) {
+		default:
+			co_return;
+		case INTERACTION_APPLICATION_COMMAND:
+			callback = INTERACTION_CALLBACK_CHANNEL_MESSAGE_WITH_SOURCE;
+			break;
+		case INTERACTION_MESSAGE_COMPONENT:
+			callback = INTERACTION_CALLBACK_UPDATE_MESSAGE;
+	}
+	co_await DiscordPost(cUtils::Format("/interactions/%s/%s/callback", i.GetId().ToString(), i.GetToken()), {
+		{ "type", callback        },
+		{ "data", params.ToJson() }
+	});
+}
+
+cTask<>
 cBot::EditInteractionResponse(const cInteraction& interaction, eMessageFlag flags, const cMessageOptions& options) {
 	if (interaction.GetType() != INTERACTION_PING)
 		co_await DiscordPatch(cUtils::Format("/webhooks/%s/%s/messages/@original", interaction.GetApplicationId().ToString(), interaction.GetToken()), options.ToJson(flags));

@@ -5,6 +5,7 @@
 #include <chrono>
 #include <random>
 #include <string>
+#include <optional>
 #include <cinttypes>
 #include <cstring>
 #include "Exception.h"
@@ -189,27 +190,28 @@ KW_DECLARE(icon_url, KW_ICON_URL, std::string)
 KW_DECLARE(timestamp, KW_TIMESTAMP, std::string)
 
 template<typename T>
-class cOption {
-private:
-	T    m_value;
-	bool m_deleted;
-
+class cOption final : std::optional<T> {
 public:
-	template<typename... Args>
-	cOption(Args&&... args) : m_value(std::forward<Args>(args)...), m_deleted(false) {}
-	cOption(std::nullptr_t arg) : m_deleted(true) {}
+	cOption() : std::optional<T>(std::in_place) {}
+	cOption(std::nullptr_t) {}
+	template<typename Arg, typename... Args> requires (!std::is_same_v<std::remove_cvref_t<Arg>, cOption> && !std::is_same_v<std::remove_cvref_t<Arg>, std::nullptr_t>)
+	cOption(Arg&& arg, Args&&... args) : std::optional<T>(std::in_place, std::forward<Arg>(arg), std::forward<Args>(args)...) {}
+	template<typename Arg, typename... Args>
+	cOption(std::initializer_list<Arg> list, Args&&... args): std::optional<T>(std::in_place, list, std::forward<Args>(args)...) {}
 	cOption(const cOption&) = default;
 	cOption(cOption&&) noexcept = default;
 
+	cOption& operator=(std::nullptr_t) noexcept { this->reset(); return *this; }
 	cOption& operator=(const cOption&) = default;
 	cOption& operator=(cOption&&) noexcept = default;
-
-	const T& Get() const noexcept { return m_value; }
-	T Move() noexcept {
-		m_deleted = false;
-		return std::move(m_value);
+	template<typename U>
+	cOption& operator=(std::initializer_list<U> list) {
+		this->template emplace(list);
+		return *this;
 	}
 
-	bool IsDeleted() const noexcept { return m_deleted; }
+	using std::optional<T>::operator bool;
+	using std::optional<T>::operator->;
+	using std::optional<T>::operator*;
 };
 #endif /* _GREEKBOT_COMMON_H_ */

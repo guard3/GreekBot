@@ -228,4 +228,9 @@ typedef  uhHandle<cEmbed>  uhEmbed;
 typedef uchHandle<cEmbed> uchEmbed;
 typedef  shHandle<cEmbed>  shEmbed;
 typedef schHandle<cEmbed> schEmbed;
+
+enum eEmbedKey {
+	KW_EMBEDS = 270,
+};
+KW_DECLARE(embeds, KW_EMBEDS, cOption<std::vector<cEmbed>>, nullptr)
 #endif // GREEKBOT_EMBED_H

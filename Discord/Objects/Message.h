@@ -4,6 +4,7 @@
 #include "User.h"
 #include "Embed.h"
 #include "Member.h"
+#include "Component.h"
 
 enum eMessageType {
 	MESSAGE_TYPE_DEFAULT,
@@ -50,6 +51,37 @@ enum eMessageFlag {
 };
 inline eMessageFlag operator|(eMessageFlag a, eMessageFlag b) { return (eMessageFlag)((int)a | (int)b); }
 inline eMessageFlag operator&(eMessageFlag a, eMessageFlag b) { return (eMessageFlag)((int)a & (int)b); }
+
+enum eMessageKey {
+	KW_FLAGS = 250,
+	KW_CONTENT
+};
+KW_DECLARE(flags, KW_FLAGS, eMessageFlag)
+KW_DECLARE(content, KW_CONTENT, cOption<std::string>)
+
+/* TODO: make cMessage inherit from here */
+/* TODO: maybe also make a base discord object class? */
+/* Base class of cMessage; used for creating or editing messages */
+class cMessageParams {
+private:
+	eMessageFlag m_flags;
+	cOption<std::string> m_content;
+	cOption<std::vector<cActionRow>> m_components;
+	cOption<std::vector<cEmbed>> m_embeds;
+
+	template<iKwArg... KwArgs>
+	cMessageParams(cKwPack<KwArgs...>&& pack):
+		m_flags(KwGet<KW_FLAGS>(pack, MESSAGE_FLAG_NONE)),
+		m_content(KwGet<KW_CONTENT>(pack)),
+		m_components(KwGet<KW_COMPONENTS>(pack)),
+		m_embeds(KwGet<KW_EMBEDS>(pack)) {}
+
+public:
+	template<iKwArg... KwArgs>
+	cMessageParams(KwArgs&... kwargs) : cMessageParams(cKwPack<KwArgs...>(kwargs...)) {}
+
+	json::object ToJson() const;
+};
 
 class cMessage final {
 private:

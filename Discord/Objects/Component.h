@@ -3,6 +3,8 @@
 #define _GREEKBOT_COMPONENT_H_
 #include "Common.h"
 #include "Emoji.h"
+#include "json.h"
+/* TODO: ^^^ remove this */
 
 enum eComponentType {
 	COMPONENT_ACTION_ROW = 1, // A container for other components
@@ -203,5 +205,10 @@ typedef  uhHandle<cActionRow>  uhActionRow;
 typedef uchHandle<cActionRow> uchActionRow;
 typedef  shHandle<cActionRow>  shActionRow;
 typedef schHandle<cActionRow> schActionRow;
+
+enum eComponentKey {
+	KW_COMPONENTS = 200
+};
+KW_DECLARE(components, KW_COMPONENTS, cOption<std::vector<cActionRow>>, nullptr)
 
 #endif /* _GREEKBOT_COMPONENT_H_ */

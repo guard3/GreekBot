@@ -37,6 +37,11 @@ public:
 		m_value = std::forward<tValueType>(t);
 		return *this;
 	}
+	template<typename U>
+	cKwArg& operator=(std::initializer_list<U> list) {
+		m_value = list;
+		return *this;
+	}
 
 private:
 	/* The actual kwarg value */
@@ -45,24 +50,30 @@ private:
 	template<typename... Args>
 	explicit cKwArg(Args&&... args): m_value(std::forward<Args>(args)...) {}
 
-	const tValueType& get() const { return m_value; }
+	tValueType& get() noexcept { return m_value; }
+	const tValueType& get() const noexcept { return m_value; }
 	tValueType move() { return std::move(m_value); }
 
 	template<iKwArg...> friend class cKwPack;
-	template<int key> friend const tKwType<key>& KwGet(const cKwPack<>&, tKwType<key>&&);
+	template<int key> friend tKwType<key>& KwGet(cKwPack<>&, const tKwType<key>&);
+	template<int key> friend tKwType<key>& KwGet(cKwPack<>&, tKwType<key>&&);
 };
 /* ========== Access functions for empty packs ====================================================================== */
 template<int key>
+inline tKwType<key>& KwGet(cKwPack<>&, const tKwType<key>& default_) { return (cKwArg<key>::Instance = default_).get(); }
+template<int key>
+inline tKwType<key>& KwGet(cKwPack<>&, tKwType<key>&& default_ = {}) { return (cKwArg<key>::Instance = std::forward<tKwType<key>>(default_)).get(); }
+template<int key>
 inline const tKwType<key>& KwGet(const cKwPack<>&, const tKwType<key>& default_) { return default_; }
 template<int key>
-inline const tKwType<key>& KwGet(const cKwPack<>&, tKwType<key>&& default_ = {}) { return (cKwArg<key>::Instance = std::forward<tKwType<key>>(default_)).get(); }
+inline const tKwType<key>& KwGet(const cKwPack<>& p, tKwType<key>&& default_ = {}) { return KwGet<key>(const_cast<cKwPack<>&>(p), std::forward<tKwType<key>>(default_)); }//(cKwArg<key>::Instance = std::forward<tKwType<key>>(default_)).get(); }
 template<int key>
 inline tKwType<key> KwMove(cKwPack<>&, const tKwType<key>& default_) { return default_; }
 template<int key>
 inline tKwType<key> KwMove(cKwPack<>&, tKwType<key>&& default_ = {}) { return default_; }
 /* ========== Access functions for non empty packs ================================================================== */
 template<int key, iKwArg First, iKwArg... Rest, typename... Default>
-const tKwType<key>& KwGet(const cKwPack<First, Rest...>&, Default&&...);
+tKwType<key>& KwGet(cKwPack<First, Rest...>&, Default&&...);
 template<int key, iKwArg First, iKwArg... Rest, typename... Default>
 tKwType<key> KwMove(cKwPack<First, Rest...>&, Default&&...);
 /* ========== Default empty kwarg pack ============================================================================== */
@@ -84,7 +95,7 @@ private:
 	cKwPack<Rest...> m_rest;  // The rest of the kwargs
 
 	template<int key, typename... Default>
-	friend const tKwType<key>& KwGet(const cKwPack& pack, Default&&... default_) {
+	friend tKwType<key>& KwGet(cKwPack& pack, Default&&... default_) {
 		if constexpr (key == std::remove_cvref_t<First>::Key)
 			return pack.m_first.get();
 		else
@@ -98,7 +109,9 @@ private:
 			return KwMove<key>(pack.m_rest, std::forward<Default>(default_)...);
 	}
 };
-/* ========== Enable KwMove to work on r-value reference packs ====================================================== */
+/* ========== Final touches to support all kinds of references ====================================================== */
+template<int key, iKwArg... KwArgs, typename... Default>
+inline const tKwType<key>& KwGet(const cKwPack<KwArgs...>&& pack, Default&&... default_) { return KwGet<key>(const_cast<cKwPack<KwArgs...>&>(pack));}
 template<int key, iKwArg... Kwargs, typename... Default>
 inline tKwType<key> KwMove(cKwPack<Kwargs...>&& pack, Default&&... default_) { return KwMove<key>(pack, std::forward<Default>(default_)...); }
 /*

@@ -1,6 +1,41 @@
 #include "Message.h"
 #include "json.h"
 
+json::object
+cMessageParams::ToJson() const {
+	/* Create object with flags */
+	json::object obj {
+		{ "tts", (bool)(m_flags & MESSAGE_FLAG_TTS) },
+		{ "flags", (int)(m_flags & (MESSAGE_FLAG_EPHEMERAL | MESSAGE_FLAG_SUPPRESS_EMBEDS)) }
+	};
+	/* Set content */
+	if (!m_content)
+		obj["content"] = "";
+	else if (!m_content->empty())
+		obj["content"] = *m_content;
+	/* Set components */
+	if (!m_components)
+		obj["components"] = json::array();
+	else if (!m_components->empty()) {
+		json::array a;
+		a.reserve(m_components->size());
+		for (auto& c : *m_components)
+			a.push_back(c.ToJson());
+		obj["components"] = std::move(a);
+	}
+	/* Set embeds */
+	if (!m_embeds)
+		obj["embeds"] = json::array();
+	else if (!m_embeds->empty()) {
+		json::array a;
+		a.reserve(m_embeds->size());
+		for (auto& e : *m_embeds)
+			a.push_back(e.ToJson());
+		obj["embeds"] = std::move(a);
+	}
+	return obj;
+}
+
 cMessage::cMessage(const json::object &o) : id(o.at("id")), channel_id(o.at("channel_id")), author(o.at("author")), content(o.at("content").as_string().c_str()), timestamp(o.at("timestamp").as_string().c_str()), type((eMessageType)o.at("type").as_int64()) {
 	/* Parse guild_id */
 	const json::value* f;

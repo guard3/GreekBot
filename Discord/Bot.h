@@ -83,6 +83,14 @@ public:
 
 	cTask<> AcknowledgeInteraction(const cInteraction& interaction);
 	cTask<> RespondToInteraction(const cInteraction& interaction, eMessageFlag flags, const cMessageOptions& options = {});
+	/* TEST */
+	cTask<> RespondToInteraction(const cInteraction&, const cMessageParams& params);
+	template<iKwArg... KwArgs>
+	cTask<> RespondToInteraction(const cInteraction& i, KwArgs&... kwargs) {
+		return RespondToInteraction(i, {kwargs...});
+	}
+
+
 	cTask<> EditInteractionResponse(const cInteraction& interaction, eMessageFlag flags, const cMessageOptions& options = {});
 	cTask<> SendInteractionFollowupMessage(const cInteraction& interaction, eMessageFlag flags, const cMessageOptions& options = {});
 

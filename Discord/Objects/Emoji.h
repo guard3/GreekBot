@@ -28,14 +28,7 @@ public:
 	chSnowflake GetId()      const { return id;           }
 	bool        IsAnimated() const { return animated;     }
 
-	json::object ToJson() const {
-		json::object obj;
-		obj["name"] = name;
-		if (id)
-			obj["id"] = id->ToString();
-		obj["animated"] = animated;
-		return obj;
-	}
+	json::object ToJson() const;
 };
 typedef   hHandle<cEmoji>   hEmoji;
 typedef  chHandle<cEmoji>  chEmoji;
