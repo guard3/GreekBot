@@ -69,14 +69,10 @@ cGreekBot::OnInteraction_rank(const cInteraction& i) {
 			member = data->Options[0].GetMember();
 		}
 		/* Don't display data for bot users */
-		if (user->IsBotUser()) {
-			co_await RespondToInteraction(i, MESSAGE_FLAG_NONE, {.content = "Ranking isn't available for bot users."});
-			co_return;
-		}
-		if (user->IsSystemUser()) {
-			co_await RespondToInteraction(i, MESSAGE_FLAG_NONE, {.content = "Ranking isn't available for system users."});
-			co_return;
-		}
+		if (user->IsBotUser())
+			co_return co_await RespondToInteraction(i, content="Ranking isn't available for bot users.");
+		if (user->IsSystemUser())
+			co_return co_await RespondToInteraction(i, content="Ranking isn't available for system users.");
 		/* Acknowledge interaction while we're looking through the database */
 		co_await AcknowledgeInteraction(i);
 		/* Get user's ranking info from the database */
@@ -84,20 +80,20 @@ cGreekBot::OnInteraction_rank(const cInteraction& i) {
 		co_await ResumeOnEventThread();
 		/* Make sure that the selected user is a member of Learning Greek */
 		if (!member) {
-			co_await EditInteractionResponse(i, MESSAGE_FLAG_NONE, {.embeds {make_no_member_embed(*user, !db_result.empty())}});
+			co_await EditInteractionResponse(i, embeds={make_no_member_embed(*user, !db_result.empty())});
 			co_return;
 		}
 		/* Respond */
 		cColor color = get_lmg_member_color(*member);
 		if (db_result.empty()) {
 			/* User not registered in the leaderboard */
-			co_await EditInteractionResponse(i, MESSAGE_FLAG_NONE, {.embeds {make_no_xp_embed(*user, color)}});
+			co_await EditInteractionResponse(i, embeds={make_no_xp_embed(*user, color)});//MESSAGE_FLAG_NONE, {.embeds {make_no_xp_embed(*user, color)}});
 		} else {
 			/* Respond to interaction with a proper embed */
 			auto &res = db_result[0];
-			co_await EditInteractionResponse(i, MESSAGE_FLAG_NONE, {
-				.embeds { make_embed(*user, *member, color, res.GetRank(), res.GetXp(), res.GetNumMessages()) },
-				.components {
+			co_await EditInteractionResponse(i,
+				embeds = { make_embed(*user, *member, color, res.GetRank(), res.GetXp(), res.GetNumMessages()) },
+				components ={
 					cActionRow{
 						cButton<BUTTON_STYLE_SECONDARY>{
 							STR(CMP_ID_BUTTON_RANK_HELP),
@@ -105,7 +101,7 @@ cGreekBot::OnInteraction_rank(const cInteraction& i) {
 						}
 					}
 				}
-			});
+			);
 		}
 	}
 	catch (const std::exception& e) {
@@ -121,34 +117,34 @@ cGreekBot::OnInteraction_top(const cInteraction& i) {
 		/* Get data from the database */
 		tRankQueryData db_result = co_await cDatabase::GetTop10();
 		if (db_result.empty()) {
-			co_await EditInteractionResponse(i, MESSAGE_FLAG_NONE, {.content = "I don't have any data yet. Start talking!"});
+			co_await EditInteractionResponse(i, content="I don't have any data yet. Start talking!");
 			co_return;
 		}
 		co_await ResumeOnEventThread();
 		/* Prepare embeds */
-		std::vector<cEmbed> embeds;
-		embeds.reserve(db_result.size());
+		std::vector<cEmbed> es;
+		es.reserve(db_result.size());
 		for (auto &d: db_result) {
 			try {
 				/* Get member info and create embeds */
 				if (*d.GetUserId() == i.GetMember()->GetUser()->GetId()) {
 					chMember member = i.GetMember();
-					embeds.push_back(make_embed(*member->GetUser(), *member, get_lmg_member_color(*member), d.GetRank(), d.GetXp(), d.GetNumMessages()));
+					es.push_back(make_embed(*member->GetUser(), *member, get_lmg_member_color(*member), d.GetRank(), d.GetXp(), d.GetNumMessages()));
 				}
 				else {
 					cMember member = co_await GetGuildMember(m_lmg_id, *d.GetUserId());
-					embeds.push_back(make_embed(*member.GetUser(), member, get_lmg_member_color(member), d.GetRank(), d.GetXp(), d.GetNumMessages()));
+					es.push_back(make_embed(*member.GetUser(), member, get_lmg_member_color(member), d.GetRank(), d.GetXp(), d.GetNumMessages()));
 				}
 				continue;
 			}
 			catch (const xDiscordError& e) {}
 			/* User isn't a member anymore */
-			embeds.push_back(make_no_member_embed(co_await GetUser(*d.GetUserId()), true));
+			es.push_back(make_no_member_embed(co_await GetUser(*d.GetUserId()), true));
 		}
 		/* Respond to interaction */
-		co_await EditInteractionResponse(i, MESSAGE_FLAG_NONE, {
-			.embeds { embeds },
-			.components {
+		co_await EditInteractionResponse(i,
+			embeds=std::move(es),
+			components={
 				cActionRow{
 					cButton<BUTTON_STYLE_SECONDARY>{
 						STR(CMP_ID_BUTTON_RANK_HELP),
@@ -156,7 +152,7 @@ cGreekBot::OnInteraction_top(const cInteraction& i) {
 					}
 				}
 			}
-		});
+		);
 	}
 	catch (const std::exception& e) {
 		cUtils::PrintErr("OnInteraction_top: %s", e.what());

@@ -82,23 +82,6 @@ cBot::AcknowledgeInteraction(const cInteraction& i) {
 	co_await DiscordPost(cUtils::Format("/interactions/%s/%s/callback", i.GetId().ToString(), i.GetToken()), { { "type", callback } });
 }
 cTask<>
-cBot::RespondToInteraction(const cInteraction& interaction, eMessageFlag flags, const cMessageOptions& options) {
-	int callback;
-	switch (interaction.GetType()) {
-		default:
-			co_return;
-		case INTERACTION_APPLICATION_COMMAND:
-			callback = INTERACTION_CALLBACK_CHANNEL_MESSAGE_WITH_SOURCE;
-			break;
-		case INTERACTION_MESSAGE_COMPONENT:
-			callback = INTERACTION_CALLBACK_UPDATE_MESSAGE;
-	}
-	co_await DiscordPost(cUtils::Format("/interactions/%s/%s/callback", interaction.GetId().ToString(), interaction.GetToken()), {
-		{ "type", callback              },
-		{ "data", options.ToJson(flags) }
-	});
-}
-cTask<>
 cBot::RespondToInteraction(const cInteraction& i, const cMessageParams& params) {
 	int callback;
 	switch (i.GetType()) {
@@ -117,15 +100,15 @@ cBot::RespondToInteraction(const cInteraction& i, const cMessageParams& params) 
 }
 
 cTask<>
-cBot::EditInteractionResponse(const cInteraction& interaction, eMessageFlag flags, const cMessageOptions& options) {
-	if (interaction.GetType() != INTERACTION_PING)
-		co_await DiscordPatch(cUtils::Format("/webhooks/%s/%s/messages/@original", interaction.GetApplicationId().ToString(), interaction.GetToken()), options.ToJson(flags));
+cBot::EditInteractionResponse(const cInteraction& i, const cMessageParams& params) {
+	if (i.GetType() != INTERACTION_PING)
+		co_await DiscordPatch(cUtils::Format("/webhooks/%s/%s/messages/@original", i.GetApplicationId().ToString(), i.GetToken()), params.ToJson());
 }
 
 cTask<>
-cBot::SendInteractionFollowupMessage(const cInteraction& interaction, eMessageFlag flags, const cMessageOptions& options) {
-	if (interaction.GetType() != INTERACTION_PING)
-		co_await DiscordPost(cUtils::Format("/webhooks/%s/%s", interaction.GetApplicationId().ToString(), interaction.GetToken()), options.ToJson(flags));
+cBot::SendInteractionFollowupMessage(const cInteraction& i, const cMessageParams& params) {
+	if (i.GetType() != INTERACTION_PING)
+		co_await DiscordPost(cUtils::Format("/webhooks/%s/%s", i.GetApplicationId().ToString(), i.GetToken()), params.ToJson());
 }
 
 cTask<int>
@@ -145,15 +128,15 @@ cBot::CreateDM(const cSnowflake& recipient_id) {
 }
 
 cTask<cMessage>
-cBot::CreateMessage(const cSnowflake& channel_id, eMessageFlag flags, const cMessageOptions& options) {
+cBot::CreateMessage(const cSnowflake& channel_id, const cMessageParams& params) {
 	co_return cMessage {
-		co_await DiscordPost(cUtils::Format("/channels/%s/messages", channel_id.ToString()), options.ToJson(flags))
+		co_await DiscordPost(cUtils::Format("/channels/%s/messages", channel_id.ToString()), params.ToJson())
 	};
 }
 
 cTask<cMessage>
-cBot::CreateDMMessage(const cSnowflake& recipient_id, eMessageFlag flags, const cMessageOptions& options) {
-	co_return co_await CreateMessage((co_await CreateDM(recipient_id)).GetId(), flags, options);
+cBot::CreateDMMessage(const cSnowflake& recipient_id, const cMessageParams& params) {
+	co_return co_await CreateMessage((co_await CreateDM(recipient_id)).GetId(), params);
 }
 
 cTask<>

@@ -105,7 +105,7 @@ private:
 			co_await lmg_update_proficiency_role(member, LMG_PROFICIENCY_NON_LEARNER);
 		}
 		/* Edit original interaction message */
-		co_await EditInteractionResponse(i, MESSAGE_FLAG_EPHEMERAL, {.content = "Role assigned!", .clear_components = true});
+		co_await EditInteractionResponse(i, flags=MESSAGE_FLAG_EPHEMERAL, content="Role assigned!", components=nullptr);
 	}
 
 	cTask<> OnInteraction_avatar(const cInteraction&);

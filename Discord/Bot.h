@@ -1,6 +1,5 @@
-#pragma once
-#ifndef _GREEKBOT_BOT_H_
-#define _GREEKBOT_BOT_H_
+#ifndef GREEKBOT_BOT_H
+#define GREEKBOT_BOT_H
 #include "Interaction.h"
 #include "Gateway.h"
 #include "Message.h"
@@ -10,48 +9,6 @@
 #include "User.h"
 #include "Guild.h"
 #include "Channel.h"
-
-struct cMessageOptions {
-	bool clear_content = false;
-	bool clear_components = false;
-	bool clear_embeds = false;
-	std::string content;
-	std::vector<cActionRow> components;
-	std::vector<cEmbed> embeds;
-
-	json::object ToJson(eMessageFlag flags) const {
-		json::object obj {
-			{   "tts", (bool)(flags & MESSAGE_FLAG_TTS) },
-			{ "flags", (int)(flags & (MESSAGE_FLAG_EPHEMERAL | MESSAGE_FLAG_SUPPRESS_EMBEDS)) }
-		};
-		/* Set content */
-		if (clear_content)
-			obj["content"] = "";
-		else if (!content.empty())
-			obj["content"] = content;
-		/* Set components */
-		if (clear_components)
-			obj["components"] = json::array();
-		else if (!components.empty()) {
-			json::array a;
-			a.reserve(components.size());
-			for (auto& c : components)
-				a.push_back(c.ToJson());
-			obj["components"] = std::move(a);
-		}
-		/* Set embeds */
-		if (clear_embeds)
-			obj["embeds"] = json::array();
-		else if (!embeds.empty()) {
-			json::array a;
-			a.reserve(embeds.size());
-			for (auto& e : embeds)
-				a.push_back(e.ToJson());
-			obj["embeds"] = std::move(a);
-		}
-		return obj;
-	};
-};
 
 class cBot : public cGateway {
 private:
@@ -82,25 +39,37 @@ public:
 	cTask<> UpdateGuildMemberRoles(const cSnowflake& guild_id, const cSnowflake& user_id, const std::vector<chSnowflake>& role_ids);
 
 	cTask<> AcknowledgeInteraction(const cInteraction& interaction);
-	cTask<> RespondToInteraction(const cInteraction& interaction, eMessageFlag flags, const cMessageOptions& options = {});
-	/* TEST */
-	cTask<> RespondToInteraction(const cInteraction&, const cMessageParams& params);
+	cTask<> RespondToInteraction(const cInteraction&, const cMessageParams&);
 	template<iKwArg... KwArgs>
 	cTask<> RespondToInteraction(const cInteraction& i, KwArgs&... kwargs) {
-		return RespondToInteraction(i, {kwargs...});
+		return RespondToInteraction(i, { kwargs... });
 	}
-
-
-	cTask<> EditInteractionResponse(const cInteraction& interaction, eMessageFlag flags, const cMessageOptions& options = {});
-	cTask<> SendInteractionFollowupMessage(const cInteraction& interaction, eMessageFlag flags, const cMessageOptions& options = {});
+	cTask<> EditInteractionResponse(const cInteraction&, const cMessageParams&);
+	template<iKwArg... KwArgs>
+	cTask<> EditInteractionResponse(const cInteraction& i, KwArgs&... kwargs) {
+		return EditInteractionResponse(i, { kwargs... });
+	}
+	cTask<> SendInteractionFollowupMessage(const cInteraction& i, const cMessageParams&);
+	template<iKwArg... KwArgs>
+	cTask<> SendInteractionFollowupMessage(const cInteraction& i, KwArgs&... kwargs) {
+		return SendInteractionFollowupMessage(i, { kwargs... });
+	}
 
 	cTask<int> BeginGuildPrune(const cSnowflake& id, int days, std::string reason = {});
 
 	cTask<cChannel> CreateDM(const cSnowflake& recipient_id);
-	cTask<cMessage> CreateMessage(const cSnowflake& channel_id, eMessageFlag flags, const cMessageOptions& options = {});
+	cTask<cMessage> CreateMessage(const cSnowflake& channel_id, const cMessageParams&);
+	cTask<cMessage> CreateDMMessage(const cSnowflake& recipient_id, const cMessageParams&);
+	template<iKwArg... KwArgs>
+	cTask<cMessage> CreateMessage(const cSnowflake& channel_id, KwArgs&... kwargs) {
+		return CreateMessage(channel_id, { kwargs... });
+	}
+	template<iKwArg... KwArgs>
+	cTask<cMessage> CreateDMMessage(const cSnowflake& recipient_id, KwArgs&... kwargs) {
+		co_return co_await CreateDMMessage(recipient_id, { kwargs... });
+	}
 
-	cTask<cMessage> CreateDMMessage(const cSnowflake& recipient_id, eMessageFlag flags, const cMessageOptions& options = {});
 	cTask<> CreateGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, chrono::seconds delete_message_seconds = chrono::seconds(0), const std::string& reason = {});
 	cTask<> RemoveGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, const std::string& reason = {});
 };
-#endif /* _GREEKBOT_BOT_H_ */
+#endif // GREEKBOT_BOT_H
