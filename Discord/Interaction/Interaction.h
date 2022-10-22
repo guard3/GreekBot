@@ -2,7 +2,6 @@
 #ifndef _GREEKBOT_INTERACTION_H_
 #define _GREEKBOT_INTERACTION_H_
 #include "Common.h"
-#include "json.h"
 #include "User.h"
 #include "Member.h"
 #include <vector>

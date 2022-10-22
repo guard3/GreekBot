@@ -1,4 +1,5 @@
 #include "Interaction.h"
+#include "json.h"
 
 cInteractionData<INTERACTION_APPLICATION_COMMAND>::cInteractionData(const json::object& o) : id(o.at("id")), name(o.at("name").as_string().c_str()), type((eApplicationCommandType)o.at("type").as_int64()) {
 	if (auto p = o.if_contains("options")) {

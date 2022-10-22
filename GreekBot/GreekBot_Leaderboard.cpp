@@ -92,12 +92,12 @@ cGreekBot::OnInteraction_rank(const cInteraction& i) {
 			/* Respond to interaction with a proper embed */
 			auto &res = db_result[0];
 			co_await EditInteractionResponse(i,
-				embeds = { make_embed(*user, *member, color, res.GetRank(), res.GetXp(), res.GetNumMessages()) },
-				components ={
+				embeds={ make_embed(*user, *member, color, res.GetRank(), res.GetXp(), res.GetNumMessages()) },
+				components={
 					cActionRow{
 						cButton<BUTTON_STYLE_SECONDARY>{
 							STR(CMP_ID_BUTTON_RANK_HELP),
-							"How does this work?"
+							label="How does this work?"
 						}
 					}
 				}
@@ -148,7 +148,7 @@ cGreekBot::OnInteraction_top(const cInteraction& i) {
 				cActionRow{
 					cButton<BUTTON_STYLE_SECONDARY>{
 						STR(CMP_ID_BUTTON_RANK_HELP),
-						"How does this work?"
+						label="How does this work?"
 					}
 				}
 			}

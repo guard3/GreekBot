@@ -64,7 +64,7 @@ cGreekBot::OnInteraction_role(const cInteraction& interaction) try {
 			cActionRow {
 				cButton<BUTTON_STYLE_LINK> {
 					"https://en.wikipedia.org/wiki/Common_European_Framework_of_Reference_for_Languages",
-					"Don't know what to pick?"
+					label="Don't know what to pick?"
 				}
 			}
 		}

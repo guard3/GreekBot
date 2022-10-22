@@ -1,4 +1,5 @@
 #include "Interaction.h"
+#include "json.h"
 
 cInteraction::cInteraction(const json::object &o) : id(o.at("id")), application_id(o.at("application_id")), type((eInteractionType)o.at("type").as_int64()), token(o.at("token").as_string().c_str()), version(o.at("version").as_int64()) {
 	/* Check if interaction was triggered from a guild or DMs */

@@ -2,6 +2,7 @@
 #define _GREEKBOT_GATEWAYIMPL_H_
 #include "Gateway.h"
 #include "beast.h"
+#include "json.h"
 #include <deque>
 #include <zlib.h>
 #include "Task.h"

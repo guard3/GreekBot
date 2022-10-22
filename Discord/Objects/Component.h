@@ -1,10 +1,7 @@
 #pragma once
 #ifndef _GREEKBOT_COMPONENT_H_
 #define _GREEKBOT_COMPONENT_H_
-#include "Common.h"
 #include "Emoji.h"
-#include "json.h"
-/* TODO: ^^^ remove this */
 
 enum eComponentType {
 	COMPONENT_ACTION_ROW = 1, // A container for other components
@@ -22,19 +19,16 @@ enum eButtonStyle {
 
 class cComponent {
 private:
-	eComponentType type;
+	eComponentType m_type;
 public:
-	explicit cComponent(eComponentType type) : type(type) {}
-	explicit cComponent(const json::value& v) : cComponent(static_cast<eComponentType>(v.at("type").as_int64())) {}
+	explicit cComponent(eComponentType type) : m_type(type) {}
+	explicit cComponent(const json::object&);
+	explicit cComponent(const json::value&);
 	virtual ~cComponent() = default;
 
-	eComponentType GetType() const { return type; }
+	eComponentType GetType() const noexcept { return m_type; }
 
-	virtual json::object ToJson() const {
-		json::object obj;
-		obj["type"] = static_cast<int>(type);
-		return obj;
-	};
+	virtual json::object ToJson() const;
 };
 typedef   hHandle<cComponent>   hComponent;
 typedef  chHandle<cComponent>  chComponent;
@@ -43,44 +37,71 @@ typedef uchHandle<cComponent> uchComponent;
 typedef  shHandle<cComponent>  shComponent;
 typedef schHandle<cComponent> schComponent;
 
+enum eButtonKey {
+	KW_LABEL = 300,
+	KW_EMOJI,
+	KW_DISABLED
+};
+KW_DECLARE(label, KW_LABEL, std::string)
+KW_DECLARE(emoji, KW_EMOJI, cOption<cEmoji>, nullptr)
+KW_DECLARE(disabled, KW_DISABLED, bool, false)
+
 class cBaseButton : public cComponent {
 private:
-	eButtonStyle style;
-	std::string label;
-	// emoji
-	std::string custom_id;
-	std::string url;
-	// disabled
+	eButtonStyle m_style;
+	std::string m_label;
+	cOption<cEmoji> m_emoji;
+	std::string m_value; // either url or custom_id depending on button style
+	bool m_disabled;
 
-public:
-	cBaseButton(eButtonStyle s, const char* l, const char* c, const char* u) : cComponent(COMPONENT_BUTTON), style(s), label(l ? l : std::string()), custom_id(c ? c : std::string()), url(u ? u : std::string()) {}
+	template<typename String, iKwArg... KwArgs>
+	cBaseButton(eButtonStyle s, String&& v, cKwPack<KwArgs...>&& pack):
+		cComponent(COMPONENT_BUTTON),
+		m_style(s),
+		m_value(std::forward<String>(v)),
+		m_label(KwMove<KW_LABEL>(pack)),
+		m_emoji(KwMove<KW_EMOJI>(pack, nullptr)),
+		m_disabled(KwGet<KW_DISABLED>(pack, false)) {}
+
+protected:
+	template<typename String, iKwArg... KwArgs>
+	cBaseButton(eButtonStyle s, String&& v, KwArgs&... kwargs) : cBaseButton(s, std::forward<String>(v), cKwPack<KwArgs...>(kwargs...)) {}
 	~cBaseButton() override = default;
 
-	[[nodiscard]] eButtonStyle GetStyle() const { return style; }
+	std::string&       get_value()       noexcept { return m_value; }
+	const std::string& get_value() const noexcept { return m_value; }
 
-	[[nodiscard]] json::object ToJson() const override {
-		json::object obj = cComponent::ToJson();
-		obj["style"] = static_cast<int>(style);
-		if (!label.empty())
-			obj["label"] = label;
-		if (!custom_id.empty())
-			obj["custom_id"] = custom_id;
-		if (!url.empty())
-			obj["url"] = url;
-		return obj;
-	}
+public:
+	/* Non const getters */
+	std::string& GetLabel() noexcept { return m_label; }
+	hEmoji GetEmoji() noexcept { return m_emoji ? m_emoji.operator->() : nullptr; }
+	/* Const getters */
+	eButtonStyle GetStyle() const noexcept { return m_style; }
+	const std::string& GetLabel() const noexcept { return m_label; }
+	chEmoji GetEmoji() const noexcept { return const_cast<cBaseButton*>(this)->GetEmoji(); }
+	bool IsDisabled() const noexcept { return m_disabled; }
+
+	json::object ToJson() const override;
 };
 
 template<eButtonStyle s>
 class cButton final : public cBaseButton {
 public:
-	explicit cButton(const char* custom_id, const char* label = nullptr) : cBaseButton(s, label, custom_id, nullptr) {}
+	template<typename String, iKwArg KwArg, iKwArg... KwArgs>
+	cButton(String&& custom_id, KwArg& kwarg, KwArgs&... kwargs) : cBaseButton(s, std::forward<String>(custom_id), kwarg, kwargs...) {}
+
+	std::string&       GetCustomId()       noexcept { return get_value(); }
+	const std::string& GetCustomId() const noexcept { return get_value(); }
 };
 
 template<>
 class cButton<BUTTON_STYLE_LINK> final : public cBaseButton {
 public:
-	explicit cButton(const char* url, const char* label = nullptr) : cBaseButton(BUTTON_STYLE_LINK, label, nullptr, url) {}
+	template<typename String, iKwArg KwArg, iKwArg... KwArgs>
+	cButton(String&& url_, KwArg& kwarg, KwArgs&... kwargs) : cBaseButton(BUTTON_STYLE_LINK, std::forward<String>(url_), kwarg, kwargs...) {}
+
+	std::string&       GetUrl() noexcept { return get_value(); }
+	const std::string& GetUrl() const noexcept { return get_value(); }
 };
 
 class cSelectOption final {
@@ -110,16 +131,7 @@ public:
 		return *this;
 	}
 
-	[[nodiscard]] json::value ToJson() const {
-		json::object obj;
-		obj["label"] = label;
-		obj["value"] = value;
-		if (!description.empty())
-			obj["description"] = description;
-		if (emoji)
-			obj["emoji"] = emoji->ToJson();
-		return obj;
-	}
+	json::value ToJson() const;
 };
 
 class cSelectMenu final : public cComponent {
@@ -136,21 +148,7 @@ public:
 
 	~cSelectMenu() override = default;
 
-	[[nodiscard]] json::object ToJson() const override {
-		json::object obj = cComponent::ToJson();
-		if (!custom_id.empty())
-			obj["custom_id"] = custom_id;
-		if (!placeholder.empty())
-			obj["placeholder"] = placeholder;
-		if (!options.empty()) {
-			json::array opts;
-			opts.reserve(options.size());
-			for (auto& o : options)
-				opts.push_back(o.ToJson());
-			obj["options"] = std::move(opts);
-		}
-		return obj;
-	}
+	json::object ToJson() const override;
 };
 
 class cActionRow : public cComponent {
@@ -187,17 +185,7 @@ public:
 		return *this;
 	}
 
-	[[nodiscard]] json::object ToJson() const override {
-		json::object obj = cComponent::ToJson();
-		if (!Components.empty()) {
-			json::array components;
-			components.reserve(Components.size());
-			for (chComponent c : Components)
-				components.push_back(c->ToJson());
-			obj["components"] = std::move(components);
-		}
-		return obj;
-	}
+	json::object ToJson() const override;
 };
 typedef   hHandle<cActionRow>   hActionRow;
 typedef  chHandle<cActionRow>  chActionRow;

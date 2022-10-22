@@ -1,4 +1,5 @@
 #include "Interaction.h"
+#include "json.h"
 
 cApplicationCommandOption::cApplicationCommandOption(const json::value& v, const json::value* r) : m_name(json::value_to<std::string>(v.at("name"))), m_type((eApplicationCommandOptionType)v.at("type").as_int64()) {
 	switch (m_type) {

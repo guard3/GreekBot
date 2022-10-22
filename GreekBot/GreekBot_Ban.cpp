@@ -46,11 +46,11 @@ cGreekBot::OnInteraction_ban(const cInteraction& i, const char* image_url) {
 							cActionRow{
 								cButton<BUTTON_STYLE_SUCCESS>{
 									STR(CMP_ID_BUTTON_TURK_A),
-									"Evet"
+									label="Evet"
 								},
 								cButton<BUTTON_STYLE_DANGER>{
 									STR(CMP_ID_BUTTON_TURK_B),
-									"Hayır"
+									label="Hayır"
 								}
 							}
 						}
@@ -108,9 +108,9 @@ cGreekBot::OnInteraction_ban(const cInteraction& i, const char* image_url) {
 			co_await EditInteractionResponse(i,
 				components={
 					cActionRow {
-						cButton<BUTTON_STYLE_DANGER>{
-							cUtils::Format("BAN#%s", user->GetId().ToString()).c_str(), // TODO: std::string for cButton, like plz
-							"Revoke ban"
+						cButton<BUTTON_STYLE_DANGER> {
+							cUtils::Format("BAN#%s", user->GetId().ToString()),
+							label="Revoke ban"
 						}
 					}
 				},

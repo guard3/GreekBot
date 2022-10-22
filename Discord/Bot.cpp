@@ -1,4 +1,5 @@
 #include "Bot.h"
+#include "json.h"
 
 cTask<>
 cBot::OnReady(uhUser user) {
