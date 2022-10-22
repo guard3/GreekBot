@@ -206,7 +206,7 @@ public:
 	cOption& operator=(cOption&&) noexcept = default;
 	template<typename U>
 	cOption& operator=(std::initializer_list<U> list) {
-		this->template emplace(list);
+		this->emplace(list);
 		return *this;
 	}
 

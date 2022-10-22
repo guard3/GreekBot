@@ -82,7 +82,7 @@ cBot::AcknowledgeInteraction(const cInteraction& i) {
 	co_await DiscordPost(cUtils::Format("/interactions/%s/%s/callback", i.GetId().ToString(), i.GetToken()), { { "type", callback } });
 }
 cTask<>
-cBot::RespondToInteraction(const cInteraction& i, const cMessageParams& params) {
+cBot::respond_to_interaction(const cInteraction& i, const cMessageParams& params) {
 	int callback;
 	switch (i.GetType()) {
 		default:
@@ -100,13 +100,13 @@ cBot::RespondToInteraction(const cInteraction& i, const cMessageParams& params) 
 }
 
 cTask<>
-cBot::EditInteractionResponse(const cInteraction& i, const cMessageParams& params) {
+cBot::edit_interaction_response(const cInteraction& i, const cMessageParams& params) {
 	if (i.GetType() != INTERACTION_PING)
 		co_await DiscordPatch(cUtils::Format("/webhooks/%s/%s/messages/@original", i.GetApplicationId().ToString(), i.GetToken()), params.ToJson());
 }
 
 cTask<>
-cBot::SendInteractionFollowupMessage(const cInteraction& i, const cMessageParams& params) {
+cBot::send_interaction_followup_message(const cInteraction& i, const cMessageParams& params) {
 	if (i.GetType() != INTERACTION_PING)
 		co_await DiscordPost(cUtils::Format("/webhooks/%s/%s", i.GetApplicationId().ToString(), i.GetToken()), params.ToJson());
 }
@@ -128,15 +128,10 @@ cBot::CreateDM(const cSnowflake& recipient_id) {
 }
 
 cTask<cMessage>
-cBot::CreateMessage(const cSnowflake& channel_id, const cMessageParams& params) {
+cBot::create_message(const cSnowflake& channel_id, const cMessageParams& params) {
 	co_return cMessage {
 		co_await DiscordPost(cUtils::Format("/channels/%s/messages", channel_id.ToString()), params.ToJson())
 	};
-}
-
-cTask<cMessage>
-cBot::CreateDMMessage(const cSnowflake& recipient_id, const cMessageParams& params) {
-	co_return co_await CreateMessage((co_await CreateDM(recipient_id)).GetId(), params);
 }
 
 cTask<>
