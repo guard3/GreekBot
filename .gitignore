@@ -7,7 +7,7 @@
 cmake-build-*
 Database/Queries.h
 Find*.cmake
-commands/register.sh
+**/*.sh
 
 # Visual Studio stuff
 .vs

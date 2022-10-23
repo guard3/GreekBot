@@ -128,7 +128,7 @@ cGreekBot::OnInteraction_ban(const cInteraction& i, const char* image_url) {
 		}
 		catch (...) {}
 	}
-	co_await EditInteractionResponse(i, content="An unexpected error has occurred, please try again later.");
+	co_await EditInteractionResponse(i, content="An unexpected error has occurred, try again later.");
 }
 
 cTask<>

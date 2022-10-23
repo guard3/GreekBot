@@ -2,24 +2,29 @@
 
 cTask<>
 cGreekBot::OnInteraction_prune(const cInteraction& i) {
-	/* If we're not on a guild, just do nothing */
-	chSnowflake pGuildId = nullptr;
-	if (pGuildId = i.GetGuildId(); !pGuildId)
-		co_return co_await RespondToInteraction(i, flags=MESSAGE_FLAG_EPHEMERAL, content="Sorry, I can't do that in DMs or Group chats.");
-
+	/* Acknowledge interaction first */
 	co_await AcknowledgeInteraction(i);
-	int days = 2;
-	auto& options = i.GetData<INTERACTION_APPLICATION_COMMAND>()->Options;
-	if (!options.empty())
-		days = options[0].GetValue<APP_CMD_OPT_INTEGER>();
-
-	chrono::milliseconds retry_after;
+	/* Content of the message in case of an error */
+	std::string str;
 	try {
-		int pruned = co_await BeginGuildPrune(*pGuildId, days, "Failed to get a rank");
-		co_return co_await EditInteractionResponse(i, content = cUtils::Format("Pruned **%d** member%s for **%d** day%s of inactivity.", pruned, pruned == 1 ? "" : "s", days, days == 1 ? "" : "s"));
+		/* Make sure that we're on a guild and that we have the necessary permissions */
+		chSnowflake guild_id = i.GetGuildId();
+		chMember member = i.GetMember();
+		if (!guild_id || !member) throw 0;
+		if (!(member->GetPermissions() & PERM_KICK_MEMBERS))
+			co_return co_await EditInteractionResponse(i, content="You can't do that. You're missing the `KICK_MEMBERS` permission.");
+		/* How many days of inactivity to consider */
+		auto &options = i.GetData<INTERACTION_APPLICATION_COMMAND>()->Options;
+		int days = options.empty() ? 2 : options.front().GetValue<APP_CMD_OPT_INTEGER>();
+		/* Prune */
+		int pruned = co_await BeginGuildPrune(*guild_id, days, "Failed to get a rank");
+		co_return co_await EditInteractionResponse(i, content=cUtils::Format("Pruned **%d** member%s for **%d** day%s of inactivity.", pruned, pruned == 1 ? "" : "s", days, days == 1 ? "" : "s"));
 	}
 	catch (const xRateLimitError& e) {
-		retry_after = e.retry_after();
+		str = cUtils::Format("Rate limited. Try again after **%dms**.", (int)e.retry_after().count());
 	}
-	co_await EditInteractionResponse(i, content = cUtils::Format("Rate limited. Try again after **%dms**.", (int)retry_after.count()));
+	catch (...) {
+		str = "An unexpected error has occurred, try again later.";
+	}
+	co_await EditInteractionResponse(i, content=std::move(str));
 }
