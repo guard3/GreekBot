@@ -44,7 +44,7 @@ cUtils::Base64Encode(const void* data, size_t num) {
 std::vector<uint8_t>
 cUtils::base64_decode(const char* s, size_t len) {
 	/* Lookup table */
-	static const char b64values[128] {
+	static const int8_t b64values[256] {
 		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 62, -1, -1, -1, 63,
@@ -52,7 +52,15 @@ cUtils::base64_decode(const char* s, size_t len) {
 		-1,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14,
 		15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, -1, -1, -1, -1, -1,
 		-1, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
-		41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, -1, -1, -1, -1, -1
+		41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, -1, -1, -1, -1, -1,
+		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
 	};
 	/* If string is empty, just return */
 	if (len == 0)
@@ -61,13 +69,13 @@ cUtils::base64_decode(const char* s, size_t len) {
 	std::vector<uint8_t> result;
 	result.reserve(len * 6 / 8);
 	/* Decode */
-	char a, b, c, d;
+	int8_t a, b, c, d;
 	for (uint32_t n; len > 4; len -= 4) {
 		/* Consume next 4 characters */
-		a = b64values[*s++];
-		b = b64values[*s++];
-		c = b64values[*s++];
-		d = b64values[*s++];
+		a = b64values[(uint8_t)*s++];
+		b = b64values[(uint8_t)*s++];
+		c = b64values[(uint8_t)*s++];
+		d = b64values[(uint8_t)*s++];
 		/* Check for errors */
 		if ((a | b | c | d) < 0)
 			throw std::exception();
@@ -81,8 +89,8 @@ cUtils::base64_decode(const char* s, size_t len) {
 	if (len == 1)
 		throw std::exception();
 	/* Load final chars, add padding if missing */
-	a = b64values[*s++];
-	b = b64values[*s++];
+	a = b64values[(uint8_t)*s++];
+	b = b64values[(uint8_t)*s++];
 	switch (len) {
 		case 2:
 			c = d = '=';
@@ -101,14 +109,14 @@ cUtils::base64_decode(const char* s, size_t len) {
 			throw std::exception();
 		return result;
 	}
-	c = b64values[c];
+	c = b64values[(uint8_t)c];
 	result.emplace_back(0xFF & ((b << 4) | (c >> 2)));
 	if (d == '=') {
 		if ((a | b | c) < 0)
 			throw std::exception();
 		return result;
 	}
-	d = b64values[d];
+	d = b64values[(uint8_t)d];
 	result.emplace_back(0xFF & ((c << 6) | d));
 	if ((a | b | c | d) < 0)
 		throw std::exception();

@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <coroutine>
 #include <vector>
+#include <functional>
 #include "Message.h"
 /* ================================================================================================================== */
 class xDatabaseError : public std::runtime_error {

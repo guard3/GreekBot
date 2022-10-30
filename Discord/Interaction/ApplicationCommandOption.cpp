@@ -109,6 +109,7 @@ cApplicationCommandOption::~cApplicationCommandOption() {
 		case APP_CMD_OPT_SUB_COMMAND:
 		case APP_CMD_OPT_SUB_COMMAND_GROUP:
 			m_options.~vector();
+			break;
 		case APP_CMD_OPT_STRING:
 			m_value_string.~basic_string();
 			break;

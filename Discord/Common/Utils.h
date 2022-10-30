@@ -4,8 +4,10 @@
 #include <random>
 #include <string>
 #include <concepts>
+#include <stdexcept>
 #include <cstdlib>
-
+#include <cstring>
+#if 0
 namespace discord::detail {
 	/* Generic random distribution types */
 	namespace distribution_detail {
@@ -16,7 +18,7 @@ namespace discord::detail {
 	template<typename T> using distribution = typename distribution_detail::d<T>::type;
 	template<typename T> using range        = typename distribution<T>::param_type;
 }
-
+#endif
 class xNumberFormatError : public std::invalid_argument {
 public:
 	explicit xNumberFormatError(const char* str) : std::invalid_argument(str) {}
@@ -27,8 +29,12 @@ public:
 class cUtils final {
 private:
 	/* Random generators */
-	static std::mt19937       ms_gen;
-	static std::mt19937_64    ms_gen64;
+	static std::mt19937    ms_gen;
+	static std::mt19937_64 ms_gen64;
+	/* Distribution types */
+	template<typename T> struct d;
+	template<typename T> using distribution = typename d<T>::type;
+	template<typename T> using range        = typename distribution<T>::param_type;
 	/* Non templated static functions */
 	static void print(FILE*, const char*, char, const char*, ...);
 	static std::string format(const char*, ...);
@@ -50,7 +56,7 @@ public:
 	/* Random functions */
 	template<typename T1, typename T2, typename R = std::common_type_t<T1, T2>>
 	static R Random(T1 a, T2 b) {
-		using namespace discord::detail;
+		//using namespace discord::detail;
 		/* Static uniform distribution */
 		static distribution<R> dist;
 		/* Generate random number */
@@ -62,23 +68,23 @@ public:
 	/* Logger functions */
 	template<char nl = '\n', typename... Args>
 	static void PrintErr(Args&&... args) {
-		using namespace discord::detail;
+		//using namespace discord::detail;
 		print(stderr, "[ERR] ", nl, resolve_va_arg(std::forward<Args>(args))...);
 	}
 	template<char nl = '\n', typename... Args>
 	static void PrintLog(Args&&... args) {
-		using namespace discord::detail;
+		//using namespace discord::detail;
 		print(stdout, "[LOG] ", nl, resolve_va_arg(std::forward<Args>(args))...);
 	}
 	template<char nl = '\n', typename... Args>
 	static void PrintMsg(Args&&... args) {
-		using namespace discord::detail;
+		//using namespace discord::detail;
 		print(stdout, "[MSG] ", nl, resolve_va_arg(std::forward<Args>(args))...);
 	}
 	/* C style formatting for std::string */
 	template<typename... Args>
 	static std::string Format(Args&&... args) {
-		using namespace discord::detail;
+		//using namespace discord::detail;
 		return format(resolve_va_arg(std::forward<Args>(args))...);
 	}
 	/* Converting a string to int */
@@ -130,4 +136,7 @@ public:
 	/* Resolving the OS we're running on */
 	static const char* GetOS();
 };
+
+template<std::integral I>       struct cUtils::d<I> { typedef std::uniform_int_distribution<I>  type; };
+template<std::floating_point F> struct cUtils::d<F> { typedef std::uniform_real_distribution<F> type; };
 #endif //GREEKBOT_UTILS_H

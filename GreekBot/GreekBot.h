@@ -3,6 +3,8 @@
 #define _GREEKBOT_GREEKBOT_H_
 #include "Bot.h"
 #include <mutex>
+#include <algorithm>
+#include <unordered_map>
 
 /* Define custom message component ids; used for responding to component interactions */
 #define CMP_ID_BUTTON_RANK_HELP 0
@@ -12,10 +14,10 @@
 /* Specialize std::hash for cSnowflake to use in unordered maps */
 namespace std {
 	template<>
-	class hash<cSnowflake> {
+	class hash<cSnowflake> : hash<uint64_t> {
 	public:
 		size_t operator()(const cSnowflake& snowflake) const {
-			return hash<uint64_t>()(snowflake.ToInt());
+			return hash<uint64_t>::operator()(snowflake.ToInt());
 		}
 	};
 }
