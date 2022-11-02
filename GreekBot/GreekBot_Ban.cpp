@@ -9,7 +9,7 @@ cGreekBot::OnInteraction_ban(const cInteraction& i, const char* image_url) {
 		co_return co_await SendInteractionFollowupMessage(i, content=image_url);
 	}
 	/* Acknowledge the interaction first */
-	co_await AcknowledgeInteraction(i);
+	co_await RespondToInteraction(i);
 	/* Collect interaction data */
 	chSnowflake guild_id = i.GetGuildId();
 	chMember    member   = i.GetMember();
@@ -155,7 +155,7 @@ cGreekBot::OnInteraction_unban(const cInteraction& i, const cSnowflake& user_id)
 			co_return co_await SendInteractionFollowupMessage(i, flags=MESSAGE_FLAG_EPHEMERAL, content="You can't do that. You're missing the `BAN_MEMBERS` permission.");
 		}
 		if (chSnowflake pGuildId = i.GetGuildId()) {
-			co_await AcknowledgeInteraction(i);
+			co_await RespondToInteraction(i);
 			try {
 				co_await RemoveGuildBan(*pGuildId, user_id);
 			}

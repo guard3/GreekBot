@@ -3,10 +3,7 @@
 cTask<>
 cGreekBot::OnInteraction_prune(const cInteraction& i) {
 	/* Acknowledge interaction first */
-	co_await AcknowledgeInteraction(i);
-	/* Content of the message in case of an error */
-	//std::string str;
-	//bool bDismissButton = false;
+	co_await RespondToInteraction(i);
 	try {
 		/* Make sure that we're on a guild and that we have the necessary permissions */
 		chSnowflake guild_id = i.GetGuildId();

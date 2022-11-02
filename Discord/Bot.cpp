@@ -66,23 +66,6 @@ enum eInteractionCallbackType {
 };
 
 cTask<>
-cBot::AcknowledgeInteraction(const cInteraction& i) {
-	int callback;
-	switch (i.GetType()) {
-		default:
-			co_return;
-		case INTERACTION_PING:
-			callback = INTERACTION_CALLBACK_PONG;
-			break;
-		case INTERACTION_APPLICATION_COMMAND:
-			callback = INTERACTION_CALLBACK_DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE;
-			break;
-		case INTERACTION_MESSAGE_COMPONENT:
-			callback = INTERACTION_CALLBACK_DEFERRED_UPDATE_MESSAGE;
-	}
-	co_await DiscordPost(cUtils::Format("/interactions/%s/%s/callback", i.GetId().ToString(), i.GetToken()), { { "type", callback } });
-}
-cTask<>
 cBot::respond_to_interaction(const cInteraction& i, const cMessageParams& params) {
 	int callback;
 	switch (i.GetType()) {
@@ -98,6 +81,25 @@ cBot::respond_to_interaction(const cInteraction& i, const cMessageParams& params
 		{ "type", callback        },
 		{ "data", params.ToJson() }
 	});
+}
+
+template<>
+cTask<>
+cBot::RespondToInteraction<>(const cInteraction& i) {
+	int callback;
+	switch (i.GetType()) {
+		default:
+			co_return;
+		case INTERACTION_PING:
+			callback = INTERACTION_CALLBACK_PONG;
+			break;
+		case INTERACTION_APPLICATION_COMMAND:
+			callback = INTERACTION_CALLBACK_DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE;
+			break;
+		case INTERACTION_MESSAGE_COMPONENT:
+			callback = INTERACTION_CALLBACK_DEFERRED_UPDATE_MESSAGE;
+	}
+	co_await DiscordPost(cUtils::Format("/interactions/%s/%s/callback", i.GetId().ToString(), i.GetToken()), {{ "type", callback }});
 }
 
 cTask<>

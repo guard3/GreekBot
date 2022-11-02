@@ -43,11 +43,12 @@ public:
 	cTask<> RemoveGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake& role_id);
 	cTask<> UpdateGuildMemberRoles(const cSnowflake& guild_id, const cSnowflake& user_id, const std::vector<chSnowflake>& role_ids);
 
-	cTask<> AcknowledgeInteraction(const cInteraction& interaction);
 	template<iKwArg... KwArgs>
 	cTask<> RespondToInteraction(const cInteraction& i, KwArgs&... kwargs) {
 		return respond_to_interaction(i, { kwargs... });
 	}
+	template<>
+	cTask<> RespondToInteraction<>(const cInteraction&);
 	template<iKwArg... KwArgs>
 	cTask<> EditInteractionResponse(const cInteraction& i, KwArgs&... kwargs) {
 		return edit_interaction_response(i, { kwargs... });

@@ -98,25 +98,21 @@ cGreekBot::OnInteractionCreate(const cInteraction& interaction) {
 		switch (data->GetComponentType()) {
 			case COMPONENT_BUTTON:
 				/* Check custom id */
-				if (data->GetCustomId().starts_with("BAN#")) {
+				if (data->GetCustomId().starts_with("BAN#"))
 					co_return co_await OnInteraction_unban(interaction, data->GetCustomId().c_str() + 4);
-				}
-				else if (data->GetCustomId().starts_with("DLT#")) {
-					cUtils::PrintLog(data->GetCustomId());
+				if (data->GetCustomId().starts_with("DLT#"))
 					co_return co_await OnInteraction_dismiss(interaction, data->GetCustomId().c_str() + 4);
-				}
-				else {
-					switch (cUtils::ParseInt(data->GetCustomId())) {
-						case CMP_ID_BUTTON_RANK_HELP:
-							co_await OnInteraction_button(interaction);
-							break;
-						case CMP_ID_BUTTON_TURK_A:
-							co_await OnInteraction_ban(interaction, "https://cdn.discordapp.com/attachments/355242373380308993/875731671423516692/image0.png");
-							break;
-						case CMP_ID_BUTTON_TURK_B:
-							co_await OnInteraction_ban(interaction, "https://cdn.discordapp.com/attachments/355242373380308993/835936970991075420/1588162009.png");
-							break;
-					}
+
+				switch (cUtils::ParseInt(data->GetCustomId())) {
+					case CMP_ID_BUTTON_RANK_HELP:
+						co_await OnInteraction_button(interaction);
+						break;
+					case CMP_ID_BUTTON_TURK_A:
+						co_await OnInteraction_ban(interaction, "https://cdn.discordapp.com/attachments/355242373380308993/875731671423516692/image0.png");
+						break;
+					case CMP_ID_BUTTON_TURK_B:
+						co_await OnInteraction_ban(interaction, "https://cdn.discordapp.com/attachments/355242373380308993/835936970991075420/1588162009.png");
+						break;
 				}
 				break;
 			case COMPONENT_SELECT_MENU:

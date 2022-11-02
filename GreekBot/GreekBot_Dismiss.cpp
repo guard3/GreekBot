@@ -3,7 +3,7 @@
 cTask<>
 cGreekBot::OnInteraction_dismiss(const cInteraction& i, const cSnowflake& user_id) {
 	/* Acknowledge interaction first */
-	co_await AcknowledgeInteraction(i);
+	co_await RespondToInteraction(i);
 	try {
 		if (chUser user = i.GetUser(); !user) {
 			/* If we're on a guild, collect member and user info */

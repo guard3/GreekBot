@@ -74,7 +74,7 @@ cGreekBot::OnInteraction_rank(const cInteraction& i) {
 		if (user->IsSystemUser())
 			co_return co_await RespondToInteraction(i, content="Ranking isn't available for system users.");
 		/* Acknowledge interaction while we're looking through the database */
-		co_await AcknowledgeInteraction(i);
+		co_await RespondToInteraction(i);
 		/* Get user's ranking info from the database */
 		tRankQueryData db_result = co_await cDatabase::GetUserRank(*user);
 		co_await ResumeOnEventThread();
@@ -113,7 +113,7 @@ cTask<>
 cGreekBot::OnInteraction_top(const cInteraction& i) {
 	try {
 		/* Acknowledge interaction */
-		co_await AcknowledgeInteraction(i);
+		co_await RespondToInteraction(i);
 		/* Get data from the database */
 		tRankQueryData db_result = co_await cDatabase::GetTop10();
 		if (db_result.empty()) {
