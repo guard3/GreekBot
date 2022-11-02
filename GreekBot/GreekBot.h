@@ -118,6 +118,7 @@ private:
 	cTask<> OnInteraction_prune(const cInteraction&);
 	cTask<> OnInteraction_ban(const cInteraction&, const char* image_url);
 	cTask<> OnInteraction_unban(const cInteraction&, const cSnowflake& user_id);
+	cTask<> OnInteraction_dismiss(const cInteraction&, const cSnowflake& user_id);
 
 	cTask<> OnGuildCreate(uhGuild guild) override;
 	cTask<> OnGuildRoleCreate(cSnowflake& guild_id, cRole& role) override;

@@ -107,6 +107,11 @@ cBot::edit_interaction_response(const cInteraction& i, const cMessageParams& par
 }
 
 cTask<>
+cBot::DeleteInteractionResponse(const cInteraction& i) {
+	co_await DiscordDelete(cUtils::Format("/webhooks/%s/%s/messages/@original", i.GetApplicationId().ToString(), i.GetToken()));
+}
+
+cTask<>
 cBot::send_interaction_followup_message(const cInteraction& i, const cMessageParams& params) {
 	if (i.GetType() != INTERACTION_PING)
 		co_await DiscordPost(cUtils::Format("/webhooks/%s/%s", i.GetApplicationId().ToString(), i.GetToken()), params.ToJson());

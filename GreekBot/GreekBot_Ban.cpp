@@ -63,7 +63,17 @@ cGreekBot::OnInteraction_ban(const cInteraction& i, const char* image_url) {
 				/* Create the ban */
 				co_await CreateGuildBan(*guild_id, user.GetId(), chrono::days(7), "Turk troll");
 				/* Send confirmation message */
-				co_return co_await EditInteractionResponse(i, embeds = {std::move(e)});
+				co_return co_await EditInteractionResponse(
+					i,
+					embeds={std::move(e)},
+					components={
+						cActionRow{
+							cButton<BUTTON_STYLE_SECONDARY>{
+								cUtils::Format("DLT#%s", member->GetUser()->GetId().ToString()),
+								label="Dismiss"
+							}
+						}
+					});
 			}
 			/* Handle ban for regular user */
 			chUser user = nullptr;
@@ -105,12 +115,17 @@ cGreekBot::OnInteraction_ban(const cInteraction& i, const char* image_url) {
 			/* Create the ban; TODO: convert 'reason' string to be url-encoded */
 			co_await CreateGuildBan(*guild_id, user->GetId(), delete_messages, reason);
 			/* Send confirmation message */
-			co_await EditInteractionResponse(i,
+			co_await EditInteractionResponse(
+				i,
 				components={
-					cActionRow {
-						cButton<BUTTON_STYLE_DANGER> {
+					cActionRow{
+						cButton<BUTTON_STYLE_DANGER>{
 							cUtils::Format("BAN#%s", user->GetId().ToString()),
 							label="Revoke ban"
+						},
+						cButton<BUTTON_STYLE_SECONDARY>{
+							cUtils::Format("DLT#%s", member->GetUser()->GetId().ToString()),
+							label="Dismiss"
 						}
 					}
 				},

@@ -101,6 +101,10 @@ cGreekBot::OnInteractionCreate(const cInteraction& interaction) {
 				if (data->GetCustomId().starts_with("BAN#")) {
 					co_return co_await OnInteraction_unban(interaction, data->GetCustomId().c_str() + 4);
 				}
+				else if (data->GetCustomId().starts_with("DLT#")) {
+					cUtils::PrintLog(data->GetCustomId());
+					co_return co_await OnInteraction_dismiss(interaction, data->GetCustomId().c_str() + 4);
+				}
 				else {
 					switch (cUtils::ParseInt(data->GetCustomId())) {
 						case CMP_ID_BUTTON_RANK_HELP:

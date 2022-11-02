@@ -52,6 +52,7 @@ public:
 	cTask<> EditInteractionResponse(const cInteraction& i, KwArgs&... kwargs) {
 		return edit_interaction_response(i, { kwargs... });
 	}
+	cTask<> DeleteInteractionResponse(const cInteraction&);
 	template<iKwArg... KwArgs>
 	cTask<> SendInteractionFollowupMessage(const cInteraction& i, KwArgs&... kwargs) {
 		return send_interaction_followup_message(i, { kwargs... });
