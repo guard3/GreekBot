@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <cstdlib>
 #include <cstring>
+#include <cstdio>
 
 class xNumberFormatError : public std::invalid_argument {
 public:
@@ -46,7 +47,6 @@ public:
 	/* Random functions */
 	template<typename T1, typename T2, typename R = std::common_type_t<T1, T2>>
 	static R Random(T1 a, T2 b) {
-		//using namespace discord::detail;
 		/* Static uniform distribution */
 		static distribution<R> dist;
 		/* Generate random number */
@@ -57,26 +57,14 @@ public:
 	}
 	/* Logger functions */
 	template<char nl = '\n', typename... Args>
-	static void PrintErr(Args&&... args) {
-		//using namespace discord::detail;
-		print(stderr, "[ERR] ", nl, resolve_va_arg(std::forward<Args>(args))...);
-	}
+	static void PrintErr(Args&&... args) { print(stderr, "[ERR] ", nl, resolve_va_arg(std::forward<Args>(args))...); }
 	template<char nl = '\n', typename... Args>
-	static void PrintLog(Args&&... args) {
-		//using namespace discord::detail;
-		print(stdout, "[LOG] ", nl, resolve_va_arg(std::forward<Args>(args))...);
-	}
+	static void PrintLog(Args&&... args) { print(stdout, "[LOG] ", nl, resolve_va_arg(std::forward<Args>(args))...); }
 	template<char nl = '\n', typename... Args>
-	static void PrintMsg(Args&&... args) {
-		//using namespace discord::detail;
-		print(stdout, "[MSG] ", nl, resolve_va_arg(std::forward<Args>(args))...);
-	}
+	static void PrintMsg(Args&&... args) { print(stdout, "[MSG] ", nl, resolve_va_arg(std::forward<Args>(args))...); }
 	/* C style formatting for std::string */
 	template<typename... Args>
-	static std::string Format(Args&&... args) {
-		//using namespace discord::detail;
-		return format(resolve_va_arg(std::forward<Args>(args))...);
-	}
+	static std::string Format(Args&&... args) { return format(resolve_va_arg(std::forward<Args>(args))...); }
 	/* Converting a string to int */
 	template<std::integral Result = int, typename String>
 	static Result ParseInt(String &&str) {
@@ -124,12 +112,8 @@ public:
 		return base64_decode(str, strlen(str));
 	}
 	/* Percent encoding */
-	static std::string PercentEncode(const char* str) {
-		return percent_encode(str, strlen(str));
-	}
-	static std::string PercentEncode(const std::string& str) {
-		return percent_encode(str.c_str(), str.length());
-	}
+	static std::string PercentEncode(const char*        str) { return percent_encode(str,         strlen(str));  }
+	static std::string PercentEncode(const std::string& str) { return percent_encode(str.c_str(), str.length()); }
 	/* Resolving the OS we're running on */
 	static const char* GetOS();
 };

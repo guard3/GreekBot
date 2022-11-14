@@ -33,6 +33,11 @@ namespace boost::json {
 }
 namespace json = boost::json;
 
+/* Declare itoa variants if they're not provided by the standard library */
+char* utoa (unsigned, char*, int);
+char* ultoa (unsigned long, char*, int);
+char* ulltoa (unsigned long long, char*, int);
+
 /* ========== Handle types ========== */
 template<typename T> // handle
 using   hHandle = T*;
@@ -125,8 +130,8 @@ private:
 	
 public:
 	cSnowflake() noexcept : m_int(0), m_str("0") {}
-	cSnowflake(uint64_t i) noexcept : m_int(i) { sprintf(m_str, "%" PRIu64, i); }
-	cSnowflake(const char* str) noexcept : m_int(strtoull(str, nullptr, 10)) { strcpy(m_str, str); }
+	cSnowflake(uint64_t i) noexcept : m_int(i) { ulltoa(i, m_str, 10); }
+	cSnowflake(const char* str) noexcept : m_int(cUtils::ParseInt<uint64_t>(str)) { strcpy(m_str, str); }
 	cSnowflake(const json::value& v);
 
 	bool operator==(const cSnowflake& o) const noexcept { return m_int == o.m_int; }

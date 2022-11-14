@@ -1,9 +1,9 @@
 #include "Utils.h"
-#include <cstdio>
+
 /* Random engine stuff */
 static std::random_device g_rd;
-std::mt19937       cUtils::ms_gen(g_rd());
-std::mt19937_64    cUtils::ms_gen64(g_rd());
+std::mt19937    cUtils::ms_gen(g_rd());
+std::mt19937_64 cUtils::ms_gen64(g_rd());
 
 void
 cUtils::print(FILE* f, const char* comment, char nl, const char* fmt, ...) {
@@ -42,8 +42,8 @@ cUtils::GetOS() {
 #elif defined __linux__
 	return "Linux";
 #elif defined __FreeBSD__
-		return "FreeBSD";
+	return "FreeBSD";
 #else
-		return "Unix";
+	return "Unix";
 #endif
 }
