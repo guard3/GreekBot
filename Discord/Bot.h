@@ -59,7 +59,7 @@ public:
 		return send_interaction_followup_message(i, { kwargs... });
 	}
 
-	cTask<int> BeginGuildPrune(const cSnowflake& id, int days, std::string reason = {});
+	cTask<int> BeginGuildPrune(const cSnowflake& id, int days, const std::string& reason = {});
 
 	cTask<cChannel> CreateDM(const cSnowflake& recipient_id);
 	template<iKwArg... KwArgs>

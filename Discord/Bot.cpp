@@ -120,10 +120,10 @@ cBot::send_interaction_followup_message(const cInteraction& i, const cMessagePar
 }
 
 cTask<int>
-cBot::BeginGuildPrune(const cSnowflake &id, int days, std::string reason) {
+cBot::BeginGuildPrune(const cSnowflake &id, int days, const std::string& reason) {
 	tHttpFields fields;
 	if (!reason.empty())
-		fields.emplace_back("X-Audit-Log-Reason", std::move(reason));
+		fields.emplace_back("X-Audit-Log-Reason", cUtils::PercentEncode(reason));
 	auto response = co_await DiscordPostNoRetry(cUtils::Format("/guilds/%s/prune", id.ToString()), {{ "days", days }}, fields);
 	co_return response.at("pruned").as_int64();
 }
@@ -146,7 +146,7 @@ cTask<>
 cBot::CreateGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, chrono::seconds delete_message_seconds, const std::string& reason) {
 	tHttpFields fields;
 	if (!reason.empty())
-		fields.emplace_back("X-Audit-Log-Reason", reason);
+		fields.emplace_back("X-Audit-Log-Reason", cUtils::PercentEncode(reason));
 	co_await DiscordPut(cUtils::Format("/guilds/%s/bans/%s", guild_id.ToString(), user_id.ToString()), {{ "delete_message_seconds", delete_message_seconds.count() }}, fields);
 }
 
@@ -154,6 +154,6 @@ cTask<>
 cBot::RemoveGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, const std::string& reason) {
 	tHttpFields fields;
 	if (!reason.empty())
-		fields.emplace_back("X-Audit-Log-Reason", reason);
+		fields.emplace_back("X-Audit-Log-Reason", cUtils::PercentEncode(reason));
 	co_await DiscordDelete(cUtils::Format("/guilds/%s/bans/%s", guild_id.ToString(), user_id.ToString()), fields);
 }

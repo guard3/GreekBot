@@ -34,7 +34,6 @@ public:
 	const char* errors() const noexcept { return m_errors.c_str(); }
 };
 
-using tRealSeconds = std::chrono::duration<double>;
 class xRateLimitError : public std::runtime_error {
 private:
 	chrono::milliseconds m_retry_after;

@@ -7,18 +7,7 @@
 #include <stdexcept>
 #include <cstdlib>
 #include <cstring>
-#if 0
-namespace discord::detail {
-	/* Generic random distribution types */
-	namespace distribution_detail {
-		template<typename T>            struct d {};
-		template<std::integral I>       struct d<I> { typedef std::uniform_int_distribution<I>  type; };
-		template<std::floating_point F> struct d<F> { typedef std::uniform_real_distribution<F> type; };
-	}
-	template<typename T> using distribution = typename distribution_detail::d<T>::type;
-	template<typename T> using range        = typename distribution<T>::param_type;
-}
-#endif
+
 class xNumberFormatError : public std::invalid_argument {
 public:
 	explicit xNumberFormatError(const char* str) : std::invalid_argument(str) {}
@@ -48,6 +37,7 @@ private:
 	}
 
 	static std::vector<uint8_t> base64_decode(const char*, size_t);
+	static std::string percent_encode(const char*, size_t);
 	/* Private constructor */
 	cUtils() = default;
 public:
@@ -132,6 +122,13 @@ public:
 	}
 	static std::vector<uint8_t> Base64Decode(const char* str) {
 		return base64_decode(str, strlen(str));
+	}
+	/* Percent encoding */
+	static std::string PercentEncode(const char* str) {
+		return percent_encode(str, strlen(str));
+	}
+	static std::string PercentEncode(const std::string& str) {
+		return percent_encode(str.c_str(), str.length());
 	}
 	/* Resolving the OS we're running on */
 	static const char* GetOS();
