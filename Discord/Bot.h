@@ -73,5 +73,8 @@ public:
 
 	cTask<> CreateGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, chrono::seconds delete_message_seconds = chrono::seconds(0), const std::string& reason = {});
 	cTask<> RemoveGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, const std::string& reason = {});
+
+	// TODO: make an async generator for all members
+	cTask<std::vector<cMember>> ListGuildMembers(const cSnowflake& guild_id, const cSnowflake& after);
 };
 #endif // GREEKBOT_BOT_H

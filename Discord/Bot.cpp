@@ -157,3 +157,14 @@ cBot::RemoveGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, cons
 		fields.emplace_back("X-Audit-Log-Reason", cUtils::PercentEncode(reason));
 	co_await DiscordDelete(cUtils::Format("/guilds/%s/bans/%s", guild_id.ToString(), user_id.ToString()), fields);
 }
+
+cTask<std::vector<cMember>>
+cBot::ListGuildMembers(const cSnowflake& guild_id, const cSnowflake& after) {
+	std::vector<cMember> result;
+	result.reserve(1000);
+
+	auto members_json = co_await DiscordGet(cUtils::Format("/guilds/%s/members?after=%s&limit=1000", guild_id.ToString(), after.ToString()));
+	for (auto& v : members_json.as_array())
+		result.emplace_back(v);
+	co_return result;
+}

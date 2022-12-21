@@ -63,7 +63,7 @@ inline T cTask<T>::await_resume() {
 	auto v = std::move(m_handle.promise().value);
 	m_handle.destroy();
 	if (e) std::rethrow_exception(e);
-	return *v;
+	return std::move(*v);
 }
 
 template<>
