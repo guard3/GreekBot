@@ -17,11 +17,13 @@ static char* unsigned_integral_to_string(I n, char* buffer) {
 			n /= 10;
 		}
 		else {
-			static char hex[] = "0123456789abcdef";
+			static const char hex[] = "0123456789abcdef";
 			*buffer++ = hex[n & 15];
 			n >>= 4;
 		}
 	} while (n);
+	/* Add the null terminator */
+	*buffer = '\0';
 	/* Reverse the result */
 	std::reverse(result, buffer);
 	return result;
