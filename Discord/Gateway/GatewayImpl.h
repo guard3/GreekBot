@@ -98,7 +98,7 @@ private:
 	void on_event(const cEvent& event);
 
 	class discord_request;
-	class retry_discord_request;
+	class wait_on_event_thread;
 
 public:
 	implementation(cGateway*, const char*, eIntent);
@@ -115,6 +115,7 @@ public:
 	const char* GetToken() const noexcept { return m_http_auth.c_str() + 4; }
 
 	cTask<> ResumeOnEventThread();
+	cTask<> WaitOnEventThread(chrono::milliseconds);
 
 	void Run();
 };

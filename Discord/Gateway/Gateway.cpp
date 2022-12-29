@@ -36,6 +36,8 @@ cGateway::DiscordPostNoRetry(const std::string& t, const json::object& o, const 
 /* ================================================================================================================== */
 cTask<>
 cGateway::ResumeOnEventThread() { return m_pImpl->ResumeOnEventThread(); }
+cTask<>
+cGateway::WaitOnEventThread(chrono::milliseconds d) { return m_pImpl->WaitOnEventThread(d); }
 /* ================================================================================================================== */
 const char*
 cGateway::GetHttpAuthorization() const noexcept { return m_pImpl->GetHttpAuthorization(); }

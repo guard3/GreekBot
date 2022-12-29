@@ -83,28 +83,18 @@ public:
 	}
 };
 
-class cGateway::implementation::retry_discord_request {
+class cGateway::implementation::wait_on_event_thread {
 private:
-	cGateway::implementation* m_parent;
-
-	beast::http::verb   m_method;
-	const std::string&  m_target;
-	const json::object* m_object;
-	const tHttpFields&  m_fields;
-
+	asio::io_context& m_ioc;
 	chrono::time_point<chrono::steady_clock> m_target_time;
-	uhHandle<cTask<json::value>> m_result;
 	std::exception_ptr m_except;
 
 	void postpone(std::coroutine_handle<> h) {
 		try {
-			/* Postpone the next request until enough time has passed */
 			if (chrono::steady_clock::now() < m_target_time) {
-				asio::post(m_parent->m_http_ioc, [this, h]() { postpone(h); });
+				asio::post(m_ioc, [this, h]() { postpone(h); });
 				return;
 			}
-			/* Start and return the request task */
-			m_result = cHandle::MakeUnique<cTask<json::value>>(m_parent->DiscordRequest(m_method, m_target, m_object, m_fields));
 		}
 		catch (...) {
 			m_except = std::current_exception();
@@ -113,22 +103,13 @@ private:
 	}
 
 public:
-	retry_discord_request(cGateway::implementation* this_, chrono::milliseconds r, beast::http::verb m, const std::string& t, const json::object* o, const tHttpFields& f) :
-		m_parent(this_),
-		m_method(m),
-		m_target(t),
-		m_object(o),
-		m_fields(f),
-		m_target_time(chrono::steady_clock::now() + r) {
+	wait_on_event_thread(cGateway::implementation* p, chrono::milliseconds r) : m_ioc(p->m_http_ioc), m_target_time(chrono::steady_clock::now() + r) {
 		cUtils::PrintLog("Rate limited! Waiting for %dms", r);
 	}
 
 	bool await_ready() noexcept { return false; }
-	void await_suspend(std::coroutine_handle<> h) { asio::post(m_parent->m_http_ioc, [this, h]() { postpone(h); }); }
-	cTask<json::value> await_resume() {
-		if (m_except) std::rethrow_exception(m_except);
-		return std::move(*m_result);
-	}
+	void await_suspend(std::coroutine_handle<> h) { asio::post(m_ioc, [this, h]() { postpone(h); }); }
+	void await_resume() { if (m_except) std::rethrow_exception(m_except); }
 };
 
 cTask<json::value>
@@ -140,7 +121,8 @@ cGateway::implementation::DiscordRequest(beast::http::verb m, const std::string&
 	catch (const xRateLimitError& e) {
 		retry_after = e.retry_after();
 	}
-	co_return co_await co_await retry_discord_request(this, retry_after, m, t, o, f);
+	co_await wait_on_event_thread(this, retry_after);
+	co_return co_await DiscordRequest(m, t, o, f);
 }
 
 cTask<json::value>
@@ -156,4 +138,9 @@ cGateway::implementation::DiscordRequestNoRetry(beast::http::verb m, const std::
 	if (status == beast::http::status::too_many_requests)
 		throw xRateLimitError(result);
 	throw xDiscordError(result);
+}
+/* ================================================================================================================== */
+cTask<>
+cGateway::implementation::WaitOnEventThread(chrono::milliseconds duration) {
+	co_await wait_on_event_thread(this, duration);
 }

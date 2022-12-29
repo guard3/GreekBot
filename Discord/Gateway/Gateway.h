@@ -67,6 +67,7 @@ public:
 	cTask<json::value> DiscordPostNoRetry(const std::string& path, const json::object& obj, const tHttpFields& fields = m_empty);
 
 	cTask<> ResumeOnEventThread();
+	cTask<> WaitOnEventThread(chrono::milliseconds);
 
 	virtual cTask<> OnReady(uhUser) { co_return; }
 	virtual cTask<> OnGuildCreate(uhGuild) { co_return; }
