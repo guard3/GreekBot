@@ -88,7 +88,7 @@ cGreekBot::OnInteraction_ban(const cInteraction& i, const char* image_url) {
 					/* Deduce delete messages duration */
 					switch (value) {
 						case 0:
-							delete_messages = chrono::hours(1);
+							delete_messages = 1h;
 							break;
 						case 1:
 							delete_messages = chrono::days(1);

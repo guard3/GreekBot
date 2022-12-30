@@ -143,7 +143,7 @@ cDatabase::UpdateLeaderboard(const cMessage& msg) {
 		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_UPDATE_LB, QRLEN_UPDATE_LB, &stmt, nullptr)) {
 			if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, msg.GetAuthor().GetId().ToInt())) {
 				// TODO: update db and save discord epoch milliseconds directly
-				if (SQLITE_OK == sqlite3_bind_int64(stmt, 2, std::chrono::duration_cast<std::chrono::seconds>(cDiscordClock::to_sys(msg.GetId().GetTimestamp()).time_since_epoch()).count())) {
+				if (SQLITE_OK == sqlite3_bind_int64(stmt, 2, chrono::duration_cast<chrono::seconds>(cDiscordClock::to_sys(msg.GetId().GetTimestamp()).time_since_epoch()).count())) {
 					if (SQLITE_DONE == sqlite3_step(stmt)) {
 						sqlite3_finalize(stmt);
 						return;
