@@ -45,18 +45,18 @@ public:
 
 	template<iKwArg... KwArgs>
 	cTask<> RespondToInteraction(const cInteraction& i, KwArgs&... kwargs) {
-		return respond_to_interaction(i, { kwargs... });
+		co_await respond_to_interaction(i, { kwargs... });
 	}
 	template<>
 	cTask<> RespondToInteraction<>(const cInteraction&);
 	template<iKwArg... KwArgs>
 	cTask<> EditInteractionResponse(const cInteraction& i, KwArgs&... kwargs) {
-		return edit_interaction_response(i, { kwargs... });
+		co_await edit_interaction_response(i, { kwargs... });
 	}
 	cTask<> DeleteInteractionResponse(const cInteraction&);
 	template<iKwArg... KwArgs>
 	cTask<> SendInteractionFollowupMessage(const cInteraction& i, KwArgs&... kwargs) {
-		return send_interaction_followup_message(i, { kwargs... });
+		co_await send_interaction_followup_message(i, { kwargs... });
 	}
 
 	cTask<int> BeginGuildPrune(const cSnowflake& id, int days, const std::string& reason = {});
@@ -64,7 +64,7 @@ public:
 	cTask<cChannel> CreateDM(const cSnowflake& recipient_id);
 	template<iKwArg... KwArgs>
 	cTask<cMessage> CreateMessage(const cSnowflake& channel_id, KwArgs&... kwargs) {
-		return create_message(channel_id, { kwargs... });
+		co_return co_await create_message(channel_id, { kwargs... });
 	}
 	template<iKwArg... KwArgs>
 	cTask<cMessage> CreateDMMessage(const cSnowflake& recipient_id, KwArgs&... kwargs) {

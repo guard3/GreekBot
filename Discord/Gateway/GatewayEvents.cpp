@@ -13,7 +13,7 @@ cGateway::implementation::on_event(const cEvent& event) {
 		case EVENT_READY:
 			if (auto e = event.GetData<EVENT_READY>()) {
 				m_session_id = std::move(e->session_id);
-				asio::post(m_http_ioc, [this, u = std::move(e->user)]() mutable -> cTask<> {
+				asio::post(m_http_ioc, [this, u = std::move(e->user)]() mutable -> cDetachedTask {
 					co_await m_parent->OnReady(std::move(u));
 				});
 				return;
@@ -21,7 +21,7 @@ cGateway::implementation::on_event(const cEvent& event) {
 			break;
 		case EVENT_GUILD_CREATE:
 			if (auto e = event.GetData<EVENT_GUILD_CREATE>()) {
-				asio::post(m_http_ioc, [this, e = std::move(e)]() mutable -> cTask<> {
+				asio::post(m_http_ioc, [this, e = std::move(e)]() mutable -> cDetachedTask {
 					co_await m_parent->OnGuildCreate(std::move(e));
 				});
 				return;
@@ -30,7 +30,7 @@ cGateway::implementation::on_event(const cEvent& event) {
 
 		case EVENT_GUILD_ROLE_CREATE:
 			if (auto e = event.GetData<EVENT_GUILD_ROLE_CREATE>()) {
-				asio::post(m_http_ioc, [this, e = std::move(e)]() mutable -> cTask<> {
+				asio::post(m_http_ioc, [this, e = std::move(e)]() mutable -> cDetachedTask {
 					auto p = std::move(e);
 					co_await m_parent->OnGuildRoleCreate(p->guild_id, p->role);
 				});
@@ -40,7 +40,7 @@ cGateway::implementation::on_event(const cEvent& event) {
 
 		case EVENT_GUILD_ROLE_UPDATE:
 			if (auto e = event.GetData<EVENT_GUILD_ROLE_UPDATE>()) {
-				asio::post(m_http_ioc, [this, e = std::move(e)]() mutable -> cTask<> {
+				asio::post(m_http_ioc, [this, e = std::move(e)]() mutable -> cDetachedTask {
 					auto p = std::move(e);
 					co_await m_parent->OnGuildRoleUpdate(p->guild_id, p->role);
 				});
@@ -50,7 +50,7 @@ cGateway::implementation::on_event(const cEvent& event) {
 
 		case EVENT_GUILD_ROLE_DELETE:
 			if (auto e = event.GetData<EVENT_GUILD_ROLE_DELETE>()) {
-				asio::post(m_http_ioc, [this, e = std::move(e)]() mutable -> cTask<> {
+				asio::post(m_http_ioc, [this, e = std::move(e)]() mutable -> cDetachedTask {
 					auto p = std::move(e);
 					co_await m_parent->OnGuildRoleDelete(p->guild_id, p->role_id);
 				});
@@ -60,7 +60,7 @@ cGateway::implementation::on_event(const cEvent& event) {
 
 		case EVENT_INTERACTION_CREATE:
 			if (auto e = event.GetData<EVENT_INTERACTION_CREATE>()) {
-				asio::post(m_http_ioc, [this, e = std::move(e)]() mutable -> cTask<> {
+				asio::post(m_http_ioc, [this, e = std::move(e)]() mutable -> cDetachedTask {
 					auto i = std::move(e);
 					co_await m_parent->OnInteractionCreate(*i);
 				});
@@ -70,7 +70,7 @@ cGateway::implementation::on_event(const cEvent& event) {
 
 		case EVENT_MESSAGE_CREATE:
 			if (auto e = event.GetData<EVENT_MESSAGE_CREATE>()) {
-				asio::post(m_http_ioc, [this, e = std::move(e)]() mutable -> cTask<> {
+				asio::post(m_http_ioc, [this, e = std::move(e)]() mutable -> cDetachedTask {
 					auto m = std::move(e);
 					co_await m_parent->OnMessageCreate(*m);
 				});

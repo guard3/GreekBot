@@ -3,73 +3,103 @@
 #include <coroutine>
 #include <exception>
 #include <optional>
-
+#include <atomic>
+/* ========== A simple non-owning coroutine task ==================================================================== */
+struct cDetachedTask {
+	struct promise_type {
+		cDetachedTask    get_return_object() const noexcept { return {}; }
+		std::suspend_never initial_suspend() const noexcept { return {}; }
+		std::suspend_never   final_suspend() const noexcept { return {}; }
+		void return_void() const noexcept {}
+		void unhandled_exception() const noexcept;
+	};
+};
+/* ========== A 'lazy' coroutine task with symmetric transfer ======================================================= */
 template<typename T = void>
-class cTask final {
+class cTask final : public std::suspend_always {
 public:
 	struct promise_type;
 
-	bool await_ready() { return m_handle.done(); }
-	void await_suspend(std::coroutine_handle<> h);
-	T    await_resume();
+	cTask(const cTask&) = delete;
+	~cTask() { m_handle.destroy(); }
+
+	std::coroutine_handle<> await_suspend(std::coroutine_handle<> h) {
+		m_handle.promise().caller = h;
+		return m_handle;
+	}
+	T await_resume();
+
+	T Wait();
 
 private:
 	struct promise_base;
 	std::coroutine_handle<promise_type> m_handle;
 
-	cTask(std::coroutine_handle<promise_type> h) : m_handle(h) {}
+	cTask(std::coroutine_handle<promise_type> h) : std::suspend_always(), m_handle(h) {}
 };
 
 /* ================================================================================================================== */
-template<typename R>
-struct cTask<R>::promise_base {
+template<typename T>
+struct cTask<T>::promise_base {
 	std::coroutine_handle<> caller; // The task coroutine caller
 	std::exception_ptr      except; // Any unhandled exception that might occur
 
-	cTask<R> get_return_object() { return std::coroutine_handle<promise_type>::from_promise(static_cast<promise_type&>(*this)); }
-	auto initial_suspend() noexcept { return std::suspend_never{}; }
+	cTask get_return_object() { return std::coroutine_handle<promise_type>::from_promise(*static_cast<promise_type*>(this)); }
+	auto initial_suspend() noexcept { return std::suspend_always{}; }
 	auto   final_suspend() noexcept {
-		struct awaitable {
+		struct awaitable : std::suspend_always {
 			std::coroutine_handle<> caller;
-			bool await_ready() noexcept { return false; }
-			bool await_suspend(std::coroutine_handle<> h) noexcept {
-				if (caller) caller();
-				return true;
-			}
-			void await_resume() noexcept {}
+			std::coroutine_handle<> await_suspend(std::coroutine_handle<>) const noexcept { return caller; }
 		};
-		return awaitable{caller};
+		return awaitable{ {}, caller };
 	}
 	void unhandled_exception() noexcept { except = std::current_exception(); }
 };
 /* ================================================================================================================== */
-template<typename R>
-struct cTask<R>::promise_type : promise_base {
-	std::optional<R> value;
-	void return_value(auto&& v) { value.emplace(std::forward<R>(v)); }
+template<typename T>
+struct cTask<T>::promise_type : promise_base {
+	std::optional<T> value;
+	template<typename U>
+	void return_value(U&& v) { value.emplace(std::forward<U>(v)); }
 };
 /* ================================================================================================================== */
 template<>
 struct cTask<void>::promise_type : promise_base {
 	void return_void() {}
 };
-
-template<typename T>
-inline void cTask<T>::await_suspend(std::coroutine_handle<> h) { m_handle.promise().caller = h; }
-
+/* ================================================================================================================== */
 template<typename T>
 inline T cTask<T>::await_resume() {
-	auto e = std::move(m_handle.promise().except);
-	auto v = std::move(m_handle.promise().value);
-	m_handle.destroy();
-	if (e) std::rethrow_exception(e);
-	return std::move(*v);
+	promise_type& p = m_handle.promise();
+	if (p.except) std::rethrow_exception(p.except);
+	return std::move(*p.value);
 }
-
+/* ================================================================================================================== */
 template<>
-inline void cTask<void>::await_resume() {
-	auto e = std::move(m_handle.promise().except);
-	m_handle.destroy();
-	if (e) std::rethrow_exception(e);
+inline void cTask<>::await_resume() {
+	promise_type& p = m_handle.promise();
+	if (p.except) std::rethrow_exception(p.except);
 }
+/* ================================================================================================================== */
+template<typename T>
+inline T cTask<T>::Wait() {
+	std::optional<T>   value;
+	std::exception_ptr except;
+	std::atomic_bool   bDone = false;
+	[&]() -> cDetachedTask {
+		try {
+			value.emplace(co_await *this);
+		}
+		catch (...) {
+			except = std::current_exception();
+		}
+		bDone = true;
+	} ();
+	while (!bDone);
+	if (except) std::rethrow_exception(except);
+	return std::move(*value);
+}
+/* ================================================================================================================== */
+template<>
+void cTask<>::Wait();
 #endif // GREEKBOT_TASK_H

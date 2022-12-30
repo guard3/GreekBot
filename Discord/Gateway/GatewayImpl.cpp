@@ -210,23 +210,7 @@ cGateway::implementation::run_session(const std::string& url) {
 /* ================================================================================================================== */
 cGatewayInfo
 cGateway::implementation::get_gateway_info() {
-	/* Get gateway info object synchronously */
-	std::atomic_bool bDone = false;
-	json::value v;
-	std::exception_ptr except;
-	[&]() -> cTask<> {
-		try {
-			v = co_await m_parent->DiscordGet("/gateway/bot");
-		}
-		catch (...) {
-			except = std::current_exception();
-		}
-		bDone = true;
-	}();
-	/* Wait for the asynchronous task to finish */
-	while(!bDone);
-	if (except) std::rethrow_exception(except);
-	return cGatewayInfo(v);
+	return cGatewayInfo(m_parent->DiscordGet("/gateway/bot").Wait());
 }
 /* ================================================================================================================== */
 cTask<>
