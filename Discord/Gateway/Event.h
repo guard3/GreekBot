@@ -25,7 +25,7 @@ enum eEvent : uint32_t {
 
 /* ================================================================================================= */
 namespace hidden {
-	template<eEvent, typename = void>
+	template<eEvent>
 	class event_data;
 /* ================================================================================================= */
 	template<>
@@ -39,8 +39,8 @@ namespace hidden {
 		event_data(const json::value& v) : event_data(v.as_object()) {}
 	};
 /* ================================================================================================= */
-	template<eEvent e>
-	class event_data<e, std::enable_if_t<e == EVENT_GUILD_ROLE_CREATE || e == EVENT_GUILD_ROLE_UPDATE>> final {
+	template<eEvent e> requires (e == EVENT_GUILD_ROLE_CREATE || e == EVENT_GUILD_ROLE_UPDATE)
+	class event_data<e> final {
 	public:
 		cSnowflake guild_id;
 		cRole      role;
@@ -89,7 +89,10 @@ public:
 	int64_t            GetSequence() const noexcept { return m_seq;  }
 
 	template<eEvent e>
-	uhEventData<e> GetData() const { return cHandle::MakeUniqueNoEx<tEventData<e>>(m_data); }
+	tEventData<e> GetData() const { return m_data; }
+
+	template<eEvent e>
+	uhEventData<e> GetDataPtr() const { return cHandle::MakeUnique<tEventData<e>>(m_data); }
 };
 typedef   hHandle<cEvent>   hEvent;
 typedef  chHandle<cEvent>  chEvent;

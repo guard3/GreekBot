@@ -95,7 +95,7 @@ private:
 	void run_session(const std::string& url);
 	cGatewayInfo get_gateway_info();
 	/* A method that's invoked for every gateway event */
-	void on_event(const cEvent& event);
+	cDetachedTask on_event(cEvent);
 
 	class discord_request;
 	class wait_on_event_thread;

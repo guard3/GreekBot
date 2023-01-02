@@ -1,85 +1,58 @@
 #include "GatewayImpl.h"
 #include "Event.h"
 
-void
-cGateway::implementation::on_event(const cEvent& event) {
-	/* Update last sequence received */
-	m_last_sequence.store(event.GetSequence());
+cDetachedTask
+cGateway::implementation::on_event(cEvent event) {
+	try {
+		/* Update last sequence received */
+		m_last_sequence = event.GetSequence();
 #ifdef GW_LOG_LVL_1
-	cUtils::PrintLog("Event: 0x%08X %s", event.GetType(), event.GetName());
+		cUtils::PrintLog("Event: 0x%08X %s", event.GetType(), event.GetName());
 #endif
-	/* Trigger event functions */
-	switch (event.GetType()) {
-		case EVENT_READY:
-			if (auto e = event.GetData<EVENT_READY>()) {
-				m_session_id = std::move(e->session_id);
-				asio::post(m_http_ioc, [this, u = std::move(e->user)]() mutable -> cDetachedTask {
-					co_await m_parent->OnReady(std::move(u));
-				});
-				return;
+		/* On 'READY' save the session id before switching to the event thread */
+		if (event.GetType() == EVENT_READY) {
+			auto e = event.GetData<EVENT_READY>();
+			m_session_id = std::move(e.session_id);
+			co_await ResumeOnEventThread();
+			co_return co_await m_parent->OnReady(std::move(e.user));
+		}
+		/* Switch to the event thread */
+		co_await ResumeOnEventThread();
+		/* Trigger the appropriate event methods */
+		switch (event.GetType()) {
+			case EVENT_GUILD_CREATE: {
+				co_await m_parent->OnGuildCreate(event.GetDataPtr<EVENT_GUILD_CREATE>());
+				break;
 			}
-			break;
-		case EVENT_GUILD_CREATE:
-			if (auto e = event.GetData<EVENT_GUILD_CREATE>()) {
-				asio::post(m_http_ioc, [this, e = std::move(e)]() mutable -> cDetachedTask {
-					co_await m_parent->OnGuildCreate(std::move(e));
-				});
-				return;
+			case EVENT_GUILD_ROLE_CREATE: {
+				auto e = event.GetData<EVENT_GUILD_ROLE_CREATE>();
+				co_await m_parent->OnGuildRoleCreate(e.guild_id, e.role);
+				break;
 			}
-			break;
-
-		case EVENT_GUILD_ROLE_CREATE:
-			if (auto e = event.GetData<EVENT_GUILD_ROLE_CREATE>()) {
-				asio::post(m_http_ioc, [this, e = std::move(e)]() mutable -> cDetachedTask {
-					auto p = std::move(e);
-					co_await m_parent->OnGuildRoleCreate(p->guild_id, p->role);
-				});
-				return;
+			case EVENT_GUILD_ROLE_UPDATE: {
+				auto e = event.GetData<EVENT_GUILD_ROLE_UPDATE>();
+				co_await m_parent->OnGuildRoleUpdate(e.guild_id, e.role);
+				break;
 			}
-			break;
-
-		case EVENT_GUILD_ROLE_UPDATE:
-			if (auto e = event.GetData<EVENT_GUILD_ROLE_UPDATE>()) {
-				asio::post(m_http_ioc, [this, e = std::move(e)]() mutable -> cDetachedTask {
-					auto p = std::move(e);
-					co_await m_parent->OnGuildRoleUpdate(p->guild_id, p->role);
-				});
-				return;
+			case EVENT_GUILD_ROLE_DELETE: {
+				auto e = event.GetData<EVENT_GUILD_ROLE_DELETE>();
+				co_await m_parent->OnGuildRoleDelete(e.guild_id, e.role_id);
+				break;
 			}
-			break;
-
-		case EVENT_GUILD_ROLE_DELETE:
-			if (auto e = event.GetData<EVENT_GUILD_ROLE_DELETE>()) {
-				asio::post(m_http_ioc, [this, e = std::move(e)]() mutable -> cDetachedTask {
-					auto p = std::move(e);
-					co_await m_parent->OnGuildRoleDelete(p->guild_id, p->role_id);
-				});
-				return;
+			case EVENT_INTERACTION_CREATE: {
+				co_await m_parent->OnInteractionCreate(event.GetData<EVENT_INTERACTION_CREATE>());
+				break;
 			}
-			break;
-
-		case EVENT_INTERACTION_CREATE:
-			if (auto e = event.GetData<EVENT_INTERACTION_CREATE>()) {
-				asio::post(m_http_ioc, [this, e = std::move(e)]() mutable -> cDetachedTask {
-					auto i = std::move(e);
-					co_await m_parent->OnInteractionCreate(*i);
-				});
-				return;
+			case EVENT_MESSAGE_CREATE: {
+				co_await m_parent->OnMessageCreate(event.GetData<EVENT_MESSAGE_CREATE>());
+				break;
 			}
-			break;
-
-		case EVENT_MESSAGE_CREATE:
-			if (auto e = event.GetData<EVENT_MESSAGE_CREATE>()) {
-				asio::post(m_http_ioc, [this, e = std::move(e)]() mutable -> cDetachedTask {
-					auto m = std::move(e);
-					co_await m_parent->OnMessageCreate(*m);
-				});
-				return;
-			}
-			break;
-
-		default:
-			return;
+			default:
+				break;
+		}
 	}
-	throw std::runtime_error(cUtils::Format("Invalid %s event", event.GetName()));
+	catch (...) {
+		/* Make sure to schedule the caught exception to be rethrown at the websocket thread */
+		asio::post(m_ws_ioc, [except = std::current_exception()]() { std::rethrow_exception(except); });
+	}
 }

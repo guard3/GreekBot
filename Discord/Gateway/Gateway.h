@@ -75,7 +75,7 @@ public:
 	virtual cTask<> OnGuildRoleUpdate(cSnowflake& guild_id, cRole& role) { co_return; }
 	virtual cTask<> OnGuildRoleDelete(cSnowflake& guild_id, cSnowflake& role_id) { co_return; }
 	virtual cTask<> OnInteractionCreate(const cInteraction&) { co_return; }
-	virtual cTask<> OnMessageCreate(cMessage&) { co_return; }
+	virtual cTask<> OnMessageCreate(const cMessage&) { co_return; }
 
 	void Run();
 };

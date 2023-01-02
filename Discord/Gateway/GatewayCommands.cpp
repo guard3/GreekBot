@@ -23,7 +23,6 @@ void
 cGateway::implementation::start_heartbeating(chrono::milliseconds interval) {
 	m_heartbeat_exit.store(false);
 	m_heartbeat_thread = std::thread([this, interval]() {
-		//auto interval = std::chrono::milliseconds(interval_int);
 		/* Wait for a random amount of time */
 		auto later = chrono::steady_clock::now() + chrono::milliseconds(cUtils::Random(0, interval.count()));
 		do {

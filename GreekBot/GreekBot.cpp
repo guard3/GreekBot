@@ -124,7 +124,7 @@ cGreekBot::OnInteractionCreate(const cInteraction& interaction) {
 }
 
 cTask<>
-cGreekBot::OnMessageCreate(cMessage& msg) {
+cGreekBot::OnMessageCreate(const cMessage& msg) {
 	/* Update leaderboard for Learning Greek */
 	if (chSnowflake guild_id = msg.GetGuildId()) {
 		if (*guild_id == m_lmg_id) {
