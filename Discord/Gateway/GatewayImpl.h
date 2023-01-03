@@ -67,6 +67,7 @@ private:
 	std::string m_http_auth; // The authorization parameter for HTTP requests 'Bot token'
 	eIntent     m_intents;   // The gateway intents
 	/* Session attributes */
+	// TODO: Add resume_gateway_url
 	std::string         m_session_id;    // The current session id, used for resuming; empty = no valid session
 	std::atomic_int64_t m_last_sequence; // The last event sequence received, used for heartbeating; 0 = none received
 	/* Heartbeating */

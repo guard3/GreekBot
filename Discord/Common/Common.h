@@ -18,7 +18,7 @@ using namespace std::literals::chrono_literals;
 #define _STR(x) #x
 #define STR(x) _STR(x)
 
-#define DISCORD_API_VERSION     9
+#define DISCORD_API_VERSION     10
 #define DISCORD_API_HOST        "discord.com"
 #define DISCORD_API_ENDPOINT    "/api/v" STR(DISCORD_API_VERSION)
 
