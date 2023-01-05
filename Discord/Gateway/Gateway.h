@@ -6,6 +6,7 @@
 #include "User.h"
 #include "Guild.h"
 #include "Interaction.h"
+#include "GuildMembersResult.h"
 
 enum eIntent {
 	INTENT_GUILDS                    = 1 << 0,
@@ -68,6 +69,7 @@ public:
 
 	cTask<> ResumeOnEventThread();
 	cTask<> WaitOnEventThread(chrono::milliseconds);
+	cTask<std::vector<cMember>> GetGuildMembersById(const cSnowflake&, const std::vector<cSnowflake>&);
 
 	virtual cTask<> OnReady(uhUser) { co_return; }
 	virtual cTask<> OnGuildCreate(uhGuild) { co_return; }

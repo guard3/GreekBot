@@ -118,6 +118,53 @@ public:
 	cTask<> ResumeOnEventThread();
 	cTask<> WaitOnEventThread(chrono::milliseconds);
 
+	std::string m_rgm_payload;
+	std::coroutine_handle<> m_rgm_handle;
+	uint64_t m_rgm_nonce = 0;
+
+	std::unordered_map<uint64_t, cGuildMembersResult> m_rgm_map;
+
+	bool await_ready() { return false; }
+	void await_suspend(std::coroutine_handle<> h) {
+		/* Save the coroutine handle to resume after all members have been received */
+		m_rgm_map[m_rgm_nonce++].Insert(h);
+		/* Send the payload */
+		send(std::move(m_rgm_payload));
+	}
+	void await_resume() {}
+
+	cTask<std::vector<cMember>> GetGuildMembersById(const cSnowflake& guild_id, const std::vector<cSnowflake>& users) {
+		// TODO: check for users.size() <= 1
+		/* Make sure we're running on the event thread */
+		co_await ResumeOnEventThread();
+		/* Save the current nonce to get the result later */
+		auto nonce = m_rgm_nonce;
+		/* Prepare the gateway payload */
+		json::array a;
+		a.reserve(users.size());
+		for (auto& s : users)
+			a.emplace_back(s.ToString());
+		m_rgm_payload = json::serialize(json::object {
+			{ "op", 8 },
+			{ "d", json::object {
+				{ "guild_id", guild_id.ToString() },
+				{ "user_ids", std::move(a) },
+				{ "nonce", std::to_string(nonce) }
+			}}
+		});
+		/* Send the payload to the gateway and wait for the result to be available */
+		co_await *this;
+		/* Extract the result node */
+		auto node = m_rgm_map.extract(nonce);
+		/* If the map is empty, reset the nonce count */
+		if (m_rgm_map.empty())
+			m_rgm_nonce = 0;
+		/* Return the result */
+		// TODO: check if empty
+		co_return node.mapped().Publish().MoveMembers();
+		// TODO: check for failed requests during identify()
+	}
+
 	void Run();
 };
 #endif /* _GREEKBOT_GATEWAYIMPL_H_ */

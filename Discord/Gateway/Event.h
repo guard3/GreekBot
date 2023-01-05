@@ -6,8 +6,9 @@
 #include "Guild.h"
 #include "Interaction.h"
 #include "Message.h"
+#include "GuildMembersResult.h"
 
-/* ================================================================================================= */
+/* ================================================================================================================== */
 enum eEvent : uint32_t {
 	EVENT_RESUMED                   = 0x712ED6EE,
 	EVENT_READY                     = 0xDFC1471F,
@@ -21,13 +22,13 @@ enum eEvent : uint32_t {
 	EVENT_MESSAGE_CREATE            = 0x9C643E55,
 	EVENT_MESSAGE_UPDATE            = 0x8B97EBD6,
 	EVENT_MESSAGE_DELETE            = 0x29A0A229,
+	EVENT_GUILD_MEMBERS_CHUNK       = 0x343F4BC5
 };
-
-/* ================================================================================================= */
+/* ================================================================================================================== */
 namespace hidden {
 	template<eEvent>
 	class event_data;
-/* ================================================================================================= */
+/* ================================================================================================================== */
 	template<>
 	class event_data<EVENT_READY> final {
 	public:
@@ -38,7 +39,7 @@ namespace hidden {
 		event_data(const json::object& o) : v(o.at("v").as_int64()), session_id(o.at("session_id").as_string().c_str()), user(cHandle::MakeUnique<cUser>(o.at("user"))) {}
 		event_data(const json::value& v) : event_data(v.as_object()) {}
 	};
-/* ================================================================================================= */
+/* ================================================================================================================== */
 	template<eEvent e> requires (e == EVENT_GUILD_ROLE_CREATE || e == EVENT_GUILD_ROLE_UPDATE)
 	class event_data<e> final {
 	public:
@@ -48,7 +49,7 @@ namespace hidden {
 		event_data(const json::object& o) : guild_id(o.at("guild_id")), role(o.at("role")) {}
 		event_data(const json::value& v) : event_data(v.as_object()) {}
 	};
-/* ================================================================================================= */
+/* ================================================================================================================== */
 	template<>
 	class event_data<EVENT_GUILD_ROLE_DELETE> final {
 	public:
@@ -57,11 +58,12 @@ namespace hidden {
 		event_data(const json::object& o) : guild_id(o.at("guild_id")), role_id(o.at("role_id")) {}
 		event_data(const json::value& v) : event_data(v.as_object()) {}
 	};
-/* ================================================================================================= */
-	template<eEvent e> struct map_event_data                           { typedef event_data<e> type; };
-	template<>         struct map_event_data<EVENT_GUILD_CREATE>       { typedef cGuild        type; };
-	template<>         struct map_event_data<EVENT_INTERACTION_CREATE> { typedef cInteraction  type; };
-	template<>         struct map_event_data<EVENT_MESSAGE_CREATE>     { typedef cMessage      type; };
+/* ================================================================================================================== */
+	template<eEvent e> struct map_event_data                            { typedef event_data<e>      type; };
+	template<>         struct map_event_data<EVENT_GUILD_CREATE>        { typedef cGuild             type; };
+	template<>         struct map_event_data<EVENT_INTERACTION_CREATE>  { typedef cInteraction       type; };
+	template<>         struct map_event_data<EVENT_MESSAGE_CREATE>      { typedef cMessage           type; };
+	template<>         struct map_event_data<EVENT_GUILD_MEMBERS_CHUNK> { typedef cGuildMembersChunk type; };
 }
 template<eEvent e> using tEventData = typename hidden::map_event_data<e>::type;
 
@@ -72,7 +74,7 @@ template<eEvent e> using uchEventData = uchHandle<tEventData<e>>;
 template<eEvent e> using  shEventData =  shHandle<tEventData<e>>;
 template<eEvent e> using schEventData = schHandle<tEventData<e>>;
 
-/* ================================================================================================= */
+/* ================================================================================================================== */
 class cEvent final {
 private:
 	std::string m_name; // Event name as a string

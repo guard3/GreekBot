@@ -120,26 +120,22 @@ cGreekBot::OnInteraction_top(const cInteraction& i) {
 			co_await EditInteractionResponse(i, content="I don't have any data yet. Start talking!");
 			co_return;
 		}
-		co_await ResumeOnEventThread();
+		/* Get members */
+		std::vector<cSnowflake> ids;
+		ids.reserve(db_result.size());
+		for (auto& r : db_result)
+			ids.emplace_back(*r.GetUserId());
+		auto members = co_await GetGuildMembersById(*i.GetGuildId(), ids);
 		/* Prepare embeds */
 		std::vector<cEmbed> es;
 		es.reserve(db_result.size());
 		for (auto &d: db_result) {
-			try {
-				/* Get member info and create embeds */
-				if (*d.GetUserId() == i.GetMember()->GetUser()->GetId()) {
-					chMember member = i.GetMember();
-					es.push_back(make_embed(*member->GetUser(), *member, get_lmg_member_color(*member), d.GetRank(), d.GetXp(), d.GetNumMessages()));
-				}
-				else {
-					cMember member = co_await GetGuildMember(m_lmg_id, *d.GetUserId());
-					es.push_back(make_embed(*member.GetUser(), member, get_lmg_member_color(member), d.GetRank(), d.GetXp(), d.GetNumMessages()));
-				}
-				continue;
-			}
-			catch (const xDiscordError& e) {}
-			/* User isn't a member anymore */
-			es.push_back(make_no_member_embed(co_await GetUser(*d.GetUserId()), true));
+			auto m = std::find_if(members.begin(), members.end(), [&](const cMember& k) { return k.GetUser()->GetId() == *d.GetUserId(); });
+			if (m == members.end())
+				// TODO: if GetUser() fails?
+				es.push_back(make_no_member_embed(co_await GetUser(*d.GetUserId()), true));
+			else
+				es.push_back(make_embed(*m->GetUser(), *m, get_lmg_member_color(*m), d.GetRank(), d.GetXp(), d.GetNumMessages()));
 		}
 		/* Respond to interaction */
 		co_await EditInteractionResponse(i,

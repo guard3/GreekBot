@@ -47,6 +47,14 @@ cGateway::implementation::on_event(cEvent event) {
 				co_await m_parent->OnMessageCreate(event.GetData<EVENT_MESSAGE_CREATE>());
 				break;
 			}
+			case EVENT_GUILD_MEMBERS_CHUNK: {
+				auto e = event.GetData<EVENT_GUILD_MEMBERS_CHUNK>();
+				auto& r = m_rgm_map[e.GetNonce()];
+				r.Insert(std::move(e));
+				if (r.IsReady())
+					r.Resume();
+				break;
+			}
 			default:
 				break;
 		}
