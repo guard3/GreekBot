@@ -6,7 +6,6 @@
 #include "User.h"
 #include "Guild.h"
 #include "Interaction.h"
-#include "GuildMembersResult.h"
 
 enum eIntent {
 	INTENT_GUILDS                    = 1 << 0,

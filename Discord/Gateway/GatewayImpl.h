@@ -9,6 +9,7 @@
 #include <thread>
 #include <atomic>
 #include <tuple>
+#include "GuildMembersResult.h"
 
 #define INFLATE_BUFFER_SIZE 4096
 
@@ -58,9 +59,9 @@ private:
 	asio::executor_work_guard<asio::io_context::executor_type> m_work;
 	std::thread m_work_thread;
 
-	beast::flat_buffer      m_buffer;    // A buffer for reading from the websocket
-	beast::flat_buffer      m_http_buffer;
-	std::deque<std::string> m_queue; // A queue with all pending messages to be sent
+	beast::flat_buffer      m_buffer;      // A buffer for reading from the websocket
+	beast::flat_buffer      m_http_buffer; // A buffer for storing http responses
+	std::deque<std::string> m_queue;       // A queue with all pending messages to be sent
 	uhHandle<beast::websocket::stream<beast::ssl_stream<beast::tcp_stream>>> m_ws; // The websocket stream
 
 	/* Initial parameters for identifying */
@@ -80,6 +81,10 @@ private:
 	/* Zlib stuff for decompressing websocket messages */
 	z_stream m_inflate_stream;
 	Byte     m_inflate_buffer[INFLATE_BUFFER_SIZE];
+	/* Request Guild Members stuff */
+	std::string m_rgm_payload;   // The gateway payload to be sent
+	uint64_t    m_rgm_nonce = 0; // The nonce of the payload
+	std::unordered_map<uint64_t, cGuildMembersResult> m_rgm_map; // A map to hold and manage all responses
 
 	/* Gateway commands */
 	void resume();
@@ -97,6 +102,21 @@ private:
 	cGatewayInfo get_gateway_info();
 	/* A method that's invoked for every gateway event */
 	cDetachedTask on_event(cEvent);
+	/* Gateway command functions */
+	bool await_ready() { return false; }
+	void await_suspend(std::coroutine_handle<> h) {
+		/* Save the coroutine handle to resume after all members have been received */
+		m_rgm_map[m_rgm_nonce++].Fill(h);
+		/* Send the payload */
+		send(std::move(m_rgm_payload));
+	}
+	void await_resume() {}
+
+	void rgm_reset() {
+		m_rgm_payload.clear();
+		m_rgm_map.clear();
+		m_rgm_nonce = 0;
+	}
 
 	class discord_request;
 	class wait_on_event_thread;
@@ -118,23 +138,9 @@ public:
 	cTask<> ResumeOnEventThread();
 	cTask<> WaitOnEventThread(chrono::milliseconds);
 
-	std::string m_rgm_payload;
-	std::coroutine_handle<> m_rgm_handle;
-	uint64_t m_rgm_nonce = 0;
-
-	std::unordered_map<uint64_t, cGuildMembersResult> m_rgm_map;
-
-	bool await_ready() { return false; }
-	void await_suspend(std::coroutine_handle<> h) {
-		/* Save the coroutine handle to resume after all members have been received */
-		m_rgm_map[m_rgm_nonce++].Insert(h);
-		/* Send the payload */
-		send(std::move(m_rgm_payload));
-	}
-	void await_resume() {}
-
 	cTask<std::vector<cMember>> GetGuildMembersById(const cSnowflake& guild_id, const std::vector<cSnowflake>& users) {
 		// TODO: check for users.size() <= 1
+		// TODO: customisation for other commands too
 		/* Make sure we're running on the event thread */
 		co_await ResumeOnEventThread();
 		/* Save the current nonce to get the result later */
@@ -160,9 +166,9 @@ public:
 		if (m_rgm_map.empty())
 			m_rgm_nonce = 0;
 		/* Return the result */
-		// TODO: check if empty
-		co_return node.mapped().Publish().MoveMembers();
-		// TODO: check for failed requests during identify()
+		if (node)
+			co_return node.mapped().Publish();
+		throw std::runtime_error("Unexpected empty result");
 	}
 
 	void Run();

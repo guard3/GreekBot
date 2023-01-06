@@ -50,9 +50,7 @@ cGateway::implementation::on_event(cEvent event) {
 			case EVENT_GUILD_MEMBERS_CHUNK: {
 				auto e = event.GetData<EVENT_GUILD_MEMBERS_CHUNK>();
 				auto& r = m_rgm_map[e.GetNonce()];
-				r.Insert(std::move(e));
-				if (r.IsReady())
-					r.Resume();
+				r.Fill(std::move(e));
 				break;
 			}
 			default:

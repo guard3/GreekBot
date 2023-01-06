@@ -7,6 +7,9 @@ cGateway::implementation::resume() {
 
 void
 cGateway::implementation::identify() {
+	/* Reset everything related to RequestGuildMembers command in case smth got stuck */
+	asio::post(m_http_ioc, [this](){ rgm_reset(); });
+	/* Then send the payload */
 	send(cUtils::Format(R"({"op":2,"d":{"token":"%s","intents":%d,"compress":true,"properties":{"os":"%s","browser":"GreekBot","device":"GreekBot"}}})", GetToken(), m_intents, cUtils::GetOS()));
 }
 

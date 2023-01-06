@@ -20,7 +20,8 @@ public:
 	const cSnowflake& GetGuildId() const noexcept { return m_guild_id; }
 	int GetChunkIndex() const noexcept { return m_chunk_index; }
 	int GetChunkCount() const noexcept { return m_chunk_count; }
-	auto& GetMembers() const noexcept { return m_members; }
+	const std::vector<cMember>& GetMembers() const noexcept { return m_members; }
+	std::vector<cMember>& GetMembers() noexcept { return m_members; }
 	auto& GetNotFound() const noexcept { return m_not_found; }
 	auto GetNonce() const noexcept { return m_nonce; }
 
@@ -36,26 +37,44 @@ private:
 	std::coroutine_handle<> m_handle;
 
 public:
-	void Insert(std::coroutine_handle<> h) {
+	~cGuildMembersResult() {
+		if (m_handle)
+			m_handle.destroy();
+	}
+
+	void Fill(std::coroutine_handle<> h) {
 		m_handle = h;
 	}
-	void Insert(cGuildMembersChunk c) {
-		if (m_chunks.empty()) {
-			m_chunks.reserve(c.GetChunkCount());
-			m_chunk_total = c.GetChunkCount();
-		}
-		m_chunks.push_back(std::move(c));
+	void Fill(cGuildMembersChunk c) {
+		/* If no chunks have been received yet, reserve enough space in the chunk vector */
+		if (m_chunks.empty())
+			m_chunks.reserve(m_chunk_total = c.GetChunkCount());
+		/* Save chunk */
+		m_chunks.emplace_back(std::move(c));
 		m_chunk_count++;
+		/* If all chunks have been consumed, resume coroutine */
+		if (m_chunk_count == m_chunk_total && m_handle) {
+			std::coroutine_handle<> coro = m_handle;
+			m_handle = nullptr;
+			coro();
+		}
 	}
-	bool IsReady() const { return m_chunk_count >= m_chunk_total; }
-	void Resume() const {
-		if (m_handle) m_handle.resume();
-	}
-	cGuildMembersChunk Publish() {
-		// TODO: complete
-		return std::move(m_chunks.front());
+
+	std::vector<cMember> Publish() {
+		/* If there's only one chunk, simply return its members */
+		if (m_chunks.size() == 1)
+			return m_chunks.front().MoveMembers();
+		/* Otherwise, create a new vector with all members */
+		size_t num = 0;
+		for (auto& chunk : m_chunks)
+			num += chunk.GetMembers().size();
+		std::vector<cMember> members;
+		members.reserve(num);
+		for (auto& chunk : m_chunks) {
+			for (cMember& m : chunk.GetMembers())
+				members.emplace_back(std::move(m));
+		}
+		return members;
 	}
 };
-
-
 #endif //GREEKBOT_GUILDMEMBERSRESULT_H
