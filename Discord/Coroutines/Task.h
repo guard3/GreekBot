@@ -21,7 +21,14 @@ public:
 	struct promise_type;
 
 	cTask(const cTask&) = delete;
-	~cTask() { m_handle.destroy(); }
+	cTask(cTask&& o) noexcept : cTask(o.m_handle) { o.m_handle = nullptr; }
+	~cTask() { if (m_handle) m_handle.destroy(); }
+
+	cTask& operator=(const cTask&) = delete;
+	cTask& operator=(cTask&& o) noexcept {
+		~cTask();
+		return *new(this) cTask(std::forward<cTask>(o));
+	}
 
 	std::coroutine_handle<> await_suspend(std::coroutine_handle<> h) {
 		m_handle.promise().caller = h;
@@ -40,20 +47,16 @@ private:
 
 /* ================================================================================================================== */
 template<typename T>
-struct cTask<T>::promise_base {
+struct cTask<T>::promise_base : std::suspend_always {
 	std::coroutine_handle<> caller; // The task coroutine caller
 	std::exception_ptr      except; // Any unhandled exception that might occur
 
 	cTask get_return_object() { return std::coroutine_handle<promise_type>::from_promise(*static_cast<promise_type*>(this)); }
-	auto initial_suspend() noexcept { return std::suspend_always{}; }
-	auto   final_suspend() noexcept {
-		struct awaitable : std::suspend_always {
-			std::coroutine_handle<> caller;
-			std::coroutine_handle<> await_suspend(std::coroutine_handle<>) const noexcept { return caller; }
-		};
-		return awaitable{ {}, caller };
-	}
+	std::suspend_always initial_suspend() noexcept { return {}; }
+	promise_base   final_suspend() noexcept { return *this; }
 	void unhandled_exception() noexcept { except = std::current_exception(); }
+
+	std::coroutine_handle<> await_suspend(std::coroutine_handle<>) const noexcept { return caller; }
 };
 /* ================================================================================================================== */
 template<typename T>
@@ -61,6 +64,7 @@ struct cTask<T>::promise_type : promise_base {
 	std::optional<T> value;
 	template<typename U>
 	void return_value(U&& v) { value.emplace(std::forward<U>(v)); }
+	void return_value(T&& t) { value.emplace(std::forward<T>(t)); }
 };
 /* ================================================================================================================== */
 template<>

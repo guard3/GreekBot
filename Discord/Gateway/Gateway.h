@@ -2,7 +2,7 @@
 #ifndef _GREEKBOT_GATEWAY_H_
 #define _GREEKBOT_GATEWAY_H_
 #include "Common.h"
-#include "Task.h"
+#include "Coroutines.h"
 #include "User.h"
 #include "Guild.h"
 #include "Interaction.h"
