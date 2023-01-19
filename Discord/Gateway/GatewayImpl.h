@@ -124,10 +124,9 @@ private:
 public:
 	implementation(cGateway*, const char*, eIntent);
 	implementation(const implementation&) = delete;
-	implementation(implementation&&) = delete;
 	~implementation();
 
-	implementation& operator=(implementation) = delete;
+	implementation& operator=(const implementation&) = delete;
 
 	cTask<json::value> DiscordRequest(beast::http::verb method, const std::string& target, const json::object* obj, const tHttpFields& fields);
 	cTask<json::value> DiscordRequestNoRetry(beast::http::verb method, const std::string& target, const json::object* obj, const tHttpFields& fields);
@@ -137,8 +136,7 @@ public:
 
 	cTask<> ResumeOnEventThread();
 	cTask<> WaitOnEventThread(chrono::milliseconds);
-
-	cTask<std::vector<cMember>> GetGuildMembersById(const cSnowflake& guild_id, const std::vector<cSnowflake>& users) {
+	cAsyncGenerator<cMember> GetGuildMembersById(const cSnowflake& guild_id, const std::vector<cSnowflake>& users) {
 		// TODO: check for users.size() <= 1
 		// TODO: customisation for other commands too
 		/* Make sure we're running on the event thread */
@@ -165,10 +163,11 @@ public:
 		/* If the map is empty, reset the nonce count */
 		if (m_rgm_map.empty())
 			m_rgm_nonce = 0;
-		/* Return the result */
-		if (node)
-			co_return node.mapped().Publish();
-		throw std::runtime_error("Unexpected empty result");
+		/* Make sure node is not empty for whatever reason */
+		if (!node) throw std::runtime_error("Unexpected empty result");
+		/* Return the results one by one */
+		for (auto gen = node.mapped().Publish(); gen;)
+			co_yield gen();
 	}
 
 	void Run();

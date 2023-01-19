@@ -125,7 +125,10 @@ cGreekBot::OnInteraction_top(const cInteraction& i) {
 		ids.reserve(db_result.size());
 		for (auto& r : db_result)
 			ids.emplace_back(*r.GetUserId());
-		auto members = co_await GetGuildMembersById(*i.GetGuildId(), ids);
+		std::vector<cMember> members;
+		members.reserve(db_result.size());
+		for (auto gen = GetGuildMembersById(*i.GetGuildId(), ids); co_await gen.HasValue();)
+			members.emplace_back(co_await gen());
 		/* Prepare embeds */
 		std::vector<cEmbed> es;
 		es.reserve(db_result.size());

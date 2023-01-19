@@ -50,10 +50,9 @@ protected:
 public:
 	cGateway(const char* token, eIntent intents);
 	cGateway(const cGateway&) = delete;
-	cGateway(cGateway&&) noexcept = delete;
 	~cGateway();
 
-	cGateway& operator=(cGateway) = delete;
+	cGateway& operator=(const cGateway&) = delete;
 
 	const char* GetToken() const noexcept;
 
@@ -68,7 +67,7 @@ public:
 
 	cTask<> ResumeOnEventThread();
 	cTask<> WaitOnEventThread(chrono::milliseconds);
-	cTask<std::vector<cMember>> GetGuildMembersById(const cSnowflake&, const std::vector<cSnowflake>&);
+	cAsyncGenerator<cMember> GetGuildMembersById(const cSnowflake&, const std::vector<cSnowflake>&);
 
 	virtual cTask<> OnReady(uhUser) { co_return; }
 	virtual cTask<> OnGuildCreate(uhGuild) { co_return; }

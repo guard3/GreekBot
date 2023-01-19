@@ -38,9 +38,9 @@ cTask<>
 cGateway::ResumeOnEventThread() { return m_pImpl->ResumeOnEventThread(); }
 cTask<>
 cGateway::WaitOnEventThread(chrono::milliseconds d) { return m_pImpl->WaitOnEventThread(d); }
-cTask<std::vector<cMember>>
+cAsyncGenerator<cMember>
 cGateway::GetGuildMembersById(const cSnowflake& guild_id, const std::vector<cSnowflake>& users) {
-	co_return co_await m_pImpl->GetGuildMembersById(guild_id, users);
+	return m_pImpl->GetGuildMembersById(guild_id, users);
 }
 /* ================================================================================================================== */
 const char*

@@ -2,7 +2,7 @@
 #define GREEKBOT_GUILDMEMBERSRESULT_H
 #include "Member.h"
 #include <unordered_map>
-#include <coroutine>
+#include "Coroutines.h"
 
 class cGuildMembersChunk final {
 private:
@@ -60,21 +60,11 @@ public:
 		}
 	}
 
-	std::vector<cMember> Publish() {
-		/* If there's only one chunk, simply return its members */
-		if (m_chunks.size() == 1)
-			return m_chunks.front().MoveMembers();
-		/* Otherwise, create a new vector with all members */
-		size_t num = 0;
-		for (auto& chunk : m_chunks)
-			num += chunk.GetMembers().size();
-		std::vector<cMember> members;
-		members.reserve(num);
+	cGenerator<cMember> Publish() {
 		for (auto& chunk : m_chunks) {
 			for (cMember& m : chunk.GetMembers())
-				members.emplace_back(std::move(m));
+				co_yield std::move(m);
 		}
-		return members;
 	}
 };
 #endif //GREEKBOT_GUILDMEMBERSRESULT_H
