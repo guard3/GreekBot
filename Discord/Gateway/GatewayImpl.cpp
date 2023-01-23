@@ -1,6 +1,7 @@
 #include "GatewayImpl.h"
 #include "GatewayInfo.h"
 #include "Event.h"
+#include <future>
 
 /* ================================================================================================================== */
 cGateway::implementation::implementation(cGateway* p, const char* t, eIntent i) :

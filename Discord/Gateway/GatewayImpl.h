@@ -101,7 +101,7 @@ private:
 	void run_session(const std::string& url);
 	cGatewayInfo get_gateway_info();
 	/* A method that's invoked for every gateway event */
-	cDetachedTask on_event(cEvent);
+	void on_event(cEvent);
 	/* Gateway command functions */
 	bool await_ready() { return false; }
 	void await_suspend(std::coroutine_handle<> h) {

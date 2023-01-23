@@ -1,19 +1,7 @@
 #ifndef GREEKBOT_TASK_H
 #define GREEKBOT_TASK_H
-#include <coroutine>
-#include <exception>
+#include "Future.h"
 #include <optional>
-#include <atomic>
-/* ========== A simple non-owning coroutine task ==================================================================== */
-struct cDetachedTask {
-	struct promise_type {
-		cDetachedTask    get_return_object() const noexcept { return {}; }
-		std::suspend_never initial_suspend() const noexcept { return {}; }
-		std::suspend_never   final_suspend() const noexcept { return {}; }
-		void return_void() const noexcept {}
-		void unhandled_exception() const noexcept;
-	};
-};
 /* ========== A 'lazy' coroutine task with symmetric transfer ======================================================= */
 template<typename T = void>
 class cTask final : public std::suspend_always {
@@ -36,7 +24,7 @@ public:
 	}
 	T await_resume();
 
-	T Wait();
+	T Wait() { return [](cTask* task) -> std::future<T> { co_return co_await *task; } (this).get(); }
 
 private:
 	struct promise_base;
@@ -84,26 +72,4 @@ inline void cTask<>::await_resume() {
 	promise_type& p = m_handle.promise();
 	if (p.except) std::rethrow_exception(p.except);
 }
-/* ================================================================================================================== */
-template<typename T>
-inline T cTask<T>::Wait() {
-	std::optional<T>   value;
-	std::exception_ptr except;
-	std::atomic_bool   bDone = false;
-	[&]() -> cDetachedTask {
-		try {
-			value.emplace(co_await *this);
-		}
-		catch (...) {
-			except = std::current_exception();
-		}
-		bDone = true;
-	} ();
-	while (!bDone);
-	if (except) std::rethrow_exception(except);
-	return std::move(*value);
-}
-/* ================================================================================================================== */
-template<>
-void cTask<>::Wait();
 #endif // GREEKBOT_TASK_H

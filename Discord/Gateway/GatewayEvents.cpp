@@ -1,7 +1,18 @@
 #include "GatewayImpl.h"
 #include "Event.h"
-
-cDetachedTask
+/* ========== Make void a valid coroutine return type =============================================================== */
+template<typename... Args>
+struct std::coroutine_traits<void, Args...> {
+	struct promise_type {
+		void   get_return_object() const noexcept {}
+		void unhandled_exception() const noexcept {}
+		void         return_void() const noexcept {}
+		std::suspend_never initial_suspend() const noexcept { return {}; }
+		std::suspend_never   final_suspend() const noexcept { return {}; }
+	};
+};
+/* ========== Implement on_event() ================================================================================== */
+void
 cGateway::implementation::on_event(cEvent event) {
 	try {
 		/* Update last sequence received */
