@@ -1,6 +1,5 @@
-#pragma once
-#ifndef _GREEKBOT_COMMON_H_
-#define _GREEKBOT_COMMON_H_
+#ifndef GREEKBOT_COMMON_H
+#define GREEKBOT_COMMON_H
 #include <memory>
 #include <chrono>
 #include <random>
@@ -15,8 +14,8 @@
 namespace chrono = std::chrono;
 using namespace std::literals::chrono_literals;
 
-#define _STR(x) #x
-#define STR(x) _STR(x)
+#define STR_(x) #x
+#define STR(x) STR_(x)
 
 #define DISCORD_API_VERSION     10
 #define DISCORD_API_HOST        "discord.com"
@@ -180,44 +179,10 @@ public:
 	bool operator!() const { return m_value == NO_COLOR; }
 };
 
-enum eGlobalKey {
-	KW_COLOR,
-	KW_TITLE,
-	KW_DESCRIPTION,
-	KW_URL,
-	KW_ICON_URL,
-	KW_TIMESTAMP,
-};
 KW_DECLARE(color, KW_COLOR, cColor)
 KW_DECLARE(title, KW_TITLE, std::string)
 KW_DECLARE(description, KW_DESCRIPTION, std::string)
 KW_DECLARE(url, KW_URL, std::string)
 KW_DECLARE(icon_url, KW_ICON_URL, std::string)
 KW_DECLARE(timestamp, KW_TIMESTAMP, std::string)
-
-template<typename T>
-class cOption final : std::optional<T> {
-public:
-	cOption() : std::optional<T>(std::in_place) {}
-	cOption(std::nullptr_t) {}
-	template<typename Arg, typename... Args> requires (!std::is_same_v<std::remove_cvref_t<Arg>, cOption> && !std::is_same_v<std::remove_cvref_t<Arg>, std::nullptr_t>)
-	cOption(Arg&& arg, Args&&... args) : std::optional<T>(std::in_place, std::forward<Arg>(arg), std::forward<Args>(args)...) {}
-	template<typename Arg, typename... Args>
-	cOption(std::initializer_list<Arg> list, Args&&... args): std::optional<T>(std::in_place, list, std::forward<Args>(args)...) {}
-	cOption(const cOption&) = default;
-	cOption(cOption&&) noexcept = default;
-
-	cOption& operator=(std::nullptr_t) noexcept { this->reset(); return *this; }
-	cOption& operator=(const cOption&) = default;
-	cOption& operator=(cOption&&) noexcept = default;
-	template<typename U>
-	cOption& operator=(std::initializer_list<U> list) {
-		this->emplace(list);
-		return *this;
-	}
-
-	using std::optional<T>::operator bool;
-	using std::optional<T>::operator->;
-	using std::optional<T>::operator*;
-};
-#endif /* _GREEKBOT_COMMON_H_ */
+#endif // GREEKBOT_COMMON_H

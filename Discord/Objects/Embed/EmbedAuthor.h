@@ -6,8 +6,7 @@ class cEmbedAuthor final {
 private:
 	std::string m_name, m_url, m_icon_url, m_proxy_icon_url;
 
-	template<iKwArg... KwArgs>
-	cEmbedAuthor(std::string name, cKwPack<KwArgs...>&& pack):
+	cEmbedAuthor(std::string name, iKwPack auto&& pack):
 		m_name(std::move(name)),
 		m_url(KwMove<KW_URL>(pack)),
 		m_icon_url(KwMove<KW_ICON_URL>(pack)) {}
@@ -16,8 +15,7 @@ public:
 	cEmbedAuthor(const json::object&);
 	cEmbedAuthor(const json::value&);
 	cEmbedAuthor(const char* name) : m_name(name) {}
-	template<iKwArg... KwArgs>
-	cEmbedAuthor(std::string name, KwArgs&... kwargs) : cEmbedAuthor(std::move(name), cKwPack<KwArgs...>(kwargs...)) {}
+	cEmbedAuthor(std::string name, iKwArg auto&... kwargs) : cEmbedAuthor(std::move(name), cKwPack{ kwargs... }) {}
 	/* Non const getters */
 	std::string& GetName()         noexcept { return m_name;           }
 	std::string& GetUrl()          noexcept { return m_url;            }

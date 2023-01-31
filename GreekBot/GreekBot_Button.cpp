@@ -13,7 +13,7 @@ cGreekBot::OnInteraction_button(const cInteraction& i) {
 			es[9] = std::move(e);
 		else
 			es.push_back(std::move(e));
-		co_await RespondToInteraction(i, components=nullptr, embeds=std::move(es));
+		co_await RespondToInteraction(i, components=nil, embeds=std::move(es));
 	}
 	catch (const std::exception& e) {
 		cUtils::PrintErr("OnInteraction_button: %s", e.what());

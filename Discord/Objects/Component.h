@@ -37,35 +37,30 @@ typedef uchHandle<cComponent> uchComponent;
 typedef  shHandle<cComponent>  shComponent;
 typedef schHandle<cComponent> schComponent;
 
-enum eButtonKey {
-	KW_LABEL = 300,
-	KW_EMOJI,
-	KW_DISABLED
-};
 KW_DECLARE(label, KW_LABEL, std::string)
-KW_DECLARE(emoji, KW_EMOJI, cOption<cEmoji>, nullptr)
-KW_DECLARE(disabled, KW_DISABLED, bool, false)
+KW_DECLARE(emoji, KW_EMOJI, cEmoji)
+KW_DECLARE(disabled, KW_DISABLED, bool)
 
 class cBaseButton : public cComponent {
 private:
 	eButtonStyle m_style;
 	std::string m_label;
-	cOption<cEmoji> m_emoji;
+	std::optional<cEmoji> m_emoji;
 	std::string m_value; // either url or custom_id depending on button style
 	bool m_disabled;
 
-	template<typename String, iKwArg... KwArgs>
-	cBaseButton(eButtonStyle s, String&& v, cKwPack<KwArgs...>&& pack):
+	template<typename String>
+	cBaseButton(eButtonStyle s, String&& v, iKwPack auto&& pack):
 		cComponent(COMPONENT_BUTTON),
 		m_style(s),
 		m_value(std::forward<String>(v)),
 		m_label(KwMove<KW_LABEL>(pack)),
-		m_emoji(KwMove<KW_EMOJI>(pack, nullptr)),
+		m_emoji(KwOptMove<KW_EMOJI>(pack, nil)),
 		m_disabled(KwGet<KW_DISABLED>(pack, false)) {}
 
 protected:
-	template<typename String, iKwArg... KwArgs>
-	cBaseButton(eButtonStyle s, String&& v, KwArgs&... kwargs) : cBaseButton(s, std::forward<String>(v), cKwPack<KwArgs...>(kwargs...)) {}
+	template<typename String>
+	cBaseButton(eButtonStyle s, String&& v, iKwArg auto&... kwargs) : cBaseButton(s, std::forward<String>(v), cKwPack(kwargs...)) {}
 	~cBaseButton() override = default;
 
 	std::string&       get_value()       noexcept { return m_value; }
@@ -74,7 +69,7 @@ protected:
 public:
 	/* Non const getters */
 	std::string& GetLabel() noexcept { return m_label; }
-	hEmoji GetEmoji() noexcept { return m_emoji ? m_emoji.operator->() : nullptr; }
+	hEmoji GetEmoji() noexcept { return m_emoji ? &m_emoji.value() : nullptr; }
 	/* Const getters */
 	eButtonStyle GetStyle() const noexcept { return m_style; }
 	const std::string& GetLabel() const noexcept { return m_label; }
@@ -87,8 +82,8 @@ public:
 template<eButtonStyle s>
 class cButton final : public cBaseButton {
 public:
-	template<typename String, iKwArg KwArg, iKwArg... KwArgs>
-	cButton(String&& custom_id, KwArg& kwarg, KwArgs&... kwargs) : cBaseButton(s, std::forward<String>(custom_id), kwarg, kwargs...) {}
+	template<typename String>
+	cButton(String&& custom_id, iKwArg auto& kwarg, iKwArg auto&... kwargs) : cBaseButton(s, std::forward<String>(custom_id), kwarg, kwargs...) {}
 
 	std::string&       GetCustomId()       noexcept { return get_value(); }
 	const std::string& GetCustomId() const noexcept { return get_value(); }
@@ -97,8 +92,8 @@ public:
 template<>
 class cButton<BUTTON_STYLE_LINK> final : public cBaseButton {
 public:
-	template<typename String, iKwArg KwArg, iKwArg... KwArgs>
-	cButton(String&& url_, KwArg& kwarg, KwArgs&... kwargs) : cBaseButton(BUTTON_STYLE_LINK, std::forward<String>(url_), kwarg, kwargs...) {}
+	template<typename String>
+	cButton(String&& url_, iKwArg auto& kwarg, iKwArg auto&... kwargs) : cBaseButton(BUTTON_STYLE_LINK, std::forward<String>(url_), kwarg, kwargs...) {}
 
 	std::string&       GetUrl() noexcept { return get_value(); }
 	const std::string& GetUrl() const noexcept { return get_value(); }
@@ -194,9 +189,6 @@ typedef uchHandle<cActionRow> uchActionRow;
 typedef  shHandle<cActionRow>  shActionRow;
 typedef schHandle<cActionRow> schActionRow;
 
-enum eComponentKey {
-	KW_COMPONENTS = 200
-};
-KW_DECLARE(components, KW_COMPONENTS, cOption<std::vector<cActionRow>>, nullptr)
+KW_DECLARE(components, KW_COMPONENTS, std::vector<cActionRow>)
 
 #endif /* _GREEKBOT_COMPONENT_H_ */

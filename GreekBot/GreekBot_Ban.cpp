@@ -5,7 +5,7 @@ cGreekBot::OnInteraction_ban(const cInteraction& i, const char* image_url) {
 	/* If an image url is specified, send troll message */
 	if (image_url) {
 		cUtils::PrintLog("Sending troll image");
-		co_await RespondToInteraction(i, components=nullptr);
+		co_await RespondToInteraction(i, components=nil);
 		co_return co_await SendInteractionFollowupMessage(i, content=image_url);
 	}
 	/* Acknowledge the interaction first */
@@ -166,7 +166,7 @@ cGreekBot::OnInteraction_unban(const cInteraction& i, const cSnowflake& user_id)
 			auto& s = e.GetAuthor()->GetName();
 			s.erase(s.end()-11, s.end());
 			e.SetFields(nullptr).SetDescription("User was unbanned");
-			co_await EditInteractionResponse(i, components=nullptr, embeds={std::move(e)});
+			co_await EditInteractionResponse(i, components=nil, embeds={std::move(e)});
 		}
 	}
 }

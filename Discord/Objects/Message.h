@@ -52,12 +52,8 @@ enum eMessageFlag {
 inline eMessageFlag operator|(eMessageFlag a, eMessageFlag b) { return (eMessageFlag)((int)a | (int)b); }
 inline eMessageFlag operator&(eMessageFlag a, eMessageFlag b) { return (eMessageFlag)((int)a & (int)b); }
 
-enum eMessageKey {
-	KW_FLAGS = 250,
-	KW_CONTENT
-};
 KW_DECLARE(flags, KW_FLAGS, eMessageFlag)
-KW_DECLARE(content, KW_CONTENT, cOption<std::string>)
+KW_DECLARE(content, KW_CONTENT, std::string)
 
 /* TODO: make cMessage inherit from here */
 /* TODO: maybe also make a base discord object class? */
@@ -65,20 +61,18 @@ KW_DECLARE(content, KW_CONTENT, cOption<std::string>)
 class cMessageParams {
 private:
 	eMessageFlag m_flags;
-	cOption<std::string> m_content;
-	cOption<std::vector<cActionRow>> m_components;
-	cOption<std::vector<cEmbed>> m_embeds;
+	std::optional<std::string> m_content;
+	std::optional<std::vector<cActionRow>> m_components;
+	std::optional<std::vector<cEmbed>> m_embeds;
 
-	template<iKwArg... KwArgs>
-	cMessageParams(cKwPack<KwArgs...>&& pack):
+	cMessageParams(iKwPack auto&& pack):
 		m_flags(KwGet<KW_FLAGS>(pack, MESSAGE_FLAG_NONE)),
-		m_content(KwGet<KW_CONTENT>(pack)),
-		m_components(KwGet<KW_COMPONENTS>(pack)),
-		m_embeds(KwGet<KW_EMBEDS>(pack)) {}
+		m_content(KwOptMove<KW_CONTENT>(pack)),
+		m_components(KwOptMove<KW_COMPONENTS>(pack)),
+		m_embeds(KwOptMove<KW_EMBEDS>(pack)) {}
 
 public:
-	template<iKwArg... KwArgs>
-	cMessageParams(KwArgs&... kwargs) : cMessageParams(cKwPack<KwArgs...>(kwargs...)) {}
+	cMessageParams(iKwArg auto&... kwargs) : cMessageParams(cKwPack{ kwargs... }) {}
 
 	json::object ToJson() const;
 };

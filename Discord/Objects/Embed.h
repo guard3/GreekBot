@@ -73,13 +73,6 @@ typedef uchHandle<cEmbedField> uchEmbedField;
 typedef  shHandle<cEmbedField>  shEmbedField;
 typedef schHandle<cEmbedField> schEmbedField;
 
-enum eEmbedKwArg {
-	KW_THUMBNAIL = 100,
-	KW_IMAGE,
-	KW_FOOTER,
-	KW_AUTHOR,
-	KW_FIELDS
-};
 KW_DECLARE(thumbnail, KW_THUMBNAIL, cWrapper<cEmbedMedia>)
 KW_DECLARE(image, KW_IMAGE, cWrapper<cEmbedMedia>)
 KW_DECLARE(footer, KW_FOOTER, cWrapper<cEmbedFooter>)
@@ -96,8 +89,7 @@ private:
 	uhEmbedAuthor m_author;
 	std::vector<cEmbedField> m_fields;
 
-	template<iKwArg... KwArgs>
-	cEmbed(cKwPack<KwArgs...>&& pack):
+	cEmbed(iKwPack auto&& pack):
 		m_color(KwMove<KW_COLOR>(pack)),
 		m_title(KwMove<KW_TITLE>(pack)),
 		m_description(KwMove<KW_DESCRIPTION>(pack)),
@@ -110,8 +102,7 @@ private:
 		m_fields(KwMove<KW_FIELDS>(pack)) {}
 
 public:
-	template<iKwArg... KwArgs>
-	cEmbed(KwArgs&... kwargs) : cEmbed(cKwPack<KwArgs...>(kwargs...)) {}
+	cEmbed(iKwArg auto&... kwargs) : cEmbed({ kwargs... }) {}
 
 	cEmbed(const json::object&);
 	cEmbed(const json::value&);
@@ -229,8 +220,5 @@ typedef uchHandle<cEmbed> uchEmbed;
 typedef  shHandle<cEmbed>  shEmbed;
 typedef schHandle<cEmbed> schEmbed;
 
-enum eEmbedKey {
-	KW_EMBEDS = 270,
-};
-KW_DECLARE(embeds, KW_EMBEDS, cOption<std::vector<cEmbed>>, nullptr)
+KW_DECLARE(embeds, KW_EMBEDS, std::vector<cEmbed>)
 #endif // GREEKBOT_EMBED_H
