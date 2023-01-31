@@ -72,7 +72,7 @@ private:
 		m_embeds(KwOptMove<KW_EMBEDS>(pack)) {}
 
 public:
-	cMessageParams(iKwArg auto&... kwargs) : cMessageParams(cKwPack{ kwargs... }) {}
+	cMessageParams(iKwArg auto&... kwargs) : cMessageParams(cKwPack(kwargs...)) {}
 
 	json::object ToJson() const;
 };

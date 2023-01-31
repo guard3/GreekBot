@@ -15,7 +15,7 @@ public:
 	cEmbedAuthor(const json::object&);
 	cEmbedAuthor(const json::value&);
 	cEmbedAuthor(const char* name) : m_name(name) {}
-	cEmbedAuthor(std::string name, iKwArg auto&... kwargs) : cEmbedAuthor(std::move(name), cKwPack{ kwargs... }) {}
+	cEmbedAuthor(std::string name, iKwArg auto&... kwargs) : cEmbedAuthor(std::move(name), cKwPack(kwargs...)) {}
 	/* Non const getters */
 	std::string& GetName()         noexcept { return m_name;           }
 	std::string& GetUrl()          noexcept { return m_url;            }

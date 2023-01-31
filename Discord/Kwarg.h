@@ -60,7 +60,7 @@ private:
 	static tKwOptValue<T>& get_optional() { return detail::kwdetail<T>::instance.m_opt; }
 
 public:
-	cKwPack(cKwArg<Tags>&...) {}
+	explicit cKwPack(cKwArg<Tags>&...) {}
 
 	template<iTag T, typename Arg = tKwValue<T>> requires std::is_assignable_v<cKwArg<T>&, Arg&&>
 	friend tKwOptValue<T>& KwOptGet(cKwPack&, Arg&& arg) {
@@ -83,7 +83,7 @@ private:
 	static tKwOptValue<T>& get_optional() noexcept { return detail::kwdetail<T>::instance.m_opt; }
 
 public:
-	cKwPack(cKwArg<First>&, cKwArg<Rest>&... r) : m_rest(r...) {}
+	explicit cKwPack(cKwArg<First>&, cKwArg<Rest>&... r) : m_rest(r...) {}
 
 	template<iTag T, typename Arg = tKwValue<T>> requires std::is_assignable_v<cKwArg<T>&, Arg&&>
 	friend tKwOptValue<T>& KwOptGet(cKwPack pack, Arg&& arg) {

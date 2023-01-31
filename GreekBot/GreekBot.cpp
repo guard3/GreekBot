@@ -118,6 +118,8 @@ cGreekBot::OnInteractionCreate(const cInteraction& interaction) {
 			case COMPONENT_SELECT_MENU:
 				co_await OnInteraction_SelectMenu(interaction);
 				break;
+			default:
+				break;
 		}
 	}
 	co_return;

@@ -102,7 +102,7 @@ private:
 		m_fields(KwMove<KW_FIELDS>(pack)) {}
 
 public:
-	cEmbed(iKwArg auto&... kwargs) : cEmbed({ kwargs... }) {}
+	cEmbed(iKwArg auto&... kwargs) : cEmbed(cKwPack(kwargs...)) {}
 
 	cEmbed(const json::object&);
 	cEmbed(const json::value&);
