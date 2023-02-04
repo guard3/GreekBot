@@ -10,9 +10,8 @@ struct std::coroutine_traits<std::future<T>, Args...> {
 		std::future<T> get_return_object() { return this->get_future(); }
 		std::suspend_never initial_suspend() noexcept { return {}; }
 		std::suspend_never final_suspend() noexcept { return {}; }
-		template<typename U>
+		template<typename U = T>
 		void return_value(U&& u) { this->set_value(std::forward<U>(u)); }
-		void return_value(T&& t) { this->set_value(std::forward<T>(t)); }
 		void unhandled_exception() { this->set_exception(std::current_exception()); }
 	};
 };

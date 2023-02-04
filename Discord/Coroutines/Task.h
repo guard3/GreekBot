@@ -52,7 +52,6 @@ struct cTask<T>::promise_type : promise_base {
 	std::optional<T> value;
 	template<typename U = T>
 	void return_value(U&& v) { value.emplace(std::forward<U>(v)); }
-	//void return_value(T&& t) { value.emplace(std::forward<T>(t)); }
 };
 /* ================================================================================================================== */
 template<>
