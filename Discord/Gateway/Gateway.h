@@ -37,12 +37,17 @@ public:
 };
 typedef std::vector<cHttpField> tHttpFields;
 
+KW_DECLARE(query, KW_QUERY, std::string)
+KW_DECLARE(user_ids, KW_USER_IDS, std::vector<cSnowflake>)
+
 class cGateway {
 private:
 	class implementation;
 	uhHandle<implementation> m_pImpl;
 
 	static inline tHttpFields m_empty;
+
+	cAsyncGenerator<cMember> get_guild_members(const cSnowflake&, const std::string&, const std::vector<cSnowflake>&);
 
 protected:
 	const char* GetHttpAuthorization() const noexcept;
@@ -67,9 +72,13 @@ public:
 
 	cTask<> ResumeOnEventThread();
 	cTask<> WaitOnEventThread(chrono::milliseconds);
-	cAsyncGenerator<cMember> GetGuildMembersById(const cSnowflake&, const std::vector<cSnowflake>&);
+	cAsyncGenerator<cMember> GetGuildMembers(const cSnowflake& guild_id, iKwArg auto&... kwargs) {
+		cKwPack pack{ kwargs... };
+		return get_guild_members(guild_id, KwGet<KW_QUERY>(pack), KwGet<KW_USER_IDS>(pack));
+	}
 
 	virtual cTask<> OnReady(uhUser) { co_return; }
+	virtual cTask<> OnUserUpdate(uhUser) { co_return; }
 	virtual cTask<> OnGuildCreate(uhGuild) { co_return; }
 	virtual cTask<> OnGuildRoleCreate(cSnowflake& guild_id, cRole& role) { co_return; }
 	virtual cTask<> OnGuildRoleUpdate(cSnowflake& guild_id, cRole& role) { co_return; }

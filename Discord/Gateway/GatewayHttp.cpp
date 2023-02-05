@@ -144,3 +144,66 @@ cTask<>
 cGateway::implementation::WaitOnEventThread(chrono::milliseconds duration) {
 	co_await wait_on_event_thread(this, duration);
 }
+
+// TODO: make custom exceptions, preferably in Exceptions.h
+// TODO: make getting all members from the gateway
+cAsyncGenerator<cMember>
+cGateway::implementation::get_guild_members(const cSnowflake& guild_id, const std::string& query, const std::vector<cSnowflake>& user_ids) {
+	if (!user_ids.empty()) {
+		/* Make sure we're running on the event thread */
+		co_await ResumeOnEventThread();
+		/* Save the current nonce to get the result later */
+		auto nonce = m_rgm_nonce;
+		/* Prepare the gateway payload */
+		json::array a;
+		a.reserve(user_ids.size());
+		for (auto& s : user_ids)
+			a.emplace_back(s.ToString());
+		m_rgm_payload = json::serialize(json::object {
+			{ "op", 8 },
+			{ "d", json::object {
+				{ "guild_id", guild_id.ToString() },
+				{ "user_ids", std::move(a) },
+				{ "nonce", std::to_string(nonce) }
+			}}
+		});
+		/* Send the payload to the gateway and wait for the result to be available */
+		co_await *this;
+		/* Extract the result node */
+		auto node = m_rgm_map.extract(nonce);
+		/* If the map is empty, reset the nonce count */
+		if (m_rgm_map.empty())
+			m_rgm_nonce = 0;
+		/* Make sure node is not empty for whatever reason */
+		if (!node) throw std::runtime_error("Unexpected empty result");
+		/* Return the results one by one */
+		for (auto gen = node.mapped().Publish(); gen;)
+			co_yield gen();
+		co_return;
+	}
+	if (query.empty()) {
+		/* If no query is specified, return all guild members, provided we have the appropriate intents */
+		if (!(m_application->GetFlags() & (APP_FLAG_GATEWAY_GUILD_MEMBERS | APP_FLAG_GATEWAY_GUILD_MEMBERS_LIMITED)))
+			throw std::runtime_error("Missing privileged intents");
+		for (cSnowflake last_id = "0";;) {
+			json::value result = co_await m_parent->DiscordGet(cUtils::Format("/guilds/%s/members?limit=1000&after=%s", guild_id.ToString(), last_id.ToString()));
+			json::array& members = result.as_array();
+			if (members.empty())
+				break;
+			for (auto i = members.begin(); i < members.end() - 1; ++i)
+				co_yield cMember(*i);
+			cMember last_member(members.back());
+			last_id = last_member.GetUser()->GetId();
+			co_yield std::move(last_member);
+			if (members.size() < 1000)
+				break;
+		}
+	}
+	else {
+		/* If there is a query, return matching guild members */
+		json::value result = co_await m_parent->DiscordGet(cUtils::Format("/guilds/%s/members/search?limit=1000&query=%s", guild_id.ToString(), query));
+		for (auto& v : result.as_array())
+			co_yield cMember(v);
+	}
+	co_return;
+}

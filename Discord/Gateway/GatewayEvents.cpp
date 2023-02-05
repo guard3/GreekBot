@@ -25,6 +25,7 @@ cGateway::implementation::on_event(cEvent event) {
 			auto e = event.GetData<EVENT_READY>();
 			m_session_id = std::move(e.session_id);
 			co_await ResumeOnEventThread();
+			m_application = e.application;
 			co_return co_await m_parent->OnReady(std::move(e.user));
 		}
 		/* Switch to the event thread */
@@ -62,6 +63,11 @@ cGateway::implementation::on_event(cEvent event) {
 				auto e = event.GetData<EVENT_GUILD_MEMBERS_CHUNK>();
 				auto& r = m_rgm_map[e.GetNonce()];
 				r.Fill(std::move(e));
+				break;
+			}
+			case EVENT_USER_UPDATE: {
+				co_await m_parent->OnUserUpdate(event.GetDataPtr<EVENT_USER_UPDATE>());
+				m_application = cApplication(co_await m_parent->DiscordGet("/oauth2/applications/@me"));
 				break;
 			}
 			default:

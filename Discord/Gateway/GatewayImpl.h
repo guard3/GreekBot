@@ -10,6 +10,7 @@
 #include <atomic>
 #include <tuple>
 #include "GuildMembersResult.h"
+#include "Application.h"
 
 #define INFLATE_BUFFER_SIZE 4096
 
@@ -85,6 +86,8 @@ private:
 	std::string m_rgm_payload;   // The gateway payload to be sent
 	uint64_t    m_rgm_nonce = 0; // The nonce of the payload
 	std::unordered_map<uint64_t, cGuildMembersResult> m_rgm_map; // A map to hold and manage all responses
+	/* Partial application object */
+	std::optional<cApplication> m_application;
 
 	/* Gateway commands */
 	void resume();
@@ -136,39 +139,7 @@ public:
 
 	cTask<> ResumeOnEventThread();
 	cTask<> WaitOnEventThread(chrono::milliseconds);
-	cAsyncGenerator<cMember> GetGuildMembersById(const cSnowflake& guild_id, const std::vector<cSnowflake>& users) {
-		// TODO: check for users.size() <= 1
-		// TODO: customisation for other commands too
-		/* Make sure we're running on the event thread */
-		co_await ResumeOnEventThread();
-		/* Save the current nonce to get the result later */
-		auto nonce = m_rgm_nonce;
-		/* Prepare the gateway payload */
-		json::array a;
-		a.reserve(users.size());
-		for (auto& s : users)
-			a.emplace_back(s.ToString());
-		m_rgm_payload = json::serialize(json::object {
-			{ "op", 8 },
-			{ "d", json::object {
-				{ "guild_id", guild_id.ToString() },
-				{ "user_ids", std::move(a) },
-				{ "nonce", std::to_string(nonce) }
-			}}
-		});
-		/* Send the payload to the gateway and wait for the result to be available */
-		co_await *this;
-		/* Extract the result node */
-		auto node = m_rgm_map.extract(nonce);
-		/* If the map is empty, reset the nonce count */
-		if (m_rgm_map.empty())
-			m_rgm_nonce = 0;
-		/* Make sure node is not empty for whatever reason */
-		if (!node) throw std::runtime_error("Unexpected empty result");
-		/* Return the results one by one */
-		for (auto gen = node.mapped().Publish(); gen;)
-			co_yield gen();
-	}
+	cAsyncGenerator<cMember> get_guild_members(const cSnowflake& guild_id, const std::string& query, const std::vector<cSnowflake>& user_ids);
 
 	void Run();
 };

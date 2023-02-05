@@ -1,12 +1,12 @@
-#pragma once
-#ifndef _GREEKBOT_EVENT_H_
-#define _GREEKBOT_EVENT_H_
+#ifndef GREEKBOT_EVENT_H
+#define GREEKBOT_EVENT_H
 #include "json.h"
 #include "User.h"
 #include "Guild.h"
 #include "Interaction.h"
 #include "Message.h"
 #include "GuildMembersResult.h"
+#include "Application.h"
 
 /* ================================================================================================================== */
 enum eEvent : uint32_t {
@@ -22,7 +22,8 @@ enum eEvent : uint32_t {
 	EVENT_MESSAGE_CREATE            = 0x9C643E55,
 	EVENT_MESSAGE_UPDATE            = 0x8B97EBD6,
 	EVENT_MESSAGE_DELETE            = 0x29A0A229,
-	EVENT_GUILD_MEMBERS_CHUNK       = 0x343F4BC5
+	EVENT_GUILD_MEMBERS_CHUNK       = 0x343F4BC5,
+	EVENT_USER_UPDATE               = 0xBFC98531
 };
 /* ================================================================================================================== */
 namespace hidden {
@@ -35,9 +36,14 @@ namespace hidden {
 		int v;
 		std::string session_id;
 		uhUser user;
+		cApplication application;
 
-		event_data(const json::object& o) : v(o.at("v").as_int64()), session_id(o.at("session_id").as_string().c_str()), user(cHandle::MakeUnique<cUser>(o.at("user"))) {}
-		event_data(const json::value& v) : event_data(v.as_object()) {}
+		event_data(const json::value& v): event_data(v.as_object()) {}
+		event_data(const json::object& o):
+			v(o.at("v").as_int64()),
+			session_id(o.at("session_id").as_string().c_str()),
+			user(cHandle::MakeUnique<cUser>(o.at("user"))),
+			application(o.at("application")) {}
 	};
 /* ================================================================================================================== */
 	template<eEvent e> requires (e == EVENT_GUILD_ROLE_CREATE || e == EVENT_GUILD_ROLE_UPDATE)
@@ -64,6 +70,7 @@ namespace hidden {
 	template<>         struct map_event_data<EVENT_INTERACTION_CREATE>  { typedef cInteraction       type; };
 	template<>         struct map_event_data<EVENT_MESSAGE_CREATE>      { typedef cMessage           type; };
 	template<>         struct map_event_data<EVENT_GUILD_MEMBERS_CHUNK> { typedef cGuildMembersChunk type; };
+	template<>         struct map_event_data<EVENT_USER_UPDATE>         { typedef cUser              type; };
 }
 template<eEvent e> using tEventData = typename hidden::map_event_data<e>::type;
 
@@ -102,4 +109,4 @@ typedef  uhHandle<cEvent>  uhEvent;
 typedef uchHandle<cEvent> uchEvent;
 typedef  shHandle<cEvent>  shEvent;
 typedef schHandle<cEvent> schEvent;
-#endif /* _GREEKBOT_EVENT_H_ */
+#endif // GREEKBOT_EVENT_H

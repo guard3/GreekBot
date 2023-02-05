@@ -15,6 +15,7 @@ private:
 	uhUser m_user;
 
 	cTask<> OnReady(uhUser) override;
+	cTask<> OnUserUpdate(uhUser) override;
 
 	cTask<> respond_to_interaction(const cInteraction&, const cMessageParams&);
 	cTask<> edit_interaction_response(const cInteraction&, const cMessageParams&);
@@ -43,8 +44,7 @@ public:
 	cTask<> RemoveGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake& role_id);
 	cTask<> UpdateGuildMemberRoles(const cSnowflake& guild_id, const cSnowflake& user_id, const std::vector<chSnowflake>& role_ids);
 
-	template<iKwArg... KwArgs>
-	cTask<> RespondToInteraction(const cInteraction& i, KwArgs&... kwargs) {
+	cTask<> RespondToInteraction(const cInteraction& i, iKwArg auto&... kwargs) {
 		co_await respond_to_interaction(i, { kwargs... });
 	}
 	template<>
@@ -69,8 +69,5 @@ public:
 
 	cTask<> CreateGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, chrono::seconds delete_message_seconds = 0s, const std::string& reason = {});
 	cTask<> RemoveGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, const std::string& reason = {});
-
-	// TODO: make an async generator for all members
-	cTask<std::vector<cMember>> ListGuildMembers(const cSnowflake& guild_id, const cSnowflake& after);
 };
 #endif // GREEKBOT_BOT_H

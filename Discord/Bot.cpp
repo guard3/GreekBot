@@ -8,6 +8,13 @@ cBot::OnReady(uhUser user) {
 	co_return;
 }
 
+cTask<>
+cBot::OnUserUpdate(uhUser user) {
+	cUtils::PrintMsg("User updated: %s#%s %s", user->GetUsername(), user->GetDiscriminator(), user->GetId().ToString());
+	m_user = std::move(user);
+	co_return;
+}
+
 cTask<std::vector<cRole>>
 cBot::GetGuildRoles(const cSnowflake& guild_id) {
 	json::value v = co_await DiscordGet(cUtils::Format("/guilds/%s/roles", guild_id.ToString()));
@@ -156,15 +163,4 @@ cBot::RemoveGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, cons
 	if (!reason.empty())
 		fields.emplace_back("X-Audit-Log-Reason", cUtils::PercentEncode(reason));
 	co_await DiscordDelete(cUtils::Format("/guilds/%s/bans/%s", guild_id.ToString(), user_id.ToString()), fields);
-}
-
-cTask<std::vector<cMember>>
-cBot::ListGuildMembers(const cSnowflake& guild_id, const cSnowflake& after) {
-	std::vector<cMember> result;
-	result.reserve(1000);
-
-	auto members_json = co_await DiscordGet(cUtils::Format("/guilds/%s/members?after=%s&limit=1000", guild_id.ToString(), after.ToString()));
-	for (auto& v : members_json.as_array())
-		result.emplace_back(v);
-	co_return result;
 }
