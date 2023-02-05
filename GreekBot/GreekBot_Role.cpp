@@ -4,9 +4,9 @@ cTask<>
 cGreekBot::OnInteraction_role(const cInteraction& interaction) try {
 	co_await RespondToInteraction(
 		interaction,
-		flags=MESSAGE_FLAG_EPHEMERAL,
-		content="Select a role depending on your greek level:",
-		components={
+		kw::flags=MESSAGE_FLAG_EPHEMERAL,
+		kw::content="Select a role depending on your greek level:",
+		kw::components={
 			cActionRow {
 				cSelectMenu {
 					"proficiency_role_menu",
@@ -64,7 +64,7 @@ cGreekBot::OnInteraction_role(const cInteraction& interaction) try {
 			cActionRow {
 				cButton<BUTTON_STYLE_LINK> {
 					"https://en.wikipedia.org/wiki/Common_European_Framework_of_Reference_for_Languages",
-					label="Don't know what to pick?"
+					kw::label="Don't know what to pick?"
 				}
 			}
 		}

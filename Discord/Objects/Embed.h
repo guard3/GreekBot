@@ -146,7 +146,7 @@ public:
 	uhEmbedAuthor MoveAuthor()      noexcept { return std::move(m_author);       }
 	std::vector<cEmbedField> MoveFields() noexcept { return std::move(m_fields); }
 	/* Setters */
-	cEmbed& SetColor(cColor c) { color = c; return *this; }
+	cEmbed& SetColor(cColor c) { m_color = c; return *this; }
 	template<typename Arg, typename... Args>
 	cEmbed& SetTitle(Arg&& arg, Args&&... args) { m_title = { std::forward<Arg>(arg), std::forward<Args>(args)... }; return *this; }
 	template<typename Arg, typename... Args>

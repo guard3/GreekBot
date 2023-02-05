@@ -168,5 +168,5 @@ inline tKwValue<T> KwMove(cKwPack<>, Args&&... args) { return tKwValue<T>(std::f
 struct tag : detail::kwtag {};\
 template<> struct detail::kwdetail<tag> { static cKwArg<tag> instance; using value_type = type; };\
 inline cKwArg<tag> detail::kwdetail<tag>::instance{nil};\
-inline cKwArg<tag>& name = detail::kwdetail<tag>::instance;
+namespace kw { inline cKwArg<tag>& name = detail::kwdetail<tag>::instance; }
 #endif //GREEKBOT_KWARG_H

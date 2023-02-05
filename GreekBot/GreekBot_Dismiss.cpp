@@ -13,12 +13,12 @@ cGreekBot::OnInteraction_dismiss(const cInteraction& i, const cSnowflake& user_i
 			/* If current user is not the original author, check for appropriate permissions */
 			if (user->GetId() != user_id) {
 				if (!(member->GetPermissions() & PERM_MANAGE_MESSAGES))
-					co_return co_await SendInteractionFollowupMessage(i, flags=MESSAGE_FLAG_EPHEMERAL, content="You can't do that, you're missing the `MANAGE_MESSAGES` permission.");
+					co_return co_await SendInteractionFollowupMessage(i, kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content="You can't do that, you're missing the `MANAGE_MESSAGES` permission.");
 			}
 		}
 		/* If all's good, delete the original response */
 		co_return co_await DeleteInteractionResponse(i);
 	}
 	catch (...) {}
-	co_await SendInteractionFollowupMessage(i, flags=MESSAGE_FLAG_EPHEMERAL, content="An unexpected error has occurred. Try again later.");
+	co_await SendInteractionFollowupMessage(i, kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content="An unexpected error has occurred. Try again later.");
 }

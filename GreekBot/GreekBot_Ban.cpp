@@ -5,8 +5,8 @@ cGreekBot::OnInteraction_ban(const cInteraction& i, const char* image_url) {
 	/* If an image url is specified, send troll message */
 	if (image_url) {
 		cUtils::PrintLog("Sending troll image");
-		co_await RespondToInteraction(i, components=nil);
-		co_return co_await SendInteractionFollowupMessage(i, content=image_url);
+		co_await RespondToInteraction(i, kw::components=nil);
+		co_return co_await SendInteractionFollowupMessage(i, kw::content=image_url);
 	}
 	/* Acknowledge the interaction first */
 	co_await RespondToInteraction(i);
@@ -16,7 +16,7 @@ cGreekBot::OnInteraction_ban(const cInteraction& i, const char* image_url) {
 	if (guild_id && member) {
 		/* Check that the invoking user has appropriate permissions, for extra measure */
 		if (!(member->GetPermissions() & PERM_BAN_MEMBERS))
-			co_return co_await EditInteractionResponse(i, content="You can't do that. You're missing the `BAN_MEMBERS` permission.");
+			co_return co_await EditInteractionResponse(i, kw::content="You can't do that. You're missing the `BAN_MEMBERS` permission.");
 		try {
 			/* Check which subcommand was invoked */
 			auto& subcommand_option = i.GetData<INTERACTION_APPLICATION_COMMAND>()->Options.front();
@@ -26,31 +26,31 @@ cGreekBot::OnInteraction_ban(const cInteraction& i, const char* image_url) {
 				auto& user = options.front().GetValue<APP_CMD_OPT_USER>();
 				/* Make sure we're not banning ourselves */
 				if (user.GetId() == GetUser()->GetId())
-					co_return co_await EditInteractionResponse(i, content = "Excuse me, ı'm not türk! Beep bop... 🤖");
+					co_return co_await EditInteractionResponse(i, kw::content="Excuse me, ı'm not türk! Beep bop... 🤖");
 				/* TODO: choose a random goodbye message */
 				const char *msg = "senin ananı hacı bekir efendinin şalvarına dolar yan yatırır sokağındaki caminin minaresinde öyle bir sikerim ki ezan okundu sanırsın sonra minareden indirir koca yarrağımla köyünü yağmalar herkesi ortadox yaparım seni veled-i zina seni dljs;fjaiaejadklsjkfjdsjfklsdjflkjds;afdkslfdksfdlsfs";
 				/* Create the embed for the confirmation message */
 				cEmbed e {
-					author = {
+					kw::author={
 						cUtils::Format("%s#%s was banned", user.GetUsername(), user.GetDiscriminator()),
-						icon_url = user.GetAvatarUrl()
+						kw::icon_url=user.GetAvatarUrl()
 					},
-					fields = {{"Reason", "Turk troll"}}
+					kw::fields = {{"Reason", "Turk troll"}}
 				};
 				try {
 					/* DM the goodbye message */
 					co_await CreateDMMessage(
 						user.GetId(),
-						content=cUtils::Format("You've been banned from **%s** with reason:\n```%s```Do you want to appeal the ban?", m_guilds.at(*guild_id)->GetName(), msg),
-						components={
+						kw::content=cUtils::Format("You've been banned from **%s** with reason:\n```%s```Do you want to appeal the ban?", m_guilds.at(*guild_id)->GetName(), msg),
+						kw::components={
 							cActionRow{
 								cButton<BUTTON_STYLE_SUCCESS>{
 									STR(CMP_ID_BUTTON_TURK_A),
-									label="Evet"
+									kw::label="Evet"
 								},
 								cButton<BUTTON_STYLE_DANGER>{
 									STR(CMP_ID_BUTTON_TURK_B),
-									label="Hayır"
+									kw::label="Hayır"
 								}
 							}
 						}
@@ -65,12 +65,12 @@ cGreekBot::OnInteraction_ban(const cInteraction& i, const char* image_url) {
 				/* Send confirmation message */
 				co_return co_await EditInteractionResponse(
 					i,
-					embeds={std::move(e)},
-					components={
+					kw::embeds={std::move(e)},
+					kw::components={
 						cActionRow{
 							cButton<BUTTON_STYLE_SECONDARY>{
 								cUtils::Format("DLT#%s", member->GetUser()->GetId().ToString()),
-								label="Dismiss"
+								kw::label="Dismiss"
 							}
 						}
 					});
@@ -104,46 +104,43 @@ cGreekBot::OnInteraction_ban(const cInteraction& i, const char* image_url) {
 			if (!user) throw std::exception();
 			/* Make sure we're not banning ourselves */
 			if (user->GetId() == GetUser()->GetId())
-				co_return co_await EditInteractionResponse(i, content="I'm not gonna ban myself, I'm a good bot. Beep bop... 🤖");
+				co_return co_await EditInteractionResponse(i, kw::content="I'm not gonna ban myself, I'm a good bot. Beep bop... 🤖");
 			try {
 				/* DM the ban reason */
-				co_await CreateDMMessage(user->GetId(), content = cUtils::Format("You've been banned from **%s** with reason:\n```%s```", m_guilds.at(*guild_id)->GetName(), reason));
+				co_await CreateDMMessage(user->GetId(), kw::content=cUtils::Format("You've been banned from **%s** with reason:\n```%s```", m_guilds.at(*guild_id)->GetName(), reason));
 			}
 			catch (...) {
 				/* Couldn't send ban reason in DMs, the user may not be a member of the guild but that's fine */
 			}
-			/* Create the ban; TODO: convert 'reason' string to be url-encoded */
 			co_await CreateGuildBan(*guild_id, user->GetId(), delete_messages, reason);
 			/* Send confirmation message */
 			co_await EditInteractionResponse(
 				i,
-				components={
+				kw::components={
 					cActionRow{
 						cButton<BUTTON_STYLE_DANGER>{
 							cUtils::Format("BAN#%s", user->GetId().ToString()),
-							label="Revoke ban"
+							kw::label="Revoke ban"
 						},
 						cButton<BUTTON_STYLE_SECONDARY>{
 							cUtils::Format("DLT#%s", member->GetUser()->GetId().ToString()),
-							label="Dismiss"
+							kw::label="Dismiss"
 						}
 					}
 				},
-				embeds={
-					cEmbed{
-						author={
-							cUtils::Format("%s#%s was banned", user->GetUsername(), user->GetDiscriminator()),
-							icon_url = user->GetAvatarUrl()
-						},
-						fields={{"Reason", reason}}
-					}
-				}
+				kw::embeds={{
+					kw::author={
+						cUtils::Format("%s#%s was banned", user->GetUsername(), user->GetDiscriminator()),
+						kw::icon_url=user->GetAvatarUrl()
+					},
+					kw::fields={{"Reason", reason}}
+				}}
 			);
 			co_return;
 		}
 		catch (...) {}
 	}
-	co_await EditInteractionResponse(i, content="An unexpected error has occurred, try again later.");
+	co_await EditInteractionResponse(i, kw::content="An unexpected error has occurred, try again later.");
 }
 
 cTask<>
@@ -152,7 +149,7 @@ cGreekBot::OnInteraction_unban(const cInteraction& i, const cSnowflake& user_id)
 		/* Make sure that the invoking user has the appropriate permissions */
 		if (!(member->GetPermissions() & PERM_BAN_MEMBERS)) {
 			co_await RespondToInteraction(i);
-			co_return co_await SendInteractionFollowupMessage(i, flags=MESSAGE_FLAG_EPHEMERAL, content="You can't do that. You're missing the `BAN_MEMBERS` permission.");
+			co_return co_await SendInteractionFollowupMessage(i, kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content="You can't do that. You're missing the `BAN_MEMBERS` permission.");
 		}
 		if (chSnowflake pGuildId = i.GetGuildId()) {
 			co_await RespondToInteraction(i);
@@ -166,7 +163,7 @@ cGreekBot::OnInteraction_unban(const cInteraction& i, const cSnowflake& user_id)
 			auto& s = e.GetAuthor()->GetName();
 			s.erase(s.end()-11, s.end());
 			e.SetFields(nullptr).SetDescription("User was unbanned");
-			co_await EditInteractionResponse(i, components=nil, embeds={std::move(e)});
+			co_await EditInteractionResponse(i, kw::components=nil, kw::embeds={std::move(e)});
 		}
 	}
 }

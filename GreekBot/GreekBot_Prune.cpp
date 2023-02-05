@@ -10,7 +10,7 @@ cGreekBot::OnInteraction_prune(const cInteraction& i) {
 		chMember member = i.GetMember();
 		if (!guild_id || !member) throw 0;
 		if (!(member->GetPermissions() & PERM_KICK_MEMBERS))
-			co_return co_await EditInteractionResponse(i, content="You can't do that. You're missing the `KICK_MEMBERS` permission.");
+			co_return co_await EditInteractionResponse(i, kw::content="You can't do that. You're missing the `KICK_MEMBERS` permission.");
 		/* How many days of inactivity to consider */
 		auto &options = i.GetData<INTERACTION_APPLICATION_COMMAND>()->Options;
 		int days = options.empty() ? 2 : options.front().GetValue<APP_CMD_OPT_INTEGER>();
@@ -26,17 +26,17 @@ cGreekBot::OnInteraction_prune(const cInteraction& i) {
 		/* Send confirmation message */
 		co_return co_await EditInteractionResponse(
 			i,
-			content=std::move(str),
-			components = {
+			kw::content=std::move(str),
+			kw::components = {
 				cActionRow{
 					cButton<BUTTON_STYLE_SECONDARY>{
 						cUtils::Format("DLT#%s", member->GetUser()->GetId().ToString()),
-						label = "Dismiss"
+						kw::label = "Dismiss"
 					}
 				}
 			}
 		);
 	}
 	catch (...) {}
-	co_await EditInteractionResponse(i, content="An unexpected error has occurred, try again later.");
+	co_await EditInteractionResponse(i, kw::content="An unexpected error has occurred, try again later.");
 }
