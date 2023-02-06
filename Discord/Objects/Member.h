@@ -1,21 +1,10 @@
-#pragma once
-#ifndef _GREEKBOT_MEMBER_H_
-#define _GREEKBOT_MEMBER_H_
+#ifndef GREEKBOT_MEMBER_H
+#define GREEKBOT_MEMBER_H
 #include "User.h"
 #include "Role.h"
 #include <vector>
-#if 0
-enum ePermission : int64_t {
-	PERM_NONE                  = 0,
-	PERM_CREATE_INSTANT_INVITE = 1 << 0,
-	PERM_KICK_MEMBERS          = 1 << 1,
-	PERM_BAN_MEMBERS           = 1 << 2,
-	PERM_ADMINISTRATOR         = 1 << 3
-	// more tba...
-};
-inline ePermission operator|(ePermission a, ePermission b) { return (ePermission)((int64_t)a | (int64_t)b); }
-inline ePermission operator&(ePermission a, ePermission b) { return (ePermission)((int64_t)a | (int64_t)b); }
-#endif
+
+// TODO: fix this in general
 class cMember final {
 private:
 	uhUser user;
@@ -23,6 +12,8 @@ private:
 	bool deaf, mute;
 	// pending
 	ePermission permissions;
+
+	chrono::sys_seconds m_joined_at;
 
 public:
 	std::vector<cSnowflake> Roles;
@@ -41,6 +32,8 @@ public:
 	const std::string& GetPremiumSince() const { return premium_since; }
 	ePermission        GetPermissions()  const { return permissions;   }
 
+	chrono::sys_seconds JoinedAt() const { return m_joined_at; }
+
 	bool IsDeaf() const { return deaf; }
 	bool IsMute() const { return mute; }
 };
@@ -50,4 +43,4 @@ typedef  uhHandle<cMember>  uhMember;
 typedef uchHandle<cMember> uchMember;
 typedef  shHandle<cMember>  shMember;
 typedef schHandle<cMember> schMember;
-#endif /* _GREEKBOT_MEMBER_H_ */
+#endif //GREEKBOT_MEMBER_H

@@ -88,6 +88,9 @@ cGreekBot::OnInteractionCreate(const cInteraction& interaction) {
 			case 1031907652541890621:
 				/* ban */
 				co_return co_await OnInteraction_ban(interaction, nullptr);
+			case 1072131488478404621:
+				/* prune (Learning Greek) */
+				co_return co_await OnInteraction_prune_lmg(interaction);
 			case 904462004071313448:
 				/* connect */
 				//OnInteraction_connect(&interaction);

@@ -1,4 +1,5 @@
 #include "Utils.h"
+#include "date_time.h"
 
 /* Random engine stuff */
 static std::random_device g_rd;
@@ -31,6 +32,11 @@ cUtils::format(const char *fmt, ...) {
 	vsprintf(str.data(), fmt, args);
 	va_end(args);
 	return str;
+}
+
+std::chrono::sys_seconds
+cUtils::ParseTimestamp(const std::string& t) {
+	return std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::from_time_t(posix_time::to_time_t(posix_time::from_iso_extended_string(t.substr(0, t.find_last_of("+-Z"))))));
 }
 
 const char*

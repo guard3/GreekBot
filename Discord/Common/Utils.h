@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <cstdio>
+#include <chrono>
 
 class xNumberFormatError : public std::invalid_argument {
 public:
@@ -114,6 +115,8 @@ public:
 	/* Percent encoding */
 	static std::string PercentEncode(const char*        str) { return percent_encode(str,         strlen(str));  }
 	static std::string PercentEncode(const std::string& str) { return percent_encode(str.c_str(), str.length()); }
+	/* Parse ISO8601 timestamp */
+	static std::chrono::sys_seconds ParseTimestamp(const std::string&);
 	/* Resolving the OS we're running on */
 	static const char* GetOS();
 };

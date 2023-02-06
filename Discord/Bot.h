@@ -67,6 +67,7 @@ public:
 		co_return co_await CreateMessage((co_await CreateDM(recipient_id)).GetId(), kwargs...);
 	}
 
+	cTask<> RemoveGuildMember(const cSnowflake& guild_id, const cSnowflake& user_id, const std::string& reason = {});
 	cTask<> CreateGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, chrono::seconds delete_message_seconds = 0s, const std::string& reason = {});
 	cTask<> RemoveGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, const std::string& reason = {});
 };

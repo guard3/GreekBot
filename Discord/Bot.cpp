@@ -150,6 +150,14 @@ cBot::create_message(const cSnowflake& channel_id, const cMessageParams& params)
 }
 
 cTask<>
+cBot::RemoveGuildMember(const cSnowflake& guild_id, const cSnowflake& user_id, const std::string& reason) {
+	tHttpFields fields;
+	if (!reason.empty())
+		fields.emplace_back("X-Audit-Log-Reason", cUtils::PercentEncode(reason));
+	co_await DiscordDelete(cUtils::Format("/guilds/%s/members/%s", guild_id.ToString(), user_id.ToString()), fields);
+}
+
+cTask<>
 cBot::CreateGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, chrono::seconds delete_message_seconds, const std::string& reason) {
 	tHttpFields fields;
 	if (!reason.empty())

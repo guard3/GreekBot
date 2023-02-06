@@ -116,6 +116,7 @@ private:
 	cTask<> OnInteraction_top(const cInteraction&);
 	cTask<> OnInteraction_button(const cInteraction&);
 	cTask<> OnInteraction_prune(const cInteraction&);
+	cTask<> OnInteraction_prune_lmg(const cInteraction&);
 	cTask<> OnInteraction_ban(const cInteraction&, const char* image_url);
 	cTask<> OnInteraction_unban(const cInteraction&, const cSnowflake& user_id);
 	cTask<> OnInteraction_dismiss(const cInteraction&, const cSnowflake& user_id);
