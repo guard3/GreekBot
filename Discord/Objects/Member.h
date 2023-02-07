@@ -4,38 +4,34 @@
 #include "Role.h"
 #include <vector>
 
-// TODO: fix this in general
 class cMember final {
 private:
-	uhUser user;
-	std::string nick, joined_at, premium_since;
-	bool deaf, mute;
-	// pending
-	ePermission permissions;
-
-	chrono::sys_seconds m_joined_at;
+	std::optional<cUser> m_user;
+	std::string m_nick;
+	bool m_deaf, m_mute;
+	// ...
+	ePermission m_permissions;
+	chrono::sys_seconds m_joined_at, m_premium_since;
+	std::vector<cSnowflake> m_roles;
 
 public:
-	std::vector<cSnowflake> Roles;
+	explicit cMember(const json::object&);
+	explicit cMember(const json::value&);
 
-	cMember(const json::object&);
-	cMember(const json::value&);
-	cMember(const cMember&);
-	cMember(cMember&& o) = default;
+	hUser        GetUser()     noexcept { return m_user.has_value() ? &*m_user : nullptr; }
+	std::string& GetNickname() noexcept { return m_nick; }
+	std::vector<cSnowflake>& GetRoles() noexcept { return m_roles; }
 
-	cMember& operator=(const cMember&);
-	cMember& operator=(cMember&&) = default;
+	chUser             GetUser()         const noexcept { return const_cast<cMember*>(this)->GetUser();     }
+	const std::string& GetNickname()     const noexcept { return const_cast<cMember*>(this)->GetNickname(); }
+	const std::vector<cSnowflake>& GetRoles() const noexcept { return const_cast<cMember*>(this)->GetRoles(); }
+	ePermission        GetPermissions()  const noexcept { return m_permissions;   }
 
-	chUser             GetUser()         const { return user.get();    }
-	const std::string& GetNickname()     const { return nick;          }
-	const std::string& GetMemberSince()  const { return joined_at;     }
-	const std::string& GetPremiumSince() const { return premium_since; }
-	ePermission        GetPermissions()  const { return permissions;   }
+	chrono::sys_seconds JoinedAt()     const noexcept { return m_joined_at;     }
+	chrono::sys_seconds PremiumSince() const noexcept { return m_premium_since; }
 
-	chrono::sys_seconds JoinedAt() const { return m_joined_at; }
-
-	bool IsDeaf() const { return deaf; }
-	bool IsMute() const { return mute; }
+	bool IsDeaf() const noexcept { return m_deaf; }
+	bool IsMute() const noexcept { return m_mute; }
 };
 typedef   hHandle<cMember>   hMember;
 typedef  chHandle<cMember>  chMember;

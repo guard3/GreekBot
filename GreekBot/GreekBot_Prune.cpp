@@ -56,7 +56,7 @@ cGreekBot::OnInteraction_prune_lmg(const cInteraction& i) {
 		for (auto gen = GetGuildMembers(guild_id); co_await gen.HasValue();) {
 			cMember member = co_await gen();
 			/* Select those that have joined for more than 2 days and have no roles */
-			if (auto member_for = chrono::system_clock::now() - member.JoinedAt(); member_for > 48h && member.Roles.empty()) {
+			if (auto member_for = chrono::system_clock::now() - member.JoinedAt(); member_for > 48h && member.GetRoles().empty()) {
 				chUser user = member.GetUser();
 				/* Attempt to send a DM explaining the reason of the kick */
 				try {
@@ -80,7 +80,6 @@ cGreekBot::OnInteraction_prune_lmg(const cInteraction& i) {
 					if (++fails > 2)
 						break;
 				}
-				cUtils::PrintLog("%s %s#%s Member since: %s Role count: %d", user->GetId().ToString(), user->GetUsername(), user->GetDiscriminator(), member.GetMemberSince(), (int) member.Roles.size());
 			}
 		}
 		co_return co_await EditInteractionResponse(i, kw::content=cUtils::Format("Pruned **%d** member%s", total, total == 1 ? "" : "s"));

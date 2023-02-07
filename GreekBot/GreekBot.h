@@ -64,10 +64,10 @@ private:
 	cTask<> lmg_update_proficiency_role(chMember member, eLmgProficiencyRoleId proficiency_role) {
 		/* The new roles for the member */
 		std::vector<chSnowflake> roles;
-		roles.reserve(member->Roles.size());
+		roles.reserve(member->GetRoles().size());
 		/* Copy all existing roles except proficiency roles */
 		cSnowflake *proficiency_roles_begin = m_lmg_proficiency_roles, *proficiency_roles_end = m_lmg_proficiency_roles + LMG_NUM_PROFICIENCY_ROLES;
-		for (auto& id : member->Roles) {
+		for (auto& id : member->GetRoles()) {
 			if (proficiency_roles_end == std::find_if(proficiency_roles_begin, proficiency_roles_end, [&](const cSnowflake& s) { return s == id; }))
 				roles.push_back(&id);
 		}

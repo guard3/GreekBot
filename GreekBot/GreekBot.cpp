@@ -12,7 +12,7 @@ cGreekBot::get_lmg_member_color(const cMember& member) {
 	/* Find the member's color */
 	cColor color;
 	for (auto& r : m_lmg.sorted_roles) {
-		if (std::find_if(member.Roles.begin(), member.Roles.end(), [&r](const cSnowflake &id) { return r->GetId() == id; }) != member.Roles.end()) {
+		if (std::find_if(member.GetRoles().begin(), member.GetRoles().end(), [&r](const cSnowflake &id) { return r->GetId() == id; }) != member.GetRoles().end()) {
 			if ((color = r->GetColor()))
 				break;
 		}
