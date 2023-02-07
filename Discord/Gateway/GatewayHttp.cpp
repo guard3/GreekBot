@@ -83,33 +83,14 @@ public:
 	}
 };
 
-class cGateway::implementation::wait_on_event_thread {
+class cGateway::implementation::wait_on_event_thread : public std::suspend_always {
 private:
-	asio::io_context& m_ioc;
-	chrono::time_point<chrono::steady_clock> m_target_time;
-	std::exception_ptr m_except;
-
-	void postpone(std::coroutine_handle<> h) {
-		try {
-			if (chrono::steady_clock::now() < m_target_time) {
-				asio::post(m_ioc, [this, h]() { postpone(h); });
-				return;
-			}
-		}
-		catch (...) {
-			m_except = std::current_exception();
-		}
-		h();
-	}
+	asio::steady_timer   m_timer;
 
 public:
-	wait_on_event_thread(cGateway::implementation* p, chrono::milliseconds r) : m_ioc(p->m_http_ioc), m_target_time(chrono::steady_clock::now() + r) {
-		cUtils::PrintLog("Rate limited! Waiting for %dms", r);
-	}
+	wait_on_event_thread(cGateway::implementation* p, chrono::milliseconds r) : std::suspend_always(), m_timer(p->m_http_ioc, r) {}
 
-	bool await_ready() noexcept { return false; }
-	void await_suspend(std::coroutine_handle<> h) { asio::post(m_ioc, [this, h]() { postpone(h); }); }
-	void await_resume() { if (m_except) std::rethrow_exception(m_except); }
+	void await_suspend(std::coroutine_handle<> h) { m_timer.async_wait([h](const boost::system::error_code&) { h(); }); }
 };
 
 cTask<json::value>
