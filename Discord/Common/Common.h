@@ -1,5 +1,6 @@
 #ifndef GREEKBOT_COMMON_H
 #define GREEKBOT_COMMON_H
+#include <compare>
 #include <memory>
 #include <chrono>
 #include <random>
@@ -28,8 +29,8 @@ using namespace std::literals;
 /* Boost Json forward declarations */
 namespace boost::json {
 	class value;
-
 	class object;
+	class string;
 }
 namespace json = boost::json;
 
@@ -130,19 +131,18 @@ private:
 	
 public:
 	cSnowflake() noexcept : m_int(0), m_str("0") {}
-	cSnowflake(uint64_t i) noexcept : m_int(i) { ulltoa(i, m_str, 10); }
-	cSnowflake(const char* str) noexcept : m_int(cUtils::ParseInt<uint64_t>(str)) { strcpy(m_str, str); }
-	cSnowflake(const json::value& v);
+	cSnowflake(std::integral auto i) noexcept : m_int(static_cast<uint64_t>(i)) { ulltoa(static_cast<uint64_t>(i), m_str, 10); }
+	cSnowflake(const char* s) : m_int(cUtils::ParseInt<uint64_t>(s)) { strcpy(m_str, s); }
+	cSnowflake(const std::string& s) : cSnowflake(s.c_str()) {}
+	cSnowflake(std::nullptr_t) = delete;
+	explicit cSnowflake(const json::value&);
+	explicit cSnowflake(const json::string&);
 
-	bool operator==(const cSnowflake& o) const noexcept { return m_int == o.m_int; }
-	bool operator!=(const cSnowflake& o) const noexcept { return m_int != o.m_int; }
-	bool operator< (const cSnowflake& o) const noexcept { return m_int <  o.m_int; }
-	bool operator> (const cSnowflake& o) const noexcept { return m_int >  o.m_int; }
-	bool operator<=(const cSnowflake& o) const noexcept { return m_int <= o.m_int; }
-	bool operator>=(const cSnowflake& o) const noexcept { return m_int >= o.m_int; }
+	auto operator<=>(const cSnowflake& o) const noexcept { return m_int <=> o.m_int; }
+	bool operator== (const cSnowflake& o) const noexcept { return m_int ==  o.m_int; }
 
 	/* Attributes */
-	const char *ToString() const noexcept { return m_str; }
+	const char* ToString() const noexcept { return m_str; }
 	uint64_t       ToInt() const noexcept { return m_int; }
 	
 	/* Snowflake components - https://discord.com/developers/docs/reference#snowflakes */
@@ -165,18 +165,18 @@ private:
 
 public:
 	static inline constexpr int32_t NO_COLOR = 0;
-	cColor() : m_value(NO_COLOR) {}
-	cColor(int32_t v) : m_value(v) {}
+	cColor() noexcept : m_value(NO_COLOR) {}
+	cColor(int32_t v) noexcept : m_value(v) {}
 	cColor(const json::value&);
 
-	uint8_t GetRed()   const { return (m_value >> 16) & 0xFF; }
-	uint8_t GetGreen() const { return (m_value >>  8) & 0xFF; }
-	uint8_t GetBlue()  const { return  m_value        & 0xFF; }
+	uint8_t GetRed()   const noexcept { return (m_value >> 16) & 0xFF; }
+	uint8_t GetGreen() const noexcept { return (m_value >>  8) & 0xFF; }
+	uint8_t GetBlue()  const noexcept { return  m_value        & 0xFF; }
 
-	int ToInt() const { return m_value; }
-	operator int() const { return m_value; }
-	operator bool() const { return m_value != NO_COLOR; }
-	bool operator!() const { return m_value == NO_COLOR; }
+	int ToInt() const noexcept { return m_value; }
+	operator int() const noexcept { return m_value; }
+	operator bool() const noexcept { return m_value != NO_COLOR; }
+	bool operator!() const noexcept { return m_value == NO_COLOR; }
 };
 
 KW_DECLARE(color, KW_COLOR, cColor)
