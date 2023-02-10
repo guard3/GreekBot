@@ -11,6 +11,7 @@
 #include "Exception.h"
 #include "Utils.h"
 #include "Kwarg.h"
+#include "Ptr.h"
 
 namespace chrono = std::chrono;
 using namespace std::literals::chrono_literals;

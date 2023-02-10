@@ -5,11 +5,10 @@ cGreekBot::OnInteraction_dismiss(const cInteraction& i, const cSnowflake& user_i
 	/* Acknowledge interaction first */
 	co_await RespondToInteraction(i);
 	try {
-		if (chUser user = i.GetUser(); !user) {
+		if (cPtr<const cUser> user = i.GetUser(); !user) {
 			/* If we're on a guild, collect member and user info */
-			chMember member = i.GetMember();
-			if (!member) throw 0;
-			if (!(user = member->GetUser())) throw 0;
+			cPtr<const cMember> member = i.GetMember();
+			user = member->GetUser();
 			/* If current user is not the original author, check for appropriate permissions */
 			if (user->GetId() != user_id) {
 				if (!(member->GetPermissions() & PERM_MANAGE_MESSAGES))

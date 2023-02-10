@@ -18,11 +18,11 @@ public:
 	explicit cMember(const json::object&);
 	explicit cMember(const json::value&);
 
-	hUser        GetUser()     noexcept { return m_user.has_value() ? &*m_user : nullptr; }
+	cPtr<cUser>  GetUser()     noexcept { return m_user.has_value() ? &*m_user : nullptr; }
 	std::string& GetNickname() noexcept { return m_nick; }
 	std::vector<cSnowflake>& GetRoles() noexcept { return m_roles; }
 
-	chUser             GetUser()         const noexcept { return const_cast<cMember*>(this)->GetUser();     }
+	cPtr<const cUser>  GetUser()         const noexcept { return const_cast<cMember*>(this)->GetUser();     }
 	const std::string& GetNickname()     const noexcept { return const_cast<cMember*>(this)->GetNickname(); }
 	const std::vector<cSnowflake>& GetRoles() const noexcept { return const_cast<cMember*>(this)->GetRoles(); }
 	ePermission        GetPermissions()  const noexcept { return m_permissions;   }

@@ -57,7 +57,7 @@ cGreekBot::OnInteraction_prune_lmg(const cInteraction& i) {
 			cMember member = co_await gen();
 			/* Select those that have joined for more than 2 days and have no roles */
 			if (auto member_for = chrono::system_clock::now() - member.JoinedAt(); member_for > 48h && member.GetRoles().empty()) {
-				chUser user = member.GetUser();
+				cPtr<const cUser> user = member.GetUser();
 				/* Attempt to send a DM explaining the reason of the kick */
 				try {
 					co_await CreateDMMessage(

@@ -5,7 +5,7 @@ cGreekBot::OnInteraction_avatar(const cInteraction& i) try {
 	/* Get interaction data */
 	auto data = i.GetData<INTERACTION_APPLICATION_COMMAND>();
 	/* Resolve user option */
-	chUser user;
+	cPtr<const cUser> user;
 	if (data->Options.empty())
 		user = i.GetUser() ? i.GetUser() : i.GetMember()->GetUser();
 	else
