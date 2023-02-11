@@ -59,7 +59,7 @@ cGreekBot::OnInteraction_rank(const cInteraction& i) {
 	try {
 		/* Resolve user and member data */
 		auto data = i.GetData<INTERACTION_APPLICATION_COMMAND>();
-		cPtr<const cUser> user;
+		chUser user;
 		chMember member;
 		if (data->Options.empty()) {
 			member = i.GetMember();

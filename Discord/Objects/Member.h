@@ -18,11 +18,11 @@ public:
 	explicit cMember(const json::object&);
 	explicit cMember(const json::value&);
 
-	cPtr<cUser>  GetUser()     noexcept { return m_user.has_value() ? &*m_user : nullptr; }
+	hUser  GetUser()     noexcept { return m_user.has_value() ? &*m_user : nullptr; }
 	std::string& GetNickname() noexcept { return m_nick; }
 	std::vector<cSnowflake>& GetRoles() noexcept { return m_roles; }
 
-	cPtr<const cUser>  GetUser()         const noexcept { return const_cast<cMember*>(this)->GetUser();     }
+	chUser  GetUser()         const noexcept { return const_cast<cMember*>(this)->GetUser();     }
 	const std::string& GetNickname()     const noexcept { return const_cast<cMember*>(this)->GetNickname(); }
 	const std::vector<cSnowflake>& GetRoles() const noexcept { return const_cast<cMember*>(this)->GetRoles(); }
 	ePermission        GetPermissions()  const noexcept { return m_permissions;   }
@@ -33,8 +33,8 @@ public:
 	bool IsDeaf() const noexcept { return m_deaf; }
 	bool IsMute() const noexcept { return m_mute; }
 };
-typedef   hHandle<cMember>   hMember;
-typedef  chHandle<cMember>  chMember;
+typedef       cPtr<cMember>  hMember;
+typedef cPtr<const cMember> chMember;
 typedef  uhHandle<cMember>  uhMember;
 typedef uchHandle<cMember> uchMember;
 typedef  shHandle<cMember>  shMember;

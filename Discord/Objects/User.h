@@ -25,8 +25,8 @@ public:
 	bool IsBotUser()    const { return bot;    }
 	bool IsSystemUser() const { return system; }
 };
-typedef   hHandle<cUser>   hUser;
-typedef  chHandle<cUser>  chUser;
+typedef       cPtr<cUser>  hUser;
+typedef cPtr<const cUser> chUser;
 typedef  uhHandle<cUser>  uhUser;
 typedef uchHandle<cUser> uchUser;
 typedef  shHandle<cUser>  shUser;
