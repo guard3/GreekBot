@@ -16,31 +16,11 @@ enum eButtonStyle {
 	BUTTON_STYLE_LINK
 };
 
-class cComponent {
-private:
-	eComponentType m_type;
-public:
-	explicit cComponent(eComponentType type) : m_type(type) {}
-	explicit cComponent(const json::object&);
-	explicit cComponent(const json::value&);
-	virtual ~cComponent() = default;
-
-	eComponentType GetType() const noexcept { return m_type; }
-
-	virtual json::object ToJson() const;
-};
-typedef   hHandle<cComponent>   hComponent;
-typedef  chHandle<cComponent>  chComponent;
-typedef  uhHandle<cComponent>  uhComponent;
-typedef uchHandle<cComponent> uchComponent;
-typedef  shHandle<cComponent>  shComponent;
-typedef schHandle<cComponent> schComponent;
-
 KW_DECLARE(label, KW_LABEL, std::string)
 KW_DECLARE(emoji, KW_EMOJI, cEmoji)
 KW_DECLARE(disabled, KW_DISABLED, bool)
 
-class cBaseButton : public cComponent {
+class cBaseButton {
 private:
 	eButtonStyle m_style;
 	std::string m_label;
@@ -50,7 +30,6 @@ private:
 
 	template<typename String>
 	cBaseButton(eButtonStyle s, String&& v, iKwPack auto&& pack):
-		cComponent(COMPONENT_BUTTON),
 		m_style(s),
 		m_value(std::forward<String>(v)),
 		m_label(KwMove<KW_LABEL>(pack)),
@@ -60,7 +39,6 @@ private:
 protected:
 	template<typename String>
 	cBaseButton(eButtonStyle s, String&& v, iKwArg auto&... kwargs) : cBaseButton(s, std::forward<String>(v), cKwPack(kwargs...)) {}
-	~cBaseButton() override = default;
 
 	std::string&       get_value()       noexcept { return m_value; }
 	const std::string& get_value() const noexcept { return m_value; }
@@ -75,7 +53,7 @@ public:
 	chEmoji GetEmoji() const noexcept { return const_cast<cBaseButton*>(this)->GetEmoji(); }
 	bool IsDisabled() const noexcept { return m_disabled; }
 
-	json::object ToJson() const override;
+	json::object ToJson() const;
 };
 
 template<eButtonStyle s>
@@ -117,7 +95,7 @@ public:
 	json::object ToJson() const;
 };
 
-class cSelectMenu final : public cComponent {
+class cSelectMenu final {
 private:
 	std::string custom_id;
 	std::string placeholder;
@@ -125,50 +103,46 @@ private:
 
 public:
 	template<typename... Args>
-	explicit cSelectMenu(const char* custom_id, Args... opts) : cComponent(COMPONENT_SELECT_MENU), custom_id(custom_id ? custom_id : std::string()), options{ std::move(opts)... } {}
+	explicit cSelectMenu(const char* custom_id, Args... opts) : custom_id(custom_id ? custom_id : std::string()), options{ std::move(opts)... } {}
 	template<typename... Args>
 	cSelectMenu(const char* custom_id, const char* placeholder, Args... opts) : cSelectMenu(custom_id, opts...) { if (placeholder) this->placeholder = placeholder; }
 
-	~cSelectMenu() override = default;
-
-	json::object ToJson() const override;
+	json::object ToJson() const;
 };
 
-class cActionRow : public cComponent {
+class cComponent final {
+private:
+	std::variant<
+	    cButton<BUTTON_STYLE_LINK>,
+		cButton<BUTTON_STYLE_DANGER>,
+	    cButton<BUTTON_STYLE_PRIMARY>,
+		cButton<BUTTON_STYLE_SECONDARY>,
+		cButton<BUTTON_STYLE_SUCCESS>,
+		cSelectMenu> m_component;
+
+	json::object (*m_func)(const void*);
+
 public:
-	const std::vector<chComponent> Components;
+	template<eButtonStyle e>
+	cComponent(cButton<e>);
+	cComponent(cSelectMenu);
 
+	json::object ToJson() const;
+};
+
+class cActionRow {
+private:
+	const std::vector<cComponent> m_components;
+
+public:
 	template<typename... Args, typename = std::enable_if_t<(sizeof...(Args) < 6)>>
-	explicit cActionRow(Args... buttons)       : cComponent(COMPONENT_ACTION_ROW), Components{ new cBaseButton(std::move(buttons))... } {}
-	explicit cActionRow(const cSelectMenu&  m) : cComponent(COMPONENT_ACTION_ROW), Components{ new cSelectMenu(m) } {}
-	explicit cActionRow(      cSelectMenu&& m) : cComponent(COMPONENT_ACTION_ROW), Components{ new cSelectMenu(std::forward<cSelectMenu>(m)) } {}
+	explicit cActionRow(Args&&... buttons)     : m_components{ std::forward<Args>(buttons)... } {}
+	explicit cActionRow(const cSelectMenu&  m) : m_components{ m } {}
+	explicit cActionRow(      cSelectMenu&& m) : m_components{ std::forward<cSelectMenu>(m) } {}
 
-	cActionRow(const cActionRow& o) : cComponent(o.GetType()) {
-		auto& components = const_cast<std::vector<chComponent>&>(Components);
-		components.reserve(o.Components.size());
-		for (chComponent c : o.Components) {
-			switch (c->GetType()) {
-				case COMPONENT_ACTION_ROW:
-					components.push_back(new cActionRow(*dynamic_cast<const cActionRow*>(c)));
-					break;
-				case COMPONENT_BUTTON:
-					components.push_back(new cBaseButton(*dynamic_cast<const cBaseButton*>(c)));
-					break;
-				case COMPONENT_SELECT_MENU:
-					components.push_back(new cSelectMenu(*dynamic_cast<const cSelectMenu*>(c)));
-					break;
-			}
-		}
-	}
-	cActionRow(cActionRow&& o) noexcept : cComponent(o.GetType()), Components(std::move(const_cast<std::vector<chComponent>&>(o.Components))) {}
-	~cActionRow() override { for (chComponent c : Components) delete c; }
+	const std::vector<cComponent>& GetComponents() const noexcept { return m_components; }
 
-	cActionRow& operator=(cActionRow o) {
-		const_cast<std::vector<chComponent>&>(Components) = std::move(const_cast<std::vector<chComponent>&>(o.Components));
-		return *this;
-	}
-
-	json::object ToJson() const override;
+	json::object ToJson() const;
 };
 typedef   hHandle<cActionRow>   hActionRow;
 typedef  chHandle<cActionRow>  chActionRow;
@@ -178,5 +152,4 @@ typedef  shHandle<cActionRow>  shActionRow;
 typedef schHandle<cActionRow> schActionRow;
 
 KW_DECLARE(components, KW_COMPONENTS, std::vector<cActionRow>)
-
 #endif //GREEKBOT_COMPONENT_H
