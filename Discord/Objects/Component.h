@@ -1,6 +1,5 @@
-#pragma once
-#ifndef _GREEKBOT_COMPONENT_H_
-#define _GREEKBOT_COMPONENT_H_
+#ifndef GREEKBOT_COMPONENT_H
+#define GREEKBOT_COMPONENT_H
 #include "Emoji.h"
 
 enum eComponentType {
@@ -101,32 +100,21 @@ public:
 
 class cSelectOption final {
 private:
-	std::string label;
-	std::string value;
-	std::string description;
-	chEmoji     emoji;
+	std::string           m_label;
+	std::string           m_value;
+	std::string           m_description;
+	std::optional<cEmoji> m_emoji;
+
+	cSelectOption(std::string&& l, std::string&& v, iKwPack auto pack):
+		m_label(std::forward<std::string>(l)),
+		m_value(std::forward<std::string>(v)),
+		m_description(KwMove<KW_DESCRIPTION>(pack)),
+		m_emoji(KwOptMove<KW_EMOJI>(pack, nil)) {}
 
 public:
-	cSelectOption(const char* label, const char* value, const char* description = nullptr) : label(label), value(value), description(description ? description : std::string()), emoji(nullptr) {}
-	cSelectOption(const char* label, const char* value, const cEmoji&  emoji) : label(label), value(value), emoji(new cEmoji(emoji)) {}
-	cSelectOption(const char* label, const char* value,       cEmoji&& emoji) : label(label), value(value), emoji(new cEmoji(std::forward<cEmoji>(emoji))) {}
-	cSelectOption(const char* label, const char* value, const char* description, const cEmoji&  emoji) : label(label), value(value), description(description), emoji(new cEmoji(emoji)) {}
-	cSelectOption(const char* label, const char* value, const char* description,       cEmoji&& emoji) : label(label), value(value), description(description), emoji(new cEmoji(std::forward<cEmoji>(emoji))) {}
+	cSelectOption(std::string label, std::string value, iKwArg auto&... kwargs) : cSelectOption(std::move(label), std::move(value), cKwPack(kwargs...)) {}
 
-	cSelectOption(const cSelectOption& o) : label(o.label), value(o.value), description(o.description), emoji(o.emoji ? new cEmoji(*o.emoji) : nullptr) {}
-	cSelectOption(cSelectOption&& o) noexcept : label(std::move(o.label)), value(std::move(o.value)), description(std::move(o.description)), emoji(o.emoji) { o.emoji = nullptr; }
-	~cSelectOption() { delete emoji; }
-
-	cSelectOption& operator=(cSelectOption o) {
-		label = std::move(o.label);
-		value = std::move(o.value);
-		description = std::move(o.description);
-		emoji = o.emoji;
-		o.emoji = nullptr;
-		return *this;
-	}
-
-	json::value ToJson() const;
+	json::object ToJson() const;
 };
 
 class cSelectMenu final : public cComponent {
@@ -191,4 +179,4 @@ typedef schHandle<cActionRow> schActionRow;
 
 KW_DECLARE(components, KW_COMPONENTS, std::vector<cActionRow>)
 
-#endif /* _GREEKBOT_COMPONENT_H_ */
+#endif //GREEKBOT_COMPONENT_H

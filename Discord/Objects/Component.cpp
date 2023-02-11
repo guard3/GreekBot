@@ -21,16 +21,16 @@ cBaseButton::ToJson() const {
 	return obj;
 }
 
-json::value
+json::object
 cSelectOption::ToJson() const {
 	json::object obj {
-		{ "label", label },
-		{ "value", value }
+		{ "label", m_label },
+		{ "value", m_value }
 	};
-	if (!description.empty())
-		obj["description"] = description;
-	if (emoji)
-		obj["emoji"] = emoji->ToJson();
+	if (!m_description.empty())
+		obj["description"] = m_description;
+	if (m_emoji)
+		obj["emoji"] = m_emoji->ToJson();
 	return obj;
 }
 
