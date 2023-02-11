@@ -1,6 +1,7 @@
 #ifndef GREEKBOT_COMPONENT_H
 #define GREEKBOT_COMPONENT_H
 #include "Emoji.h"
+#include <variant>
 
 enum eComponentType {
 	COMPONENT_ACTION_ROW = 1, // A container for other components

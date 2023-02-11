@@ -5,6 +5,7 @@
 #include "User.h"
 #include "Member.h"
 #include <vector>
+#include <variant>
 #include "Component.h"
 #include "Message.h"
 
