@@ -12,7 +12,7 @@ cGreekBot::OnInteraction_prune(const cInteraction& i) {
 		if (!(member->GetPermissions() & PERM_KICK_MEMBERS))
 			co_return co_await EditInteractionResponse(i, kw::content="You can't do that. You're missing the `KICK_MEMBERS` permission.");
 		/* How many days of inactivity to consider */
-		auto &options = i.GetData<INTERACTION_APPLICATION_COMMAND>()->Options;
+		auto& options = i.GetData<INTERACTION_APPLICATION_COMMAND>().Options;
 		int days = options.empty() ? 2 : options.front().GetValue<APP_CMD_OPT_INTEGER>();
 		/* Prune */
 		std::string str;

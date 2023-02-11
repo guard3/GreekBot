@@ -13,7 +13,7 @@ public:
 
 	cEmoji(const cEmoji& e) : name(e.name), id(e.id ? new cSnowflake(*e.id) : nullptr), animated(e.animated) {}
 	cEmoji(cEmoji&& e)  noexcept : name(std::move(e.name)), id(e.id), animated(e.animated) { e.id = nullptr; }
-	~cEmoji() { delete id; }
+	~cEmoji() { delete id.Get(); }
 
 	cEmoji& operator=(cEmoji e) {
 		name = std::move(e.name);

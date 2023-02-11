@@ -19,7 +19,7 @@ cGreekBot::OnInteraction_ban(const cInteraction& i, const char* image_url) {
 			co_return co_await EditInteractionResponse(i, kw::content="You can't do that. You're missing the `BAN_MEMBERS` permission.");
 		try {
 			/* Check which subcommand was invoked */
-			auto& subcommand_option = i.GetData<INTERACTION_APPLICATION_COMMAND>()->Options.front();
+			auto& subcommand_option = i.GetData<INTERACTION_APPLICATION_COMMAND>().Options.front();
 			auto& options = subcommand_option.GetOptions();
 			if (subcommand_option.GetName() == "turk") {
 				/* Get the troll user to be banned */

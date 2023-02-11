@@ -68,64 +68,68 @@ cGreekBot::OnGuildRoleDelete(cSnowflake& guild_id, cSnowflake& role_id) {
 
 cTask<>
 cGreekBot::OnInteractionCreate(const cInteraction& interaction) {
-	if (auto data = interaction.GetData<INTERACTION_APPLICATION_COMMAND>()) {
-		switch (data->GetCommandId().ToInt()) {
-			case 878391425568473098:
-				/* avatar */
-				co_return co_await OnInteraction_avatar(interaction);
-			case 874634186374414356:
-				/* role */
-				co_return co_await OnInteraction_role(interaction);
-			case 938199801420456066:
-				/* rank */
-				co_return co_await OnInteraction_rank(interaction);
-			case 938863857466757131:
-				/* top */
-				co_return co_await OnInteraction_top(interaction);
-			case 1020026874119864381:
-				/* prune */
-				co_return co_await OnInteraction_prune(interaction);
-			case 1031907652541890621:
-				/* ban */
-				co_return co_await OnInteraction_ban(interaction, nullptr);
-			case 1072131488478404621:
-				/* prune (Learning Greek) */
-				co_return co_await OnInteraction_prune_lmg(interaction);
-			case 904462004071313448:
-				/* connect */
-				//OnInteraction_connect(&interaction);
-				break;
+	switch (interaction.GetType()) {
+		case INTERACTION_APPLICATION_COMMAND: {
+			switch (interaction.GetData<INTERACTION_APPLICATION_COMMAND>().GetCommandId().ToInt()) {
+				case 878391425568473098:
+					/* avatar */
+					co_return co_await OnInteraction_avatar(interaction);
+				case 874634186374414356:
+					/* role */
+					co_return co_await OnInteraction_role(interaction);
+				case 938199801420456066:
+					/* rank */
+					co_return co_await OnInteraction_rank(interaction);
+				case 938863857466757131:
+					/* top */
+					co_return co_await OnInteraction_top(interaction);
+				case 1020026874119864381:
+					/* prune */
+					co_return co_await OnInteraction_prune(interaction);
+				case 1031907652541890621:
+					/* ban */
+					co_return co_await OnInteraction_ban(interaction, nullptr);
+				case 1072131488478404621:
+					/* prune (Learning Greek) */
+					co_return co_await OnInteraction_prune_lmg(interaction);
+				case 904462004071313448:
+					/* connect */
+					//OnInteraction_connect(&interaction);
+					break;
+			}
 		}
-	}
-	else if (auto data = interaction.GetData<INTERACTION_MESSAGE_COMPONENT>()) {
-		switch (data->GetComponentType()) {
-			case COMPONENT_BUTTON:
-				/* Check custom id */
-				if (data->GetCustomId().starts_with("BAN#"))
-					co_return co_await OnInteraction_unban(interaction, data->GetCustomId().c_str() + 4);
-				if (data->GetCustomId().starts_with("DLT#"))
-					co_return co_await OnInteraction_dismiss(interaction, data->GetCustomId().c_str() + 4);
+		case INTERACTION_MESSAGE_COMPONENT: {
+			auto& data = interaction.GetData<INTERACTION_MESSAGE_COMPONENT>();
+			switch (data.GetComponentType()) {
+				case COMPONENT_BUTTON:
+					/* Check custom id */
+					if (data.GetCustomId().starts_with("BAN#"))
+						co_return co_await OnInteraction_unban(interaction, data.GetCustomId().c_str() + 4);
+					if (data.GetCustomId().starts_with("DLT#"))
+						co_return co_await OnInteraction_dismiss(interaction, data.GetCustomId().c_str() + 4);
 
-				switch (cUtils::ParseInt(data->GetCustomId())) {
-					case CMP_ID_BUTTON_RANK_HELP:
-						co_await OnInteraction_button(interaction);
-						break;
-					case CMP_ID_BUTTON_TURK_A:
-						co_await OnInteraction_ban(interaction, "https://cdn.discordapp.com/attachments/355242373380308993/875731671423516692/image0.png");
-						break;
-					case CMP_ID_BUTTON_TURK_B:
-						co_await OnInteraction_ban(interaction, "https://cdn.discordapp.com/attachments/355242373380308993/835936970991075420/1588162009.png");
-						break;
-				}
-				break;
-			case COMPONENT_SELECT_MENU:
-				co_await OnInteraction_SelectMenu(interaction);
-				break;
-			default:
-				break;
+					switch (cUtils::ParseInt(data.GetCustomId())) {
+						case CMP_ID_BUTTON_RANK_HELP:
+							co_await OnInteraction_button(interaction);
+							break;
+						case CMP_ID_BUTTON_TURK_A:
+							co_await OnInteraction_ban(interaction, "https://cdn.discordapp.com/attachments/355242373380308993/875731671423516692/image0.png");
+							break;
+						case CMP_ID_BUTTON_TURK_B:
+							co_await OnInteraction_ban(interaction, "https://cdn.discordapp.com/attachments/355242373380308993/835936970991075420/1588162009.png");
+							break;
+					}
+					break;
+				case COMPONENT_SELECT_MENU:
+					co_await OnInteraction_SelectMenu(interaction);
+					break;
+				default:
+					break;
+			}
 		}
+		default:
+			break;
 	}
-	co_return;
 }
 
 cTask<>

@@ -98,7 +98,7 @@ public:
 	int64_t            GetSequence() const noexcept { return m_seq;  }
 
 	template<eEvent e>
-	tEventData<e> GetData() const { return m_data; }
+	tEventData<e> GetData() const { return tEventData<e>(m_data); }
 
 	template<eEvent e>
 	uhEventData<e> GetDataPtr() const { return cHandle::MakeUnique<tEventData<e>>(m_data); }

@@ -58,15 +58,15 @@ cTask<>
 cGreekBot::OnInteraction_rank(const cInteraction& i) {
 	try {
 		/* Resolve user and member data */
-		auto data = i.GetData<INTERACTION_APPLICATION_COMMAND>();
+		auto& data = i.GetData<INTERACTION_APPLICATION_COMMAND>();
 		chUser user;
 		chMember member;
-		if (data->Options.empty()) {
+		if (data.Options.empty()) {
 			member = i.GetMember();
 			user = member->GetUser();
 		} else {
-			user = &data->Options[0].GetValue<APP_CMD_OPT_USER>();
-			member = data->Options[0].GetMember();
+			user = &data.Options[0].GetValue<APP_CMD_OPT_USER>();
+			member = data.Options[0].GetMember();
 		}
 		/* Don't display data for bot users */
 		if (user->IsBotUser())

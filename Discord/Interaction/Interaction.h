@@ -167,43 +167,41 @@ template<eInteractionType e> using schInteractionData = schHandle<cInteractionDa
 /* ================================================================================================= */
 class cInteraction final {
 private:
-	cSnowflake       id;
-	cSnowflake       application_id;
-	eInteractionType type;
-	void*            data;
-	uhUser           user;
-	uhMember         member;
-	uhSnowflake      guild_id;
-	uhSnowflake      channel_id;
-	std::string      token;
-	int              version;
-	uhMessage        message;
+	cSnowflake       m_id;
+	cSnowflake       m_application_id;
+	std::string      m_token;
+	int              m_version;
+	eInteractionType m_type;
+	std::optional<cSnowflake> m_guild_id;
+	std::optional<cSnowflake> m_channel_id;
+	std::optional<cMessage>   m_message;
+	std::variant<std::monostate,
+		cInteractionData<INTERACTION_APPLICATION_COMMAND>,
+		cInteractionData<INTERACTION_MESSAGE_COMPONENT>> m_data;
+	std::variant<std::monostate,
+		cUser,
+		cMember> m_um;
 
 public:
-	cInteraction(const json::object& o);
-	cInteraction(const json::value& v);
-	cInteraction(const cInteraction&);
-	cInteraction(cInteraction&&) noexcept;
-	~cInteraction();
-
-	cInteraction& operator=(cInteraction);
+	explicit cInteraction(const json::object&);
+	explicit cInteraction(const json::value&);
 	
-	const cSnowflake&  GetId()            const { return id;               }
-	const cSnowflake&  GetApplicationId() const { return application_id;   }
-	eInteractionType   GetType()          const { return type;             }
-	chUser             GetUser()          const { return user.get();       }
-	chMember           GetMember()        const { return member.get();     }
-	chSnowflake        GetGuildId()       const { return guild_id.get();   }
-	chSnowflake        GetChannelId()     const { return channel_id.get(); }
-	const std::string& GetToken()         const { return token;            }
-	int                GetVersion()       const { return version;          }
-	chMessage          GetMessage()       const { return message.get();    }
+	const cSnowflake&  GetId()            const noexcept { return m_id;             }
+	const cSnowflake&  GetApplicationId() const noexcept { return m_application_id; }
+	const std::string& GetToken()         const noexcept { return m_token;          }
+	eInteractionType   GetType()          const noexcept { return m_type;           }
+	int                GetVersion()       const noexcept { return m_version;        }
+	chUser             GetUser()          const noexcept { return std::get_if<1>(&m_um); }
+	chMember           GetMember()        const noexcept { return std::get_if<2>(&m_um); }
+	chSnowflake        GetGuildId()       const noexcept { return m_guild_id   ? &m_guild_id.value()   : nullptr; }
+	chSnowflake        GetChannelId()     const noexcept { return m_channel_id ? &m_channel_id.value() : nullptr; }
+	chMessage          GetMessage()       const noexcept { return m_message    ? &m_message.value()    : nullptr; }
 
-	template<eInteractionType t>
-	chInteractionData<t> GetData() const { return t == type ? (chInteractionData<t>)data : nullptr;	}
+	template<eInteractionType t> requires (t == INTERACTION_APPLICATION_COMMAND || t == INTERACTION_MESSAGE_COMPONENT)
+	const cInteractionData<t>& GetData() const { return std::get<cInteractionData<t>>(m_data); }
 };
-typedef   hHandle<cInteraction>   hInteraction; // handle
-typedef  chHandle<cInteraction>  chInteraction; // const handle
+typedef   cPtr<cInteraction>   hInteraction; // handle
+typedef  cPtr<const cInteraction>  chInteraction; // const handle
 typedef  uhHandle<cInteraction>  uhInteraction; // unique handle
 typedef uchHandle<cInteraction> uchInteraction; // unique const handle
 typedef  shHandle<cInteraction>  shInteraction; // shared handle

@@ -79,7 +79,7 @@ private:
 	cTask<> OnInteraction_SelectMenu(const cInteraction& i) {
 		/* Acknowledge interaction */
 		co_await RespondToInteraction(i);
-		std::string value = i.GetData<INTERACTION_MESSAGE_COMPONENT>()->Values[0];
+		std::string value = i.GetData<INTERACTION_MESSAGE_COMPONENT>().Values[0];
 		auto member = i.GetMember();
 
 		if (value == "opt_gr") {
