@@ -42,9 +42,9 @@ char* ulltoa (unsigned long long, char*, int);
 
 /* ========== Handle types ========== */
 template<typename T> // handle
-using   hHandle = T*;
+using   hHandle = cPtr<T>;
 template<typename T> // const handle
-using  chHandle = const T*; // ch: const handle
+using  chHandle = cPtr<const T>;
 template<typename T> // unique handle
 using  uhHandle = std::unique_ptr<T>;
 template<typename T> // unique const handle
@@ -152,8 +152,8 @@ public:
 	int          GetInternalProcessID() const noexcept { return (int)((m_int >> 12) & 0x01F); }
 	int                  GetIncrement() const noexcept { return (int) (m_int        & 0xFFF); }
 };
-typedef       cPtr<cSnowflake>  hSnowflake; // handle
-typedef cPtr<const cSnowflake> chSnowflake; // const handle
+typedef   hHandle<cSnowflake>   hSnowflake; // handle
+typedef  chHandle<cSnowflake>  chSnowflake; // const handle
 typedef  uhHandle<cSnowflake>  uhSnowflake; // unique handle
 typedef uchHandle<cSnowflake> uchSnowflake; // unique const handle
 typedef  shHandle<cSnowflake>  shSnowflake; // shared handle

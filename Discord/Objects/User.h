@@ -1,6 +1,5 @@
-#pragma once
-#ifndef _GREEKBOT_USER_H_
-#define _GREEKBOT_USER_H_
+#ifndef GREEKBOT_USER_H
+#define GREEKBOT_USER_H
 #include "Common.h"
 
 class cUser final {
@@ -25,11 +24,10 @@ public:
 	bool IsBotUser()    const { return bot;    }
 	bool IsSystemUser() const { return system; }
 };
-typedef       cPtr<cUser>  hUser;
-typedef cPtr<const cUser> chUser;
+typedef   hHandle<cUser>   hUser;
+typedef  chHandle<cUser>  chUser;
 typedef  uhHandle<cUser>  uhUser;
 typedef uchHandle<cUser> uchUser;
 typedef  shHandle<cUser>  shUser;
 typedef schHandle<cUser> schUser;
-
-#endif /* _GREEKBOT_USER_H_ */
+#endif //GREEKBOT_USER_H

@@ -2,11 +2,9 @@
 #include "json.h"
 
 json::object cEmoji::ToJson() const {
-	json::object obj {
-		{ "name",     name     },
-		{ "animated", animated }
+	return {
+		{ "name",     m_name          },
+		{ "animated", m_animated      },
+		{ "id",       m_id.ToString() }
 	};
-	if (id)
-		obj["id"] = id->ToString();
-	return obj;
 }

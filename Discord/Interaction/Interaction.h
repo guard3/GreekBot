@@ -198,8 +198,8 @@ public:
 	template<eInteractionType t> requires (t == INTERACTION_APPLICATION_COMMAND || t == INTERACTION_MESSAGE_COMPONENT)
 	const cInteractionData<t>& GetData() const { return std::get<cInteractionData<t>>(m_data); }
 };
-typedef   cPtr<cInteraction>   hInteraction; // handle
-typedef  cPtr<const cInteraction>  chInteraction; // const handle
+typedef   hHandle<cInteraction>   hInteraction; // handle
+typedef  chHandle<cInteraction>  chInteraction; // const handle
 typedef  uhHandle<cInteraction>  uhInteraction; // unique handle
 typedef uchHandle<cInteraction> uchInteraction; // unique const handle
 typedef  shHandle<cInteraction>  shInteraction; // shared handle

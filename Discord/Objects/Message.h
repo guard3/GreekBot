@@ -113,8 +113,8 @@ public:
 	eMessageType       GetType()            const { return type;             }
 	eMessageFlag       GetFlags()           const { return flags;            }
 };
-typedef       cPtr<cMessage> hMessage;
-typedef cPtr<const cMessage> chMessage;
+typedef   hHandle<cMessage>   hMessage;
+typedef  chHandle<cMessage>  chMessage;
 typedef  uhHandle<cMessage>  uhMessage;
 typedef uchHandle<cMessage> uchMessage;
 typedef  shHandle<cMessage>  shMessage;

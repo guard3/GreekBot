@@ -33,8 +33,8 @@ public:
 	bool IsDeaf() const noexcept { return m_deaf; }
 	bool IsMute() const noexcept { return m_mute; }
 };
-typedef       cPtr<cMember>  hMember;
-typedef cPtr<const cMember> chMember;
+typedef   hHandle<cMember>   hMember;
+typedef  chHandle<cMember>  chMember;
 typedef  uhHandle<cMember>  uhMember;
 typedef uchHandle<cMember> uchMember;
 typedef  shHandle<cMember>  shMember;

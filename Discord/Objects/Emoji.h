@@ -1,33 +1,25 @@
-#ifndef _GREEKBOT_EMOJI_H_
-#define _GREEKBOT_EMOJI_H_
+#ifndef GREEKBOT_EMOJI_H
+#define GREEKBOT_EMOJI_H
 #include "Common.h"
 
+//TODO: separate guild emoji and standard emoji types
 class cEmoji final {
 private:
-	std::string name;
-	chSnowflake id;
-	bool        animated;
+	std::string m_name;
+	cSnowflake  m_id;
+	bool        m_animated;
 
 public:
-	explicit cEmoji(const char* name, const char* id = nullptr, bool animated = false) : name(name), id(id ? new cSnowflake(id) : nullptr), animated(animated) {}
+	cEmoji(std::string name, const cSnowflake& id, bool animated = false):
+		m_name(std::move(name)),
+		m_id(id),
+		m_animated(animated) {}
 
-	cEmoji(const cEmoji& e) : name(e.name), id(e.id ? new cSnowflake(*e.id) : nullptr), animated(e.animated) {}
-	cEmoji(cEmoji&& e)  noexcept : name(std::move(e.name)), id(e.id), animated(e.animated) { e.id = nullptr; }
-	~cEmoji() { delete id.Get(); }
+	const std::string& GetName() const noexcept { return m_name;     }
+	const cSnowflake&    GetId() const noexcept { return m_id;       }
+	bool            IsAnimated() const noexcept { return m_animated; }
 
-	cEmoji& operator=(cEmoji e) {
-		name = std::move(e.name);
-		animated = e.animated;
-		auto p = id;
-		id = e.id;
-		e.id = p;
-		return *this;
-	}
-
-	const char* GetName()    const { return name.c_str(); }
-	chSnowflake GetId()      const { return id;           }
-	bool        IsAnimated() const { return animated;     }
-
+	std::string ToString() const { return cUtils::Format("<%s:%s:%s>", m_animated ? "a" : "", m_name, m_id.ToString());}
 	json::object ToJson() const;
 };
 typedef   hHandle<cEmoji>   hEmoji;
@@ -36,4 +28,4 @@ typedef  uhHandle<cEmoji>  uhEmoji;
 typedef uchHandle<cEmoji> uchEmoji;
 typedef  shHandle<cEmoji>  shEmoji;
 typedef schHandle<cEmoji> schEmoji;
-#endif /* _GREEKBOT_EMOJI_H_ */
+#endif //GREEKBOT_EMOJI_H
