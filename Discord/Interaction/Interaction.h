@@ -1,29 +1,24 @@
-#pragma once
-#ifndef _GREEKBOT_INTERACTION_H_
-#define _GREEKBOT_INTERACTION_H_
-#include "Common.h"
+#ifndef GREEKBOT_INTERACTION_H
+#define GREEKBOT_INTERACTION_H
 #include "User.h"
 #include "Member.h"
 #include <vector>
 #include <variant>
 #include "Component.h"
 #include "Message.h"
-
-/* ================================================================================================= */
+/* ================================================================================================================== */
 enum eInteractionType {
 	INTERACTION_PING = 1,
 	INTERACTION_APPLICATION_COMMAND,
 	INTERACTION_MESSAGE_COMPONENT
 };
-
-/* ================================================================================================= */
+/* ================================================================================================================== */
 enum eApplicationCommandType {
 	APP_CMD_CHAT_INPUT = 1,
 	APP_CMD_USER,
 	APP_CMD_MESSAGE
 };
-
-/* ================================================================================================= */
+/* ================================================================================================================== */
 enum eApplicationCommandOptionType {
 	APP_CMD_OPT_SUB_COMMAND = 1,
 	APP_CMD_OPT_SUB_COMMAND_GROUP,
@@ -36,14 +31,13 @@ enum eApplicationCommandOptionType {
 	APP_CMD_OPT_MENTIONABLE,
 	APP_CMD_OPT_NUMBER
 };
-
-/* ================================================================================================= */
+/* ================================================================================================================== */
 class xInvalidAttributeError : public std::runtime_error {
 public:
 	xInvalidAttributeError(const char* m)        : std::runtime_error(m) {}
 	xInvalidAttributeError(const std::string& m) : std::runtime_error(m) {}
 };
-
+/* ================================================================================================================== */
 class cApplicationCommandOption final {
 private:
 	template<eApplicationCommandOptionType> struct a;
@@ -51,17 +45,18 @@ private:
 	std::string                   m_name;
 	eApplicationCommandOptionType m_type;
 
-	union {
-		std::vector<cApplicationCommandOption> m_options;
-		std::string m_value_string;
-		cSnowflake  m_value_snowflake;
-		int         m_value_integer;
-		bool        m_value_boolean;
-		double      m_value_number;
-		std::tuple<cUser, cWrapper<cMember>> m_value_user;
-	};
+	std::variant<std::monostate,
+		std::vector<cApplicationCommandOption>,
+		std::tuple<cUser, uhMember>,
+		std::string,
+		int,
+		bool,
+		double,
+		cSnowflake> m_value;
 	
 public:
+	cApplicationCommandOption(const json::value& v, cPtr<const json::value> r);
+
 	/* Return types */
 	template<eApplicationCommandOptionType t>
 	using tMoveType = typename a<t>::value_type;
@@ -69,39 +64,43 @@ public:
 	using tValueType = std::conditional_t<t == APP_CMD_OPT_INTEGER || t == APP_CMD_OPT_BOOLEAN || t == APP_CMD_OPT_NUMBER, tMoveType<t>, tMoveType<t>&>;
 	template<eApplicationCommandOptionType t>
 	using tConstValueType = std::conditional_t<std::is_reference_v<tValueType<t>>, const tMoveType<t>&, tMoveType<t>>;
-	/* Constructors */
-	cApplicationCommandOption(const json::value& v, const json::value* r);
-	cApplicationCommandOption(const cApplicationCommandOption&);
-	cApplicationCommandOption(cApplicationCommandOption&&) noexcept;
-	~cApplicationCommandOption();
-	cApplicationCommandOption& operator=(cApplicationCommandOption);
-	/* Non const getters */
-	std::string& GetName() noexcept { return m_name; }
-	template<eApplicationCommandOptionType t>
-	tValueType<t> GetValue() {
-		if (t != m_type) throw xInvalidAttributeError(cUtils::Format("Application command option is not of type %s", a<t>::name));
-		     if constexpr (t == APP_CMD_OPT_STRING ) return m_value_string;
-		else if constexpr (t == APP_CMD_OPT_INTEGER) return m_value_integer;
-		else if constexpr (t == APP_CMD_OPT_BOOLEAN) return m_value_boolean;
-		else if constexpr (t == APP_CMD_OPT_USER   ) return std::get<0>(m_value_user);
-		else if constexpr (t == APP_CMD_OPT_NUMBER ) return m_value_number;
-		else                                         return m_value_snowflake;
-	}
-	hMember GetMember();
-	std::vector<cApplicationCommandOption>& GetOptions();
-	/* Const getters */
-	const std::string&            GetName() const noexcept { return m_name; }
+	/* Access type */
 	eApplicationCommandOptionType GetType() const noexcept { return m_type; }
-	template<eApplicationCommandOptionType t>
-	tConstValueType<t> GetValue() const { return const_cast<cApplicationCommandOption*>(this)->template GetValue<t>(); }
-	chMember GetMember() const { return const_cast<cApplicationCommandOption*>(this)->GetMember(); }
-	const std::vector<cApplicationCommandOption>& GetOptions() const { return const_cast<cApplicationCommandOption*>(this)->GetOptions(); }
-	/* Movers */
-	std::string MoveName() noexcept { return m_name; }
+	/* Access name */
+	std::string& GetName() noexcept { return m_name; }
+	const std::string& GetName() const noexcept { return m_name; }
+	std::string MoveName() noexcept { return std::move(m_name); }
+	/* Access options - subcommands only */
+	std::vector<cApplicationCommandOption>& GetOptions();
+	const std::vector<cApplicationCommandOption>& GetOptions() const {
+		return const_cast<cApplicationCommandOption*>(this)->GetOptions();
+	}
+	std::vector<cApplicationCommandOption> MoveOptions() {
+		return std::move(GetOptions());
+	}
+	/* Access value */
+	template<eApplicationCommandOptionType t> requires (t != APP_CMD_OPT_SUB_COMMAND && t != APP_CMD_OPT_SUB_COMMAND_GROUP)
+	tValueType<t> GetValue() {
+		try {
+			if constexpr (t == APP_CMD_OPT_USER)
+				return std::get<0>(std::get<2>(m_value));
+			else
+				return std::get<tMoveType<t>>(m_value);
+		}
+		catch (const std::bad_variant_access&) {
+			throw xInvalidAttributeError(cUtils::Format("Application command option is not of type %s", a<t>::name));
+		}
+	}
+	template<eApplicationCommandOptionType t> requires (t != APP_CMD_OPT_SUB_COMMAND && t != APP_CMD_OPT_SUB_COMMAND_GROUP)
+	tConstValueType<t> GetValue() const {
+		return const_cast<cApplicationCommandOption*>(this)->template GetValue<t>();
+	}
 	template<eApplicationCommandOptionType t>
 	tMoveType<t> MoveValue() { return std::move(GetValue<t>()); }
+	/* Access member */
+	hMember GetMember();
+	chMember GetMember() const { return const_cast<cApplicationCommandOption*>(this)->GetMember(); }
 	uhMember MoveMember();
-	std::vector<cApplicationCommandOption> MoveOptions() { return std::move(GetOptions()); }
 };
 template<> struct cApplicationCommandOption::a<APP_CMD_OPT_STRING>      { using value_type = std::string; static inline auto name = "APP_CMD_OPT_STRING";      };
 template<> struct cApplicationCommandOption::a<APP_CMD_OPT_INTEGER>     { using value_type = int;         static inline auto name = "APP_CMD_OPT_INTEGER";     };
@@ -118,11 +117,10 @@ typedef  uhHandle<cApplicationCommandOption>  uhApplicationCommandInteractionDat
 typedef uchHandle<cApplicationCommandOption> uchApplicationCommandInteractionDataOption;
 typedef  uhHandle<cApplicationCommandOption>  shApplicationCommandInteractionDataOption;
 typedef uchHandle<cApplicationCommandOption> schApplicationCommandInteractionDataOption;
-
-/* ================================================================================================= */
+/* ================================================================================================================== */
 template<eInteractionType>
 class cInteractionData;
-
+/* ================================================================================================================== */
 template<>
 class cInteractionData<INTERACTION_APPLICATION_COMMAND> final {
 private:
@@ -142,7 +140,7 @@ public:
 	eApplicationCommandType GetType()      const { return type;      }
 	chSnowflake             GetTargetId()  const { return target_id; }
 };
-
+/* ================================================================================================================== */
 template<>
 class cInteractionData<INTERACTION_MESSAGE_COMPONENT> final {
 private:
@@ -164,7 +162,6 @@ template<eInteractionType e> using  uhInteractionData =  uhHandle<cInteractionDa
 template<eInteractionType e> using uchInteractionData = uchHandle<cInteractionData<e>>;
 template<eInteractionType e> using  shInteractionData =  shHandle<cInteractionData<e>>;
 template<eInteractionType e> using schInteractionData = schHandle<cInteractionData<e>>;
-
 /* ================================================================================================= */
 class cInteraction final {
 private:
@@ -207,4 +204,4 @@ typedef  uhHandle<cInteraction>  uhInteraction; // unique handle
 typedef uchHandle<cInteraction> uchInteraction; // unique const handle
 typedef  shHandle<cInteraction>  shInteraction; // shared handle
 typedef schHandle<cInteraction> schInteraction; // shared const handle
-#endif /* _GREEKBOT_INTERACTION_H_ */
+#endif //GREEKBOT_INTERACTION_H
