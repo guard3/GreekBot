@@ -88,7 +88,7 @@ cGreekBot::OnInteractionCreate(const cInteraction& interaction) {
 					co_return co_await OnInteraction_prune(interaction);
 				case 1031907652541890621:
 					/* ban */
-					co_return co_await OnInteraction_ban(interaction, nullptr);
+					co_return co_await OnInteraction_ban(interaction);
 				case 1072131488478404621:
 					/* prune (Learning Greek) */
 					co_return co_await OnInteraction_prune_lmg(interaction);
@@ -112,11 +112,8 @@ cGreekBot::OnInteractionCreate(const cInteraction& interaction) {
 						case CMP_ID_BUTTON_RANK_HELP:
 							co_await OnInteraction_button(interaction);
 							break;
-						case CMP_ID_BUTTON_TURK_A:
-							co_await OnInteraction_ban(interaction, "https://cdn.discordapp.com/attachments/355242373380308993/875731671423516692/image0.png");
-							break;
-						case CMP_ID_BUTTON_TURK_B:
-							co_await OnInteraction_ban(interaction, "https://cdn.discordapp.com/attachments/355242373380308993/835936970991075420/1588162009.png");
+						default:
+							/* More button ids TBA here */
 							break;
 					}
 					break;
