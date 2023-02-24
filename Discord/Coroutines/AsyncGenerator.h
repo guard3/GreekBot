@@ -51,15 +51,10 @@ public:
 		m_ready = true;
 		return {{}, m_caller};
 	}
-	template<typename U>
+	template<typename U = T>
 	suspend_awaitable yield_value(U&& u) {
 		m_ready = true;
 		m_value = std::forward<U>(u);
-		return {{}, m_caller};
-	}
-	suspend_awaitable yield_value(T&& t) {
-		m_ready = true;
-		m_value = std::forward<T>(t);
 		return {{}, m_caller};
 	}
 	void return_void() {}

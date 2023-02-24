@@ -14,7 +14,7 @@ public:
 	cGenerator& operator=(const cGenerator&) = delete;
 	cGenerator& operator=(cGenerator&& o) noexcept {
 		~cGenerator();
-		return *new (this) cGenerator(std::forward<cGenerator>(o));
+		return *new (this) cGenerator(std::move(o));
 	}
 
 	bool HasValue();
@@ -41,15 +41,10 @@ struct cGenerator<T>::promise_type {
 		ready = true;
 		return {};
 	}
-	template<typename U>
+	template<typename U = T>
 	std::suspend_always yield_value(U&& u) {
 		ready = true;
 		value = std::forward<U>(u);
-		return {};
-	}
-	std::suspend_always yield_value(T&& t) {
-		ready = true;
-		value = std::forward<T>(t);
 		return {};
 	}
 	void return_void() {}

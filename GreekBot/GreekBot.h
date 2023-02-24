@@ -10,15 +10,13 @@
 #define CMP_ID_BUTTON_RANK_HELP 0
 
 /* Specialize std::hash for cSnowflake to use in unordered maps */
-namespace std {
-	template<>
-	class hash<cSnowflake> : hash<uint64_t> {
-	public:
-		size_t operator()(const cSnowflake& snowflake) const {
-			return hash<uint64_t>::operator()(snowflake.ToInt());
-		}
-	};
-}
+template<>
+class std::hash<cSnowflake> : std::hash<uint64_t> {
+public:
+	size_t operator()(const cSnowflake& snowflake) const {
+		return std::hash<uint64_t>::operator()(snowflake.ToInt());
+	}
+};
 
 class cGreekBot final : public cBot {
 private:
