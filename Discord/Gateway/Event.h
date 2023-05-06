@@ -35,13 +35,15 @@ namespace hidden {
 	public:
 		int v;
 		std::string session_id;
+		std::string resume_gateway_url;
 		uhUser user;
 		cApplication application;
 
 		event_data(const json::value& v): event_data(v.as_object()) {}
 		event_data(const json::object& o):
 			v(o.at("v").as_int64()),
-			session_id(o.at("session_id").as_string().c_str()),
+			session_id(json::value_to<std::string>(o.at("session_id"))),
+			resume_gateway_url(json::value_to<std::string>(o.at("resume_gateway_url"))),
 			user(cHandle::MakeUnique<cUser>(o.at("user"))),
 			application(o.at("application")) {}
 	};

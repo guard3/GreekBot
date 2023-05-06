@@ -102,17 +102,15 @@ cGateway::implementation::on_read(const beast::error_code& ec, size_t bytes_read
 				/* Let the server close the connection gracefully */
 				break;
 			case OP_INVALID_SESSION:
-				/* Wait a random amount of time */
-				std::this_thread::sleep_for(std::chrono::milliseconds(cUtils::Random(1000, 5000)));
-				/* Try to resume the session */
+				/* Try to resume the session if possible */
 				if (v.at("d").as_bool()) {
 					resume();
 					break;
 				}
-				/* Otherwise, reset session and identify */
+				/* Otherwise, reset session and reconnect */
 				m_last_sequence = 0;
 				m_session_id.clear();
-				identify();
+				m_resume_gateway_url.clear();
 				break;
 			case OP_HELLO:
 				/* Update heartbeat interval */
@@ -209,7 +207,7 @@ cGateway::implementation::run_session(const std::string& url) {
 	/* Reset the websocket context for a subsequent run() call */
 	m_ws_ioc.restart();
 	/* If the websocket close reason doesn't permit reconnecting, throw */
-	switch (const char* reason; close_code) { // TODO: don't throw
+	switch (const char* reason; close_code) {
 		case -1:
 			reason = "Error establishing connection: ";
 			goto LABEL_THROW;
@@ -251,10 +249,14 @@ cGateway::implementation::Run() {
 	/* Start the gateway loop */
 	for (int timeout = 0;;) {
 		try {
-			/* Retrieve gateway info */
-			cGatewayInfo g = get_gateway_info();
-			/* Connect to the gateway and run for a session */
-			run_session(g.GetUrl());
+			/* Start a new session */
+			if (m_resume_gateway_url.empty())
+				run_session(get_gateway_info().GetUrl());
+			else {
+				/* TODO: remove that text, gonna leave that here for debugging */
+				cUtils::PrintLog("Attempting to resume with url: %s", m_resume_gateway_url);
+				run_session(m_resume_gateway_url);
+			}
 			/* Reset error timeout */
 			timeout = 0;
 		}

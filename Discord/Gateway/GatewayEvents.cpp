@@ -24,6 +24,7 @@ cGateway::implementation::on_event(cEvent event) {
 		if (event.GetType() == EVENT_READY) {
 			auto e = event.GetData<EVENT_READY>();
 			m_session_id = std::move(e.session_id);
+			m_resume_gateway_url = std::move(e.resume_gateway_url);
 			co_await ResumeOnEventThread();
 			m_application = e.application;
 			co_return co_await m_parent->OnReady(std::move(e.user));
