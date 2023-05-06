@@ -1,6 +1,5 @@
-#pragma once
-#ifndef _GREEKBOT_GATEWAY_H_
-#define _GREEKBOT_GATEWAY_H_
+#ifndef GREEKBOT_GATEWAY_H
+#define GREEKBOT_GATEWAY_H
 #include "Common.h"
 #include "Coroutines.h"
 #include "User.h"
@@ -88,4 +87,4 @@ public:
 
 	void Run();
 };
-#endif /* _GREEKBOT_GATEWAY_H_ */
+#endif /* GREEKBOT_GATEWAY_H */

@@ -1,5 +1,6 @@
 #include "GatewayImpl.h"
 #include "json.h"
+#include <tuple>
 
 class cGateway::implementation::discord_request final {
 private:

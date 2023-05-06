@@ -1,22 +1,21 @@
 #include "GatewayImpl.h"
 #include "GatewayInfo.h"
 #include "Event.h"
-#include <future>
 
 /* ================================================================================================================== */
 cGateway::implementation::implementation(cGateway* p, const char* t, eIntent i) :
-		m_parent(p),
-		m_ctx(asio::ssl::context::tlsv13_client),
-		m_ws_resolver(m_ws_ioc),
-		m_http_resolver(m_http_ioc),
-		m_work(asio::make_work_guard(m_http_ioc)),
-		m_work_thread([this]() { m_http_ioc.run(); }),
-		m_http_auth(cUtils::Format("Bot %s", t)),
-		m_intents(i),
-		m_last_sequence(0),
-		m_heartbeat_exit(false),
-		m_heartbeat_ack(false),
-		m_parser(&m_mr) {
+	m_parent(p),
+	m_ctx(asio::ssl::context::tlsv13_client),
+	m_ws_resolver(m_ws_ioc),
+	m_http_resolver(m_http_ioc),
+	m_work(asio::make_work_guard(m_http_ioc)),
+	m_work_thread([this]() { m_http_ioc.run(); }),
+	m_http_auth(cUtils::Format("Bot %s", t)),
+	m_intents(i),
+	m_last_sequence(0),
+	m_heartbeat_timer(m_ws_ioc),
+	m_heartbeat_ack(false),
+	m_parser(&m_mr) {
 	/* Set SSL context to verify peers */
 	m_ctx.set_default_verify_paths();
 	m_ctx.set_verify_mode(asio::ssl::verify_peer);
@@ -47,7 +46,7 @@ cGateway::implementation::send(std::string msg) {
 }
 /* ================================================================================================================== */
 void
-cGateway::implementation::on_read(beast::error_code ec, size_t bytes_read) {
+cGateway::implementation::on_read(const beast::error_code& ec, size_t bytes_read) {
 	/* If an error occurred, return and let the websocket stream close */
 	if (ec)
 		return;
@@ -91,8 +90,13 @@ cGateway::implementation::on_read(beast::error_code ec, size_t bytes_read) {
 				on_event(std::move(v));
 				break;
 			case OP_HEARTBEAT:
+				/* Cancel any pending heartbeats */
+				m_heartbeat_timer.cancel();
 				/* Send a heartbeat immediately */
 				heartbeat();
+				/* Resume heartbeating */
+				m_heartbeat_timer.expires_after(m_heartbeat_interval);
+				m_heartbeat_timer.async_wait([this](beast::error_code ec){ on_expire(ec); });
 				break;
 			case OP_RECONNECT:
 				/* Let the server close the connection gracefully */
@@ -106,19 +110,23 @@ cGateway::implementation::on_read(beast::error_code ec, size_t bytes_read) {
 					break;
 				}
 				/* Otherwise, reset session and identify */
-				m_last_sequence.store(0);
+				m_last_sequence = 0;
 				m_session_id.clear();
 				identify();
 				break;
 			case OP_HELLO:
-				/* Immediately start heartbeating */
-				start_heartbeating(chrono::milliseconds(v.at("d").at("heartbeat_interval").as_int64()));
+				/* Update heartbeat interval */
+				m_heartbeat_ack = true;
+				m_heartbeat_interval = chrono::milliseconds(v.at("d").at("heartbeat_interval").as_int64());
+				/* Set the heartbeating to begin */
+				m_heartbeat_timer.expires_after(chrono::milliseconds(cUtils::Random(0, m_heartbeat_interval.count())));
+				m_heartbeat_timer.async_wait([this](beast::error_code ec) { on_expire(ec); });
 				/* If there is an active session, try to resume, otherwise identify */
 				m_session_id.empty() ? identify() : resume();
 				break;
 			case OP_HEARTBEAT_ACK:
 				/* Acknowledge heartbeat */
-				m_heartbeat_ack.store(true);
+				m_heartbeat_ack = true;
 				break;
 		}
 	}
@@ -133,7 +141,7 @@ cGateway::implementation::on_read(beast::error_code ec, size_t bytes_read) {
 }
 /* ================================================================================================================== */
 void
-cGateway::implementation::on_write(beast::error_code ec, size_t size) {
+cGateway::implementation::on_write(const beast::error_code& ec, size_t size) {
 	/* If an error occurred, return and let the websocket stream close */
 	if (ec) return;
 	/* Pop the message that was just sent */
@@ -141,6 +149,17 @@ cGateway::implementation::on_write(beast::error_code ec, size_t size) {
 	/* If the queue isn't clear, continue the asynchronous send operation */
 	if (!m_queue.empty())
 		m_ws->async_write(asio::buffer(m_queue.front()), [this](beast::error_code ec, size_t size) { on_write(ec, size); });
+}
+/* ================================================================================================================== */
+void
+cGateway::implementation::on_expire(const beast::error_code& ec) {
+	/* If the operation was canceled or the previous heartbeat wasn't acknowledged, return and let the io_context run out of work */
+	if (ec || !m_heartbeat_ack) return;
+	/* Send a heartbeat */
+	heartbeat();
+	/* Reset the timer */
+	m_heartbeat_timer.expires_after(m_heartbeat_interval);
+	m_heartbeat_timer.async_wait([this](beast::error_code ec) { on_expire(ec); });
 }
 /* ================================================================================================================== */
 void
@@ -185,12 +204,12 @@ cGateway::implementation::run_session(const std::string& url) {
 	catch (...) {
 		close_msg = "An error occurred";
 	}
+	/* Stop heartbeating */
+	m_heartbeat_timer.cancel();
 	/* Reset the websocket context for a subsequent run() call */
 	m_ws_ioc.restart();
-	/* Stop heartbeating */
-	stop_heartbeating();
 	/* If the websocket close reason doesn't permit reconnecting, throw */
-	switch (const char* reason; close_code) {
+	switch (const char* reason; close_code) { // TODO: don't throw
 		case -1:
 			reason = "Error establishing connection: ";
 			goto LABEL_THROW;

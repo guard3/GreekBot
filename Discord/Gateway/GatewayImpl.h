@@ -1,14 +1,11 @@
-#ifndef _GREEKBOT_GATEWAYIMPL_H_
-#define _GREEKBOT_GATEWAYIMPL_H_
+#ifndef GREEKBOT_GATEWAYIMPL_H
+#define GREEKBOT_GATEWAYIMPL_H
 #include "Gateway.h"
 #include "beast.h"
 #include "json.h"
 #include <deque>
 #include <zlib.h>
-#include "Coroutines.h"
 #include <thread>
-#include <atomic>
-#include <tuple>
 #include "GuildMembersResult.h"
 #include "Application.h"
 
@@ -70,12 +67,12 @@ private:
 	eIntent     m_intents;   // The gateway intents
 	/* Session attributes */
 	// TODO: Add resume_gateway_url
-	std::string         m_session_id;    // The current session id, used for resuming; empty = no valid session
-	std::atomic_int64_t m_last_sequence; // The last event sequence received, used for heartbeating; 0 = none received
+	std::string m_session_id;    // The current session id, used for resuming; empty = no valid session
+	int64_t     m_last_sequence; // The last event sequence received, used for heartbeating; 0 = none received
 	/* Heartbeating */
-	std::thread      m_heartbeat_thread; // The heartbeating thread
-	std::atomic_bool m_heartbeat_exit;   // Should the heartbeating thread exit?
-	std::atomic_bool m_heartbeat_ack;    // Is the heartbeat acknowledged?
+	asio::steady_timer   m_heartbeat_timer;    // The async timer for heartbeats
+	chrono::milliseconds m_heartbeat_interval; // The interval between heartbeats
+	bool                 m_heartbeat_ack;      // Is the heartbeat acknowledged?
 	/* Json parsing for gateway events */
 	json::monotonic_resource m_mr;     // A monotonic memory resource for json parsing
 	json::stream_parser      m_parser; // The json parser
@@ -93,13 +90,12 @@ private:
 	void resume();
 	void identify();
 	void heartbeat();
-	void start_heartbeating(chrono::milliseconds);
-	void stop_heartbeating();
 	/* Websocket message queuing */
 	void send(std::string);
 	/* Beast/Asio async functions */
-	void on_read(beast::error_code, size_t);
-	void on_write(beast::error_code, size_t);
+	void on_read(const beast::error_code&, size_t);
+	void on_write(const beast::error_code&, size_t);
+	void on_expire(const beast::error_code&);
 	/* A method that initiates the gateway connection */
 	void run_session(const std::string& url);
 	cGatewayInfo get_gateway_info();
@@ -143,4 +139,4 @@ public:
 
 	void Run();
 };
-#endif /* _GREEKBOT_GATEWAYIMPL_H_ */
+#endif /* GREEKBOT_GATEWAYIMPL_H */
