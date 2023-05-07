@@ -102,15 +102,13 @@ cGateway::implementation::on_read(const beast::error_code& ec, size_t bytes_read
 				/* Let the server close the connection gracefully */
 				break;
 			case OP_INVALID_SESSION:
-				/* Try to resume the session if possible */
-				if (v.at("d").as_bool()) {
-					resume();
-					break;
+				/* If session is not resumable, reset the current session */
+				if (!v.at("d").as_bool()) {
+                    m_last_sequence = 0;
+                    m_session_id.clear();
+                    m_resume_gateway_url.clear();
 				}
-				/* Otherwise, reset session and reconnect */
-				m_last_sequence = 0;
-				m_session_id.clear();
-				m_resume_gateway_url.clear();
+                /* Let the server close the connection gracefully */
 				break;
 			case OP_HELLO:
 				/* Update heartbeat interval */
@@ -197,15 +195,19 @@ cGateway::implementation::run_session(const std::string& url) {
 		close_msg  = m_ws->reason().reason.c_str();
 	}
 	catch (const std::exception& e) {
+        /* Save the error message in case of an exception */
 		close_msg = e.what();
-	}
-	catch (...) {
-		close_msg = "An error occurred";
+        /* Also clear the current session */
+        m_last_sequence = 0;
+        m_session_id.clear();
+        m_resume_gateway_url.clear();
 	}
 	/* Stop heartbeating */
 	m_heartbeat_timer.cancel();
 	/* Reset the websocket context for a subsequent run() call */
 	m_ws_ioc.restart();
+    /* Clear any pending messages left the queue */
+    m_queue.clear();
 	/* If the websocket close reason doesn't permit reconnecting, throw */
 	switch (const char* reason; close_code) {
 		case -1:
