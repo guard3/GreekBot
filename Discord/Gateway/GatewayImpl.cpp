@@ -209,19 +209,14 @@ cGateway::implementation::run_session(const std::string& url) {
 	/* Clear any pending messages left the queue */
 	m_queue.clear();
 	/* If the websocket close reason doesn't permit reconnecting, throw */
-	switch (const char* reason; close_code) {
-		case -1:
-			reason = "Error establishing connection: ";
-			goto LABEL_THROW;
+	switch (close_code) {
 		case 4004:
 		case 4010:
 		case 4011:
 		case 4012:
 		case 4013:
 		case 4014:
-			reason = "Closing connection: ";
-		LABEL_THROW:
-			throw xGatewayError(reason + close_msg, close_code);
+			throw xGatewayError(cUtils::Format("Fatal gateway error: %s", close_msg), close_code);
 	}
 	/* Reset the zlib inflate stream */
 	if (Z_OK != inflateReset(&m_inflate_stream))
@@ -246,45 +241,29 @@ cGateway::implementation::ResumeOnEventThread() {
 /* ================================================================================================================== */
 void
 cGateway::implementation::Run() {
-	/* Show a message at exit */
-	class _ { public: ~_() { cUtils::PrintLog("Exiting..."); } } show_message_at_exit;
 	/* Start the gateway loop */
-	for (int timeout = 0;;) {
+	for (;;) {
 		try {
 			/* Start a new session */
 			if (m_resume_gateway_url.empty())
 				run_session(get_gateway_info().GetUrl());
-			else {
-				/* TODO: remove that text, gonna leave that here for debugging */
-				cUtils::PrintLog("Attempting to resume with url: %s", m_resume_gateway_url);
+			else
 				run_session(m_resume_gateway_url);
-			}
-			/* Reset error timeout */
-			timeout = 0;
 		}
 		catch (const xGatewayError& e) {
+			/* Exit after a fatal gateway error that doesn't permit reconnecting */
 			cUtils::PrintErr(e.what());
-			return;
-		}
-		catch (const xDiscordError& e) {
-			cUtils::PrintErr("Couldn't retrieve gateway info");
-			cUtils::PrintErr(e.what());
+			cUtils::PrintLog("Exiting...");
 			break;
 		}
-		catch (const std::exception& e) {
-			switch (timeout += 5) {
-				case 20:
-					cUtils::PrintErr("");
-					cUtils::PrintErr(e.what());
-					return;
-				case 5:
-					cUtils::PrintErr("Couldn't retrieve gateway info");
-				default:
-					for (int tick = timeout; tick >= 0; --tick) {
-						cUtils::PrintErr<'\r'>("Retrying in %ds ", tick);
-						std::this_thread::sleep_for(std::chrono::seconds(1));
-					}
+		catch (...) {
+			/* If anything happens, wait 5 seconds and try again */
+			for (int tick = 5; tick > 0; --tick) {
+				cUtils::PrintErr<'\r'>("Connection error. Retrying in %ds", tick);
+				std::this_thread::sleep_for(1s);
 			}
+			cUtils::PrintErr("Connection error. Retrying...   ");
+			std::this_thread::sleep_for(1s);
 		}
 	}
 }
