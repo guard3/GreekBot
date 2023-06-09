@@ -3,14 +3,14 @@
 
 cTask<>
 cBot::OnReady(uhUser user) {
-	cUtils::PrintMsg("Connected as: %s#%s %s", user->GetUsername(), user->GetDiscriminator(), user->GetId().ToString());
+	cUtils::PrintMsg("Connected as: %s %s", user->GetUsername(), user->GetId().ToString());
 	m_user = std::move(user);
 	co_return;
 }
 
 cTask<>
 cBot::OnUserUpdate(uhUser user) {
-	cUtils::PrintMsg("User updated: %s#%s %s", user->GetUsername(), user->GetDiscriminator(), user->GetId().ToString());
+	cUtils::PrintMsg("User updated: %s %s", user->GetUsername(), user->GetId().ToString());
 	m_user = std::move(user);
 	co_return;
 }

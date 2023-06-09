@@ -6,7 +6,6 @@ class cUser final {
 private:
 	cSnowflake  id;
 	std::string username;
-	std::string discriminator;
 	std::string avatar;
 	bool        bot;
 	bool        system;
@@ -16,10 +15,9 @@ public:
 	explicit cUser(const json::object&);
 	explicit cUser(const json::value&);
 	
-	const cSnowflake&  GetId()            const { return id;            }
-	const std::string& GetUsername()      const { return username;      }
-	const std::string& GetDiscriminator() const { return discriminator; }
-	const std::string& GetAvatarUrl()     const { return avatar;        }
+	const cSnowflake&  GetId()        const { return id;       }
+	const std::string& GetUsername()  const { return username; }
+	const std::string& GetAvatarUrl() const { return avatar;   }
 
 	bool IsBotUser()    const { return bot;    }
 	bool IsSystemUser() const { return system; }

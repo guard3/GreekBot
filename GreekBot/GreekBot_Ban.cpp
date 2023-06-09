@@ -57,7 +57,7 @@ cGreekBot::OnInteraction_ban(const cInteraction& i) {
 		/* Create the embed of the confirmation message */
 		cEmbed e {
 			kw::author={
-				cUtils::Format("%s#%s was banned", user->GetUsername(), user->GetDiscriminator()),
+				user->GetUsername() + " was banned",
 				kw::icon_url=user->GetAvatarUrl()
 			},
 			kw::fields = {{"Reason", reason}}

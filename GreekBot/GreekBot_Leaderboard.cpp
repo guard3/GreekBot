@@ -5,7 +5,7 @@
 static cEmbed make_no_xp_embed(const cUser& user, cColor c) {
 	return {
 		kw::author={
-			user.GetUsername() + '#' + user.GetDiscriminator(),
+			user.GetUsername(),
 			kw::icon_url=user.GetAvatarUrl()
 		},
 		kw::description="User has no XP yet.",
@@ -15,7 +15,7 @@ static cEmbed make_no_xp_embed(const cUser& user, cColor c) {
 static cEmbed make_no_member_embed(const cUser& user, bool bAnymore) {
 	return {
 		kw::author={
-			user.GetUsername() + '#' + user.GetDiscriminator(),
+			user.GetUsername(),
 			kw::icon_url=user.GetAvatarUrl()
 		},
 		kw::description=cUtils::Format("User is not a member of **Learning Greek**%s", bAnymore ? " anymore." : "."),
@@ -41,7 +41,7 @@ static cEmbed make_embed(const cUser& user, const cMember& member, cColor c, int
 	/* Create embed */
 	return {
 		kw::author={
-			user.GetUsername() + '#' + user.GetDiscriminator(),
+			user.GetUsername(),
 			kw::icon_url = user.GetAvatarUrl()
 		},
 		kw::title=cUtils::Format("%s Rank **#%" PRIi64 "**\tLevel **%" PRIi64 "**", medal, rank, level),
