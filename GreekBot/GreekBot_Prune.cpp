@@ -43,10 +43,14 @@ cGreekBot::OnInteraction_prune(const cInteraction& i) {
 
 cTask<>
 cGreekBot::OnInteraction_prune_lmg(const cInteraction& i) {
-	/* Respond with a message because this may take too long */
-	co_await RespondToInteraction(i, kw::content="Please wait, this may take a while...");
+	/* Check that the invoking member has the appropriate permissions for extra security measure */
+	chMember invoking_member = i.GetMember();
+	if (!(invoking_member->GetPermissions() & PERM_KICK_MEMBERS))
+		co_return co_await RespondToInteraction(i, kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content="You can't do that. You're missing the `KICK_MEMBERS` permission.");
+	/* Otherwise, carry on normally */
+	co_await RespondToInteraction(i);
+	auto before = chrono::system_clock::now();
 	try {
-		//TODO: add more error checking later
 		/* Collect guild information */
 		const cGuild& guild = *m_guilds[*i.GetGuildId()];
 		cSnowflake guild_id = guild.GetId();
@@ -55,8 +59,12 @@ cGreekBot::OnInteraction_prune_lmg(const cInteraction& i) {
 		/* Get all members of the guild */
 		for (auto gen = GetGuildMembers(guild_id); co_await gen.HasValue();) {
 			cMember member = co_await gen();
+			/* Interaction tokens are valid for 15 minutes, so, just to be safe, abort after 14 minutes have passed*/
+			auto now = chrono::system_clock::now();
+			if (now - before > 14min)
+				break;
 			/* Select those that have joined for more than 2 days and have no roles */
-			if (auto member_for = chrono::system_clock::now() - member.JoinedAt(); member_for > 48h && member.GetRoles().empty()) {
+			if (auto member_for = now - member.JoinedAt(); member_for > 48h && member.GetRoles().empty()) {
 				chUser user = member.GetUser();
 				/* Attempt to send a DM explaining the reason of the kick */
 				try {
@@ -82,7 +90,17 @@ cGreekBot::OnInteraction_prune_lmg(const cInteraction& i) {
 				}
 			}
 		}
-		co_return co_await EditInteractionResponse(i, kw::content=cUtils::Format("Pruned **%d** member%s", total, total == 1 ? "" : "s"));
+		co_return co_await EditInteractionResponse(i,
+			kw::content=cUtils::Format("Pruned **%d** member%s", total, total == 1 ? "" : "s"),
+			kw::components={
+				cActionRow {
+					cButton<BUTTON_STYLE_SECONDARY> {
+						cUtils::Format("DLT#%s", invoking_member->GetUser()->GetId().ToString()),
+						kw::label="Dismiss"
+					}
+				}
+			}
+		);
 	}
 	catch (const std::exception& e) {
 		cUtils::PrintErr(e.what());
