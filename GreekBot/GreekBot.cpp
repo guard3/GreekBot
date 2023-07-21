@@ -132,25 +132,6 @@ cGreekBot::OnInteractionCreate(const cInteraction& interaction) {
 cTask<>
 cGreekBot::OnMessageCreate(const cMessage& msg) {
 	/* Update leaderboard for Learning Greek */
-#define SILLY
-#ifdef SILLY
-	chSnowflake guild_id = msg.GetGuildId();
-	if (!guild_id) {
-		if (msg.GetAuthor().GetId() == 353216421955895307 || msg.GetAuthor().GetId() == 338333804039110656) {
-			if (msg.GetContent().starts_with("!waifu")) {
-				co_await CreateMessage(msg.GetChannelId(), kw::content = cUtils::Random(0, 2) ? "https://cdn.discordapp.com/attachments/668218037320548374/1090665071073570966/IMG_1524.JPG" : "https://media.discordapp.net/attachments/668218037320548374/1074389410499530922/makesweet-7lokj1.gif");
-			}
-		}
-		co_return;
-	}
-	if (*guild_id == m_lmg_id) {
-		/* Ignore messages of bots and system users */
-		if (msg.GetAuthor().IsBotUser() || msg.GetAuthor().IsSystemUser())
-			co_return;
-		/* Update leaderboard */
-		co_await cDatabase::UpdateLeaderboard(msg);
-	}
-#else
 	if (chSnowflake guild_id = msg.GetGuildId()) {
 		if (*guild_id == m_lmg_id) {
 			/* Ignore messages of bots and system users */
@@ -160,5 +141,4 @@ cGreekBot::OnMessageCreate(const cMessage& msg) {
 			co_await cDatabase::UpdateLeaderboard(msg);
 		}
 	}
-#endif
 }
