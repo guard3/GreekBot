@@ -1,6 +1,11 @@
 #include "Role.h"
 #include "json.h"
 
+ePermission
+tag_invoke(json::value_to_tag<ePermission>, const json::value& v) {
+	return static_cast<ePermission>(cUtils::ParseInt<uint64_t>(v.as_string().c_str()));
+}
+
 cRoleTags::cRoleTags(const json::object &o) {
 	if (auto p = o.if_contains("bot_id"))
 		bot_id = cHandle::MakeUnique<cSnowflake>(*p);
@@ -24,12 +29,12 @@ cRoleTags::operator=(cRoleTags o) {
 
 
 cRole::cRole(const json::object &o) :
-	id(o.at("id")),
-	name(o.at("name").as_string().c_str()),
-	color(o.at("color")),
+	id(json::value_to<cSnowflake>(o.at("id"))),
+	name(json::value_to<std::string>(o.at("name"))),
+	color(json::value_to<cColor>(o.at("color"))),
 	hoist(o.at("hoist").as_bool()),
-	position(o.at("position").as_int64()),
-	permissions((ePermission)strtoull(o.at("permissions").as_string().c_str(), nullptr, 10)),
+	position(o.at("position").to_number<int>()),
+	permissions(json::value_to<ePermission>(o.at("permissions"))),
 	managed(o.at("managed").as_bool()),
 	mentionable(o.at("mentionable").as_bool())
 {

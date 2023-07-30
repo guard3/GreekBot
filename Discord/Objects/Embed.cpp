@@ -21,7 +21,7 @@ cEmbedField::ToJson() const {
 cEmbed::cEmbed(const json::object &o) {
 	const json::value* v;
 	if ((v = o.if_contains("color")))
-		m_color = *v;
+		m_color = json::value_to<cColor>(*v);
 	if ((v = o.if_contains("title")))
 		m_title = json::value_to<std::string>(*v);
 	if ((v = o.if_contains("description")))

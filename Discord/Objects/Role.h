@@ -1,6 +1,5 @@
-#pragma once
-#ifndef _GREEKBOT_ROLE_H_
-#define _GREEKBOT_ROLE_H_
+#ifndef GREEKBOT_ROLE_H
+#define GREEKBOT_ROLE_H
 #include "Common.h"
 
 enum ePermission : uint64_t {
@@ -49,6 +48,8 @@ enum ePermission : uint64_t {
 };
 inline ePermission operator|(ePermission a, ePermission b) { return (ePermission)((uint64_t)a | (uint64_t)b); }
 inline ePermission operator&(ePermission a, ePermission b) { return (ePermission)((uint64_t)a & (uint64_t)b); }
+
+ePermission tag_invoke(boost::json::value_to_tag<ePermission>, const boost::json::value&);
 
 class cRoleTags final {
 private:
@@ -117,4 +118,4 @@ typedef  uhHandle<cRole>  uhRole;
 typedef uchHandle<cRole> uchRole;
 typedef  shHandle<cRole>  shRole;
 typedef schHandle<cRole> schRole;
-#endif /* _GREEKBOT_ROLE_H_ */
+#endif /* GREEKBOT_ROLE_H */

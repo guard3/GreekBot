@@ -31,7 +31,8 @@ using namespace std::literals;
 namespace boost::json {
 	class value;
 	class object;
-	class string;
+
+	template<typename> struct value_to_tag;
 }
 namespace json = boost::json;
 
@@ -136,8 +137,8 @@ public:
 	cSnowflake(const char* s) : m_int(cUtils::ParseInt<uint64_t>(s)) { strcpy(m_str, s); }
 	cSnowflake(const std::string& s) : cSnowflake(s.c_str()) {}
 	cSnowflake(std::nullptr_t) = delete;
+	[[deprecated("Use boost::json::value_to")]]
 	explicit cSnowflake(const json::value&);
-	explicit cSnowflake(const json::string&);
 
 	auto operator<=>(const cSnowflake& o) const noexcept { return m_int <=> o.m_int; }
 	bool operator== (const cSnowflake& o) const noexcept { return m_int ==  o.m_int; }
@@ -159,6 +160,8 @@ typedef uchHandle<cSnowflake> uchSnowflake; // unique const handle
 typedef  shHandle<cSnowflake>  shSnowflake; // shared handle
 typedef schHandle<cSnowflake> schSnowflake; // shared const handle
 
+cSnowflake tag_invoke(boost::json::value_to_tag<cSnowflake>, const boost::json::value&);
+
 /* ========== Color ========== */
 class cColor final {
 private:
@@ -168,7 +171,6 @@ public:
 	static inline constexpr int32_t NO_COLOR = 0;
 	cColor() noexcept : m_value(NO_COLOR) {}
 	cColor(int32_t v) noexcept : m_value(v) {}
-	cColor(const json::value&);
 
 	uint8_t GetRed()   const noexcept { return (m_value >> 16) & 0xFF; }
 	uint8_t GetGreen() const noexcept { return (m_value >>  8) & 0xFF; }
@@ -179,6 +181,8 @@ public:
 	operator bool() const noexcept { return m_value != NO_COLOR; }
 	bool operator!() const noexcept { return m_value == NO_COLOR; }
 };
+
+cColor tag_invoke(boost::json::value_to_tag<cColor>, const boost::json::value&);
 
 KW_DECLARE(color, KW_COLOR, cColor)
 KW_DECLARE(title, KW_TITLE, std::string)

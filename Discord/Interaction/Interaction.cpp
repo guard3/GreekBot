@@ -1,6 +1,11 @@
 #include "Interaction.h"
 #include "json.h"
 
+eInteractionType
+tag_invoke(json::value_to_tag<eInteractionType>, const json::value& v) {
+	return static_cast<eInteractionType>(json::value_to<int>(v));
+}
+
 cApplicationCommandOption::cApplicationCommandOption(const json::value& v, cPtr<const json::value> r):
 	m_name(json::value_to<std::string>(v.at("name"))),
 	m_type((eApplicationCommandOptionType)v.at("type").as_int64()) {
@@ -83,18 +88,18 @@ cInteractionData<INTERACTION_APPLICATION_COMMAND>::cInteractionData(const json::
 }
 cInteractionData<INTERACTION_APPLICATION_COMMAND>::cInteractionData(const json::value& v) : cInteractionData(v.as_object()) {}
 
-cInteractionData<INTERACTION_MESSAGE_COMPONENT>::cInteractionData(const json::object& o) : custom_id(o.at("custom_id").as_string().c_str()), component_type((eComponentType)o.at("component_type").as_int64()) {
+cInteractionData<INTERACTION_MESSAGE_COMPONENT>::cInteractionData(const json::object& o) : custom_id(json::value_to<std::string>(o.at("custom_id"))), component_type((eComponentType)o.at("component_type").as_int64()) {
 	if (auto p = o.if_contains("values"))
 		Values = json::value_to<std::vector<std::string>>(*p);
 }
 cInteractionData<INTERACTION_MESSAGE_COMPONENT>::cInteractionData(const json::value& v) : cInteractionData(v.as_object()) {}
 
 cInteraction::cInteraction(const json::object &o):
-	m_id(o.at("id")),
-	m_application_id(o.at("application_id")),
-	m_type((eInteractionType)o.at("type").as_int64()),
+	m_id(json::value_to<cSnowflake>(o.at("id"))),
+	m_application_id(json::value_to<cSnowflake>(o.at("application_id"))),
+	m_type(json::value_to<eInteractionType>(o.at("type"))),
 	m_token(json::value_to<std::string>(o.at("token"))),
-	m_version(o.at("version").as_int64()) {
+	m_version(json::value_to<int>(o.at("version"))) {
 	/* Check if interaction was triggered from a guild or DMs */
 	if (auto p = o.if_contains("member")) {
 		m_um.emplace<cMember>(*p);

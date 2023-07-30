@@ -48,7 +48,14 @@ char* __attribute__((weak)) utoa(unsigned n, char* buffer, int radix) { return i
 char* __attribute__((weak)) ultoa(unsigned long n, char* buffer, int radix) { return itoa_(n, buffer, radix); }
 char* __attribute__((weak)) ulltoa(unsigned long long n, char* buffer, int radix) { return itoa_(n, buffer, radix); }
 
-cSnowflake::cSnowflake(const json::value& v) : cSnowflake(v.as_string()) {}
-cSnowflake::cSnowflake(const json::string& s) : cSnowflake(s.c_str()) {}
+cSnowflake::cSnowflake(const json::value& v) : cSnowflake(v.as_string().c_str()) {}
 
-cColor::cColor(const json::value& v) : cColor(v.as_int64()) {}
+cSnowflake
+tag_invoke(json::value_to_tag<cSnowflake>, const json::value& v) {
+	return { json::value_to<std::string_view>(v).data() };
+}
+
+cColor
+tag_invoke(json::value_to_tag<cColor>, const json::value& v) {
+	return json::value_to<int32_t>(v);
+}

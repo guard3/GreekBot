@@ -12,6 +12,7 @@ enum eInteractionType {
 	INTERACTION_APPLICATION_COMMAND,
 	INTERACTION_MESSAGE_COMPONENT
 };
+eInteractionType tag_invoke(boost::json::value_to_tag<eInteractionType>, const boost::json::value&);
 /* ================================================================================================================== */
 enum eApplicationCommandType {
 	APP_CMD_CHAT_INPUT = 1,
