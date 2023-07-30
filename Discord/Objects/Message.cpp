@@ -1,6 +1,11 @@
 #include "Message.h"
 #include "json.h"
 
+eMessageType
+tag_invoke(json::value_to_tag<eMessageType>, const json::value& v) {
+	return static_cast<eMessageType>(v.to_number<int>());
+}
+
 json::object
 cMessageParams::ToJson() const {
 	/* Create object with flags */
@@ -36,11 +41,17 @@ cMessageParams::ToJson() const {
 	return obj;
 }
 
-cMessage::cMessage(const json::object &o) : id(o.at("id")), channel_id(o.at("channel_id")), author(o.at("author")), content(o.at("content").as_string().c_str()), timestamp(o.at("timestamp").as_string().c_str()), type((eMessageType)o.at("type").as_int64()) {
+cMessage::cMessage(const json::object &o):
+	id(json::value_to<cSnowflake>(o.at("id"))),
+	channel_id(json::value_to<cSnowflake>(o.at("channel_id"))),
+	author(o.at("author")),
+	content(json::value_to<std::string>(o.at("content"))),
+	timestamp(json::value_to<std::string>(o.at("timestamp"))),
+	type(json::value_to<eMessageType>(o.at("type"))) {
 	/* Parse guild_id */
 	const json::value* f;
 	if ((f = o.if_contains("guild_id")))
-		guild_id = cHandle::MakeUnique<cSnowflake>(*f);
+		guild_id = cHandle::MakeUnique<cSnowflake>(json::value_to<cSnowflake>(*f));
 	/* Parse edited_timestamp */
 	if (auto s = o.at("edited_timestamp").if_string())
 		edited_timestamp = s->c_str();

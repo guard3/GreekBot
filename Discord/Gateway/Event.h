@@ -41,11 +41,11 @@ namespace hidden {
 
 		event_data(const json::value& v): event_data(v.as_object()) {}
 		event_data(const json::object& o):
-			v(o.at("v").as_int64()),
+			v(o.at("v").to_number<int>()),
 			session_id(json::value_to<std::string>(o.at("session_id"))),
 			resume_gateway_url(json::value_to<std::string>(o.at("resume_gateway_url"))),
 			user(cHandle::MakeUnique<cUser>(o.at("user"))),
-			application(o.at("application")) {}
+			application(json::value_to<cApplication>(o.at("application"))) {}
 	};
 /* ================================================================================================================== */
 	template<eEvent e> requires (e == EVENT_GUILD_ROLE_CREATE || e == EVENT_GUILD_ROLE_UPDATE)
@@ -54,7 +54,7 @@ namespace hidden {
 		cSnowflake guild_id;
 		cRole      role;
 
-		event_data(const json::object& o) : guild_id(o.at("guild_id")), role(o.at("role")) {}
+		event_data(const json::object& o) : guild_id(json::value_to<cSnowflake>(o.at("guild_id"))), role(o.at("role")) {}
 		event_data(const json::value& v) : event_data(v.as_object()) {}
 	};
 /* ================================================================================================================== */
@@ -63,7 +63,7 @@ namespace hidden {
 	public:
 		cSnowflake guild_id, role_id;
 
-		event_data(const json::object& o) : guild_id(o.at("guild_id")), role_id(o.at("role_id")) {}
+		event_data(const json::object& o) : guild_id(json::value_to<cSnowflake>(o.at("guild_id"))), role_id(json::value_to<cSnowflake>(o.at("role_id"))) {}
 		event_data(const json::value& v) : event_data(v.as_object()) {}
 	};
 /* ================================================================================================================== */

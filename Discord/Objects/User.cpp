@@ -2,7 +2,7 @@
 #include "json.h"
 
 cUser::cUser(const json::object& o):
-	id(json::value_to<std::string>(o.at("id"))),
+	id(json::value_to<cSnowflake>(o.at("id"))),
 	username(json::value_to<std::string>(o.at("username"))) {
 	/* Combine username and discriminator to account for new usernames */
 	int disc_int = 0;

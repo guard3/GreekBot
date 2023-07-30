@@ -1,6 +1,5 @@
-#pragma once
-#ifndef _GREEKBOT_MESSAGE_H_
-#define _GREEKBOT_MESSAGE_H_
+#ifndef GREEKBOT_MESSAGE_H
+#define GREEKBOT_MESSAGE_H
 #include "User.h"
 #include "Embed.h"
 #include "Member.h"
@@ -32,6 +31,7 @@ enum eMessageType {
 	MESSAGE_TYPE_GUILD_INVITE_REMINDER,
 	MESSAGE_TYPE_CONTEXT_MENU_COMMAND
 };
+eMessageType tag_invoke(boost::json::value_to_tag<eMessageType>, const boost::json::value&);
 
 enum eMessageFlag {
 	MESSAGE_FLAG_NONE                                   = 0,
@@ -119,4 +119,4 @@ typedef  uhHandle<cMessage>  uhMessage;
 typedef uchHandle<cMessage> uchMessage;
 typedef  shHandle<cMessage>  shMessage;
 typedef schHandle<cMessage> schMessage;
-#endif /* _GREEKBOT_MESSAGE_H_ */
+#endif /* GREEKBOT_MESSAGE_H */

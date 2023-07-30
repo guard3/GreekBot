@@ -1,5 +1,5 @@
-#ifndef _GREEKBOT_GUILD_H_
-#define _GREEKBOT_GUILD_H_
+#ifndef GREEKBOT_GUILD_H
+#define GREEKBOT_GUILD_H
 #include "Role.h"
 
 class cGuild final {
@@ -22,4 +22,4 @@ typedef  uhHandle<cGuild>  uhGuild;
 typedef uchHandle<cGuild> uchGuild;
 typedef  shHandle<cGuild>  shGuild;
 typedef schHandle<cGuild> schGuild;
-#endif /* _GREEKBOT_GUILD_H_ */
+#endif /* GREEKBOT_GUILD_H */

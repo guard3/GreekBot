@@ -68,7 +68,7 @@ cGateway::implementation::on_event(cEvent event) {
 			}
 			case EVENT_USER_UPDATE: {
 				co_await m_parent->OnUserUpdate(event.GetDataPtr<EVENT_USER_UPDATE>());
-				m_application = cApplication(co_await m_parent->DiscordGet("/oauth2/applications/@me"));
+				m_application = json::value_to<cApplication>(co_await m_parent->DiscordGet("/oauth2/applications/@me"));
 				break;
 			}
 			default:

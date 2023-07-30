@@ -137,8 +137,6 @@ public:
 	cSnowflake(const char* s) : m_int(cUtils::ParseInt<uint64_t>(s)) { strcpy(m_str, s); }
 	cSnowflake(const std::string& s) : cSnowflake(s.c_str()) {}
 	cSnowflake(std::nullptr_t) = delete;
-	[[deprecated("Use boost::json::value_to")]]
-	explicit cSnowflake(const json::value&);
 
 	auto operator<=>(const cSnowflake& o) const noexcept { return m_int <=> o.m_int; }
 	bool operator== (const cSnowflake& o) const noexcept { return m_int ==  o.m_int; }

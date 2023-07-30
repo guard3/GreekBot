@@ -19,6 +19,7 @@ enum eApplicationCommandType {
 	APP_CMD_USER,
 	APP_CMD_MESSAGE
 };
+eApplicationCommandType tag_invoke(boost::json::value_to_tag<eApplicationCommandType>, const boost::json::value&);
 /* ================================================================================================================== */
 enum eApplicationCommandOptionType {
 	APP_CMD_OPT_SUB_COMMAND = 1,
@@ -32,6 +33,7 @@ enum eApplicationCommandOptionType {
 	APP_CMD_OPT_MENTIONABLE,
 	APP_CMD_OPT_NUMBER
 };
+eApplicationCommandOptionType tag_invoke(boost::json::value_to_tag<eApplicationCommandOptionType>, const boost::json::value&);
 /* ================================================================================================================== */
 class xInvalidAttributeError : public std::runtime_error {
 public:

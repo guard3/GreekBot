@@ -3,12 +3,20 @@
 
 eInteractionType
 tag_invoke(json::value_to_tag<eInteractionType>, const json::value& v) {
-	return static_cast<eInteractionType>(json::value_to<int>(v));
+	return static_cast<eInteractionType>(v.to_number<int>());
+}
+eApplicationCommandType
+tag_invoke(json::value_to_tag<eApplicationCommandType>, const json::value& v) {
+	return static_cast<eApplicationCommandType>(v.to_number<int>());
+}
+eApplicationCommandOptionType
+tag_invoke(json::value_to_tag<eApplicationCommandOptionType>, const json::value& v) {
+	return static_cast<eApplicationCommandOptionType>(v.to_number<int>());
 }
 
 cApplicationCommandOption::cApplicationCommandOption(const json::value& v, cPtr<const json::value> r):
 	m_name(json::value_to<std::string>(v.at("name"))),
-	m_type((eApplicationCommandOptionType)v.at("type").as_int64()) {
+	m_type(json::value_to<eApplicationCommandOptionType>(v.at("type"))) {
 	switch (m_type) {
 		case APP_CMD_OPT_SUB_COMMAND:
 		case APP_CMD_OPT_SUB_COMMAND_GROUP: {
@@ -37,7 +45,7 @@ cApplicationCommandOption::cApplicationCommandOption(const json::value& v, cPtr<
 		case APP_CMD_OPT_CHANNEL:
 		case APP_CMD_OPT_ROLE:
 		case APP_CMD_OPT_MENTIONABLE:
-			m_value.emplace<7>(v.at("value"));
+			m_value.emplace<7>(json::value_to<cSnowflake>(v.at("value")));
 			break;
 		case APP_CMD_OPT_NUMBER:
 			m_value.emplace<6>(v.at("value").as_double());
@@ -77,7 +85,10 @@ cApplicationCommandOption::GetOptions() {
 	}
 }
 
-cInteractionData<INTERACTION_APPLICATION_COMMAND>::cInteractionData(const json::object& o) : id(o.at("id")), name(o.at("name").as_string().c_str()), type((eApplicationCommandType)o.at("type").as_int64()) {
+cInteractionData<INTERACTION_APPLICATION_COMMAND>::cInteractionData(const json::object& o):
+	id(json::value_to<cSnowflake>(o.at("id"))),
+	name(json::value_to<std::string>(o.at("name"))),
+	type(json::value_to<eApplicationCommandType>(o.at("type"))) {
 	if (auto p = o.if_contains("options")) {
 		auto& a = p->as_array();
 		auto  r = o.if_contains("resolved");
@@ -99,12 +110,12 @@ cInteraction::cInteraction(const json::object &o):
 	m_application_id(json::value_to<cSnowflake>(o.at("application_id"))),
 	m_type(json::value_to<eInteractionType>(o.at("type"))),
 	m_token(json::value_to<std::string>(o.at("token"))),
-	m_version(json::value_to<int>(o.at("version"))) {
+	m_version(o.at("version").to_number<int>()) {
 	/* Check if interaction was triggered from a guild or DMs */
 	if (auto p = o.if_contains("member")) {
 		m_um.emplace<cMember>(*p);
-		m_guild_id.emplace(o.at("guild_id"));
-		m_channel_id.emplace(o.at("channel_id"));
+		m_guild_id   = json::value_to<cSnowflake>(o.at("guild_id"));
+		m_channel_id = json::value_to<cSnowflake>(o.at("channel_id"));
 	}
 	else m_um.emplace<cUser>(o.at("user"));
 	/* Linked message for component interactions */

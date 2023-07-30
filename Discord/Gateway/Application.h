@@ -16,17 +16,21 @@ enum eApplicationFlag {
 inline eApplicationFlag operator|(eApplicationFlag a, eApplicationFlag b) { return (eApplicationFlag)((int)a | (int)b); }
 inline eApplicationFlag operator&(eApplicationFlag a, eApplicationFlag b) { return (eApplicationFlag)((int)a & (int)b); }
 
+eApplicationFlag tag_invoke(boost::json::value_to_tag<eApplicationFlag>, const boost::json::value&);
+
 /* Partially implemented application object */
 class cApplication {
 private:
 	cSnowflake m_id;
 	eApplicationFlag m_flags;
 
-public:
-	explicit cApplication(const json::object&);
-	explicit cApplication(const json::value&);
+	cApplication(const boost::json::value&);
 
+public:
 	const cSnowflake& GetId()    const noexcept { return m_id;    }
 	eApplicationFlag  GetFlags() const noexcept { return m_flags; }
+
+	friend cApplication tag_invoke(boost::json::value_to_tag<cApplication>, const boost::json::value&);
 };
+cApplication tag_invoke(boost::json::value_to_tag<cApplication>, const boost::json::value&);
 #endif //GREEKBOT_APPLICATION_H
