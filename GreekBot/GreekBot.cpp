@@ -1,19 +1,25 @@
 #include "GreekBot.h"
 #include "Database.h"
 
+std::span<const cRole>
+cGreekBot::get_lmg_roles() {
+	/* Make sure the roles are sorted on position before returning */
+	if (!m_bSorted) {
+		std::sort(m_lmg_roles.begin(), m_lmg_roles.end(), [](const cRole& a, const cRole& b) {
+			return a.GetPosition() > b.GetPosition();
+		});
+		m_bSorted = true;
+	}
+	return m_lmg_roles;
+}
+
 cColor
 cGreekBot::get_lmg_member_color(const cMember& member) {
-	/* Make sure roles are sorted based on position */
-	if (m_lmg.sorted_roles.empty()) {
-		for (auto &r: m_lmg.roles)
-			m_lmg.sorted_roles.push_back(&r);
-		std::sort(m_lmg.sorted_roles.begin(), m_lmg.sorted_roles.end(), [](chRole a, chRole b) { return a->GetPosition() > b->GetPosition(); });
-	}
 	/* Find the member's color */
 	cColor color;
-	for (auto& r : m_lmg.sorted_roles) {
-		if (std::find_if(member.GetRoles().begin(), member.GetRoles().end(), [&r](const cSnowflake &id) { return r->GetId() == id; }) != member.GetRoles().end()) {
-			if ((color = r->GetColor()))
+	for (auto& r : get_lmg_roles()) {
+		if (std::find_if(member.GetRoles().begin(), member.GetRoles().end(), [&r](const cSnowflake &id) { return r.GetId() == id; }) != member.GetRoles().end()) {
+			if ((color = r.GetColor()))
 				break;
 		}
 	}
@@ -22,13 +28,11 @@ cGreekBot::get_lmg_member_color(const cMember& member) {
 
 cTask<>
 cGreekBot::OnGuildCreate(uhGuild guild) {
-	/* Make sure the guild is Learning Greek */
 	if (guild->GetId() == m_lmg_id) {
-		/* Save guild roles */
-		m_lmg.roles = std::move(guild->Roles);
-		m_lmg.sorted_roles.clear();
-		/* Save guild object */
-		m_lmg.guild = cHandle::MakeUnique<cGuild>(*guild);
+		/* If the guild is 'Learning Greek', save its role vector */
+		m_lmg_roles = guild->MoveRoles();
+		/* Which is most likely not sorted */
+		m_bSorted = false;
 	}
 	m_guilds[guild->GetId()] = std::move(guild);
 	co_return;
@@ -37,9 +41,10 @@ cGreekBot::OnGuildCreate(uhGuild guild) {
 cTask<>
 cGreekBot::OnGuildRoleCreate(cSnowflake& guild_id, cRole& role) {
 	if (guild_id == m_lmg_id) {
-		/* A new role was created in Learning Greek */
-		m_lmg.roles.push_back(std::move(role));
-		m_lmg.sorted_roles.clear();
+		/* If the guild is 'Learning Greek', save the newly created role */
+		m_lmg_roles.push_back(std::move(role));
+		/* The vector now is most likely not sorted */
+		m_bSorted = false;
 	}
 	co_return;
 }
@@ -47,10 +52,16 @@ cGreekBot::OnGuildRoleCreate(cSnowflake& guild_id, cRole& role) {
 cTask<>
 cGreekBot::OnGuildRoleUpdate(cSnowflake& guild_id, cRole& role) {
 	if (guild_id == m_lmg_id) {
-		auto i = std::find_if(m_lmg.roles.begin(), m_lmg.roles.end(), [&role](const cRole& r) { return r.GetId() == role.GetId(); });
-		if (i != m_lmg.roles.end())
+		/* If the guild is 'Learning Greek', find the updated role and save the new object */
+		auto i = std::find_if(m_lmg_roles.begin(), m_lmg_roles.end(), [&role](const cRole& r) {
+			return r.GetId() == role.GetId();
+		});
+		if (i == m_lmg_roles.end())
+			m_lmg_roles.push_back(std::move(role));
+		else
 			*i = std::move(role);
-		m_lmg.sorted_roles.clear();
+		/* The new vector is most likely not sorted */
+		m_bSorted = false;
 	}
 	co_return;
 }
@@ -58,10 +69,11 @@ cGreekBot::OnGuildRoleUpdate(cSnowflake& guild_id, cRole& role) {
 cTask<>
 cGreekBot::OnGuildRoleDelete(cSnowflake& guild_id, cSnowflake& role_id) {
 	if (guild_id == m_lmg_id) {
-		auto i = std::find_if(m_lmg.roles.begin(), m_lmg.roles.end(), [&role_id](const cRole& r) { return r.GetId() == role_id; });
-		if (i != m_lmg.roles.end())
-			m_lmg.roles.erase(i);
-		m_lmg.sorted_roles.clear();
+		/* If the guild is 'Learning Greek', just remove all occurrences of the deleted role.
+		 * m_bSorted isn't updated because the order doesn't change, so it remains sorted */
+		m_lmg_roles.erase(std::remove_if(m_lmg_roles.begin(), m_lmg_roles.end(), [&role_id](const cRole& r) {
+			return r.GetId() == role_id;
+		}), m_lmg_roles.end());
 	}
 	co_return;
 }

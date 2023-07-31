@@ -1,10 +1,9 @@
-#pragma once
-#ifndef _GREEKBOT_GREEKBOT_H_
-#define _GREEKBOT_GREEKBOT_H_
+#ifndef GREEKBOT_GREEKBOT_H
+#define GREEKBOT_GREEKBOT_H
 #include "Bot.h"
-#include <mutex>
 #include <algorithm>
 #include <unordered_map>
+#include <span>
 
 /* Define custom message component ids; used for responding to component interactions */
 #define CMP_ID_BUTTON_RANK_HELP 0
@@ -43,11 +42,9 @@ private:
 		352001527780474881  // @Non Learner
 	};
 
-	struct {
-		uhGuild guild;
-		std::vector<cRole> roles;
-		std::vector<chRole> sorted_roles;
-	} m_lmg;
+	std::vector<cRole> m_lmg_roles;
+	bool m_bSorted = false;
+	std::span<const cRole> get_lmg_roles();
 
 	std::unordered_map<cSnowflake, uhGuild> m_guilds;
 
@@ -127,4 +124,4 @@ private:
 public:
 	explicit cGreekBot(const char* token) : cBot(token, INTENT_GUILD_INTEGRATIONS | INTENT_GUILD_MESSAGES | INTENT_GUILDS) {}
 };
-#endif /* _GREEKBOT_GREEKBOT_H_ */
+#endif /* GREEKBOT_GREEKBOT_H */

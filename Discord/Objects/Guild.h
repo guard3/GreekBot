@@ -1,25 +1,27 @@
 #ifndef GREEKBOT_GUILD_H
 #define GREEKBOT_GUILD_H
 #include "Role.h"
+#include <span>
 
 class cGuild final {
 private:
 	cSnowflake id;
 	std::string name;
+	std::vector<cRole> roles;
 
 public:
-	std::vector<cRole> Roles;
+	explicit cGuild(const boost::json::value&);
 
-	cGuild(const json::value&);
-	cGuild(const json::object&);
+	const cSnowflake&      GetId()    const noexcept { return id;    }
+	const std::string&     GetName()  const noexcept { return name;  }
+	std::span<const cRole> GetRoles() const noexcept { return roles; }
 
-	const cSnowflake&  GetId()   const { return id;   }
-	const std::string& GetName() const { return name; }
+	std::vector<cRole> MoveRoles() noexcept { return std::move(roles); }
 };
 typedef   hHandle<cGuild>   hGuild;
 typedef  chHandle<cGuild>  chGuild;
 typedef  uhHandle<cGuild>  uhGuild;
 typedef uchHandle<cGuild> uchGuild;
-typedef  shHandle<cGuild>  shGuild;
-typedef schHandle<cGuild> schGuild;
+
+cGuild tag_invoke(boost::json::value_to_tag<cGuild>, const boost::json::value&);
 #endif /* GREEKBOT_GUILD_H */

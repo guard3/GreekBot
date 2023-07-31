@@ -6,6 +6,11 @@ tag_invoke(json::value_to_tag<ePermission>, const json::value& v) {
 	return static_cast<ePermission>(cUtils::ParseInt<uint64_t>(v.as_string().c_str()));
 }
 
+cRole
+tag_invoke(json::value_to_tag<cRole>, const json::value& v) {
+	return v;
+}
+
 cRoleTags::cRoleTags(const json::object &o) {
 	if (auto p = o.if_contains("bot_id"))
 		bot_id = cHandle::MakeUnique<cSnowflake>(json::value_to<cSnowflake>(*p));

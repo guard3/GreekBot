@@ -17,14 +17,7 @@ cBot::OnUserUpdate(uhUser user) {
 
 cTask<std::vector<cRole>>
 cBot::GetGuildRoles(const cSnowflake& guild_id) {
-	json::value v = co_await DiscordGet(cUtils::Format("/guilds/%s/roles", guild_id.ToString()));
-	auto& a = v.as_array();
-	std::vector<cRole> result;
-	result.reserve(a.size());
-	for (auto& e : a) {
-		result.emplace_back(e);
-	}
-	co_return result;
+	co_return json::value_to<std::vector<cRole>>(co_await DiscordGet(cUtils::Format("/guilds/%s/roles", guild_id.ToString())));
 }
 
 cTask<cUser>

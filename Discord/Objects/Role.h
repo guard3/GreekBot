@@ -118,4 +118,6 @@ typedef  uhHandle<cRole>  uhRole;
 typedef uchHandle<cRole> uchRole;
 typedef  shHandle<cRole>  shRole;
 typedef schHandle<cRole> schRole;
+
+cRole tag_invoke(boost::json::value_to_tag<cRole>, const boost::json::value&);
 #endif /* GREEKBOT_ROLE_H */
