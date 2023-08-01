@@ -15,7 +15,6 @@ private:
 	std::vector<cSnowflake> m_roles;
 
 public:
-	explicit cMember(const json::object&);
 	explicit cMember(const json::value&);
 
 	hUser  GetUser()     noexcept { return m_user.has_value() ? &*m_user : nullptr; }
@@ -39,4 +38,6 @@ typedef  uhHandle<cMember>  uhMember;
 typedef uchHandle<cMember> uchMember;
 typedef  shHandle<cMember>  shMember;
 typedef schHandle<cMember> schMember;
+
+cMember tag_invoke(boost::json::value_to_tag<cMember>, const boost::json::value&);
 #endif //GREEKBOT_MEMBER_H

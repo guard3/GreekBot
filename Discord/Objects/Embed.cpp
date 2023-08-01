@@ -101,3 +101,8 @@ cEmbed::ToJson() const {
 	obj["fields"] = std::move(a);
 	return obj;
 }
+
+cEmbed
+tag_invoke(json::value_to_tag<cEmbed>, const json::value& v) {
+	return cEmbed{ v };
+}

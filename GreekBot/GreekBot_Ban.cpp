@@ -114,7 +114,7 @@ cGreekBot::OnInteraction_unban(const cInteraction& i, const cSnowflake& user_id)
 			catch (xDiscordError& e) {
 				/* Ban not found, but that's fine */
 			}
-			auto e = i.GetMessage()->Embeds[0];
+			auto e = i.GetMessage()->GetEmbeds().front();
 			auto& s = e.GetAuthor()->GetName();
 			s.erase(s.end()-11, s.end());
 			e.SetFields(nullptr).SetDescription("User was unbanned");

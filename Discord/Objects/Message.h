@@ -4,6 +4,7 @@
 #include "Embed.h"
 #include "Member.h"
 #include "Component.h"
+#include <span>
 
 enum eMessageType {
 	MESSAGE_TYPE_DEFAULT,
@@ -92,9 +93,9 @@ private:
 	// ...
 	eMessageFlag flags;
 
-public:
-	std::vector<cEmbed> Embeds;
+	std::vector<cEmbed> embeds;
 
+public:
 	cMessage(const json::object&);
 	cMessage(const json::value& v);
 	cMessage(const cMessage& o);
@@ -102,16 +103,24 @@ public:
 
 	cMessage& operator=(cMessage o);
 
-	const cSnowflake&  GetId()              const { return id;               }
-	const cSnowflake&  GetChannelId()       const { return channel_id;       }
-	chSnowflake        GetGuildId()         const { return guild_id.get();   }
-	const cUser&       GetAuthor()          const { return author;           }
-	chMember           GetMember()          const { return member.get();     }
-	const std::string& GetContent()         const { return content;          }
-	const std::string& GetTimestamp()       const { return timestamp;        }
-	const std::string& GetEditedTimestamp() const { return edited_timestamp; }
-	eMessageType       GetType()            const { return type;             }
-	eMessageFlag       GetFlags()           const { return flags;            }
+	std::span<cEmbed> GetEmbeds() noexcept { return embeds; }
+
+	const cSnowflake&  GetId()              const noexcept { return id;               }
+	const cSnowflake&  GetChannelId()       const noexcept { return channel_id;       }
+	chSnowflake        GetGuildId()         const noexcept { return guild_id.get();   }
+	const cUser&       GetAuthor()          const noexcept { return author;           }
+	chMember           GetMember()          const noexcept { return member.get();     }
+	const std::string& GetContent()         const noexcept { return content;          }
+	const std::string& GetTimestamp()       const noexcept { return timestamp;        }
+	const std::string& GetEditedTimestamp() const noexcept { return edited_timestamp; }
+	eMessageType       GetType()            const noexcept { return type;             }
+	eMessageFlag       GetFlags()           const noexcept { return flags;            }
+	std::span<const cEmbed> GetEmbeds() const noexcept { return embeds; }
+
+	std::vector<cEmbed> CloneEmbeds() const { return embeds; }
+
+	std::vector<cEmbed> MoveEmbeds() noexcept { return std::move(embeds); }
+	std::vector<cEmbed> MoveEmbeds() const { return embeds; }
 };
 typedef   hHandle<cMessage>   hMessage;
 typedef  chHandle<cMessage>  chMessage;

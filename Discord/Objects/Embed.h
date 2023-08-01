@@ -220,5 +220,7 @@ typedef uchHandle<cEmbed> uchEmbed;
 typedef  shHandle<cEmbed>  shEmbed;
 typedef schHandle<cEmbed> schEmbed;
 
+cEmbed tag_invoke(boost::json::value_to_tag<cEmbed>, const boost::json::value&);
+
 KW_DECLARE(embeds, KW_EMBEDS, std::vector<cEmbed>)
 #endif // GREEKBOT_EMBED_H

@@ -1,28 +1,28 @@
 #include "Member.h"
 #include "json.h"
 
-cMember::cMember(const json::object& o):
-	m_joined_at(cUtils::ParseTimestamp(json::value_to<std::string>(o.at("joined_at")))),
-	m_roles(json::value_to<std::vector<cSnowflake>>(o.at("roles")))
-	{
-	//auto& a = o.at("roles").as_array();
-	//m_roles.reserve(a.size());
-	//for (auto& v : a)
-	//	m_roles.emplace_back(v);
-	const json::value* v;
-	if ((v = o.if_contains("user")))
-		m_user.emplace(*v);
-	if ((v = o.if_contains("nick"))) {
-		if (auto s = v->if_string())
-			m_nick = s->c_str();
+cMember::cMember(const json::value& v):
+	m_joined_at(cUtils::ParseTimestamp(json::value_to<std::string>(v.at("joined_at")))),
+	m_roles(json::value_to<std::vector<cSnowflake>>(v.at("roles"))) {
+	auto& o = v.as_object();
+	const json::value* p;
+	if ((p = o.if_contains("user")))
+		m_user.emplace(*p);
+	if ((p = o.if_contains("nick"))) {
+		auto result = json::try_value_to<std::string>(*p);
+		if (result.has_value())
+			m_nick = std::move(result.value());
 	}
-	if ((v = o.if_contains("premium_since"))) {
-		if (auto s = v->if_string())
+	if ((p = o.if_contains("premium_since"))) {
+		if (auto s = p->if_string())
 			m_premium_since = cUtils::ParseTimestamp(s->c_str());
 	}
-	m_permissions = (v = o.if_contains("permissions")) ? json::value_to<ePermission>(*v) : PERM_NONE;
-	m_deaf = (v = o.if_contains("deaf")) && v->as_bool();
-	m_mute = (v = o.if_contains("mute")) && v->as_bool();
+	m_permissions = (p = o.if_contains("permissions")) ? json::value_to<ePermission>(*p) : PERM_NONE;
+	m_deaf = (p = o.if_contains("deaf")) && p->as_bool();
+	m_mute = (p = o.if_contains("mute")) && p->as_bool();
 }
 
-cMember::cMember(const json::value& v) : cMember(v.as_object()) {}
+cMember
+tag_invoke(json::value_to_tag<cMember>, const json::value& v) {
+	return cMember{ v };
+}

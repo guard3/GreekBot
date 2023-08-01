@@ -47,7 +47,8 @@ cMessage::cMessage(const json::object &o):
 	author(o.at("author")),
 	content(json::value_to<std::string>(o.at("content"))),
 	timestamp(json::value_to<std::string>(o.at("timestamp"))),
-	type(json::value_to<eMessageType>(o.at("type"))) {
+	type(json::value_to<eMessageType>(o.at("type"))),
+	embeds(json::value_to<std::vector<cEmbed>>(o.at("embeds"))) {
 	/* Parse guild_id */
 	const json::value* f;
 	if ((f = o.if_contains("guild_id")))
@@ -58,16 +59,11 @@ cMessage::cMessage(const json::object &o):
 	/* Parse flags */
 	flags = (eMessageFlag)((f = o.if_contains("flags")) ? f->as_int64() : 0);
 	flags = flags | (eMessageFlag)((o.at("tts").as_bool() << 15) | (o.at("mention_everyone").as_bool() << 16));
-	/* Parse embeds */
-	auto& a = o.at("embeds").as_array();
-	Embeds.reserve(a.size());
-	for (auto& v : a)
-		Embeds.emplace_back(v);
 }
 
 cMessage::cMessage(const json::value &v) : cMessage(v.as_object()) {}
 
-cMessage::cMessage(const cMessage &o) : id(o.id), channel_id(o.channel_id), author(o.author), content(o.content), timestamp(o.timestamp), edited_timestamp(o.edited_timestamp), type(o.type), flags(o.flags), Embeds(o.Embeds) {
+cMessage::cMessage(const cMessage &o) : id(o.id), channel_id(o.channel_id), author(o.author), content(o.content), timestamp(o.timestamp), edited_timestamp(o.edited_timestamp), type(o.type), flags(o.flags), embeds(o.embeds) {
 	if (o.guild_id) guild_id = cHandle::MakeUnique<cSnowflake>(*o.guild_id);
 	if (o.member  ) member   = cHandle::MakeUnique<cMember   >(*o.member  );
 }

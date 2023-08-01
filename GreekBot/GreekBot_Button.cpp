@@ -3,7 +3,7 @@
 cTask<>
 cGreekBot::OnInteraction_button(const cInteraction& i) {
 	try {
-		auto embeds = i.GetMessage()->Embeds;
+		auto embeds = i.GetMessage()->MoveEmbeds();
 		cEmbed e {
 			kw::color=embeds.back().GetColor(),
 			kw::title="How it works",
