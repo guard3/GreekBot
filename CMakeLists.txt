@@ -58,6 +58,10 @@ find_package(ZLIB REQUIRED)
 include_directories(SYSTEM ${ZLIB_INCLUDE_DIRS})
 target_link_libraries(GreekBot ZLIB::ZLIB)
 
+# Link libfmt (since Clang doesn't support C++20 <format> yet
+find_package(fmt)
+target_link_libraries(GreekBot fmt::fmt)
+
 # Link Shlwapi on Windows
 if(WIN32)
     target_link_libraries(GreekBot Shlwapi.lib)

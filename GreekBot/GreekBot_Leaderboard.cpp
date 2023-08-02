@@ -1,5 +1,6 @@
 #include "GreekBot.h"
 #include "Database.h"
+#include <fmt/core.h>
 
 /* Helper functions that create embeds */
 static cEmbed make_no_xp_embed(const cUser& user, cColor c) {
@@ -44,7 +45,7 @@ static cEmbed make_embed(const cUser& user, const cMember& member, cColor c, int
 			user.GetUsername(),
 			kw::icon_url = user.GetAvatarUrl()
 		},
-		kw::title=cUtils::Format("%s Rank **#%" PRIi64 "**\tLevel **%" PRIi64 "**", medal, rank, level),
+		kw::title=fmt::format("{} Rank **#{}**\tLevel **{}**", medal, rank, level),
 		kw::color=c,
 		kw::fields={
 			{ "XP Progress", cUtils::Format("%" PRIi64 "/%" PRIi64, xp - base_xp, next_xp - base_xp), true},
