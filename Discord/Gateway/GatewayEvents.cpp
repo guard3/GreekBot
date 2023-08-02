@@ -18,7 +18,7 @@ cGateway::implementation::on_event(cEvent event) {
 		/* Update last sequence received */
 		m_last_sequence = event.GetSequence();
 #ifdef GW_LOG_LVL_1
-		cUtils::PrintLog("Event: 0x%08X %s", event.GetType(), event.GetName());
+		cUtils::PrintLogFmt("Event: 0x{:08X} {}", (uint32_t)event.GetType(), event.GetName());
 #endif
 		/* On 'READY' save the session id before switching to the event thread */
 		if (event.GetType() == EVENT_READY) {
