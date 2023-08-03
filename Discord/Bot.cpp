@@ -1,43 +1,44 @@
 #include "Bot.h"
 #include "json.h"
+#include <fmt/format.h>
 
 cTask<>
 cBot::OnReady(uhUser user) {
-	cUtils::PrintMsg("Connected as: %s %s", user->GetUsername(), user->GetId().ToString());
+	cUtils::PrintMsgFmt("Connected as: {} {}", user->GetUsername(), user->GetId());
 	m_user = std::move(user);
 	co_return;
 }
 
 cTask<>
 cBot::OnUserUpdate(uhUser user) {
-	cUtils::PrintMsg("User updated: %s %s", user->GetUsername(), user->GetId().ToString());
+	cUtils::PrintMsgFmt("User updated: {} {}", user->GetUsername(), user->GetId());
 	m_user = std::move(user);
 	co_return;
 }
 
 cTask<std::vector<cRole>>
 cBot::GetGuildRoles(const cSnowflake& guild_id) {
-	co_return json::value_to<std::vector<cRole>>(co_await DiscordGet(cUtils::Format("/guilds/%s/roles", guild_id.ToString())));
+	co_return json::value_to<std::vector<cRole>>(co_await DiscordGet(fmt::format("/guilds/{}/roles", guild_id)));
 }
 
 cTask<cUser>
 cBot::GetUser(const cSnowflake &user_id) {
-	co_return cUser(co_await DiscordGet("/users/"s + user_id.ToString()));
+	co_return cUser{ co_await DiscordGet(fmt::format("/users/{}", user_id)) };
 }
 
 cTask<cMember>
 cBot::GetGuildMember(const cSnowflake &guild_id, const cSnowflake &user_id) {
-	co_return cMember(co_await DiscordGet(cUtils::Format("/guilds/%s/members/%s", guild_id.ToString(), user_id.ToString())));
+	co_return cMember{ co_await DiscordGet(fmt::format("/guilds/{}/members/{}", guild_id, user_id)) };
 }
 
 cTask<>
 cBot::AddGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake &role_id) {
-	co_await DiscordPut(cUtils::Format("/guilds/%s/members/%s/roles/%s", guild_id.ToString(), user_id.ToString(), role_id.ToString()));
+	co_await DiscordPut(fmt::format("/guilds/{}/members/{}/roles/{}", guild_id, user_id, role_id));
 }
 
 cTask<>
 cBot::RemoveGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake &role_id) {
-	co_await DiscordDelete(cUtils::Format("/guilds/%s/members/%s/roles/%s", guild_id.ToString(), user_id.ToString(), role_id.ToString()));
+	co_await DiscordDelete(fmt::format("/guilds/{}/members/{}/roles/{}", guild_id, user_id, role_id));
 }
 
 cTask<>
@@ -52,7 +53,7 @@ cBot::UpdateGuildMemberRoles(const cSnowflake& guild_id, const cSnowflake& user_
 		obj["roles"] = std::move(a);
 	}
 	/* Resolve api path */
-	co_await DiscordPatch(cUtils::Format("/guilds/%s/members/%s", guild_id.ToString(), user_id.ToString()), obj);
+	co_await DiscordPatch(fmt::format("/guilds/{}/members/{}", guild_id, user_id), obj);
 }
 
 /* Interaction related functions */
@@ -77,7 +78,7 @@ cBot::respond_to_interaction(const cInteraction& i, const cMessageParams& params
 		case INTERACTION_MESSAGE_COMPONENT:
 			callback = INTERACTION_CALLBACK_UPDATE_MESSAGE;
 	}
-	co_await DiscordPost(cUtils::Format("/interactions/%s/%s/callback", i.GetId().ToString(), i.GetToken()), {
+	co_await DiscordPost(fmt::format("/interactions/{}/{}/callback", i.GetId(), i.GetToken()), {
 		{ "type", callback        },
 		{ "data", params.ToJson() }
 	});
@@ -99,24 +100,24 @@ cBot::RespondToInteraction<>(const cInteraction& i) {
 		case INTERACTION_MESSAGE_COMPONENT:
 			callback = INTERACTION_CALLBACK_DEFERRED_UPDATE_MESSAGE;
 	}
-	co_await DiscordPost(cUtils::Format("/interactions/%s/%s/callback", i.GetId().ToString(), i.GetToken()), {{ "type", callback }});
+	co_await DiscordPost(fmt::format("/interactions/{}/{}/callback", i.GetId(), i.GetToken()), {{ "type", callback }});
 }
 
 cTask<>
 cBot::edit_interaction_response(const cInteraction& i, const cMessageParams& params) {
 	if (i.GetType() != INTERACTION_PING)
-		co_await DiscordPatch(cUtils::Format("/webhooks/%s/%s/messages/@original", i.GetApplicationId().ToString(), i.GetToken()), params.ToJson());
+		co_await DiscordPatch(fmt::format("/webhooks/{}/{}/messages/@original", i.GetApplicationId(), i.GetToken()), params.ToJson());
 }
 
 cTask<>
 cBot::DeleteInteractionResponse(const cInteraction& i) {
-	co_await DiscordDelete(cUtils::Format("/webhooks/%s/%s/messages/@original", i.GetApplicationId().ToString(), i.GetToken()));
+	co_await DiscordDelete(fmt::format("/webhooks/{}/{}/messages/@original", i.GetApplicationId(), i.GetToken()));
 }
 
 cTask<>
 cBot::send_interaction_followup_message(const cInteraction& i, const cMessageParams& params) {
 	if (i.GetType() != INTERACTION_PING)
-		co_await DiscordPost(cUtils::Format("/webhooks/%s/%s", i.GetApplicationId().ToString(), i.GetToken()), params.ToJson());
+		co_await DiscordPost(fmt::format("/webhooks/{}/{}", i.GetApplicationId(), i.GetToken()), params.ToJson());
 }
 
 cTask<int>
@@ -124,8 +125,8 @@ cBot::BeginGuildPrune(const cSnowflake &id, int days, const std::string& reason)
 	tHttpFields fields;
 	if (!reason.empty())
 		fields.emplace_back("X-Audit-Log-Reason", cUtils::PercentEncode(reason));
-	auto response = co_await DiscordPostNoRetry(cUtils::Format("/guilds/%s/prune", id.ToString()), {{ "days", days }}, fields);
-	co_return response.at("pruned").as_int64();
+	auto response = co_await DiscordPostNoRetry(fmt::format("/guilds/{}/prune", id), {{ "days", days }}, fields);
+	co_return response.at("pruned").to_number<int>();
 }
 
 cTask<cChannel>
@@ -138,7 +139,7 @@ cBot::CreateDM(const cSnowflake& recipient_id) {
 cTask<cMessage>
 cBot::create_message(const cSnowflake& channel_id, const cMessageParams& params) {
 	co_return cMessage {
-		co_await DiscordPost(cUtils::Format("/channels/%s/messages", channel_id.ToString()), params.ToJson())
+		co_await DiscordPost(fmt::format("/channels/{}/messages", channel_id), params.ToJson())
 	};
 }
 
@@ -147,7 +148,7 @@ cBot::RemoveGuildMember(const cSnowflake& guild_id, const cSnowflake& user_id, c
 	tHttpFields fields;
 	if (!reason.empty())
 		fields.emplace_back("X-Audit-Log-Reason", cUtils::PercentEncode(reason));
-	co_await DiscordDelete(cUtils::Format("/guilds/%s/members/%s", guild_id.ToString(), user_id.ToString()), fields);
+	co_await DiscordDelete(fmt::format("/guilds/{}/members/{}", guild_id, user_id), fields);
 }
 
 cTask<>
@@ -155,7 +156,7 @@ cBot::CreateGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, chro
 	tHttpFields fields;
 	if (!reason.empty())
 		fields.emplace_back("X-Audit-Log-Reason", cUtils::PercentEncode(reason));
-	co_await DiscordPut(cUtils::Format("/guilds/%s/bans/%s", guild_id.ToString(), user_id.ToString()), {{ "delete_message_seconds", delete_message_seconds.count() }}, fields);
+	co_await DiscordPut(fmt::format("/guilds/{}/bans/{}", guild_id, user_id), {{ "delete_message_seconds", delete_message_seconds.count() }}, fields);
 }
 
 cTask<>
@@ -163,5 +164,5 @@ cBot::RemoveGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, cons
 	tHttpFields fields;
 	if (!reason.empty())
 		fields.emplace_back("X-Audit-Log-Reason", cUtils::PercentEncode(reason));
-	co_await DiscordDelete(cUtils::Format("/guilds/%s/bans/%s", guild_id.ToString(), user_id.ToString()), fields);
+	co_await DiscordDelete(fmt::format("/guilds/{}/bans/{}", guild_id, user_id), fields);
 }

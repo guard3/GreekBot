@@ -160,6 +160,11 @@ typedef schHandle<cSnowflake> schSnowflake; // shared const handle
 
 cSnowflake tag_invoke(boost::json::value_to_tag<cSnowflake>, const boost::json::value&);
 
+template<>
+struct fmt::formatter<cSnowflake> : formatter<string_view> {
+	format_context::iterator format(const cSnowflake&, format_context&) const;
+};
+
 /* ========== Color ========== */
 class cColor final {
 private:

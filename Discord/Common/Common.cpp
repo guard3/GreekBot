@@ -1,6 +1,7 @@
 #include "Common.h"
 #include "json.h"
 #include <algorithm>
+#include <fmt/format.h>
 
 template<int radix, std::unsigned_integral I>
 static char* unsigned_integral_to_string(I n, char* buffer) {
@@ -55,4 +56,8 @@ tag_invoke(json::value_to_tag<cSnowflake>, const json::value& v) {
 cColor
 tag_invoke(json::value_to_tag<cColor>, const json::value& v) {
 	return v.to_number<int32_t>();
+}
+
+fmt::format_context::iterator fmt::formatter<cSnowflake>::format(const cSnowflake& snowflake, format_context& ctx) const {
+	return formatter<string_view>::format(snowflake.ToString(), ctx);
 }

@@ -19,7 +19,7 @@ public:
 	const cSnowflake&    GetId() const noexcept { return m_id;       }
 	bool            IsAnimated() const noexcept { return m_animated; }
 
-	std::string ToString() const { return cUtils::Format("<%s:%s:%s>", m_animated ? "a" : "", m_name, m_id.ToString());}
+	std::string ToString() const;
 	json::object ToJson() const;
 };
 typedef   hHandle<cEmoji>   hEmoji;
