@@ -1,6 +1,7 @@
 #include "GatewayImpl.h"
 #include "json.h"
 #include <tuple>
+#include <fmt/format.h>
 
 class cGateway::implementation::discord_request final {
 private:
@@ -168,7 +169,7 @@ cGateway::implementation::get_guild_members(const cSnowflake& guild_id, const st
 		if (!(m_application->GetFlags() & (APP_FLAG_GATEWAY_GUILD_MEMBERS | APP_FLAG_GATEWAY_GUILD_MEMBERS_LIMITED)))
 			throw std::runtime_error("Missing privileged intents");
 		for (cSnowflake last_id = "0";;) {
-			json::value result = co_await m_parent->DiscordGet(cUtils::Format("/guilds/%s/members?limit=1000&after=%s", guild_id.ToString(), last_id.ToString()));
+			json::value result = co_await m_parent->DiscordGet(fmt::format("/guilds/{}/members?limit=1000&after={}", guild_id, last_id));
 			json::array& members = result.as_array();
 			if (members.empty())
 				break;
@@ -183,7 +184,7 @@ cGateway::implementation::get_guild_members(const cSnowflake& guild_id, const st
 	}
 	else {
 		/* If there is a query, return matching guild members */
-		json::value result = co_await m_parent->DiscordGet(cUtils::Format("/guilds/%s/members/search?limit=1000&query=%s", guild_id.ToString(), query));
+		json::value result = co_await m_parent->DiscordGet(fmt::format("/guilds/{}/members/search?limit=1000&query={}", guild_id, query));
 		for (auto& v : result.as_array())
 			co_yield cMember(v);
 	}

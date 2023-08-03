@@ -14,5 +14,5 @@ cGreekBot::OnInteraction_avatar(const cInteraction& i) try {
 	co_await RespondToInteraction(i, kw::content=user->GetAvatarUrl());
 }
 catch (const std::exception& e) {
-	cUtils::PrintErr("OnInteraction_avatar: %s", e.what());
+	cUtils::PrintErr("OnInteraction_avatar: {}", e.what());
 }

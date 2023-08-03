@@ -10,7 +10,7 @@ cGateway::implementation::implementation(cGateway* p, const char* t, eIntent i) 
 	m_http_resolver(m_http_ioc),
 	m_work(asio::make_work_guard(m_http_ioc)),
 	m_work_thread([this]() { m_http_ioc.run(); }),
-	m_http_auth(cUtils::Format("Bot %s", t)),
+	m_http_auth(fmt::format("Bot {}", t)),
 	m_intents(i),
 	m_last_sequence(0),
 	m_heartbeat_timer(m_ws_ioc),
@@ -127,10 +127,10 @@ cGateway::implementation::on_read(const beast::error_code& ec, size_t bytes_read
 		}
 	}
 	catch (const std::exception& e) {
-		cUtils::PrintErr("Error parsing received gateway payload: %s", e.what());
+		cUtils::PrintErr("Error parsing received gateway payload: {}", e.what());
 	}
 	catch (...) {
-		cUtils::PrintErr("Error parsing received gateway payload: %s", "An exception was thrown");
+		cUtils::PrintErr("Error parsing received gateway payload: An exception was thrown");
 	}
 	/* Reset json parser for next call */
 	m_parser.reset(&m_mr);
@@ -173,7 +173,7 @@ cGateway::implementation::run_session(const std::string& url) {
 		beast::get_lowest_layer(*m_ws).expires_after(std::chrono::seconds(30));
 		auto ep = beast::get_lowest_layer(*m_ws).connect(m_ws_resolver.resolve(host, "https"));
 		/* Append resolved port number to host name */
-		host = cUtils::Format("%s:%d", host, ep.port());
+		host = fmt::format("{}:{}", host, ep.port());
 		/* Set a timeout and perform an SSL handshake */
 		beast::get_lowest_layer(*m_ws).expires_after(std::chrono::seconds(30));
 		m_ws->next_layer().handshake(asio::ssl::stream_base::client);
@@ -186,7 +186,7 @@ cGateway::implementation::run_session(const std::string& url) {
 			r.set(beast::http::field::user_agent, "GreekBot");
 		}));
 		/* Perform websocket handshake */
-		m_ws->handshake(host, cUtils::Format("/?v=%d&encoding=json&compress=zlib-stream", DISCORD_API_VERSION));
+		m_ws->handshake(host, fmt::format("/?v={}&encoding=json&compress=zlib-stream", DISCORD_API_VERSION));
 		/* Start the asynchronous read operation */
 		m_ws->async_read(m_buffer, [this](beast::error_code ec, size_t size) { on_read(ec, size); });
 		m_ws_ioc.run();
@@ -216,7 +216,7 @@ cGateway::implementation::run_session(const std::string& url) {
 		case 4012:
 		case 4013:
 		case 4014:
-			throw xGatewayError(cUtils::Format("Fatal gateway error: %s", close_msg), close_code);
+			throw xGatewayError(fmt::format("Fatal gateway error: {}", close_msg), close_code);
 	}
 	/* Reset the zlib inflate stream */
 	if (Z_OK != inflateReset(&m_inflate_stream))
@@ -252,14 +252,14 @@ cGateway::implementation::Run() {
 		}
 		catch (const xGatewayError& e) {
 			/* Exit after a fatal gateway error that doesn't permit reconnecting */
-			cUtils::PrintErr(e.what());
+			cUtils::PrintErr("{}", e.what());
 			cUtils::PrintLog("Exiting...");
 			break;
 		}
 		catch (...) {
 			/* If anything happens, wait 5 seconds and try again */
 			for (int tick = 5; tick > 0; --tick) {
-				cUtils::PrintErr<'\r'>("Connection error. Retrying in %ds", tick);
+				cUtils::PrintErr<'\r'>("Connection error. Retrying in {}s", tick);
 				std::this_thread::sleep_for(1s);
 			}
 			cUtils::PrintErr("Connection error. Retrying...   ");

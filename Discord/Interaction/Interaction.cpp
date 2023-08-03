@@ -61,7 +61,7 @@ cApplicationCommandOption::GetMember() {
 		return std::get<1>(std::get<2>(m_value)).get();
 	}
 	catch (const std::bad_variant_access&) {
-		throw xInvalidAttributeError(cUtils::Format("Application command option is not of type %s", a<APP_CMD_OPT_USER>::name));
+		throw xInvalidAttributeError(fmt::format("Application command option is not of type {}", a<APP_CMD_OPT_USER>::name));
 	}
 }
 
@@ -71,7 +71,7 @@ cApplicationCommandOption::MoveMember() {
 		return std::move(std::get<1>(std::get<2>(m_value)));
 	}
 	catch (const std::bad_variant_access&) {
-		throw xInvalidAttributeError(cUtils::Format("Application command option is not of type %s", a<APP_CMD_OPT_USER>::name));
+		throw xInvalidAttributeError(fmt::format("Application command option is not of type {}", a<APP_CMD_OPT_USER>::name));
 	}
 }
 

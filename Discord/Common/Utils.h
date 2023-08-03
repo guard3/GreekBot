@@ -26,25 +26,6 @@ private:
 	template<typename T> struct d;
 	template<typename T> using distribution = typename d<T>::type;
 	template<typename T> using range        = typename distribution<T>::param_type;
-	/* Non templated static functions */
-	static void print(FILE*, const char*, char, const char*, ...);
-	static std::string format(const char*, ...);
-
-	template<typename... Args>
-	static void print_fmt(FILE* file, const char* prefix, int nl, fmt::format_string<Args...> format, Args&&... args) {
-		//fputs(prefix, file);
-		//fmt::print(format, std::forward<Args>(args)...);
-		//fputc(nl, file);
-		fmt::print("{}{}{:c}", prefix, fmt::format(format, std::forward<Args>(args)...), nl);
-	}
-
-	template<typename T>
-	static auto resolve_va_arg(T&& arg) {
-		if constexpr (requires { {arg.c_str()} -> std::convertible_to<const char*>; })
-			return static_cast<const char*>(arg.c_str());
-		else
-			return arg;
-	}
 
 	static std::vector<uint8_t> base64_decode(const char*, size_t);
 	static std::string percent_encode(const char*, size_t);
@@ -66,31 +47,17 @@ public:
 	}
 	/* Logger functions */
 	template<char nl = '\n', typename... Args>
-	[[deprecated("Use cUtils::PrintErrFmt() instead")]]
-	static void PrintErr(Args&&... args) { print(stderr, "[ERR] ", nl, resolve_va_arg(std::forward<Args>(args))...); }
-	template<char nl = '\n', typename... Args>
-	[[deprecated("Use cUtils::PrintLogFmt() instead")]]
-	static void PrintLog(Args&&... args) { print(stdout, "[LOG] ", nl, resolve_va_arg(std::forward<Args>(args))...); }
-	template<char nl = '\n', typename... Args>
-	[[deprecated("Use cUtils::PrintMsgFmt() instead")]]
-	static void PrintMsg(Args&&... args) { print(stdout, "[MSG] ", nl, resolve_va_arg(std::forward<Args>(args))...); }
-	/* Logger functions with {fmt} */
-	template<char nl = '\n', typename... Args>
-	static void PrintErrFmt(fmt::format_string<Args...> format, Args&&... args) {
+	static void PrintErr(fmt::format_string<Args...> format, Args&&... args) {
 		fmt::print(stderr, "[ERR] {}{}", fmt::format(format, std::forward<Args>(args)...), nl);
 	}
 	template<char nl = '\n', typename... Args>
-	static void PrintLogFmt(fmt::format_string<Args...> format, Args&&... args) {
+	static void PrintLog(fmt::format_string<Args...> format, Args&&... args) {
 		fmt::print(stdout, "[LOG] {}{}", fmt::format(format, std::forward<Args>(args)...), nl);
 	}
 	template<char nl = '\n', typename... Args>
-	static void PrintMsgFmt(fmt::format_string<Args...> format, Args&&... args) {
+	static void PrintMsg(fmt::format_string<Args...> format, Args&&... args) {
 		fmt::print(stdout, "[MSG] {}{}", fmt::format(format, std::forward<Args>(args)...), nl);
 	}
-	/* C style formatting for std::string */
-	template<typename... Args>
-	[[deprecated("Use fmt::format() instead")]]
-	static std::string Format(Args&&... args) { return format(resolve_va_arg(std::forward<Args>(args))...); }
 	/* Converting a string to int */
 	template<std::integral Result = int, typename String>
 	static Result ParseInt(String &&str) {

@@ -1,4 +1,5 @@
 #include "GreekBot.h"
+#include <fmt/format.h>
 
 cTask<>
 cGreekBot::OnInteraction_ban(const cInteraction& i) {
@@ -57,7 +58,7 @@ cGreekBot::OnInteraction_ban(const cInteraction& i) {
 		/* Create the embed of the confirmation message */
 		cEmbed e {
 			kw::author={
-				user->GetUsername() + " was banned",
+				fmt::format("{} was banned", user->GetUsername()),
 				kw::icon_url=user->GetAvatarUrl()
 			},
 			kw::fields = {{"Reason", reason}}
@@ -66,7 +67,7 @@ cGreekBot::OnInteraction_ban(const cInteraction& i) {
 		try {
 			co_await CreateDMMessage(
 				user->GetId(),
-				kw::content=cUtils::Format("You've been banned from **%s** with reason:\n```%s```", m_guilds.at(*guild_id)->GetName(), msg)
+				kw::content=fmt::format("You've been banned from **{}** with reason:\n```{}```", m_guilds.at(*guild_id)->GetName(), msg)
 			);
 			if (bTurk)
 				e.AddField("Goodbye message", msg);
@@ -82,11 +83,11 @@ cGreekBot::OnInteraction_ban(const cInteraction& i) {
 			kw::components = {
 				cActionRow{
 					cButton<BUTTON_STYLE_DANGER>{
-						cUtils::Format("BAN#%s", user->GetId().ToString()),
+						fmt::format("BAN#{}", user->GetId()),
 						kw::label = "Revoke ban"
 					},
 					cButton<BUTTON_STYLE_SECONDARY>{
-						cUtils::Format("DLT#%s", member->GetUser()->GetId().ToString()),
+						fmt::format("DLT#{}", member->GetUser()->GetId()),
 						kw::label = "Dismiss"
 					}
 				}

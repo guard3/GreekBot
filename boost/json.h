@@ -1,6 +1,5 @@
-#pragma once
-#ifndef _GREEKBOT_JSON_H_
-#define _GREEKBOT_JSON_H_
+#ifndef GREEKBOT_JSON_H
+#define GREEKBOT_JSON_H
 #include <boost/json.hpp>
 namespace json = boost::json;
-#endif /* _GREEKBOT_JSON_H_*/
+#endif /* GREEKBOT_JSON_H*/

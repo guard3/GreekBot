@@ -101,7 +101,7 @@ LABEL_RESOLVED_DBNAME:
 		}
 		sqlite3_finalize(stmt);
 	}
-	cUtils::PrintErr("Fatal Database Error: %s", sqlite3_errmsg(db));
+	cUtils::PrintErr("Fatal Database Error: {}", sqlite3_errmsg(db));
 	sqlite3_close(db);
 	exit(EXIT_FAILURE);
 }

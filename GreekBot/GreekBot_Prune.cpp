@@ -1,4 +1,6 @@
 #include "GreekBot.h"
+#include <fmt/format.h>
+#include <fmt/chrono.h>
 
 cTask<>
 cGreekBot::OnInteraction_prune(const cInteraction& i) {
@@ -8,7 +10,6 @@ cGreekBot::OnInteraction_prune(const cInteraction& i) {
 		/* Make sure that we're on a guild and that we have the necessary permissions */
 		chSnowflake guild_id = i.GetGuildId();
 		chMember member = i.GetMember();
-		if (!guild_id || !member) throw 0;
 		if (!(member->GetPermissions() & PERM_KICK_MEMBERS))
 			co_return co_await EditInteractionResponse(i, kw::content="You can't do that. You're missing the `KICK_MEMBERS` permission.");
 		/* How many days of inactivity to consider */
@@ -18,10 +19,10 @@ cGreekBot::OnInteraction_prune(const cInteraction& i) {
 		std::string str;
 		try {
 			int pruned = co_await BeginGuildPrune(*guild_id, days, "Failed to get a rank");
-			str = cUtils::Format("Pruned **%d** member%s for **%d** day%s of inactivity.", pruned, pruned == 1 ? "" : "s", days, days == 1 ? "" : "s");
+			str = fmt::format("Pruned **{}** member{} for **{}** day{} of inactivity.", pruned, pruned == 1 ? "" : "s", days, days == 1 ? "" : "s");
 		}
 		catch (const xRateLimitError& e) {
-			str = cUtils::Format("Rate limited. Try again after **%dms**.", (int)e.retry_after().count());
+			str = fmt::format("Rate limited. Try again after **{}**.", e.retry_after());
 		}
 		/* Send confirmation message */
 		co_return co_await EditInteractionResponse(
@@ -30,7 +31,7 @@ cGreekBot::OnInteraction_prune(const cInteraction& i) {
 			kw::components = {
 				cActionRow{
 					cButton<BUTTON_STYLE_SECONDARY>{
-						cUtils::Format("DLT#%s", member->GetUser()->GetId().ToString()),
+						fmt::format("DLT#{}", member->GetUser()->GetId()),
 						kw::label = "Dismiss"
 					}
 				}
@@ -70,12 +71,14 @@ cGreekBot::OnInteraction_prune_lmg(const cInteraction& i) {
 				try {
 					co_await CreateDMMessage(
 						user->GetId(),
-						kw::content="You have been kicked from **" + guild_name + "** because **" + std::to_string(chrono::duration_cast<chrono::days>(member_for).count()) + "** days have passed since you joined and you didn't get a proficiency rank.\n"
-						            "\n"
-						            "But don't fret! You are free to rejoin, just make sure to:\n"
-						            "- Verify your phone number\n"
-						            "- Get a proficiency rank as mentioned in `#welcoming`\n"
-						            "https://discord.gg/greek"
+						kw::content=fmt::format(
+							"You have been kicked from **{}** because **{}** days have passed since you joined and you didn't get a proficiency rank.\n"
+							"\n"
+							"But don't fret! You are free to rejoin, just make sure to:\n"
+							"- Verify your phone number\n"
+							"- Get a proficiency rank as mentioned in `#welcoming`\n"
+							"https://discord.gg/greek",
+							guild_name, chrono::duration_cast<chrono::days>(member_for).count())
 					);
 				}
 				catch (...) {}
@@ -91,11 +94,11 @@ cGreekBot::OnInteraction_prune_lmg(const cInteraction& i) {
 			}
 		}
 		co_return co_await EditInteractionResponse(i,
-			kw::content=cUtils::Format("Pruned **%d** member%s", total, total == 1 ? "" : "s"),
+			kw::content=fmt::format("Pruned **{}** member{}", total, total == 1 ? "" : "s"),
 			kw::components={
 				cActionRow {
 					cButton<BUTTON_STYLE_SECONDARY> {
-						cUtils::Format("DLT#%s", invoking_member->GetUser()->GetId().ToString()),
+						fmt::format("DLT#{}", invoking_member->GetUser()->GetId()),
 						kw::label="Dismiss"
 					}
 				}
@@ -103,7 +106,7 @@ cGreekBot::OnInteraction_prune_lmg(const cInteraction& i) {
 		);
 	}
 	catch (const std::exception& e) {
-		cUtils::PrintErr(e.what());
+		cUtils::PrintErr("{}", e.what());
 	}
 	catch (...) {}
 	co_await EditInteractionResponse(i, kw::content="An unexpected error has occurred, try again later.");

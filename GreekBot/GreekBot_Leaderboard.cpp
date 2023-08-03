@@ -1,6 +1,5 @@
 #include "GreekBot.h"
 #include "Database.h"
-#include <fmt/core.h>
 
 /* Helper functions that create embeds */
 static cEmbed make_no_xp_embed(const cUser& user, cColor c) {
@@ -19,7 +18,7 @@ static cEmbed make_no_member_embed(const cUser& user, bool bAnymore) {
 			user.GetUsername(),
 			kw::icon_url=user.GetAvatarUrl()
 		},
-		kw::description=cUtils::Format("User is not a member of **Learning Greek**%s", bAnymore ? " anymore." : "."),
+		kw::description=fmt::format("User is not a member of **Learning Greek**{}.", bAnymore ? " anymore" : ""),
 		kw::color=0x0096FF
 	};
 }
@@ -48,7 +47,7 @@ static cEmbed make_embed(const cUser& user, const cMember& member, cColor c, int
 		kw::title=fmt::format("{} Rank **#{}**\tLevel **{}**", medal, rank, level),
 		kw::color=c,
 		kw::fields={
-			{ "XP Progress", cUtils::Format("%" PRIi64 "/%" PRIi64, xp - base_xp, next_xp - base_xp), true},
+			{ "XP Progress", fmt::format("{}/{}", xp - base_xp, next_xp - base_xp), true},
 			{ "Total XP", std::to_string(xp), true },
 			{ "Messages", std::to_string(num_msg), true }
 		}
@@ -88,7 +87,7 @@ cGreekBot::OnInteraction_rank(const cInteraction& i) {
 		cColor color = get_lmg_member_color(*member);
 		if (db_result.empty()) {
 			/* User not registered in the leaderboard */
-			co_await EditInteractionResponse(i, kw::embeds={make_no_xp_embed(*user, color)});//MESSAGE_FLAG_NONE, {.embeds {make_no_xp_embed(*user, color)}});
+			co_await EditInteractionResponse(i, kw::embeds={make_no_xp_embed(*user, color)});
 		} else {
 			/* Respond to interaction with a proper embed */
 			auto &res = db_result[0];
@@ -106,7 +105,7 @@ cGreekBot::OnInteraction_rank(const cInteraction& i) {
 		}
 	}
 	catch (const std::exception& e) {
-		cUtils::PrintErr("OnInteraction_rank: %s", e.what());
+		cUtils::PrintErr("OnInteraction_rank: {}", e.what());
 	}
 }
 
@@ -155,6 +154,6 @@ cGreekBot::OnInteraction_top(const cInteraction& i) {
 		);
 	}
 	catch (const std::exception& e) {
-		cUtils::PrintErr("OnInteraction_top: %s", e.what());
+		cUtils::PrintErr("OnInteraction_top: {}", e.what());
 	}
 }

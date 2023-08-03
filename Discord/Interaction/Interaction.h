@@ -91,7 +91,7 @@ public:
 				return std::get<tMoveType<t>>(m_value);
 		}
 		catch (const std::bad_variant_access&) {
-			throw xInvalidAttributeError(cUtils::Format("Application command option is not of type %s", a<t>::name));
+			throw xInvalidAttributeError(fmt::format("Application command option is not of type {}", a<t>::name));
 		}
 	}
 	template<eApplicationCommandOptionType t> requires (t != APP_CMD_OPT_SUB_COMMAND && t != APP_CMD_OPT_SUB_COMMAND_GROUP)

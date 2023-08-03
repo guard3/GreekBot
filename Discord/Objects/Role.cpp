@@ -45,7 +45,7 @@ cRole::cRole(const json::object &o) :
 {
 	if (auto p = o.if_contains("icon")) {
 		if (auto s = p->if_string()) {
-			icon = cUtils::Format("%srole-icons/%s/%s.%s?size=4096", DISCORD_IMAGE_BASE_URL, id.ToString(), s->c_str(), s->starts_with("a_") ? "gif" : "png");
+			icon = fmt::format("{}role-icons/{}/{}.{}?size=4096", DISCORD_IMAGE_BASE_URL, id, s->c_str(), s->starts_with("a_") ? "gif" : "png");
 		}
 	}
 	if (auto p = o.if_contains("unicode_emoji")) {

@@ -71,5 +71,5 @@ cGreekBot::OnInteraction_role(const cInteraction& interaction) try {
 	);
 }
 catch (const std::exception& e) {
-	cUtils::PrintErr("OnInteraction_role: %s", e.what());
+	cUtils::PrintErr("OnInteraction_role: {}", e.what());
 }
