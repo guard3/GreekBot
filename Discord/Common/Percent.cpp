@@ -1,7 +1,7 @@
 #include "Utils.h"
 
 std::string
-cUtils::percent_encode(const char* str, size_t len) {
+cUtils::PercentEncode(std::string_view sv) {
 	/* A lookup table to check if a character is unreserved or not */
 	static bool unreserved_char[256] {
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -22,6 +22,8 @@ cUtils::percent_encode(const char* str, size_t len) {
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 	};
 	/* Reserve at most 3 times as many characters for the output string */
+	const char* str = sv.data();
+	size_t len = sv.size();
 	std::string result;
 	result.reserve(len * 3);
 	/* Parse the input */

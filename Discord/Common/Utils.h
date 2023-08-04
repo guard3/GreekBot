@@ -2,19 +2,15 @@
 #define GREEKBOT_UTILS_H
 #include <random>
 #include <string>
+#include <string_view>
+#include <type_traits>
 #include <concepts>
 #include <stdexcept>
-#include <cstdlib>
-#include <cstring>
-#include <cstdio>
+#include <charconv>
 #include <chrono>
+#include <vector>
+#include <cstdint>
 #include <fmt/core.h>
-
-class xNumberFormatError : public std::invalid_argument {
-public:
-	explicit xNumberFormatError(const char* str) : std::invalid_argument(str) {}
-	explicit xNumberFormatError(const std::string& str) : xNumberFormatError(str.c_str()) {}
-};
 
 /* A helper class with various useful functions */
 class cUtils final {
@@ -26,9 +22,6 @@ private:
 	template<typename T> struct d;
 	template<typename T> using distribution = typename d<T>::type;
 	template<typename T> using range        = typename distribution<T>::param_type;
-
-	static std::vector<uint8_t> base64_decode(const char*, size_t);
-	static std::string percent_encode(const char*, size_t);
 	/* Private constructor */
 	cUtils() = default;
 public:
@@ -59,56 +52,23 @@ public:
 		fmt::print(stdout, "[MSG] {}{}", fmt::format(format, std::forward<Args>(args)...), nl);
 	}
 	/* Converting a string to int */
-	template<std::integral Result = int, typename String>
-	static Result ParseInt(String &&str) {
-		Result result;
-		/* Resolve string argument */
-		const char* s;
-		if constexpr (requires { { str.c_str() } -> std::convertible_to<const char*>; })
-			s = static_cast<const char*>(str.c_str());
-		else
-			s = str;
-		/* Clear errno */
-		errno = 0;
-		/* Parse string */
-		char* end;
-		if constexpr (std::same_as<Result, long long>)
-			result = strtoll(s, &end, 10);
-		else if constexpr (std::same_as<Result, unsigned long long>)
-			result = strtoull(s, &end, 10);
-		else if constexpr (std::unsigned_integral<Result>) {
-			auto r = strtoul(s, &end, 10);
-			result = static_cast<Result>(r);
-			if (result != r) goto LABEL_THROW_RANGE;
-		}
-		else {
-			auto r = strtol(s, &end, 10);
-			result = static_cast<Result>(r);
-			if (result != r) goto LABEL_THROW_RANGE;
-		}
-		/* Check for range errors */
-		if (errno == ERANGE) {
-			LABEL_THROW_RANGE:
-			throw xNumberFormatError("Parsed number is out of range");
-		}
-		/* Check for success */
-		if (*end)
-			throw xNumberFormatError("String can't be parsed into an integer");
-		return result;
+	template<std::integral T = int>
+	static T ParseInt(std::string_view str) {
+		T value;
+		auto result = std::from_chars(str.begin(), str.end(), value);
+		if (result.ec == std::errc{} && result.ptr == str.end())
+			return value;
+		if (result.ec == std::errc::result_out_of_range)
+			throw std::out_of_range("Parsed integer is out of range");
+		throw std::invalid_argument("Input string can't be parsed into an integer");
 	}
 	/* Base64 encode/decode */
 	static std::string Base64Encode(const void* data, size_t size);
-	static std::vector<uint8_t> Base64Decode(const std::string& str) {
-		return base64_decode(str.data(), str.length());
-	}
-	static std::vector<uint8_t> Base64Decode(const char* str) {
-		return base64_decode(str, strlen(str));
-	}
+	static std::vector<uint8_t> Base64Decode(std::string_view);
 	/* Percent encoding */
-	static std::string PercentEncode(const char*        str) { return percent_encode(str,         strlen(str));  }
-	static std::string PercentEncode(const std::string& str) { return percent_encode(str.c_str(), str.length()); }
+	static std::string PercentEncode(std::string_view);
 	/* Parse ISO8601 timestamp */
-	static std::chrono::sys_seconds ParseTimestamp(const std::string&);
+	static std::chrono::sys_seconds ParseTimestamp(std::string_view);
 	/* Resolving the OS we're running on */
 	static const char* GetOS();
 };

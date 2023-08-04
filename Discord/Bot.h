@@ -68,7 +68,7 @@ public:
 	}
 
 	cTask<> RemoveGuildMember(const cSnowflake& guild_id, const cSnowflake& user_id, const std::string& reason = {});
-	cTask<> CreateGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, chrono::seconds delete_message_seconds = 0s, const std::string& reason = {});
+	cTask<> CreateGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, std::chrono::seconds delete_message_seconds = std::chrono::seconds(0), const std::string& reason = {});
 	cTask<> RemoveGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, const std::string& reason = {});
 };
 #endif // GREEKBOT_BOT_H

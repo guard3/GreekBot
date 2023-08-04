@@ -13,9 +13,6 @@
 #include "Kwarg.h"
 #include "Ptr.h"
 
-namespace chrono = std::chrono;
-using namespace std::literals::chrono_literals;
-
 #define STR_(x) #x
 #define STR(x) STR_(x)
 
@@ -24,8 +21,6 @@ using namespace std::literals::chrono_literals;
 #define DISCORD_API_ENDPOINT    "/api/v" STR(DISCORD_API_VERSION)
 
 #define DISCORD_IMAGE_BASE_URL "https://cdn.discordapp.com/"
-
-using namespace std::literals;
 
 /* Boost Json forward declarations */
 namespace boost::json {
@@ -96,35 +91,35 @@ public:
 /* ========== Discord time point ==================================================================================== */
 class cDiscordClock;
 template<typename Duration>
-using tDiscordTime = chrono::time_point<cDiscordClock, Duration>;
+using tDiscordTime = std::chrono::time_point<cDiscordClock, Duration>;
 /* ========== Custom clock starting from Discord Epoch (1-1-2015) =================================================== */
 class cDiscordClock final {
 public:
 	/* Necessary attributes to meet requirements for 'Clock' */
-	typedef chrono::milliseconds duration;
+	typedef std::chrono::milliseconds duration;
 	typedef duration::rep rep;
 	typedef duration::period period;
-	typedef chrono::time_point<cDiscordClock> time_point;
+	typedef std::chrono::time_point<cDiscordClock> time_point;
 	static inline constexpr bool is_steady = false;
 	/* Converting to and from std::chrono::system_clock time_points similar to std::chrono::utc_clock */
 	template<typename Duration>
-	static time_point from_sys(const chrono::sys_time<Duration>& p) noexcept {
-		using namespace chrono;
+	static time_point from_sys(const std::chrono::sys_time<Duration>& p) noexcept {
+		using namespace std::chrono;
 		return time_point(duration_cast<milliseconds>(p.time_since_epoch()) - 1420070400000ms);
 	}
 	template<typename Duration>
 	static auto to_sys(const tDiscordTime<Duration>& p) noexcept {
-		using namespace chrono;
+		using namespace std::chrono;
 		typedef std::common_type_t<Duration, system_clock::duration> tCommon;
 		return sys_time<tCommon>(duration_cast<tCommon>(p.time_since_epoch() + 1420070400000ms));
 	}
 	/* Get current time starting from Discord Epoch */
-	static time_point now() noexcept { return from_sys(chrono::system_clock::now()); }
+	static time_point now() noexcept { return from_sys(std::chrono::system_clock::now()); }
 };
 /* ========== Discord time point family ============================================================================= */
-using tDiscordDays         = tDiscordTime<chrono::days>;
-using tDiscordSeconds      = tDiscordTime<chrono::seconds>;
-using tDiscordMilliseconds = tDiscordTime<chrono::milliseconds>;
+using tDiscordDays         = tDiscordTime<std::chrono::days>;
+using tDiscordSeconds      = tDiscordTime<std::chrono::seconds>;
+using tDiscordMilliseconds = tDiscordTime<std::chrono::milliseconds>;
 /* ========== Discord snowflake ===================================================================================== */
 class cSnowflake final {
 private:
@@ -146,7 +141,7 @@ public:
 	uint64_t       ToInt() const noexcept { return m_int; }
 	
 	/* Snowflake components - https://discord.com/developers/docs/reference#snowflakes */
-	tDiscordMilliseconds GetTimestamp() const noexcept { return tDiscordMilliseconds(chrono::milliseconds(m_int >> 22)); }
+	tDiscordMilliseconds GetTimestamp() const noexcept { return tDiscordMilliseconds(std::chrono::milliseconds(m_int >> 22)); }
 	int           GetInternalWorkerID() const noexcept { return (int)((m_int >> 17) & 0x01F); }
 	int          GetInternalProcessID() const noexcept { return (int)((m_int >> 12) & 0x01F); }
 	int                  GetIncrement() const noexcept { return (int) (m_int        & 0xFFF); }

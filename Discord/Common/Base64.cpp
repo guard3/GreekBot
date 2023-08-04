@@ -42,7 +42,7 @@ cUtils::Base64Encode(const void* data, size_t num) {
 }
 
 std::vector<uint8_t>
-cUtils::base64_decode(const char* s, size_t len) {
+cUtils::Base64Decode(std::string_view str) {
 	/* Lookup table */
 	static const int8_t b64values[256] {
 		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
@@ -62,6 +62,8 @@ cUtils::base64_decode(const char* s, size_t len) {
 		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
 	};
+	const char* s = str.data();
+	size_t len = str.size();
 	/* If string is empty, just return */
 	if (len == 0)
 		return {};

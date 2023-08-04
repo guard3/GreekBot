@@ -11,7 +11,7 @@ private:
 	bool m_deaf, m_mute;
 	// ...
 	ePermission m_permissions;
-	chrono::sys_seconds m_joined_at, m_premium_since;
+	std::chrono::sys_seconds m_joined_at, m_premium_since;
 	std::vector<cSnowflake> m_roles;
 
 public:
@@ -26,8 +26,8 @@ public:
 	const std::vector<cSnowflake>& GetRoles() const noexcept { return const_cast<cMember*>(this)->GetRoles(); }
 	ePermission        GetPermissions()  const noexcept { return m_permissions;   }
 
-	chrono::sys_seconds JoinedAt()     const noexcept { return m_joined_at;     }
-	chrono::sys_seconds PremiumSince() const noexcept { return m_premium_since; }
+	std::chrono::sys_seconds JoinedAt()     const noexcept { return m_joined_at;     }
+	std::chrono::sys_seconds PremiumSince() const noexcept { return m_premium_since; }
 
 	bool IsDeaf() const noexcept { return m_deaf; }
 	bool IsMute() const noexcept { return m_mute; }

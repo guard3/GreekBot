@@ -241,6 +241,7 @@ cGateway::implementation::ResumeOnEventThread() {
 /* ================================================================================================================== */
 void
 cGateway::implementation::Run() {
+	using namespace std::chrono_literals;
 	/* Start the gateway loop */
 	for (;;) {
 		try {

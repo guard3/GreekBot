@@ -70,7 +70,7 @@ public:
 	cTask<json::value> DiscordPostNoRetry(const std::string& path, const json::object& obj, const tHttpFields& fields = m_empty);
 
 	cTask<> ResumeOnEventThread();
-	cTask<> WaitOnEventThread(chrono::milliseconds);
+	cTask<> WaitOnEventThread(std::chrono::milliseconds);
 	cAsyncGenerator<cMember> GetGuildMembers(const cSnowflake& guild_id, iKwArg auto&... kwargs) {
 		cKwPack pack{ kwargs... };
 		return get_guild_members(guild_id, KwGet<KW_QUERY>(pack), KwGet<KW_USER_IDS>(pack));

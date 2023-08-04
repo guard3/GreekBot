@@ -1,11 +1,9 @@
-#pragma once
 #ifndef GREEKBOT_EXCEPTION_H
 #define GREEKBOT_EXCEPTION_H
 #include <stdexcept>
 #include <string>
 #include <chrono>
 
-namespace chrono = std::chrono;
 namespace boost::json {
 	class object;
 	class value;
@@ -36,14 +34,14 @@ public:
 
 class xRateLimitError : public std::runtime_error {
 private:
-	chrono::milliseconds m_retry_after;
-	bool                 m_global;
+	std::chrono::milliseconds m_retry_after;
+	bool                      m_global;
 
 public:
 	explicit xRateLimitError(const json::object&);
 	explicit xRateLimitError(const json::value&);
 
-	auto retry_after() const { return m_retry_after; }
-	bool      global() const { return m_global;      }
+	auto retry_after() const noexcept { return m_retry_after; }
+	bool      global() const noexcept { return m_global;      }
 };
 #endif //GREEKBOT_EXCEPTION_H

@@ -9,6 +9,8 @@
 #include "GuildMembersResult.h"
 #include "Application.h"
 
+namespace chrono = std::chrono;
+
 #define INFLATE_BUFFER_SIZE 4096
 
 class cEvent;

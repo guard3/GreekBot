@@ -3,6 +3,8 @@
 
 cTask<>
 cGreekBot::OnInteraction_ban(const cInteraction& i) {
+	using namespace std::chrono;
+	using namespace std::chrono_literals;
 	/* Acknowledge the interaction first */
 	co_await RespondToInteraction(i);
 	try {
@@ -18,7 +20,7 @@ cGreekBot::OnInteraction_ban(const cInteraction& i) {
 		bool  bTurk = subcommand_option.GetName() == "turk";
 		/* Collect options */
 		chUser user;
-		chrono::seconds delete_messages = chrono::days(7);
+		seconds delete_messages = days(7);
 		const char *reason = "Unspecified";
 		for (auto& opt: options) {
 			if (opt.GetName() == "user")
@@ -32,7 +34,7 @@ cGreekBot::OnInteraction_ban(const cInteraction& i) {
 						delete_messages = 1h;
 						break;
 					case 1:
-						delete_messages = chrono::days(1);
+						delete_messages = days(1);
 						break;
 					default:
 						break;

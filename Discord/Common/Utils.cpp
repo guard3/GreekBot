@@ -7,8 +7,10 @@ std::mt19937    cUtils::ms_gen(g_rd());
 std::mt19937_64 cUtils::ms_gen64(g_rd());
 
 std::chrono::sys_seconds
-cUtils::ParseTimestamp(const std::string& t) {
-	return std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::from_time_t(posix_time::to_time_t(posix_time::from_iso_extended_string(t.substr(0, t.find_last_of("+-Z"))))));
+cUtils::ParseTimestamp(std::string_view t) {
+	// Dirty hack since, for some reason, DateTime doesn't recognize timezones...
+	std::string_view sub = t.substr(0, t.find_last_of("+-Z"));
+	return std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::from_time_t(posix_time::to_time_t(posix_time::from_iso_extended_string(std::string(sub.begin(), sub.end())))));
 }
 
 const char*

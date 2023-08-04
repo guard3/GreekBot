@@ -152,7 +152,7 @@ cBot::RemoveGuildMember(const cSnowflake& guild_id, const cSnowflake& user_id, c
 }
 
 cTask<>
-cBot::CreateGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, chrono::seconds delete_message_seconds, const std::string& reason) {
+cBot::CreateGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, std::chrono::seconds delete_message_seconds, const std::string& reason) {
 	tHttpFields fields;
 	if (!reason.empty())
 		fields.emplace_back("X-Audit-Log-Reason", cUtils::PercentEncode(reason));

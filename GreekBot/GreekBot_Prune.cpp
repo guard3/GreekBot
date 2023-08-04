@@ -44,13 +44,15 @@ cGreekBot::OnInteraction_prune(const cInteraction& i) {
 
 cTask<>
 cGreekBot::OnInteraction_prune_lmg(const cInteraction& i) {
+	using namespace std::chrono;
+	using namespace std::chrono_literals;
 	/* Check that the invoking member has the appropriate permissions for extra security measure */
 	chMember invoking_member = i.GetMember();
 	if (!(invoking_member->GetPermissions() & PERM_KICK_MEMBERS))
 		co_return co_await RespondToInteraction(i, kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content="You can't do that. You're missing the `KICK_MEMBERS` permission.");
 	/* Otherwise, carry on normally */
 	co_await RespondToInteraction(i);
-	auto before = chrono::system_clock::now();
+	auto before = system_clock::now();
 	try {
 		/* Collect guild information */
 		const cGuild& guild = *m_guilds[*i.GetGuildId()];
@@ -61,7 +63,7 @@ cGreekBot::OnInteraction_prune_lmg(const cInteraction& i) {
 		for (auto gen = GetGuildMembers(guild_id); co_await gen.HasValue();) {
 			cMember member = co_await gen();
 			/* Interaction tokens are valid for 15 minutes, so, just to be safe, abort after 14 minutes have passed*/
-			auto now = chrono::system_clock::now();
+			auto now = system_clock::now();
 			if (now - before > 14min)
 				break;
 			/* Select those that have joined for more than 2 days and have no roles */
@@ -78,7 +80,7 @@ cGreekBot::OnInteraction_prune_lmg(const cInteraction& i) {
 							"- Verify your phone number\n"
 							"- Get a proficiency rank as mentioned in `#welcoming`\n"
 							"https://discord.gg/greek",
-							guild_name, chrono::duration_cast<chrono::days>(member_for).count())
+							guild_name, duration_cast<days>(member_for).count())
 					);
 				}
 				catch (...) {}
