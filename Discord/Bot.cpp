@@ -49,7 +49,7 @@ cBot::UpdateGuildMemberRoles(const cSnowflake& guild_id, const cSnowflake& user_
 		json::array a;
 		a.reserve(role_ids.size());
 		for (chSnowflake s: role_ids)
-			a.push_back(s->ToString());
+			a.emplace_back(s->ToString());
 		obj["roles"] = std::move(a);
 	}
 	/* Resolve api path */

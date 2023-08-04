@@ -31,11 +31,6 @@ namespace boost::json {
 }
 namespace json = boost::json;
 
-/* Declare itoa variants if they're not provided by the standard library */
-char* utoa (unsigned, char*, int);
-char* ultoa (unsigned long, char*, int);
-char* ulltoa (unsigned long long, char*, int);
-
 /* ========== Handle types ========== */
 template<typename T> // handle
 using   hHandle = cPtr<T>;
@@ -123,22 +118,26 @@ using tDiscordMilliseconds = tDiscordTime<std::chrono::milliseconds>;
 /* ========== Discord snowflake ===================================================================================== */
 class cSnowflake final {
 private:
-	char     m_str[24]; // The snowflake as a string
+	char     m_str[20]; // The snowflake as a string
+	uint32_t m_len;     // The length of the string
 	uint64_t m_int;     // The snowflake as a 64-bit integer
 	
 public:
-	cSnowflake() noexcept : m_int(0), m_str("0") {}
-	cSnowflake(std::integral auto i) noexcept : m_int(static_cast<uint64_t>(i)) { ulltoa(static_cast<uint64_t>(i), m_str, 10); }
-	cSnowflake(const char* s) : m_int(cUtils::ParseInt<uint64_t>(s)) { strcpy(m_str, s); }
-	cSnowflake(const std::string& s) : cSnowflake(s.c_str()) {}
-	cSnowflake(std::nullptr_t) = delete;
+	cSnowflake() noexcept : m_int(0), m_len(1), m_str("0") {}
+	cSnowflake(uint64_t i) noexcept : m_int(i) {
+		auto result = std::to_chars(std::begin(m_str), std::end(m_str), i);
+		m_len = result.ptr - m_str;
+	}
+	cSnowflake(std::string_view s) : m_int(cUtils::ParseInt<uint64_t>(s)), m_len(s.copy(m_str, 20)) {}
+	template<typename T> requires std::constructible_from<std::string_view, T&&>
+	cSnowflake(T&& t) : cSnowflake(std::string_view{ std::forward<T>(t) }) {}
 
 	auto operator<=>(const cSnowflake& o) const noexcept { return m_int <=> o.m_int; }
 	bool operator== (const cSnowflake& o) const noexcept { return m_int ==  o.m_int; }
 
 	/* Attributes */
-	const char* ToString() const noexcept { return m_str; }
-	uint64_t       ToInt() const noexcept { return m_int; }
+	std::string_view ToString() const noexcept { return { m_str, m_len }; }
+	uint64_t         ToInt()    const noexcept { return m_int; }
 	
 	/* Snowflake components - https://discord.com/developers/docs/reference#snowflakes */
 	tDiscordMilliseconds GetTimestamp() const noexcept { return tDiscordMilliseconds(std::chrono::milliseconds(m_int >> 22)); }
