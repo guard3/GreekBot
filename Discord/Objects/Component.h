@@ -1,6 +1,7 @@
 #ifndef GREEKBOT_COMPONENT_H
 #define GREEKBOT_COMPONENT_H
 #include "Emoji.h"
+#include <vector>
 #include <variant>
 
 enum eComponentType {

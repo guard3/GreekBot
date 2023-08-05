@@ -1,6 +1,7 @@
 #ifndef GREEKBOT_GUILD_H
 #define GREEKBOT_GUILD_H
 #include "Role.h"
+#include <vector>
 #include <span>
 
 class cGuild final {
