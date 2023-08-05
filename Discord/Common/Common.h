@@ -1,13 +1,12 @@
 #ifndef GREEKBOT_COMMON_H
 #define GREEKBOT_COMMON_H
-#include <compare>
-#include <memory>
-#include <chrono>
-#include <string>
-#include <string_view>
 #include "Exception.h"
 #include "Kwarg.h"
 #include "Ptr.h"
+#include <chrono>
+#include <memory>
+#include <string>
+#include <string_view>
 #include <fmt/core.h>
 
 #define STR_(x) #x

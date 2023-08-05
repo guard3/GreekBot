@@ -1,15 +1,13 @@
 #ifndef GREEKBOT_UTILS_H
 #define GREEKBOT_UTILS_H
-#include <random>
-#include <string>
-#include <string_view>
-#include <type_traits>
-#include <concepts>
-#include <stdexcept>
 #include <charconv>
 #include <chrono>
+#include <concepts>
+#include <random>
+#include <stdexcept>
+#include <string>
+#include <string_view>
 #include <vector>
-#include <cstdint>
 #include <fmt/core.h>
 
 /* A helper class with various useful functions */
@@ -19,24 +17,27 @@ private:
 	static std::mt19937    ms_gen;
 	static std::mt19937_64 ms_gen64;
 	/* Distribution types */
-	template<typename T> struct d;
-	template<typename T> using distribution = typename d<T>::type;
-	template<typename T> using range        = typename distribution<T>::param_type;
+	template<typename T>
+	using distribution = std::conditional_t<std::is_integral_v<T>,
+	                                        std::uniform_int_distribution<std::conditional_t<(sizeof(T) < sizeof(short)), int, T>>,
+	                                        std::uniform_real_distribution<T>>;
 	/* Private constructor */
 	cUtils() = default;
 public:
 	cUtils(const cUtils&) = delete;
 	cUtils& operator=(const cUtils&) = delete;
 	/* Random functions */
-	template<typename T1, typename T2, typename R = std::common_type_t<T1, T2>>
-	static R Random(T1 a, T2 b) {
-		/* Static uniform distribution */
-		static distribution<R> dist;
-		/* Generate random number */
-		if constexpr(sizeof(R) < 8)
-			return dist(ms_gen,   range<R>(a, b));
+	template<typename A, typename B> requires(std::is_arithmetic_v<A> && std::is_arithmetic_v<B>)
+	static auto Random(A a, B b) {
+		/* Set the return type as the common type of A and B */
+		using return_t = std::common_type_t<A, B>;
+		/* Create a static uniform distribution for the common type */
+		static distribution<return_t> dist;
+		/* Generate the random number */
+		if constexpr(sizeof(return_t) < 8)
+			return static_cast<return_t>(dist(ms_gen,   typename distribution<return_t>::param_type{ a, b }));
 		else
-			return dist(ms_gen64, range<R>(a, b));
+			return static_cast<return_t>(dist(ms_gen64, typename distribution<return_t>::param_type{ a, b }));
 	}
 	/* Logger functions */
 	template<char nl = '\n', typename... Args>
@@ -72,7 +73,4 @@ public:
 	/* Resolving the OS we're running on */
 	static const char* GetOS();
 };
-
-template<std::integral I>       struct cUtils::d<I> { typedef std::uniform_int_distribution<I>  type; };
-template<std::floating_point F> struct cUtils::d<F> { typedef std::uniform_real_distribution<F> type; };
 #endif //GREEKBOT_UTILS_H
