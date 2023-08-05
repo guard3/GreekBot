@@ -1,4 +1,5 @@
 #include "GatewayImpl.h"
+#include "Utils.h"
 
 void
 cGateway::implementation::resume() {

@@ -1,5 +1,6 @@
 #include "GatewayImpl.h"
 #include "GatewayInfo.h"
+#include "Utils.h"
 #include "Event.h"
 
 /* ================================================================================================================== */

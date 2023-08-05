@@ -3,15 +3,12 @@
 #include <compare>
 #include <memory>
 #include <chrono>
-#include <random>
 #include <string>
-#include <optional>
-#include <cinttypes>
-#include <cstring>
+#include <string_view>
 #include "Exception.h"
-#include "Utils.h"
 #include "Kwarg.h"
 #include "Ptr.h"
+#include <fmt/core.h>
 
 #define STR_(x) #x
 #define STR(x) STR_(x)
@@ -124,11 +121,8 @@ private:
 	
 public:
 	cSnowflake() noexcept : m_int(0), m_len(1), m_str("0") {}
-	cSnowflake(uint64_t i) noexcept : m_int(i) {
-		auto result = std::to_chars(std::begin(m_str), std::end(m_str), i);
-		m_len = result.ptr - m_str;
-	}
-	cSnowflake(std::string_view s) : m_int(cUtils::ParseInt<uint64_t>(s)), m_len(s.copy(m_str, 20)) {}
+	cSnowflake(uint64_t i) noexcept;
+	cSnowflake(std::string_view s);
 	template<typename T> requires std::constructible_from<std::string_view, T&&>
 	cSnowflake(T&& t) : cSnowflake(std::string_view{ std::forward<T>(t) }) {}
 

@@ -1,4 +1,5 @@
 #include "GreekBot.h"
+#include "Utils.h"
 
 cTask<>
 cGreekBot::OnInteraction_avatar(const cInteraction& i) try {

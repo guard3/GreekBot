@@ -1,9 +1,10 @@
 #include "Role.h"
+#include "Utils.h"
 #include "json.h"
 
 ePermission
 tag_invoke(json::value_to_tag<ePermission>, const json::value& v) {
-	return static_cast<ePermission>(cUtils::ParseInt<uint64_t>(v.as_string().c_str()));
+	return static_cast<ePermission>(cUtils::ParseInt<uint64_t>(json::value_to<std::string_view>(v)));
 }
 
 cRole

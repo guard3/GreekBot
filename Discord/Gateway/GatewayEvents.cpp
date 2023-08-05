@@ -1,5 +1,6 @@
 #include "GatewayImpl.h"
 #include "Event.h"
+#include "Utils.h"
 /* ========== Make void a valid coroutine return type =============================================================== */
 template<typename... Args>
 struct std::coroutine_traits<void, Args...> {

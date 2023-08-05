@@ -1,5 +1,6 @@
 #include "GreekBot.h"
 #include "Database.h"
+#include "Utils.h"
 
 /* Helper functions that create embeds */
 static cEmbed make_no_xp_embed(const cUser& user, cColor c) {

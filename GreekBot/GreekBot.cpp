@@ -1,5 +1,6 @@
 #include "GreekBot.h"
 #include "Database.h"
+#include "Utils.h"
 
 std::span<const cRole>
 cGreekBot::get_lmg_roles() {

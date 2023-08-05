@@ -1,8 +1,9 @@
 #include "Member.h"
+#include "Utils.h"
 #include "json.h"
 
 cMember::cMember(const json::value& v):
-	m_joined_at(cUtils::ParseTimestamp(json::value_to<std::string>(v.at("joined_at")))),
+	m_joined_at(cUtils::ParseTimestamp(json::value_to<std::string_view>(v.at("joined_at")))),
 	m_roles(json::value_to<std::vector<cSnowflake>>(v.at("roles"))) {
 	auto& o = v.as_object();
 	const json::value* p;

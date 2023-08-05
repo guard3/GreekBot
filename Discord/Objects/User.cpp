@@ -1,4 +1,5 @@
 #include "User.h"
+#include "Utils.h"
 #include "json.h"
 #include <fmt/format.h>
 

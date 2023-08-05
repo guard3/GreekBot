@@ -1,5 +1,6 @@
 #include "Database.h"
 #include "Queries.h"
+#include "Utils.h"
 #include <cstdlib>
 #include <sqlite3.h>
 #include <thread>
