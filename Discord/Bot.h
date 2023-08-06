@@ -31,7 +31,7 @@ protected:
 	using cGateway::OnMessageCreate;
 	
 public:
-	explicit cBot(const char* token, eIntent intents) : cGateway(token, intents) {}
+	explicit cBot(std::string_view token, eIntent intents) : cGateway(token, intents) {}
 
 	using cGateway::GetToken;
 
@@ -57,7 +57,7 @@ public:
 		co_await send_interaction_followup_message(i, { kwargs... });
 	}
 
-	cTask<int> BeginGuildPrune(const cSnowflake& id, int days, const std::string& reason = {});
+	cTask<int> BeginGuildPrune(const cSnowflake& id, int days, std::string_view reason = {});
 
 	cTask<cChannel> CreateDM(const cSnowflake& recipient_id);
 	cTask<cMessage> CreateMessage(const cSnowflake& channel_id, iKwArg auto&... kwargs) {
@@ -67,8 +67,8 @@ public:
 		co_return co_await CreateMessage((co_await CreateDM(recipient_id)).GetId(), kwargs...);
 	}
 
-	cTask<> RemoveGuildMember(const cSnowflake& guild_id, const cSnowflake& user_id, const std::string& reason = {});
-	cTask<> CreateGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, std::chrono::seconds delete_message_seconds = std::chrono::seconds(0), const std::string& reason = {});
-	cTask<> RemoveGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, const std::string& reason = {});
+	cTask<> RemoveGuildMember(const cSnowflake& guild_id, const cSnowflake& user_id, std::string_view reason = {});
+	cTask<> CreateGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, std::chrono::seconds delete_message_seconds = std::chrono::seconds(0), std::string_view reason = {});
+	cTask<> RemoveGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, std::string_view reason = {});
 };
 #endif // GREEKBOT_BOT_H

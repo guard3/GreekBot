@@ -1,7 +1,7 @@
 #include "GatewayImpl.h"
 #include "json.h"
 /* ================================================================================================================== */
-cGateway::cGateway(const char* t, eIntent i) : m_pImpl(cHandle::MakeUnique<implementation>(this, t, i)) {}
+cGateway::cGateway(std::string_view t, eIntent i) : m_pImpl(cHandle::MakeUnique<implementation>(this, t, i)) {}
 cGateway::~cGateway() = default;
 /* ================================================================================================================== */
 cTask<json::value>
@@ -43,9 +43,9 @@ cGateway::get_guild_members(const cSnowflake& g, const std::string& s, const std
 	return m_pImpl->get_guild_members(g, s, u);
 }
 /* ================================================================================================================== */
-const char*
+std::string_view
 cGateway::GetHttpAuthorization() const noexcept { return m_pImpl->GetHttpAuthorization(); }
-const char*
+std::string_view
 cGateway::GetToken() const noexcept { return m_pImpl->GetToken(); }
 void
 cGateway::Run() { m_pImpl->Run(); }

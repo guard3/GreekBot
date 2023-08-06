@@ -122,6 +122,6 @@ private:
 	cTask<> OnMessageCreate(const cMessage& msg) override;
 
 public:
-	explicit cGreekBot(const char* token) : cBot(token, INTENT_GUILD_INTEGRATIONS | INTENT_GUILD_MESSAGES | INTENT_GUILDS) {}
+	explicit cGreekBot(std::string_view token) : cBot(token, INTENT_GUILD_INTEGRATIONS | INTENT_GUILD_MESSAGES | INTENT_GUILDS) {}
 };
 #endif /* GREEKBOT_GREEKBOT_H */

@@ -122,7 +122,7 @@ cBot::send_interaction_followup_message(const cInteraction& i, const cMessagePar
 }
 
 cTask<int>
-cBot::BeginGuildPrune(const cSnowflake &id, int days, const std::string& reason) {
+cBot::BeginGuildPrune(const cSnowflake &id, int days, std::string_view reason) {
 	tHttpFields fields;
 	if (!reason.empty())
 		fields.emplace_back("X-Audit-Log-Reason", cUtils::PercentEncode(reason));
@@ -145,7 +145,7 @@ cBot::create_message(const cSnowflake& channel_id, const cMessageParams& params)
 }
 
 cTask<>
-cBot::RemoveGuildMember(const cSnowflake& guild_id, const cSnowflake& user_id, const std::string& reason) {
+cBot::RemoveGuildMember(const cSnowflake& guild_id, const cSnowflake& user_id, std::string_view reason) {
 	tHttpFields fields;
 	if (!reason.empty())
 		fields.emplace_back("X-Audit-Log-Reason", cUtils::PercentEncode(reason));
@@ -153,7 +153,7 @@ cBot::RemoveGuildMember(const cSnowflake& guild_id, const cSnowflake& user_id, c
 }
 
 cTask<>
-cBot::CreateGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, std::chrono::seconds delete_message_seconds, const std::string& reason) {
+cBot::CreateGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, std::chrono::seconds delete_message_seconds, std::string_view reason) {
 	tHttpFields fields;
 	if (!reason.empty())
 		fields.emplace_back("X-Audit-Log-Reason", cUtils::PercentEncode(reason));
@@ -161,7 +161,7 @@ cBot::CreateGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, std:
 }
 
 cTask<>
-cBot::RemoveGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, const std::string& reason) {
+cBot::RemoveGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, std::string_view reason) {
 	tHttpFields fields;
 	if (!reason.empty())
 		fields.emplace_back("X-Audit-Log-Reason", cUtils::PercentEncode(reason));

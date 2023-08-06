@@ -4,7 +4,7 @@
 #include "Event.h"
 
 /* ================================================================================================================== */
-cGateway::implementation::implementation(cGateway* p, const char* t, eIntent i) :
+cGateway::implementation::implementation(cGateway* p, std::string_view t, eIntent i) :
 	m_parent(p),
 	m_ctx(asio::ssl::context::tlsv13_client),
 	m_ws_resolver(m_ws_ioc),

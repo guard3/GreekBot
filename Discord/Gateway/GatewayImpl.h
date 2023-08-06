@@ -123,7 +123,7 @@ private:
 	class wait_on_event_thread;
 
 public:
-	implementation(cGateway*, const char*, eIntent);
+	implementation(cGateway*, std::string_view, eIntent);
 	implementation(const implementation&) = delete;
 	~implementation();
 
@@ -132,8 +132,8 @@ public:
 	cTask<json::value> DiscordRequest(beast::http::verb method, const std::string& target, const json::object* obj, const tHttpFields& fields);
 	cTask<json::value> DiscordRequestNoRetry(beast::http::verb method, const std::string& target, const json::object* obj, const tHttpFields& fields);
 
-	const char* GetHttpAuthorization() const noexcept { return m_http_auth.c_str(); }
-	const char* GetToken() const noexcept { return m_http_auth.c_str() + 4; }
+	std::string_view GetHttpAuthorization() const noexcept { return m_http_auth; }
+	std::string_view GetToken() const noexcept { return GetHttpAuthorization().substr(4); }
 
 	cTask<> ResumeOnEventThread();
 	cTask<> WaitOnEventThread(chrono::milliseconds);

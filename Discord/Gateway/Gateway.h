@@ -49,16 +49,16 @@ private:
 	cAsyncGenerator<cMember> get_guild_members(const cSnowflake&, const std::string&, const std::vector<cSnowflake>&);
 
 protected:
-	const char* GetHttpAuthorization() const noexcept;
+	std::string_view GetHttpAuthorization() const noexcept;
 
 public:
-	cGateway(const char* token, eIntent intents);
+	cGateway(std::string_view token, eIntent intents);
 	cGateway(const cGateway&) = delete;
 	~cGateway();
 
 	cGateway& operator=(const cGateway&) = delete;
 
-	const char* GetToken() const noexcept;
+	std::string_view GetToken() const noexcept;
 
 	cTask<json::value> DiscordGet   (const std::string& path,                          const tHttpFields& fields = m_empty);
 	cTask<json::value> DiscordPost  (const std::string& path, const json::object& obj, const tHttpFields& fields = m_empty);
