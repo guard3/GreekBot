@@ -1,7 +1,6 @@
 #include "GatewayImpl.h"
 #include "GatewayInfo.h"
 #include "Utils.h"
-#include "Event.h"
 
 /* ================================================================================================================== */
 cGateway::implementation::implementation(cGateway* p, std::string_view t, eIntent i) :
@@ -79,7 +78,7 @@ cGateway::implementation::on_read(const beast::error_code& ec, size_t bytes_read
 		/* Consume all read bytes from the dynamic buffer */
 		m_buffer.consume(bytes_read);
 		/* Release the parsed json value */
-		json::value v = m_parser.release();
+		const json::value v = m_parser.release();
 		/* Start the next asynchronous read operation to keep listening for more events */
 		m_ws->async_read(m_buffer, [this](beast::error_code ec, size_t size) { on_read(ec, size); });
 #ifdef GW_LOG_LVL_2
@@ -89,7 +88,7 @@ cGateway::implementation::on_read(const beast::error_code& ec, size_t bytes_read
 		switch (v.at("op").to_number<int>()) {
 			case OP_DISPATCH:
 				/* Process event */
-				on_event(std::move(v));
+				process_event(v);
 				break;
 			case OP_HEARTBEAT:
 				/* Cancel any pending heartbeats */

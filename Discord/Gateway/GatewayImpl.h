@@ -1,19 +1,18 @@
 #ifndef GREEKBOT_GATEWAYIMPL_H
 #define GREEKBOT_GATEWAYIMPL_H
+#include "Application.h"
 #include "Gateway.h"
+#include "GuildMembersResult.h"
 #include "beast.h"
 #include "json.h"
 #include <deque>
-#include <zlib.h>
 #include <thread>
-#include "GuildMembersResult.h"
-#include "Application.h"
+#include <zlib.h>
 
 namespace chrono = std::chrono;
 
 #define INFLATE_BUFFER_SIZE 4096
 
-class cEvent;
 class cGatewayInfo;
 
 /* Gateway close error exception */
@@ -101,7 +100,7 @@ private:
 	void run_session(const std::string& url);
 	cGatewayInfo get_gateway_info();
 	/* A method that's invoked for every gateway event */
-	void on_event(cEvent);
+	void process_event(const json::value&);
 	/* Gateway command functions */
 	bool await_ready() { return false; }
 	void await_suspend(std::coroutine_handle<> h) {
