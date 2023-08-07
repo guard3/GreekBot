@@ -76,8 +76,7 @@ private:
 	chrono::milliseconds m_heartbeat_interval; // The interval between heartbeats
 	bool                 m_heartbeat_ack;      // Is the heartbeat acknowledged?
 	/* Json parsing for gateway events */
-	json::monotonic_resource m_mr;     // A monotonic memory resource for json parsing
-	json::stream_parser      m_parser; // The json parser
+	json::stream_parser m_parser; // The json parser
 	/* Zlib stuff for decompressing websocket messages */
 	z_stream m_inflate_stream;
 	Byte     m_inflate_buffer[INFLATE_BUFFER_SIZE];

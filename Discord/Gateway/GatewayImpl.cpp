@@ -15,8 +15,7 @@ cGateway::implementation::implementation(cGateway* p, std::string_view t, eInten
 	m_intents(i),
 	m_last_sequence(0),
 	m_heartbeat_timer(m_ws_ioc),
-	m_heartbeat_ack(false),
-	m_parser(&m_mr) {
+	m_heartbeat_ack(false) {
 	/* Set SSL context to verify peers */
 	m_ctx.set_default_verify_paths();
 	m_ctx.set_verify_mode(asio::ssl::verify_peer);
@@ -52,6 +51,8 @@ cGateway::implementation::on_read(const beast::error_code& ec, size_t bytes_read
 	if (ec)
 		return;
 	try {
+		/* Reset the parser prior to parsing a new JSON */
+		m_parser.reset();
 		/* Check for Z_SYNC_FLUSH suffix and decompress if necessary */
 		char* in = (char*)m_buffer.data().data();
 		if (bytes_read >= 4 ) {
@@ -82,10 +83,10 @@ cGateway::implementation::on_read(const beast::error_code& ec, size_t bytes_read
 		/* Start the next asynchronous read operation to keep listening for more events */
 		m_ws->async_read(m_buffer, [this](beast::error_code ec, size_t size) { on_read(ec, size); });
 #ifdef GW_LOG_LVL_2
-		cUtils::PrintLog(json::serialize(v));
+		cUtils::PrintLog("{}", json::serialize(v));
 #endif
 		/* Process the event */
-		switch (v.at("op").as_int64()) {
+		switch (v.at("op").to_number<int>()) {
 			case OP_DISPATCH:
 				/* Process event */
 				on_event(std::move(v));
@@ -133,8 +134,6 @@ cGateway::implementation::on_read(const beast::error_code& ec, size_t bytes_read
 	catch (...) {
 		cUtils::PrintErr("Error parsing received gateway payload: An exception was thrown");
 	}
-	/* Reset json parser for next call */
-	m_parser.reset(&m_mr);
 }
 /* ================================================================================================================== */
 void
