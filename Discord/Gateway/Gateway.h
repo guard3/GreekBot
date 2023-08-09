@@ -5,6 +5,7 @@
 #include "User.h"
 #include "Guild.h"
 #include "Interaction.h"
+#include <span>
 
 enum eIntent {
 	INTENT_GUILDS                    = 1 << 0,
@@ -31,8 +32,8 @@ private:
 	std::string m_name, m_value;
 public:
 	cHttpField(std::string n, std::string v) : m_name(std::move(n)), m_value(std::move(v)) {}
-	const std::string& GetName()  const noexcept { return m_name;  }
-	const std::string& GetValue() const noexcept { return m_value; }
+	std::string_view GetName()  const noexcept { return m_name;  }
+	std::string_view GetValue() const noexcept { return m_value; }
 };
 typedef std::vector<cHttpField> tHttpFields;
 
@@ -43,8 +44,6 @@ class cGateway {
 private:
 	class implementation;
 	uhHandle<implementation> m_pImpl;
-
-	static inline tHttpFields m_empty;
 
 	cAsyncGenerator<cMember> get_guild_members(const cSnowflake&, const std::string&, const std::vector<cSnowflake>&);
 
@@ -60,14 +59,14 @@ public:
 
 	std::string_view GetToken() const noexcept;
 
-	cTask<json::value> DiscordGet   (const std::string& path,                          const tHttpFields& fields = m_empty);
-	cTask<json::value> DiscordPost  (const std::string& path, const json::object& obj, const tHttpFields& fields = m_empty);
-	cTask<json::value> DiscordPatch (const std::string& path, const json::object& obj, const tHttpFields& fields = m_empty);
-	cTask<json::value> DiscordPut   (const std::string& path,                          const tHttpFields& fields = m_empty);
-	cTask<json::value> DiscordPut   (const std::string& path, const json::object& obj, const tHttpFields& fields = m_empty);
-	cTask<json::value> DiscordDelete(const std::string& path,                          const tHttpFields& fields = m_empty);
+	cTask<json::value> DiscordGet   (std::string_view path,                          std::span<const cHttpField> fields = {});
+	cTask<json::value> DiscordPost  (std::string_view path, const json::object& obj, std::span<const cHttpField> fields = {});
+	cTask<json::value> DiscordPatch (std::string_view path, const json::object& obj, std::span<const cHttpField> fields = {});
+	cTask<json::value> DiscordPut   (std::string_view path,                          std::span<const cHttpField> fields = {});
+	cTask<json::value> DiscordPut   (std::string_view path, const json::object& obj, std::span<const cHttpField> fields = {});
+	cTask<json::value> DiscordDelete(std::string_view path,                          std::span<const cHttpField> fields = {});
 
-	cTask<json::value> DiscordPostNoRetry(const std::string& path, const json::object& obj, const tHttpFields& fields = m_empty);
+	cTask<json::value> DiscordPostNoRetry(std::string_view path, const json::object& obj, std::span<const cHttpField> fields = {});
 
 	cTask<> ResumeOnEventThread();
 	cTask<> WaitOnEventThread(std::chrono::milliseconds);

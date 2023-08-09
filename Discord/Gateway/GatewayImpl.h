@@ -127,8 +127,17 @@ public:
 
 	implementation& operator=(const implementation&) = delete;
 
-	cTask<json::value> DiscordRequest(beast::http::verb method, const std::string& target, const json::object* obj, const tHttpFields& fields);
-	cTask<json::value> DiscordRequestNoRetry(beast::http::verb method, const std::string& target, const json::object* obj, const tHttpFields& fields);
+	cTask<json::value> DiscordRequest(beast::http::verb method, std::string_view target, const json::object* obj, std::span<const cHttpField> fields);
+	cTask<json::value> DiscordRequestNoRetry(beast::http::verb method, std::string_view target, const json::object* obj, std::span<const cHttpField> fields);
+
+	cTask<json::value> DiscordGet   (std::string_view path,                          std::span<const cHttpField> fields = {});
+	cTask<json::value> DiscordPost  (std::string_view path, const json::object& obj, std::span<const cHttpField> fields = {});
+	cTask<json::value> DiscordPatch (std::string_view path, const json::object& obj, std::span<const cHttpField> fields = {});
+	cTask<json::value> DiscordPut   (std::string_view path,                          std::span<const cHttpField> fields = {});
+	cTask<json::value> DiscordPut   (std::string_view path, const json::object& obj, std::span<const cHttpField> fields = {});
+	cTask<json::value> DiscordDelete(std::string_view path,                          std::span<const cHttpField> fields = {});
+
+	cTask<json::value> DiscordPostNoRetry(std::string_view path, const json::object& obj, std::span<const cHttpField> fields = {});
 
 	std::string_view GetHttpAuthorization() const noexcept { return m_http_auth; }
 	std::string_view GetToken() const noexcept { return GetHttpAuthorization().substr(4); }

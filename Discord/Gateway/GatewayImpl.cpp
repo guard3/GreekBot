@@ -224,7 +224,7 @@ cGateway::implementation::run_session(const std::string& url) {
 /* ================================================================================================================== */
 cGatewayInfo
 cGateway::implementation::get_gateway_info() {
-	return cGatewayInfo(m_parent->DiscordGet("/gateway/bot").Wait());
+	return cGatewayInfo{ DiscordGet("/gateway/bot").Wait() };
 }
 /* ================================================================================================================== */
 cTask<>

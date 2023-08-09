@@ -16,11 +16,11 @@ private:
 	std::tuple<beast::http::status, json::value> m_result;
 
 public:
-	discord_request(cGateway::implementation* this_, beast::http::verb method, const std::string& target, const json::object* obj, const tHttpFields& fields) :
+	discord_request(cGateway::implementation* this_, beast::http::verb method, std::string_view target, const json::object* obj, std::span<const cHttpField> fields) :
 		m_parent(this_),
 		m_resolver(this_->m_http_ioc),
 		m_stream(this_->m_http_ioc, this_->m_ctx),
-		m_request(method, DISCORD_API_ENDPOINT + target, 11) {
+		m_request(method, fmt::format(DISCORD_API_ENDPOINT "{}", target), 11) {
 		/* Set http fields */
 		for (auto& f : fields)
 			m_request.set(f.GetName(), f.GetValue());
@@ -96,7 +96,7 @@ public:
 };
 
 cTask<json::value>
-cGateway::implementation::DiscordRequest(beast::http::verb m, const std::string& t, const json::object* o, const tHttpFields& f) {
+cGateway::implementation::DiscordRequest(beast::http::verb m, std::string_view t, const json::object* o, std::span<const cHttpField> f) {
 	chrono::milliseconds retry_after;
 	try {
 		co_return co_await DiscordRequestNoRetry(m, t, o, f);
@@ -109,7 +109,7 @@ cGateway::implementation::DiscordRequest(beast::http::verb m, const std::string&
 }
 
 cTask<json::value>
-cGateway::implementation::DiscordRequestNoRetry(beast::http::verb m, const std::string& t, const json::object* o, const tHttpFields& f) {
+cGateway::implementation::DiscordRequestNoRetry(beast::http::verb m, std::string_view t, const json::object* o, std::span<const cHttpField> f) {
 	/* Perform the http request */
 	beast::http::status status;
 	json::value result;
@@ -121,6 +121,36 @@ cGateway::implementation::DiscordRequestNoRetry(beast::http::verb m, const std::
 	if (status == beast::http::status::too_many_requests)
 		throw xRateLimitError(result);
 	throw xDiscordError(result);
+}
+/* ================================================================================================================== */
+cTask<json::value>
+cGateway::implementation::DiscordGet(std::string_view t, std::span<const cHttpField> f) {
+	return DiscordRequest(beast::http::verb::get, t, nullptr, f);
+}
+cTask<json::value>
+cGateway::implementation::DiscordPost(std::string_view t, const json::object& o, std::span<const cHttpField> f) {
+	return DiscordRequest(beast::http::verb::post, t, &o, f);
+}
+cTask<json::value>
+cGateway::implementation::DiscordPatch(std::string_view t, const json::object& o, std::span<const cHttpField> f) {
+	return DiscordRequest(beast::http::verb::patch, t, &o, f);
+}
+cTask<json::value>
+cGateway::implementation::DiscordPut(std::string_view t, std::span<const cHttpField> f) {
+	return DiscordRequest(beast::http::verb::put, t, nullptr, f);
+}
+cTask<json::value>
+cGateway::implementation::DiscordPut(std::string_view t, const json::object& o, std::span<const cHttpField> f) {
+	return DiscordRequest(beast::http::verb::put, t, &o, f);
+}
+cTask<json::value>
+cGateway::implementation::DiscordDelete(std::string_view t, std::span<const cHttpField> f) {
+	return DiscordRequest(beast::http::verb::delete_, t, nullptr, f);
+}
+/* ================================================================================================================== */
+cTask<json::value>
+cGateway::implementation::DiscordPostNoRetry(std::string_view t, const json::object& o, std::span<const cHttpField> f) {
+	return DiscordRequestNoRetry(beast::http::verb::post, t, &o, f);
 }
 /* ================================================================================================================== */
 cTask<>

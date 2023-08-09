@@ -101,7 +101,7 @@ cGateway::implementation::process_event(const json::value& v) {
 			}
 			case EVENT_USER_UPDATE: {
 				auto user = cHandle::MakeUnique<cUser>(d);
-				m_application = json::value_to<cApplication>(co_await m_parent->DiscordGet("/oauth2/applications/@me"));
+				m_application = json::value_to<cApplication>(co_await DiscordGet("/oauth2/applications/@me"));
 				co_await m_parent->OnUserUpdate(std::move(user));
 				break;
 			}
