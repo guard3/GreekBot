@@ -38,7 +38,7 @@ find_package(OpenSSL REQUIRED)
 target_link_libraries(GreekBot OpenSSL::SSL)
 
 # Link Boost
-add_compile_definitions(BOOST_ASIO_SEPARATE_COMPILATION)
+add_compile_definitions(BOOST_ASIO_SEPARATE_COMPILATION BOOST_BEAST_SEPARATE_COMPILATION)
 set(Boost_USE_STATIC_LIBS     ON)
 set(Boost_USE_MULTITHREADED   ON)
 set(Boost_USE_STATIC_RUNTIME OFF)
