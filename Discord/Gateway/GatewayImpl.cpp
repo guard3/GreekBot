@@ -11,6 +11,7 @@ cGateway::implementation::implementation(cGateway* p, std::string_view t, eInten
 	m_work(asio::make_work_guard(m_http_ioc)),
 	m_work_thread([this]() { m_http_ioc.run(); }),
 	m_http_auth(fmt::format("Bot {}", t)),
+	m_http_timer(m_http_ioc),
 	m_intents(i),
 	m_last_sequence(0),
 	m_heartbeat_timer(m_ws_ioc),

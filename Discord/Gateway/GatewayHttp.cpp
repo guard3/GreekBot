@@ -1,89 +1,128 @@
 #include "GatewayImpl.h"
+#include "Utils.h"
 #include "json.h"
 #include <tuple>
 #include <fmt/format.h>
-
-class cGateway::implementation::discord_request final {
-private:
-	cGateway::implementation* m_parent;
-
-	asio::ip::tcp::resolver m_resolver;
-	beast::ssl_stream<beast::tcp_stream> m_stream;
-	beast::http::request<beast::http::string_body> m_request;
-	beast::http::response<beast::http::string_body> m_response;
-
-	std::exception_ptr m_except;
-	std::tuple<beast::http::status, json::value> m_result;
-
-public:
-	discord_request(cGateway::implementation* this_, beast::http::verb method, std::string_view target, const json::object* obj, std::span<const cHttpField> fields) :
-		m_parent(this_),
-		m_resolver(this_->m_http_ioc),
-		m_stream(this_->m_http_ioc, this_->m_ctx),
-		m_request(method, fmt::format(DISCORD_API_ENDPOINT "{}", target), 11) {
-		/* Set http fields */
-		for (auto& f : fields)
-			m_request.set(f.GetName(), f.GetValue());
-		/* Also set the required ones */
-		m_request.set(beast::http::field::host, DISCORD_API_HOST);
-		m_request.set(beast::http::field::user_agent, "GreekBot");
-		m_request.set(beast::http::field::authorization, this_->m_http_auth);
-		if (obj) {
-			m_request.set(beast::http::field::content_type, "application/json");
-			m_request.body() = json::serialize(*obj);
-		}
-		m_request.prepare_payload();
-	}
-
-	bool await_ready() noexcept { return false; }
-	void await_suspend(std::coroutine_handle<> h) {
-		m_resolver.async_resolve(DISCORD_API_HOST, "https", [this, h](const beast::error_code& ec, asio::ip::tcp::resolver::results_type results) {
-			if (ec) {
-				m_except = std::make_exception_ptr(beast::system_error(ec));
-				h();
-				return;
-			}
-			beast::get_lowest_layer(m_stream).async_connect(results, [this, h](const beast::error_code& ec, asio::ip::tcp::endpoint ep) {
-				if (ec) {
-					m_except = std::make_exception_ptr(beast::system_error(ec));
-					h();
-					return;
+/* TODO: Add timeouts for async operations */
+void
+cGateway::implementation::http_do_resolve() {
+	m_http_resolver.async_resolve(DISCORD_API_HOST, "https", [this](const beast::error_code& ec, const asio::ip::tcp::resolver::results_type& results) {
+		try {
+			if (ec) throw std::system_error(ec);
+			/* Create a new http stream */
+			m_http_stream = std::make_unique<beast::ssl_stream<beast::tcp_stream>>(m_http_ioc, m_ctx);
+			/* Connect to the resolved endpoints */
+			m_http_stream->next_layer().async_connect(results, [this](const beast::error_code& ec, const asio::ip::tcp::endpoint&) {
+				try {
+					if (ec) throw std::system_error(ec);
+					m_http_stream->async_handshake(asio::ssl::stream_base::client, [this](const beast::error_code& ec) {
+						try {
+							if (ec) throw std::system_error(ec);
+							http_do_write();
+						}
+						catch (...) {
+							m_except = std::current_exception();
+							http_shutdown();
+						}
+					});
 				}
-				m_stream.async_handshake(asio::ssl::stream_base::client, [this, h](const beast::error_code& ec) {
-					if (ec) {
-						m_except = std::make_exception_ptr(beast::system_error(ec));
-						h();
+				catch (...) {
+					m_except = std::current_exception();
+					http_shutdown();
+				}
+			});
+		}
+		catch (...) {
+			m_except = std::current_exception();
+			http_shutdown();
+		}
+	});
+}
+void
+cGateway::implementation::http_do_write() {
+	using namespace std::chrono_literals;
+	beast::http::async_write(*m_http_stream, m_request_queue.front().request, [this](const beast::error_code& ec, size_t) {
+		try {
+			if (ec) throw std::system_error(ec);
+			/* Reset the response before reading */
+			m_response = {};
+			/* Start reading the response */
+			beast::http::async_read(*m_http_stream, m_http_buffer, m_response, [this](const beast::error_code& ec, size_t) {
+				if (!ec) {
+					/* If the server doesn't keep the connection alive, gracefully close the connection */
+					if (!m_response.keep_alive()) {
+						http_shutdown_ssl();
 						return;
 					}
-					beast::http::async_write(m_stream, m_request, [this, h](const beast::error_code& ec, size_t bytes_written) {
-						if (ec) {
-							m_except = std::make_exception_ptr(beast::system_error(ec));
-							h();
-							return;
-						}
-						beast::http::async_read(m_stream, m_parent->m_http_buffer, m_response, [this, h](beast::error_code ec, size_t bytes_read) {
-							try {
-								m_parent->m_http_buffer.consume(bytes_read);
-								if (ec) throw beast::system_error(ec);
-								m_stream.shutdown(ec);
-								m_result = { m_response.result(), m_response[beast::http::field::content_type] == "application/json" ? json::parse(m_response.body()) : json::value() };
+					/* If there was no error, pop the processed request from the queue */
+					std::coroutine_handle<> coro = m_request_queue.front().coro;
+					m_request_queue.pop_front();
+					if (m_request_queue.empty()) {
+						/* If there are no more requests, schedule the connection to close after 1 minute */
+						/* TODO: Find a more suitable timeout period? */
+						m_http_timer.expires_after(1min);
+						m_http_timer.async_wait([this](const boost::system::error_code& ec) {
+							/* If the timer expired and there are no pending requests, close the connection */
+							if (ec != asio::error::operation_aborted && m_request_queue.empty()) {
+								auto stream = m_http_stream.get();
+								stream->async_shutdown([_ = std::move(m_http_stream)](const beast::error_code& ec) {});
 							}
-							catch (...) {
-								m_except = std::current_exception();
-							}
-							h();
 						});
-					});
-				});
+					}
+					else {
+						/* If there are pending requests, write the next one to the stream */
+						http_do_write();
+					}
+					coro.resume();
+					return;
+				}
+				try {
+					if (ec == beast::http::error::end_of_stream) {
+						/* Connection was unexpectedly closed, retry */
+						http_do_resolve();
+						return;
+					}
+					throw std::system_error(ec);
+				}
+				catch (...) {
+					m_except = std::current_exception();
+					http_shutdown_ssl();
+				}
 			});
-		});
-	}
-	std::tuple<beast::http::status, json::value> await_resume() {
-		/* If an error is set, throw an exception */
-		if (m_except) std::rethrow_exception(m_except);
-		return std::move(m_result);
-	}
-};
+		}
+		catch (...) {
+			m_except = std::current_exception();
+			http_shutdown_ssl();
+		}
+	});
+}
+void
+cGateway::implementation::http_shutdown_ssl() {
+	/* Destroy the http stream */
+	auto stream = m_http_stream.get();
+	stream->async_shutdown([_ = std::move(m_http_stream)](const beast::error_code&){});
+	/* Save the coroutine handle before popping the current entry from the queue */
+	auto coro = m_request_queue.front().coro;
+	m_request_queue.pop_front();
+	/* Start processing the rest of the requests in the queue */
+	if (!m_request_queue.empty())
+		http_do_resolve();
+	/* Resume the coroutine */
+	coro.resume();
+}
+void
+cGateway::implementation::http_shutdown() {
+	/* Destroy the http stream */
+	m_http_stream = nullptr;
+	/* Save the coroutine handle before popping the current entry from the queue */
+	std::coroutine_handle<> coro = m_request_queue.front().coro;
+	m_request_queue.pop_front();
+	/* Start processing the rest of the requests in the queue */
+	if (!m_request_queue.empty())
+		http_do_resolve();
+	/* Resume the coroutine */
+	coro.resume();
+}
 
 class cGateway::implementation::wait_on_event_thread : public std::suspend_always {
 private:
@@ -109,12 +148,33 @@ cGateway::implementation::DiscordRequest(beast::http::verb m, std::string_view t
 }
 
 cTask<json::value>
-cGateway::implementation::DiscordRequestNoRetry(beast::http::verb m, std::string_view t, const json::object* o, std::span<const cHttpField> f) {
-	/* Perform the http request */
-	beast::http::status status;
-	json::value result;
-	std::tie(status, result) = co_await discord_request(this, m, t, o, f);
-	/* If request was successful, return received json value */
+cGateway::implementation::DiscordRequestNoRetry(beast::http::verb method, std::string_view target, const json::object* obj, std::span<const cHttpField> fields) {
+	/* Since we're about to send a request, cancel the timeout timer */
+	m_http_timer.cancel();
+	/* First make sure that we are on the http thread */
+	co_await ResumeOnEventThread();
+	/* Create a new request object and push it at the end of the queue */
+	auto &request = m_request_queue.emplace_back(method, fmt::format(DISCORD_API_ENDPOINT "{}", target), 11).request;
+	/* Set user http fields */
+	for (auto &f: fields)
+		request.set(f.GetName(), f.GetValue());
+	/* Also set the required ones */
+	request.set(beast::http::field::host, DISCORD_API_HOST);
+	request.set(beast::http::field::user_agent, "GreekBot");
+	request.set(beast::http::field::authorization, m_http_auth);
+	if (obj) {
+		request.set(beast::http::field::content_type, "application/json");
+		request.body() = json::serialize(*obj);
+	}
+	/* Request that the connection be kept alive */
+	request.keep_alive(true);
+	request.prepare_payload();
+	/* Start the async operation of sending the request */
+	m_await_command = AWAIT_REQUEST;
+	co_await *this;
+	/* Process response */
+	auto status = m_response.result();
+	auto result = m_response[beast::http::field::content_type] == "application/json" ? json::parse(m_response.body()) : json::value();
 	if (beast::http::to_status_class(status) == beast::http::status_class::successful)
 		co_return result;
 	/* Otherwise, throw an appropriate exception */
@@ -181,6 +241,7 @@ cGateway::implementation::get_guild_members(const cSnowflake& guild_id, const st
 			}}
 		});
 		/* Send the payload to the gateway and wait for the result to be available */
+		m_await_command = AWAIT_GUILD_MEMBERS;
 		co_await *this;
 		/* Extract the result node */
 		auto node = m_rgm_map.extract(nonce);
@@ -199,7 +260,7 @@ cGateway::implementation::get_guild_members(const cSnowflake& guild_id, const st
 		if (!(m_application->GetFlags() & (APP_FLAG_GATEWAY_GUILD_MEMBERS | APP_FLAG_GATEWAY_GUILD_MEMBERS_LIMITED)))
 			throw std::runtime_error("Missing privileged intents");
 		for (cSnowflake last_id = "0";;) {
-			json::value result = co_await m_parent->DiscordGet(fmt::format("/guilds/{}/members?limit=1000&after={}", guild_id, last_id));
+			json::value result = co_await DiscordGet(fmt::format("/guilds/{}/members?limit=1000&after={}", guild_id, last_id));
 			json::array& members = result.as_array();
 			if (members.empty())
 				break;
@@ -214,7 +275,7 @@ cGateway::implementation::get_guild_members(const cSnowflake& guild_id, const st
 	}
 	else {
 		/* If there is a query, return matching guild members */
-		json::value result = co_await m_parent->DiscordGet(fmt::format("/guilds/{}/members/search?limit=1000&query={}", guild_id, query));
+		json::value result = co_await DiscordGet(fmt::format("/guilds/{}/members/search?limit=1000&query={}", guild_id, query));
 		for (auto& v : result.as_array())
 			co_yield cMember(v);
 	}

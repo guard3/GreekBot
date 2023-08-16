@@ -42,6 +42,21 @@ enum eGatewayOpcode {
 	OP_HEARTBEAT_ACK         = 11, // Sent in response to receiving a heartbeat to acknowledge that it has been received.
 };
 
+struct entry {
+public:
+	std::coroutine_handle<> coro;
+	beast::http::request<beast::http::string_body> request;
+
+	template<typename... Args>
+	entry(Args&&... args): request(std::forward<Args>(args)...) {}
+	entry(const entry&) = delete;
+};
+
+enum eAwaitCommand {
+	AWAIT_REQUEST,
+	AWAIT_GUILD_MEMBERS
+};
+
 /* Separate cGateway implementation class to avoid including boost everywhere */
 class cGateway::implementation final {
 private:
@@ -62,6 +77,11 @@ private:
 	beast::flat_buffer      m_http_buffer; // A buffer for storing http responses
 	std::deque<std::string> m_queue;       // A queue with all pending messages to be sent
 	uhHandle<beast::websocket::stream<beast::ssl_stream<beast::tcp_stream>>> m_ws; // The websocket stream
+	uhHandle<beast::ssl_stream<beast::tcp_stream>> m_http_stream;
+	asio::steady_timer m_http_timer;
+	std::deque<entry> m_request_queue;
+	std::exception_ptr m_except;
+	beast::http::response<beast::http::string_body> m_response;
 
 	/* Initial parameters for identifying */
 	std::string m_http_auth; // The authorization parameter for HTTP requests 'Bot token'
@@ -102,14 +122,47 @@ private:
 	/* A method that's invoked for every gateway event */
 	void process_event(const json::value&);
 	/* Gateway command functions */
+	void http_do_resolve();
+	void http_do_write();
+	void http_shutdown_ssl();
+	void http_shutdown();
+
+	eAwaitCommand m_await_command;
 	bool await_ready() { return false; }
 	void await_suspend(std::coroutine_handle<> h) {
-		/* Save the coroutine handle to resume after all members have been received */
-		m_rgm_map[m_rgm_nonce++].Fill(h);
-		/* Send the payload */
-		send(std::move(m_rgm_payload));
+		switch (m_await_command) {
+			case AWAIT_REQUEST:
+				/* Save the coroutine handle to the entry we just added to the queue */
+				m_request_queue.back().coro = h;
+				/* If there's more than one request in the queue, just return and let it be processed later */
+				if (m_request_queue.size() > 1)
+					return;
+				if (m_http_stream) {
+					/* If there is an http stream, attempt to start sending requests right away */
+					http_do_write();
+				}
+				else {
+					/* Otherwise, start by resolving host */
+					http_do_resolve();
+				}
+				break;
+			case AWAIT_GUILD_MEMBERS:
+				/* Save the coroutine handle to resume after all members have been received */
+				m_rgm_map[m_rgm_nonce++].Fill(h);
+				/* Send the payload */
+				send(std::move(m_rgm_payload));
+				break;
+			default:
+				break;
+		}
 	}
-	void await_resume() {}
+	void await_resume() {
+		if (m_except) {
+			std::exception_ptr e = m_except;
+			m_except = nullptr;
+			std::rethrow_exception(e);
+		}
+	}
 
 	void rgm_reset() {
 		m_rgm_payload.clear();
@@ -117,7 +170,6 @@ private:
 		m_rgm_nonce = 0;
 	}
 
-	class discord_request;
 	class wait_on_event_thread;
 
 public:
