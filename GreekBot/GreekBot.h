@@ -100,7 +100,8 @@ private:
 			co_await lmg_update_proficiency_role(member, LMG_PROFICIENCY_NON_LEARNER);
 		}
 		/* Edit original interaction message */
-		co_await EditInteractionResponse(i, kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content="Role assigned!", kw::components=nil);
+		if (i.GetData<INTERACTION_MESSAGE_COMPONENT>().GetCustomId() == "proficiency_role_menu")
+			co_await EditInteractionResponse(i, kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content="Role assigned!", kw::components=nil);
 	}
 
 	cTask<> OnInteraction_avatar(const cInteraction&);

@@ -21,6 +21,7 @@ cMember::cMember(const json::value& v):
 	m_permissions = (p = o.if_contains("permissions")) ? json::value_to<ePermission>(*p) : PERM_NONE;
 	m_deaf = (p = o.if_contains("deaf")) && p->as_bool();
 	m_mute = (p = o.if_contains("mute")) && p->as_bool();
+	m_pending = (p = o.if_contains("pending")) && p->as_bool();
 }
 
 cMember

@@ -13,6 +13,7 @@ private:
 	ePermission m_permissions;
 	std::chrono::sys_seconds m_joined_at, m_premium_since;
 	std::vector<cSnowflake> m_roles;
+	bool m_pending;
 
 public:
 	explicit cMember(const json::value&);
@@ -31,6 +32,7 @@ public:
 
 	bool IsDeaf() const noexcept { return m_deaf; }
 	bool IsMute() const noexcept { return m_mute; }
+	bool IsPending() const noexcept { return m_pending; }
 };
 typedef   hHandle<cMember>   hMember;
 typedef  chHandle<cMember>  chMember;
