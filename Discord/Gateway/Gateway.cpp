@@ -1,5 +1,4 @@
 #include "GatewayImpl.h"
-#include "json.h"
 /* ================================================================================================================== */
 cGateway::cGateway(std::string_view t, eIntent i) : m_pImpl(cHandle::MakeUnique<implementation>(this, t, i)) {}
 cGateway::~cGateway() = default;
@@ -35,9 +34,9 @@ cGateway::DiscordPostNoRetry(std::string_view t, const json::object& o, std::spa
 }
 /* ================================================================================================================== */
 cTask<>
-cGateway::ResumeOnEventThread() { return m_pImpl->ResumeOnEventThread(); }
+cGateway::ResumeOnEventThread() { co_await m_pImpl->ResumeOnEventThread(); }
 cTask<>
-cGateway::WaitOnEventThread(chrono::milliseconds d) { return m_pImpl->WaitOnEventThread(d); }
+cGateway::WaitOnEventThread(chrono::milliseconds d) { co_await m_pImpl->WaitOnEventThread(d); }
 cAsyncGenerator<cMember>
 cGateway::get_guild_members(const cSnowflake& g, const std::string& s, const std::vector<cSnowflake>& u) {
 	return m_pImpl->get_guild_members(g, s, u);

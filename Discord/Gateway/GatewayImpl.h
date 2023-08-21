@@ -42,14 +42,13 @@ enum eGatewayOpcode {
 	OP_HEARTBEAT_ACK         = 11, // Sent in response to receiving a heartbeat to acknowledge that it has been received.
 };
 
-struct entry {
-public:
-	std::coroutine_handle<> coro;
+struct request_entry {
 	beast::http::request<beast::http::string_body> request;
+	std::coroutine_handle<> coro;
 
 	template<typename... Args>
-	entry(Args&&... args): request(std::forward<Args>(args)...) {}
-	entry(const entry&) = delete;
+	request_entry(Args&&... args): request(std::forward<Args>(args)...) {}
+	request_entry(const request_entry&) = delete;
 };
 
 enum eAwaitCommand {
@@ -79,7 +78,7 @@ private:
 	uhHandle<beast::websocket::stream<beast::ssl_stream<beast::tcp_stream>>> m_ws; // The websocket stream
 	uhHandle<beast::ssl_stream<beast::tcp_stream>> m_http_stream;
 	asio::steady_timer m_http_timer;
-	std::deque<entry> m_request_queue;
+	std::deque<request_entry> m_request_queue;
 	std::exception_ptr m_except;
 	beast::http::response<beast::http::string_body> m_response;
 
@@ -121,9 +120,9 @@ private:
 	cGatewayInfo get_gateway_info();
 	/* A method that's invoked for every gateway event */
 	void process_event(const json::value&);
-	/* Gateway command functions */
-	void http_do_resolve();
-	void http_do_write();
+	/* Http functions */
+	void http_resolve();
+	void http_write();
 	void http_shutdown_ssl();
 	void http_shutdown();
 
@@ -139,11 +138,11 @@ private:
 					return;
 				if (m_http_stream) {
 					/* If there is an http stream, attempt to start sending requests right away */
-					http_do_write();
+					http_write();
 				}
 				else {
 					/* Otherwise, start by resolving host */
-					http_do_resolve();
+					http_resolve();
 				}
 				break;
 			case AWAIT_GUILD_MEMBERS:
@@ -153,6 +152,7 @@ private:
 				send(std::move(m_rgm_payload));
 				break;
 			default:
+				throw std::runtime_error("Unexpected await command");
 				break;
 		}
 	}
@@ -169,8 +169,6 @@ private:
 		m_rgm_map.clear();
 		m_rgm_nonce = 0;
 	}
-
-	class wait_on_event_thread;
 
 public:
 	implementation(cGateway*, std::string_view, eIntent);
@@ -194,8 +192,36 @@ public:
 	std::string_view GetHttpAuthorization() const noexcept { return m_http_auth; }
 	std::string_view GetToken() const noexcept { return GetHttpAuthorization().substr(4); }
 
-	cTask<> ResumeOnEventThread();
-	cTask<> WaitOnEventThread(chrono::milliseconds);
+	auto ResumeOnEventThread() {
+		struct awaitable {
+			asio::io_context& ioc;
+			bool await_ready() { return ioc.get_executor().running_in_this_thread(); }
+			void await_suspend(std::coroutine_handle<> h) { asio::post([h](){ h.resume(); }); }
+			void await_resume() noexcept {}
+		};
+		return awaitable{ m_http_ioc };
+	}
+	auto WaitOnEventThread(std::chrono::milliseconds duration) {
+		struct awaitable {
+			asio::steady_timer timer;
+			std::exception_ptr except;
+			awaitable(asio::io_context& ioc, std::chrono::milliseconds d): timer(ioc, d) {}
+			bool await_ready() noexcept { return false; }
+			void await_suspend(std::coroutine_handle<> h) {
+				timer.async_wait([this, h](const boost::system::error_code& ec) {
+					try {
+						if (ec) throw std::system_error(ec);
+					}
+					catch (...) {
+						except = std::current_exception();
+					}
+					h.resume();
+				});
+			}
+			void await_resume() { if (except) std::rethrow_exception(except); }
+		};
+		return awaitable(m_http_ioc, duration);
+	}
 	cAsyncGenerator<cMember> get_guild_members(const cSnowflake& guild_id, const std::string& query, const std::vector<cSnowflake>& user_ids);
 
 	void Run();

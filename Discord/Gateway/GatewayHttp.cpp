@@ -1,24 +1,26 @@
 #include "GatewayImpl.h"
-#include "Utils.h"
 #include "json.h"
 #include <tuple>
 #include <fmt/format.h>
-/* TODO: Add timeouts for async operations */
+/* ================================================================================================================== */
 void
-cGateway::implementation::http_do_resolve() {
+cGateway::implementation::http_resolve() {
+	using namespace std::chrono_literals;
 	m_http_resolver.async_resolve(DISCORD_API_HOST, "https", [this](const beast::error_code& ec, const asio::ip::tcp::resolver::results_type& results) {
 		try {
 			if (ec) throw std::system_error(ec);
 			/* Create a new http stream */
+			m_http_buffer.clear();
 			m_http_stream = std::make_unique<beast::ssl_stream<beast::tcp_stream>>(m_http_ioc, m_ctx);
-			/* Connect to the resolved endpoints */
+			/* Connect to one of the resolved endpoints */
+			m_http_stream->next_layer().expires_after(30s);
 			m_http_stream->next_layer().async_connect(results, [this](const beast::error_code& ec, const asio::ip::tcp::endpoint&) {
 				try {
 					if (ec) throw std::system_error(ec);
 					m_http_stream->async_handshake(asio::ssl::stream_base::client, [this](const beast::error_code& ec) {
 						try {
 							if (ec) throw std::system_error(ec);
-							http_do_write();
+							http_write();
 						}
 						catch (...) {
 							m_except = std::current_exception();
@@ -39,8 +41,9 @@ cGateway::implementation::http_do_resolve() {
 	});
 }
 void
-cGateway::implementation::http_do_write() {
+cGateway::implementation::http_write() {
 	using namespace std::chrono_literals;
+	m_http_stream->next_layer().expires_after(30s);
 	beast::http::async_write(*m_http_stream, m_request_queue.front().request, [this](const beast::error_code& ec, size_t) {
 		try {
 			if (ec) throw std::system_error(ec);
@@ -48,46 +51,48 @@ cGateway::implementation::http_do_write() {
 			m_response = {};
 			/* Start reading the response */
 			beast::http::async_read(*m_http_stream, m_http_buffer, m_response, [this](const beast::error_code& ec, size_t) {
-				if (!ec) {
-					/* If the server doesn't keep the connection alive, gracefully close the connection */
-					if (!m_response.keep_alive()) {
-						http_shutdown_ssl();
-						return;
-					}
-					/* If there was no error, pop the processed request from the queue */
-					std::coroutine_handle<> coro = m_request_queue.front().coro;
-					m_request_queue.pop_front();
-					if (m_request_queue.empty()) {
-						/* If there are no more requests, schedule the connection to close after 1 minute */
-						/* TODO: Find a more suitable timeout period? */
-						m_http_timer.expires_after(1min);
-						m_http_timer.async_wait([this](const boost::system::error_code& ec) {
-							/* If the timer expired and there are no pending requests, close the connection */
-							if (ec != asio::error::operation_aborted && m_request_queue.empty()) {
-								auto stream = m_http_stream.get();
-								stream->async_shutdown([_ = std::move(m_http_stream)](const beast::error_code& ec) {});
-							}
-						});
-					}
-					else {
-						/* If there are pending requests, write the next one to the stream */
-						http_do_write();
-					}
-					coro.resume();
+				/* If connection was unexpectedly closed, retry */
+				if (ec == beast::http::error::end_of_stream) {
+					http_resolve();
 					return;
 				}
+				/* If there was any other error, fail */
 				try {
-					if (ec == beast::http::error::end_of_stream) {
-						/* Connection was unexpectedly closed, retry */
-						http_do_resolve();
-						return;
-					}
-					throw std::system_error(ec);
+					if (ec) throw std::system_error(ec);
 				}
 				catch (...) {
 					m_except = std::current_exception();
 					http_shutdown_ssl();
+					return;
 				}
+				/* If the server doesn't keep the connection alive, gracefully close the connection */
+				if (!m_response.keep_alive()) {
+					http_shutdown_ssl();
+					return;
+				}
+				/* Save the coroutine handle before popping the processed request from the queue */
+				std::coroutine_handle<> coro = m_request_queue.front().coro;
+				m_request_queue.pop_front();
+				if (m_request_queue.empty()) try {
+					/* If there are no more requests, schedule the connection to close after 1 minute */
+					m_http_timer.expires_after(1min);
+					m_http_timer.async_wait([this](const boost::system::error_code &ec) {
+						/* If the timer expired and there are no pending requests, close the connection */
+						if (ec != asio::error::operation_aborted && m_request_queue.empty()) {
+							auto stream = m_http_stream.get();
+							stream->next_layer().expires_after(30s);
+							stream->async_shutdown([_ = std::move(m_http_stream)](const beast::error_code &ec) {});
+						}
+					});
+				}
+				catch (...) {
+					m_except = std::current_exception();
+				}
+				else {
+					/* If there are pending requests, write the next one to the stream */
+					http_write();
+				}
+				coro.resume();
 			});
 		}
 		catch (...) {
@@ -98,15 +103,17 @@ cGateway::implementation::http_do_write() {
 }
 void
 cGateway::implementation::http_shutdown_ssl() {
+	using namespace std::chrono_literals;
 	/* Destroy the http stream */
 	auto stream = m_http_stream.get();
+	stream->next_layer().expires_after(30s);
 	stream->async_shutdown([_ = std::move(m_http_stream)](const beast::error_code&){});
 	/* Save the coroutine handle before popping the current entry from the queue */
 	auto coro = m_request_queue.front().coro;
 	m_request_queue.pop_front();
 	/* Start processing the rest of the requests in the queue */
 	if (!m_request_queue.empty())
-		http_do_resolve();
+		http_resolve();
 	/* Resume the coroutine */
 	coro.resume();
 }
@@ -119,21 +126,11 @@ cGateway::implementation::http_shutdown() {
 	m_request_queue.pop_front();
 	/* Start processing the rest of the requests in the queue */
 	if (!m_request_queue.empty())
-		http_do_resolve();
+		http_resolve();
 	/* Resume the coroutine */
 	coro.resume();
 }
-
-class cGateway::implementation::wait_on_event_thread : public std::suspend_always {
-private:
-	asio::steady_timer   m_timer;
-
-public:
-	wait_on_event_thread(cGateway::implementation* p, chrono::milliseconds r) : std::suspend_always(), m_timer(p->m_http_ioc, r) {}
-
-	void await_suspend(std::coroutine_handle<> h) { m_timer.async_wait([h](const boost::system::error_code&) { h(); }); }
-};
-
+/* ================================================================================================================== */
 cTask<json::value>
 cGateway::implementation::DiscordRequest(beast::http::verb m, std::string_view t, const json::object* o, std::span<const cHttpField> f) {
 	chrono::milliseconds retry_after;
@@ -143,10 +140,9 @@ cGateway::implementation::DiscordRequest(beast::http::verb m, std::string_view t
 	catch (const xRateLimitError& e) {
 		retry_after = e.retry_after();
 	}
-	co_await wait_on_event_thread(this, retry_after);
+	co_await WaitOnEventThread(retry_after);
 	co_return co_await DiscordRequest(m, t, o, f);
 }
-
 cTask<json::value>
 cGateway::implementation::DiscordRequestNoRetry(beast::http::verb method, std::string_view target, const json::object* obj, std::span<const cHttpField> fields) {
 	/* Since we're about to send a request, cancel the timeout timer */
@@ -213,11 +209,6 @@ cGateway::implementation::DiscordPostNoRetry(std::string_view t, const json::obj
 	return DiscordRequestNoRetry(beast::http::verb::post, t, &o, f);
 }
 /* ================================================================================================================== */
-cTask<>
-cGateway::implementation::WaitOnEventThread(chrono::milliseconds duration) {
-	co_await wait_on_event_thread(this, duration);
-}
-
 // TODO: make custom exceptions, preferably in Exceptions.h
 // TODO: make getting all members from the gateway
 cAsyncGenerator<cMember>
