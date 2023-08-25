@@ -152,6 +152,14 @@ cBot::edit_message(const cSnowflake& channel_id, const cSnowflake& msg_id, const
 }
 
 cTask<>
+cBot::DeleteMessage(const cSnowflake& channel_id, const cSnowflake& msg_id, std::string_view reason) {
+	tHttpFields fields;
+	if (!reason.empty())
+		fields.emplace_back("X-Audit-Log-Reason", cUtils::PercentEncode(reason));
+	co_await DiscordDelete(fmt::format("/channels/{}/messages/{}", channel_id, msg_id), fields);
+}
+
+cTask<>
 cBot::RemoveGuildMember(const cSnowflake& guild_id, const cSnowflake& user_id, std::string_view reason) {
 	tHttpFields fields;
 	if (!reason.empty())

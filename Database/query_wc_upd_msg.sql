@@ -1,0 +1,1 @@
+UPDATE welcoming SET msg_id=?1 WHERE user_id IS ?2 AND msg_id IS 0;

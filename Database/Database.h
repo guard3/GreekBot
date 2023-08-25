@@ -46,11 +46,12 @@ public:
 	cDatabase& operator=(const cDatabase&) = delete;
 
 	static cDatabaseTask<> UpdateLeaderboard(const cMessage&);
-	static cDatabaseTask<> RegisterWelcome(const cUser&);
-	static cDatabaseTask<> RegisterMessage(const cUser&, const cMessage&);
-	static cDatabaseTask<bool> WelcomeHasNullMessage(const cUser&);
-	static cDatabaseTask<cSnowflake> WelcomeGetMessage(const cUser&);
-	static cDatabaseTask<cSnowflake> WelcomeDeleteUser(const cUser&);
+	static cDatabaseTask<> WelcomeRegisterMember(const cMember&);
+	static cDatabaseTask<> WelcomeUpdateMessage(const cUser&, const cMessage&);
+	static cDatabaseTask<int64_t> WelcomeGetMessage(const cUser&);
+	static cDatabaseTask<> WelcomeEditMessage(int64_t);
+	static cDatabaseTask<std::vector<cSnowflake>> WelcomeDeleteMember(const cUser&);
+	static cDatabaseTask<> WelcomeDeleteMessage(const cSnowflake&);
 	static cDatabaseTask<tRankQueryData> GetUserRank(const cUser&);
 	static cDatabaseTask<tRankQueryData> GetTop10();
 };

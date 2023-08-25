@@ -124,6 +124,8 @@ private:
 	cTask<> OnGuildMemberRemove(cSnowflake& guild_id, cUser& user) override;
 	cTask<> OnInteractionCreate(const cInteraction&) override;
 	cTask<> OnMessageCreate(const cMessage& msg) override;
+	cTask<> OnMessageDelete(cSnowflake& id, cSnowflake& channel_id, hSnowflake guild_id) override;
+	cTask<> OnMessageDeleteBulk(std::span<cSnowflake> ids, cSnowflake& channel_id, hSnowflake guild_id) override;
 
 public:
 	explicit cGreekBot(std::string_view token) : cBot(token, INTENT_GUILD_INTEGRATIONS | INTENT_GUILD_MESSAGES | INTENT_GUILDS | INTENT_GUILD_MEMBERS) {}

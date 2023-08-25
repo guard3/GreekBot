@@ -92,8 +92,6 @@ LABEL_RESOLVED_DBNAME:
 	/* If database handle is open, create leaderboard table */
 	if (rc == SQLITE_OK) {
 		sqlite3_stmt* stmt = nullptr;
-		//const char* query = QUERY_INIT;
-		//const char* end;
 		for (const char *query = QUERY_INIT, *end; SQLITE_OK == sqlite3_prepare_v2(db, query, -1, &stmt, &end); query = end) {
 			if (stmt) {
 				int status = sqlite3_step(stmt);
@@ -101,35 +99,12 @@ LABEL_RESOLVED_DBNAME:
 				if (status != SQLITE_DONE)
 					break;
 			}
-			if (!stmt) {
+			else {
 				g_db = db;
 				cUtils::PrintLog("Database initialized successfully");
 				return;
 			}
 		}
-		// Error
-		// ...
-#if 0
-		if (SQLITE_OK == sqlite3_prepare_v2(db, query, /*QRLEN_INIT*/sizeof(QUERY_INIT), &stmt, &end)) {
-			if (SQLITE_DONE == sqlite3_step(stmt)) {
-				sqlite3_finalize(stmt);
-				g_db = db;
-
-				if (SQLITE_OK == sqlite3_prepare_v2(db, end, sizeof(QUERY_INIT) - (end-query), &stmt, &end)) {
-					if (SQLITE_DONE == sqlite3_step(stmt))
-						cUtils::PrintLog("Ola ok 2");
-					else
-						cUtils::PrintLog("Ola skata, o nikic ftaiei 2 {:?}", end);
-				}
-				else
-					cUtils::PrintLog("Ola skata, o nikic ftaiei {:?}", end);
-
-				cUtils::PrintLog("Database initialized successfully {:?}.", end);
-				return;
-			}
-		}
-		sqlite3_finalize(stmt);
-#endif
 	}
 	cUtils::PrintErr("Fatal Database Error: {}", sqlite3_errmsg(db));
 	sqlite3_close(db);
@@ -188,14 +163,16 @@ cDatabase::UpdateLeaderboard(const cMessage& msg) {
 }
 
 cDatabaseTask<>
-cDatabase::RegisterWelcome(const cUser& user) {
-	return [&user]() {
+cDatabase::WelcomeRegisterMember(const cMember& member) {
+	return [&member]() {
 		sqlite3_stmt* stmt;
-		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_REGISTER_WC, sizeof(QUERY_REGISTER_WC), &stmt, nullptr)) {
-			if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, user.GetId().ToInt())) {
-				if (SQLITE_DONE == sqlite3_step(stmt)) {
-					sqlite3_finalize(stmt);
-					return;
+		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_WC_REG_MBR, sizeof(QUERY_WC_REG_MBR), &stmt, nullptr)) {
+			if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, member.GetUser()->GetId().ToInt())) {
+				if (SQLITE_OK == sqlite3_bind_int64(stmt, 2, member.JoinedAt().time_since_epoch().count())) {
+					if (SQLITE_DONE == sqlite3_step(stmt)) {
+						sqlite3_finalize(stmt);
+						return;
+					}
 				}
 			}
 		}
@@ -204,40 +181,21 @@ cDatabase::RegisterWelcome(const cUser& user) {
 	};
 }
 
-cDatabaseTask<bool>
-cDatabase::WelcomeHasNullMessage(const cUser& user) {
-	return [&user]() -> bool {
-		sqlite3_stmt* stmt;
-		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_NULL_MSG, sizeof(QUERY_NULL_MSG), &stmt, nullptr)) {
-			if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, user.GetId().ToInt())) {
-				if (SQLITE_ROW == sqlite3_step(stmt)) {
-					auto result = sqlite3_column_int64(stmt, 0);
-					sqlite3_finalize(stmt);
-					return result;
-				}
-			}
-		}
-		sqlite3_finalize(stmt);
-		throw xDatabaseError();
-	};
-}
-
-cDatabaseTask<cSnowflake>
+cDatabaseTask<int64_t>
 cDatabase::WelcomeGetMessage(const cUser& user) {
-	return [&user]() -> cSnowflake {
+	return [&user]() -> int64_t {
 		sqlite3_stmt* stmt = nullptr;
 		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_WC_GET_MSG, sizeof(QUERY_WC_GET_MSG), &stmt, nullptr)) {
 			if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, user.GetId().ToInt())) {
-				switch (sqlite3_step(stmt)) {
+				switch (int64_t result; sqlite3_step(stmt)) {
 					case SQLITE_DONE:
-						sqlite3_finalize(stmt);
-						return {};
-					case SQLITE_ROW: {
-						const int type = sqlite3_column_type(stmt, 0);
-						const int64_t result = type == SQLITE_NULL ? 0 : sqlite3_column_int64(stmt, 0);
+						result = 0;
+						goto LABEL_DONE;
+					case SQLITE_ROW:
+						result = sqlite3_column_int64(stmt, 0);
+					LABEL_DONE:
 						sqlite3_finalize(stmt);
 						return result;
-					}
 					default:
 						break;
 				}
@@ -249,12 +207,73 @@ cDatabase::WelcomeGetMessage(const cUser& user) {
 }
 
 cDatabaseTask<>
-cDatabase::RegisterMessage(const cUser& user, const cMessage& msg) {
+cDatabase::WelcomeEditMessage(int64_t msg_id) {
+	return [msg_id]() {
+		sqlite3_stmt* stmt = nullptr;
+		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_WC_EDT_MSG, sizeof(QUERY_WC_EDT_MSG), &stmt, nullptr)) {
+			if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, msg_id)) {
+				if (SQLITE_DONE == sqlite3_step(stmt)) {
+					sqlite3_finalize(stmt);
+					return;
+				}
+			}
+		}
+		sqlite3_finalize(stmt);
+		throw xDatabaseError();
+	};
+}
+
+cDatabaseTask<std::vector<cSnowflake>>
+cDatabase::WelcomeDeleteMember(const cUser& user) {
+	return [&user]() {
+		sqlite3_stmt* stmt = nullptr;
+		if (SQLITE_OK == sqlite3_prepare_v2(g_db, "DELETE FROM welcoming WHERE user_id IS ?1 RETURNING ABS(msg_id);", -1, &stmt, nullptr)) {
+			if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, user.GetId().ToInt())) {
+				for (std::vector<cSnowflake> result;;) {
+					switch (sqlite3_step(stmt)) {
+						case SQLITE_DONE:
+							sqlite3_finalize(stmt);
+							return result;
+						case SQLITE_ROW:
+							if (auto id = sqlite3_column_int64(stmt, 0); id != 0)
+								result.emplace_back(id);
+							continue;
+						default:
+							break;
+					}
+					break;
+				}
+			}
+		}
+		sqlite3_finalize(stmt);
+		throw xDatabaseError();
+	};
+}
+
+cDatabaseTask<>
+cDatabase::WelcomeDeleteMessage(const cSnowflake &msg_id) {
+	return [&msg_id]() {
+		sqlite3_stmt* stmt = nullptr;
+		if (SQLITE_OK == sqlite3_prepare_v2(g_db, "DELETE FROM welcoming WHERE msg_id IS ?1;", -1, &stmt, nullptr)) {
+			if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, msg_id.ToInt())) {
+				if (SQLITE_DONE == sqlite3_step(stmt)) {
+					sqlite3_finalize(stmt);
+					return;
+				}
+			}
+		}
+		sqlite3_finalize(stmt);
+		throw xDatabaseError();
+	};
+}
+
+cDatabaseTask<>
+cDatabase::WelcomeUpdateMessage(const cUser& user, const cMessage& msg) {
 	return [&user, &msg]() {
 		sqlite3_stmt* stmt = nullptr;
-		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_WC_REG_MSG, sizeof(QUERY_WC_REG_MSG), &stmt, nullptr)) {
-			if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, user.GetId().ToInt())) {
-				if (SQLITE_OK == sqlite3_bind_int64(stmt, 2, msg.GetId().ToInt())) {
+		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_WC_UPD_MSG, sizeof(QUERY_WC_UPD_MSG), &stmt, nullptr)) {
+			if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, msg.GetId().ToInt())) {
+				if (SQLITE_OK == sqlite3_bind_int64(stmt, 2, user.GetId().ToInt())) {
 					if (SQLITE_DONE == sqlite3_step(stmt)) {
 						sqlite3_finalize(stmt);
 						return;

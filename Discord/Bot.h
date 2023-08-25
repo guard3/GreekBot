@@ -70,6 +70,7 @@ public:
 	cTask<cMessage> EditMessage(const cSnowflake& channel_id, const cSnowflake& msg_id, iKwArg auto&... kwargs) {
 		co_return co_await edit_message(channel_id, msg_id, { kwargs... });
 	}
+	cTask<> DeleteMessage(const cSnowflake& guild_id, const cSnowflake& msg_id, std::string_view reason = {});
 
 	cTask<> RemoveGuildMember(const cSnowflake& guild_id, const cSnowflake& user_id, std::string_view reason = {});
 	cTask<> CreateGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, std::chrono::seconds delete_message_seconds = std::chrono::seconds(0), std::string_view reason = {});

@@ -1,1 +1,0 @@
-SELECT COUNT(*) FROM welcoming WHERE user_id IS ?1 AND msg_id IS NULL;

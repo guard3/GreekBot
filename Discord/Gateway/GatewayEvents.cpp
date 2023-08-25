@@ -2,22 +2,22 @@
 #include "Utils.h"
 /* ========== Event type enum ======================================================================================= */
 enum eEvent : uint32_t {
-	EVENT_RESUMED                   = 0x712ED6EE,
-	EVENT_READY                     = 0xDFC1471F,
-	EVENT_GUILD_CREATE              = 0xDA68E698,
-	EVENT_GUILD_ROLE_CREATE         = 0xEFECD22C,
-	EVENT_GUILD_ROLE_UPDATE         = 0xF81F07AF,
-	EVENT_GUILD_ROLE_DELETE         = 0x5A284E50,
-	EVENT_GUILD_JOIN_REQUEST_DELETE = 0xC3A463EA,
-	EVENT_GUILD_MEMBER_ADD          = 0x16401324,
-	EVENT_GUILD_MEMBER_UPDATE       = 0x73288C4D,
-	EVENT_GUILD_MEMBER_REMOVE       = 0x838DA405,
-	EVENT_INTERACTION_CREATE        = 0xB1E5D8EC,
-	EVENT_MESSAGE_CREATE            = 0x9C643E55,
-	EVENT_MESSAGE_UPDATE            = 0x8B97EBD6,
-	EVENT_MESSAGE_DELETE            = 0x29A0A229,
-	EVENT_GUILD_MEMBERS_CHUNK       = 0x343F4BC5,
-	EVENT_USER_UPDATE               = 0xBFC98531
+	EVENT_RESUMED             = 0x712ED6EE,
+	EVENT_READY               = 0xDFC1471F,
+	EVENT_GUILD_CREATE        = 0xDA68E698,
+	EVENT_GUILD_ROLE_CREATE   = 0xEFECD22C,
+	EVENT_GUILD_ROLE_UPDATE   = 0xF81F07AF,
+	EVENT_GUILD_ROLE_DELETE   = 0x5A284E50,
+	EVENT_GUILD_MEMBER_ADD    = 0x16401324,
+	EVENT_GUILD_MEMBER_UPDATE = 0x73288C4D,
+	EVENT_GUILD_MEMBER_REMOVE = 0x838DA405,
+	EVENT_INTERACTION_CREATE  = 0xB1E5D8EC,
+	EVENT_MESSAGE_CREATE      = 0x9C643E55,
+	EVENT_MESSAGE_UPDATE      = 0x8B97EBD6,
+	EVENT_MESSAGE_DELETE      = 0x29A0A229,
+	EVENT_MESSAGE_DELETE_BULK = 0x2C44158B,
+	EVENT_GUILD_MEMBERS_CHUNK = 0x343F4BC5,
+	EVENT_USER_UPDATE         = 0xBFC98531
 };
 /* ========== Make void a valid coroutine return type =============================================================== */
 template<>
@@ -113,6 +113,26 @@ cGateway::implementation::process_event(const json::value& v) {
 				cMessage m{ d };
 				co_await ResumeOnEventThread();
 				co_await m_parent->OnMessageCreate(m);
+				break;
+			}
+			case EVENT_MESSAGE_DELETE: {
+				auto id = json::value_to<cSnowflake>(d.at("id"));
+				auto channel_id = json::value_to<cSnowflake>(d.at("channel_id"));
+				std::optional<cSnowflake> guild_id;
+				if (auto p = d.as_object().if_contains("guild_id"))
+					guild_id.emplace(json::value_to<std::string_view>(*p));
+				co_await ResumeOnEventThread();
+				co_await m_parent->OnMessageDelete(id, channel_id, guild_id.has_value() ? &*guild_id : nullptr);
+				break;
+			}
+			case EVENT_MESSAGE_DELETE_BULK: {
+				auto ids = json::value_to<std::vector<cSnowflake>>(d.at("ids"));
+				auto channel_id = json::value_to<cSnowflake>(d.at("channel_id"));
+				std::optional<cSnowflake> guild_id;
+				if (auto p = d.as_object().if_contains("guild_id"))
+					guild_id.emplace(json::value_to<std::string_view>(*p));
+				co_await ResumeOnEventThread();
+				co_await m_parent->OnMessageDeleteBulk(ids, channel_id, guild_id.has_value() ? &*guild_id : nullptr);
 				break;
 			}
 			case EVENT_GUILD_MEMBERS_CHUNK: {

@@ -1,3 +1,0 @@
-INSERT INTO welcoming VALUES(?1, NULL)
-ON CONFLICT(user_id) DO UPDATE SET msg_id=NULL
-WHERE user_id IS ?1;

@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS leaderboard(
     timestamp INTEGER NOT NULL
 );
 CREATE TABLE IF NOT EXISTS welcoming(
-    user_id INTEGER PRIMARY KEY,
-    msg_id INTEGER
+    msg_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    joined_at INTEGER NOT NULL
 );
