@@ -3,6 +3,22 @@
 #include "User.h"
 #include "Role.h"
 #include <vector>
+#include <span>
+
+/* TODO: Make cMember derive from cPartialMember */
+class cPartialMember {
+private:
+	cUser m_user;
+	std::string m_nick;
+	std::vector<cSnowflake> m_roles;
+
+public:
+	explicit cPartialMember(const json::value&);
+
+	const cUser& GetUser() const noexcept { return m_user; }
+	std::string_view GetNickname() const noexcept { return m_nick; }
+	std::span<const cSnowflake> GetRoles() const noexcept { return m_roles; }
+};
 
 class cMember final {
 private:

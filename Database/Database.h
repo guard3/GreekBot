@@ -1,6 +1,5 @@
-#pragma once
-#ifndef _GREEKBOT_DATABASE_H_
-#define _GREEKBOT_DATABASE_H_
+#ifndef GREEKBOT_DATABASE_H
+#define GREEKBOT_DATABASE_H
 #include <stdexcept>
 #include <coroutine>
 #include <vector>
@@ -47,6 +46,11 @@ public:
 	cDatabase& operator=(const cDatabase&) = delete;
 
 	static cDatabaseTask<> UpdateLeaderboard(const cMessage&);
+	static cDatabaseTask<> RegisterWelcome(const cUser&);
+	static cDatabaseTask<> RegisterMessage(const cUser&, const cMessage&);
+	static cDatabaseTask<bool> WelcomeHasNullMessage(const cUser&);
+	static cDatabaseTask<cSnowflake> WelcomeGetMessage(const cUser&);
+	static cDatabaseTask<cSnowflake> WelcomeDeleteUser(const cUser&);
 	static cDatabaseTask<tRankQueryData> GetUserRank(const cUser&);
 	static cDatabaseTask<tRankQueryData> GetTop10();
 };
@@ -122,4 +126,4 @@ public:
 		return std::move(*m_result);
 	}
 };
-#endif /* _GREEKBOT_DATABASE_H_ */
+#endif /* GREEKBOT_DATABASE_H */

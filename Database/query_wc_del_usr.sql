@@ -1,0 +1,1 @@
+DELETE FROM welcoming WHERE user_id IS ?1 RETURNING msg_id;

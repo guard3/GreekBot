@@ -30,8 +30,8 @@ private:
 		LMG_PROFICIENCY_NON_LEARNER,
 		LMG_NUM_PROFICIENCY_ROLES
 	};
-	cSnowflake m_lmg_id = 350234668680871946; // Learning Greek
-	cSnowflake m_lmg_proficiency_roles[8] {
+	const cSnowflake m_lmg_id = 350234668680871946; // Learning Greek
+	const cSnowflake m_lmg_proficiency_roles[8] {
 		350483752490631181, // @Native
 		351117824300679169, // @Beginner
 		351117954974482435, // @Elementary
@@ -59,7 +59,7 @@ private:
 		std::vector<chSnowflake> roles;
 		roles.reserve(member->GetRoles().size());
 		/* Copy all existing roles except proficiency roles */
-		cSnowflake *proficiency_roles_begin = m_lmg_proficiency_roles, *proficiency_roles_end = m_lmg_proficiency_roles + LMG_NUM_PROFICIENCY_ROLES;
+		const cSnowflake *proficiency_roles_begin = m_lmg_proficiency_roles, *proficiency_roles_end = m_lmg_proficiency_roles + LMG_NUM_PROFICIENCY_ROLES;
 		for (auto& id : member->GetRoles()) {
 			if (proficiency_roles_end == std::find_if(proficiency_roles_begin, proficiency_roles_end, [&](const cSnowflake& s) { return s == id; }))
 				roles.push_back(&id);
@@ -119,10 +119,13 @@ private:
 	cTask<> OnGuildRoleCreate(cSnowflake& guild_id, cRole& role) override;
 	cTask<> OnGuildRoleUpdate(cSnowflake& guild_id, cRole& role) override;
 	cTask<> OnGuildRoleDelete(cSnowflake& guild_id, cSnowflake& role_id) override;
+	cTask<> OnGuildMemberAdd(cSnowflake& guild_id, cMember& member) override;
+	cTask<> OnGuildMemberUpdate(cSnowflake& guild_id, cPartialMember& member) override;
+	cTask<> OnGuildMemberRemove(cSnowflake& guild_id, cUser& user) override;
 	cTask<> OnInteractionCreate(const cInteraction&) override;
 	cTask<> OnMessageCreate(const cMessage& msg) override;
 
 public:
-	explicit cGreekBot(std::string_view token) : cBot(token, INTENT_GUILD_INTEGRATIONS | INTENT_GUILD_MESSAGES | INTENT_GUILDS) {}
+	explicit cGreekBot(std::string_view token) : cBot(token, INTENT_GUILD_INTEGRATIONS | INTENT_GUILD_MESSAGES | INTENT_GUILDS | INTENT_GUILD_MEMBERS) {}
 };
 #endif /* GREEKBOT_GREEKBOT_H */

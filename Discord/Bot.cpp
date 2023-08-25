@@ -144,6 +144,13 @@ cBot::create_message(const cSnowflake& channel_id, const cMessageParams& params)
 	};
 }
 
+cTask<cMessage>
+cBot::edit_message(const cSnowflake& channel_id, const cSnowflake& msg_id, const cMessageParams& params) {
+	co_return cMessage {
+		co_await DiscordPatch(fmt::format("/channels/{}/messages/{}", channel_id, msg_id), params.ToJson())
+	};
+}
+
 cTask<>
 cBot::RemoveGuildMember(const cSnowflake& guild_id, const cSnowflake& user_id, std::string_view reason) {
 	tHttpFields fields;

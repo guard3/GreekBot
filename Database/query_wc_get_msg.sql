@@ -1,0 +1,1 @@
+SELECT msg_id FROM welcoming where user_id IS ?1;

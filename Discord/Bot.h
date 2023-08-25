@@ -21,6 +21,7 @@ private:
 	cTask<> edit_interaction_response(const cInteraction&, const cMessageParams&);
 	cTask<> send_interaction_followup_message(const cInteraction& i, const cMessageParams&);
 	cTask<cMessage> create_message(const cSnowflake& channel_id, const cMessageParams&);
+	cTask<cMessage> edit_message(const cSnowflake&, const cSnowflake&, const cMessageParams&);
 
 protected:
 	using cGateway::OnInteractionCreate;
@@ -65,6 +66,9 @@ public:
 	}
 	cTask<cMessage> CreateDMMessage(const cSnowflake& recipient_id, iKwArg auto&... kwargs) {
 		co_return co_await CreateMessage((co_await CreateDM(recipient_id)).GetId(), kwargs...);
+	}
+	cTask<cMessage> EditMessage(const cSnowflake& channel_id, const cSnowflake& msg_id, iKwArg auto&... kwargs) {
+		co_return co_await edit_message(channel_id, msg_id, { kwargs... });
 	}
 
 	cTask<> RemoveGuildMember(const cSnowflake& guild_id, const cSnowflake& user_id, std::string_view reason = {});

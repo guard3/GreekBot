@@ -82,6 +82,27 @@ cGateway::implementation::process_event(const json::value& v) {
 				co_await m_parent->OnGuildRoleDelete(guild_id, role_id);
 				break;
 			}
+			case EVENT_GUILD_MEMBER_ADD: {
+				auto guild_id = json::value_to<cSnowflake>(d.at("guild_id"));
+				cMember member{ d };
+				co_await ResumeOnEventThread();
+				co_await m_parent->OnGuildMemberAdd(guild_id, member);
+				break;
+			}
+			case EVENT_GUILD_MEMBER_UPDATE: {
+				auto guild_id = json::value_to<cSnowflake>(d.at("guild_id"));
+				cPartialMember member{ d };
+				co_await ResumeOnEventThread();
+				co_await m_parent->OnGuildMemberUpdate(guild_id, member);
+				break;
+			}
+			case EVENT_GUILD_MEMBER_REMOVE: {
+				auto guild_id = json::value_to<cSnowflake>(d.at("guild_id"));
+				cUser user{ d.at("user") };
+				co_await ResumeOnEventThread();
+				co_await m_parent->OnGuildMemberRemove(guild_id, user);
+				break;
+			}
 			case EVENT_INTERACTION_CREATE: {
 				cInteraction i{ d };
 				co_await ResumeOnEventThread();
