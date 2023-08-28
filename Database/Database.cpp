@@ -146,7 +146,7 @@ cDatabase::UpdateLeaderboard(const cMessage& msg) {
 		using namespace std::chrono;
 		/* Execute QUERY_UPDATE_LB */
 		sqlite3_stmt* stmt;
-		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_UPDATE_LB, QRLEN_UPDATE_LB, &stmt, nullptr)) {
+		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_UPDATE_LB, sizeof(QUERY_UPDATE_LB), &stmt, nullptr)) {
 			if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, msg.GetAuthor().GetId().ToInt())) {
 				// TODO: update db and save discord epoch milliseconds directly
 				if (SQLITE_OK == sqlite3_bind_int64(stmt, 2, duration_cast<seconds>(cDiscordClock::to_sys(msg.GetId().GetTimestamp()).time_since_epoch()).count())) {
@@ -162,16 +162,17 @@ cDatabase::UpdateLeaderboard(const cMessage& msg) {
 	};
 }
 
-cDatabaseTask<>
-cDatabase::WelcomeRegisterMember(const cMember& member) {
-	return [&member]() {
-		sqlite3_stmt* stmt;
+cDatabaseTask<uint64_t>
+cDatabase::WC_RegisterMember(const cMember& member) {
+	return [&member]() -> uint64_t {
+		sqlite3_stmt* stmt = nullptr;
 		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_WC_REG_MBR, sizeof(QUERY_WC_REG_MBR), &stmt, nullptr)) {
 			if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, member.GetUser()->GetId().ToInt())) {
 				if (SQLITE_OK == sqlite3_bind_int64(stmt, 2, member.JoinedAt().time_since_epoch().count())) {
-					if (SQLITE_DONE == sqlite3_step(stmt)) {
+					if (SQLITE_ROW == sqlite3_step(stmt)) {
+						int64_t result = sqlite3_column_int64(stmt, 0);
 						sqlite3_finalize(stmt);
-						return;
+						return static_cast<uint64_t>(result);
 					}
 				}
 			}
@@ -182,14 +183,14 @@ cDatabase::WelcomeRegisterMember(const cMember& member) {
 }
 
 cDatabaseTask<int64_t>
-cDatabase::WelcomeGetMessage(const cUser& user) {
-	return [&user]() -> int64_t {
+cDatabase::WC_GetMessage(const cPartialMember& member) {
+	return [&member]() -> int64_t {
 		sqlite3_stmt* stmt = nullptr;
 		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_WC_GET_MSG, sizeof(QUERY_WC_GET_MSG), &stmt, nullptr)) {
-			if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, user.GetId().ToInt())) {
+			if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, member.GetUser().GetId().ToInt())) {
 				switch (int64_t result; sqlite3_step(stmt)) {
 					case SQLITE_DONE:
-						result = 0;
+						result = -1;
 						goto LABEL_DONE;
 					case SQLITE_ROW:
 						result = sqlite3_column_int64(stmt, 0);
@@ -207,7 +208,7 @@ cDatabase::WelcomeGetMessage(const cUser& user) {
 }
 
 cDatabaseTask<>
-cDatabase::WelcomeEditMessage(int64_t msg_id) {
+cDatabase::WC_EditMessage(int64_t msg_id) {
 	return [msg_id]() {
 		sqlite3_stmt* stmt = nullptr;
 		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_WC_EDT_MSG, sizeof(QUERY_WC_EDT_MSG), &stmt, nullptr)) {
@@ -223,25 +224,21 @@ cDatabase::WelcomeEditMessage(int64_t msg_id) {
 	};
 }
 
-cDatabaseTask<std::vector<cSnowflake>>
-cDatabase::WelcomeDeleteMember(const cUser& user) {
+cDatabaseTask<uint64_t>
+cDatabase::WC_DeleteMember(const cUser& user) {
 	return [&user]() {
 		sqlite3_stmt* stmt = nullptr;
-		if (SQLITE_OK == sqlite3_prepare_v2(g_db, "DELETE FROM welcoming WHERE user_id IS ?1 RETURNING ABS(msg_id);", -1, &stmt, nullptr)) {
+		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_WC_DEL_MBR, sizeof(QUERY_WC_DEL_MBR), &stmt, nullptr)) {
 			if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, user.GetId().ToInt())) {
-				for (std::vector<cSnowflake> result;;) {
-					switch (sqlite3_step(stmt)) {
-						case SQLITE_DONE:
-							sqlite3_finalize(stmt);
-							return result;
-						case SQLITE_ROW:
-							if (auto id = sqlite3_column_int64(stmt, 0); id != 0)
-								result.emplace_back(id);
-							continue;
-						default:
-							break;
-					}
-					break;
+				switch (uint64_t result; sqlite3_step(stmt)) {
+					case SQLITE_DONE:
+						result = 0;
+						goto LABEL_DONE;
+					case SQLITE_ROW:
+						result = static_cast<uint64_t>(sqlite3_column_int64(stmt, 0));
+					LABEL_DONE:
+						sqlite3_finalize(stmt);
+						return result;
 				}
 			}
 		}
@@ -251,29 +248,12 @@ cDatabase::WelcomeDeleteMember(const cUser& user) {
 }
 
 cDatabaseTask<>
-cDatabase::WelcomeDeleteMessage(const cSnowflake &msg_id) {
-	return [&msg_id]() {
-		sqlite3_stmt* stmt = nullptr;
-		if (SQLITE_OK == sqlite3_prepare_v2(g_db, "DELETE FROM welcoming WHERE msg_id IS ?1;", -1, &stmt, nullptr)) {
-			if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, msg_id.ToInt())) {
-				if (SQLITE_DONE == sqlite3_step(stmt)) {
-					sqlite3_finalize(stmt);
-					return;
-				}
-			}
-		}
-		sqlite3_finalize(stmt);
-		throw xDatabaseError();
-	};
-}
-
-cDatabaseTask<>
-cDatabase::WelcomeUpdateMessage(const cUser& user, const cMessage& msg) {
+cDatabase::WC_UpdateMessage(const cUser& user, const cMessage& msg) {
 	return [&user, &msg]() {
 		sqlite3_stmt* stmt = nullptr;
 		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_WC_UPD_MSG, sizeof(QUERY_WC_UPD_MSG), &stmt, nullptr)) {
-			if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, msg.GetId().ToInt())) {
-				if (SQLITE_OK == sqlite3_bind_int64(stmt, 2, user.GetId().ToInt())) {
+			if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, user.GetId().ToInt())) {
+				if (SQLITE_OK == sqlite3_bind_int64(stmt, 2, msg.GetId().ToInt())) {
 					if (SQLITE_DONE == sqlite3_step(stmt)) {
 						sqlite3_finalize(stmt);
 						return;
@@ -291,7 +271,7 @@ cDatabase::GetUserRank(const cUser& user) {
 	return [&user]() {
 		sqlite3_stmt* stmt;
 		tRankQueryData res;
-		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_GET_RANK, QRLEN_GET_RANK, &stmt, nullptr)) {
+		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_GET_RANK, sizeof(QUERY_GET_RANK), &stmt, nullptr)) {
 			if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, user.GetId().ToInt())) {
 				switch (sqlite3_step(stmt)) {
 					case SQLITE_ROW:
@@ -320,7 +300,7 @@ cDatabase::GetTop10() {
 		int rc;
 		tRankQueryData res;
 		sqlite3_stmt* stmt;
-		if (SQLITE_OK == (rc = sqlite3_prepare_v2(g_db, QUERY_GET_TOP_10, QRLEN_GET_TOP_10, &stmt, nullptr))) {
+		if (SQLITE_OK == (rc = sqlite3_prepare_v2(g_db, QUERY_GET_TOP_10, sizeof(QUERY_GET_TOP_10), &stmt, nullptr))) {
 			res.reserve(10);
 			while (SQLITE_ROW == (rc = sqlite3_step(stmt))) {
 				res.emplace_back(

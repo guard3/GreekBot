@@ -6,11 +6,13 @@ cPartialMember::cPartialMember(const json::value& v):
 	m_user{ v.at("user") },
 	m_roles{ json::value_to<std::vector<cSnowflake>>(v.at("roles")) } {
 	auto& o = v.as_object();
-	if (auto p = o.if_contains("nick")) {
+	const json::value* p;
+	if ((p = o.if_contains("nick"))) {
 		auto result = json::try_value_to<std::string>(*p);
 		if (result.has_value())
 			m_nick = std::move(result.value());
 	}
+	m_pending = (p = o.if_contains("pending")) && p->as_bool();
 }
 
 cMember::cMember(const json::value& v):

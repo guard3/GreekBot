@@ -11,6 +11,7 @@ private:
 	cUser m_user;
 	std::string m_nick;
 	std::vector<cSnowflake> m_roles;
+	bool m_pending;
 
 public:
 	explicit cPartialMember(const json::value&);
@@ -18,6 +19,7 @@ public:
 	const cUser& GetUser() const noexcept { return m_user; }
 	std::string_view GetNickname() const noexcept { return m_nick; }
 	std::span<const cSnowflake> GetRoles() const noexcept { return m_roles; }
+	bool IsPending() const noexcept { return m_pending; }
 };
 
 class cMember final {

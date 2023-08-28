@@ -46,14 +46,14 @@ public:
 	cDatabase& operator=(const cDatabase&) = delete;
 
 	static cDatabaseTask<> UpdateLeaderboard(const cMessage&);
-	static cDatabaseTask<> WelcomeRegisterMember(const cMember&);
-	static cDatabaseTask<> WelcomeUpdateMessage(const cUser&, const cMessage&);
-	static cDatabaseTask<int64_t> WelcomeGetMessage(const cUser&);
-	static cDatabaseTask<> WelcomeEditMessage(int64_t);
-	static cDatabaseTask<std::vector<cSnowflake>> WelcomeDeleteMember(const cUser&);
-	static cDatabaseTask<> WelcomeDeleteMessage(const cSnowflake&);
 	static cDatabaseTask<tRankQueryData> GetUserRank(const cUser&);
 	static cDatabaseTask<tRankQueryData> GetTop10();
+
+	static cDatabaseTask<uint64_t> WC_RegisterMember(const cMember&);
+	static cDatabaseTask<> WC_UpdateMessage(const cUser&, const cMessage&);
+	static cDatabaseTask<int64_t> WC_GetMessage(const cPartialMember&);
+	static cDatabaseTask<> WC_EditMessage(int64_t);
+	static cDatabaseTask<uint64_t> WC_DeleteMember(const cUser&);
 };
 /* ================================================================================================================== */
 template<>

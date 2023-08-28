@@ -1,1 +1,0 @@
-DELETE FROM welcoming WHERE msg_id IS ?1;

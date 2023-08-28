@@ -1,1 +1,1 @@
-SELECT msg_id FROM welcoming where user_id IS ?1 ORDER BY joined_at DESC LIMIT 1;
+SELECT msg_id FROM welcoming where user_id IS ?1;
