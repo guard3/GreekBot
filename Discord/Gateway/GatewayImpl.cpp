@@ -109,9 +109,8 @@ cGateway::implementation::on_read(const beast::error_code& ec, size_t bytes_read
 				m_resume_gateway_url.clear();
 			}
 			/* Stop heartbeating and close the connection */
-			// TODO: check if connection must close or not
 			m_heartbeat_timer.cancel();
-			m_ws->async_close(beast::websocket::close_code::normal, [](const beast::error_code& ec) {});
+			m_ws->async_close(beast::websocket::close_code::none, [](const beast::error_code& ec) {});
 			break;
 		case OP_HELLO:
 			/* Update heartbeat interval */
@@ -194,7 +193,7 @@ cGateway::implementation::run_session(const std::string& url) {
 		/* Cancel heartbeating */
 		m_heartbeat_timer.cancel();
 		/* Close the websocket stream */
-		m_ws->async_close(beast::websocket::close_code::normal, [](const beast::error_code& ec) {});
+		m_ws->async_close(beast::websocket::close_code::none, [](const beast::error_code& ec) {});
 		/* Exhaust the io_context */
 		for (;;) {
 			try {
@@ -206,16 +205,24 @@ cGateway::implementation::run_session(const std::string& url) {
 	}
 	/* Reset the websocket context for a subsequent run() call */
 	m_ws_ioc.restart();
-	/* Clear any pending messages left the queue */
+	/* Clear any pending messages or unread data */
 	m_queue.clear();
-	/* If the websocket close reason doesn't permit reconnecting, throw */
+	m_buffer.clear();
+	/* Check websocket close code */
 	switch (close_code) {
-		case 4004:
-		case 4010:
-		case 4011:
-		case 4012:
-		case 4013:
-		case 4014:
+		case 4007: // Invalid seq
+			m_last_sequence = 0;
+			m_session_id.clear();
+			m_resume_gateway_url.clear();
+			break;
+		default:
+			break;
+		case 4004: // Authentication failed
+		case 4010: // Invalid shard
+		case 4011: // Sharding required
+		case 4012: // Invalid API version
+		case 4013: // Invalid intent(s)
+		case 4014: // Disallowed intent(s)
 			throw xGatewayError(fmt::format("Fatal gateway error: {}", close_msg), close_code);
 	}
 	/* Reset the zlib inflate stream */
