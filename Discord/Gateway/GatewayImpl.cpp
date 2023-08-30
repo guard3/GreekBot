@@ -47,92 +47,86 @@ cGateway::implementation::send(std::string msg) {
 /* ================================================================================================================== */
 void
 cGateway::implementation::on_read(const beast::error_code& ec, size_t bytes_read) {
-	/* If an error occurred, return and let the websocket stream close */
-	if (ec)
-		return;
-	try {
-		/* Reset the parser prior to parsing a new JSON */
-		m_parser.reset();
-		/* Check for Z_SYNC_FLUSH suffix and decompress if necessary */
-		char* in = (char*)m_buffer.data().data();
-		if (bytes_read >= 4 ) {
-			if (0 == memcmp(in + bytes_read - 4, "\x00\x00\xFF\xFF", 4)) {
-				m_inflate_stream.avail_in = bytes_read;
-				m_inflate_stream.next_in  = (Byte*)in;
-				do {
-					m_inflate_stream.avail_out = INFLATE_BUFFER_SIZE;
-					m_inflate_stream.next_out  = m_inflate_buffer;
-					switch (inflate(&m_inflate_stream, Z_NO_FLUSH)) {
-						default:
-							throw std::runtime_error(m_inflate_stream.msg);
-						case Z_OK:
-						case Z_STREAM_END:
-							m_parser.write((char*)m_inflate_buffer, INFLATE_BUFFER_SIZE - m_inflate_stream.avail_out);
-					}
-				} while (m_inflate_stream.avail_out == 0);
-				goto LABEL_PARSED;
-			}
-		}
-		/* If the payload isn't compressed, directly feed it into the json parser */
-		m_parser.write(in, bytes_read);
-		LABEL_PARSED:
-		/* Consume all read bytes from the dynamic buffer */
-		m_buffer.consume(bytes_read);
-		/* Release the parsed json value */
-		const json::value v = m_parser.release();
-		/* Start the next asynchronous read operation to keep listening for more events */
-		m_ws->async_read(m_buffer, [this](beast::error_code ec, size_t size) { on_read(ec, size); });
-#ifdef GW_LOG_LVL_2
-		cUtils::PrintLog("{}", json::serialize(v));
-#endif
-		/* Process the event */
-		switch (v.at("op").to_number<int>()) {
-			case OP_DISPATCH:
-				/* Process event */
-				process_event(v);
-				break;
-			case OP_HEARTBEAT:
-				/* Cancel any pending heartbeats */
-				m_heartbeat_timer.cancel();
-				/* Send a heartbeat immediately */
-				heartbeat();
-				/* Resume heartbeating */
-				m_heartbeat_timer.expires_after(m_heartbeat_interval);
-				m_heartbeat_timer.async_wait([this](beast::error_code ec){ on_expire(ec); });
-				break;
-			case OP_RECONNECT:
-				/* Let the server close the connection gracefully */
-				break;
-			case OP_INVALID_SESSION:
-				/* If session is not resumable, reset the current session */
-				if (!v.at("d").as_bool()) {
-					m_last_sequence = 0;
-					m_session_id.clear();
-					m_resume_gateway_url.clear();
+	/* If an error occurs, throw */
+	if (ec) throw std::system_error(ec);
+	/* Reset the parser prior to parsing a new JSON */
+	m_parser.reset();
+	/* Check for Z_SYNC_FLUSH suffix and decompress if necessary */
+	char* in = (char*)m_buffer.data().data();
+	if (bytes_read >= 4 ) {
+		if (0 == memcmp(in + bytes_read - 4, "\x00\x00\xFF\xFF", 4)) {
+			m_inflate_stream.avail_in = bytes_read;
+			m_inflate_stream.next_in  = (Byte*)in;
+			do {
+				m_inflate_stream.avail_out = INFLATE_BUFFER_SIZE;
+				m_inflate_stream.next_out  = m_inflate_buffer;
+				switch (inflate(&m_inflate_stream, Z_NO_FLUSH)) {
+					default:
+						throw std::runtime_error(m_inflate_stream.msg);
+					case Z_OK:
+					case Z_STREAM_END:
+						m_parser.write((char*)m_inflate_buffer, INFLATE_BUFFER_SIZE - m_inflate_stream.avail_out);
 				}
-				/* Let the server close the connection gracefully */
-				break;
-			case OP_HELLO:
-				/* Update heartbeat interval */
-				m_heartbeat_ack = true;
-				m_heartbeat_interval = chrono::milliseconds(v.at("d").at("heartbeat_interval").as_int64());
-				/* Set the heartbeating to begin */
-				m_heartbeat_timer.expires_after(chrono::milliseconds(cUtils::Random(0, m_heartbeat_interval.count())));
-				m_heartbeat_timer.async_wait([this](beast::error_code ec) { on_expire(ec); });
-				/* If there is an active session, try to resume, otherwise identify */
-				m_session_id.empty() ? identify() : resume();
-				break;
-			case OP_HEARTBEAT_ACK:
-				/* Acknowledge heartbeat */
-				m_heartbeat_ack = true;
-				break;
+			} while (m_inflate_stream.avail_out == 0);
+			goto LABEL_PARSED;
 		}
 	}
-	catch (const std::exception& e) {
-		cUtils::PrintErr("Error parsing received gateway payload: {}", e.what());
-	}
-	catch (...) {
-		cUtils::PrintErr("Error parsing received gateway payload: An exception was thrown");
+	/* If the payload isn't compressed, directly feed it into the json parser */
+	m_parser.write(in, bytes_read);
+	LABEL_PARSED:
+	/* Consume all read bytes from the dynamic buffer */
+	m_buffer.consume(bytes_read);
+	/* Release the parsed json value */
+	const json::value v = m_parser.release();
+	/* Start the next asynchronous read operation to keep listening for more events */
+	m_ws->async_read(m_buffer, [this](beast::error_code ec, size_t size) { on_read(ec, size); });
+#ifdef GW_LOG_LVL_2
+	cUtils::PrintLog("{}", json::serialize(v));
+#endif
+	/* Process the event */
+	switch (v.at("op").to_number<int>()) {
+		case OP_DISPATCH:
+			/* Process event */
+			process_event(v);
+			break;
+		case OP_HEARTBEAT:
+			/* Cancel any pending heartbeats */
+			m_heartbeat_timer.cancel();
+			/* Send a heartbeat immediately */
+			heartbeat();
+			/* Resume heartbeating */
+			m_heartbeat_timer.expires_after(m_heartbeat_interval);
+			m_heartbeat_timer.async_wait([this](beast::error_code ec){ on_expire(ec); });
+			break;
+		case OP_RECONNECT:
+			/* Let the server close the connection gracefully */
+			break;
+		case OP_INVALID_SESSION:
+			/* If session is not resumable, reset the current session */
+			if (!v.at("d").as_bool()) {
+				m_last_sequence = 0;
+				m_session_id.clear();
+				m_resume_gateway_url.clear();
+			}
+			/* Stop heartbeating and close the connection */
+			// TODO: check if connection must close or not
+			m_heartbeat_timer.cancel();
+			m_ws->async_close(beast::websocket::close_code::normal, [](const beast::error_code& ec) {});
+			break;
+		case OP_HELLO:
+			/* Update heartbeat interval */
+			m_heartbeat_ack = true;
+			m_heartbeat_interval = chrono::milliseconds(v.at("d").at("heartbeat_interval").as_int64());
+			/* Set the heartbeating to begin */
+			m_heartbeat_timer.expires_after(chrono::milliseconds(cUtils::Random(0, m_heartbeat_interval.count())));
+			m_heartbeat_timer.async_wait([this](beast::error_code ec) { on_expire(ec); });
+			/* If there is an active session, try to resume, otherwise identify */
+			m_session_id.empty() ? identify() : resume();
+			break;
+		case OP_HEARTBEAT_ACK:
+			/* Acknowledge heartbeat */
+			m_heartbeat_ack = true;
+			break;
 	}
 }
 /* ================================================================================================================== */
@@ -195,15 +189,21 @@ cGateway::implementation::run_session(const std::string& url) {
 		close_msg  = m_ws->reason().reason.c_str();
 	}
 	catch (const std::exception& e) {
-		/* Save the error message in case of an exception */
+		/* Save the error message */
 		close_msg = e.what();
-		/* Also clear the current session */
-		m_last_sequence = 0;
-		m_session_id.clear();
-		m_resume_gateway_url.clear();
+		/* Cancel heartbeating */
+		m_heartbeat_timer.cancel();
+		/* Close the websocket stream */
+		m_ws->async_close(beast::websocket::close_code::normal, [](const beast::error_code& ec) {});
+		/* Exhaust the io_context */
+		for (;;) {
+			try {
+				m_ws_ioc.run();
+				break;
+			}
+			catch (...) {}
+		}
 	}
-	/* Stop heartbeating */
-	m_heartbeat_timer.cancel();
 	/* Reset the websocket context for a subsequent run() call */
 	m_ws_ioc.restart();
 	/* Clear any pending messages left the queue */
