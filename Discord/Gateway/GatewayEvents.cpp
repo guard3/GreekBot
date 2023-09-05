@@ -19,141 +19,127 @@ enum eEvent : uint32_t {
 	EVENT_GUILD_MEMBERS_CHUNK = 0x343F4BC5,
 	EVENT_USER_UPDATE         = 0xBFC98531
 };
-/* ========== Make void a valid coroutine return type =============================================================== */
-template<>
-struct std::coroutine_traits<void, cGateway::implementation&, const json::value&> {
-	struct promise_type {
-		void   get_return_object() const noexcept {}
-		void unhandled_exception() const noexcept {}
-		void         return_void() const noexcept {}
-		std::suspend_never initial_suspend() const noexcept { return {}; }
-		std::suspend_never   final_suspend() const noexcept { return {}; }
-	};
-};
 /* ========== Implement process_event() ============================================================================= */
 void
-cGateway::implementation::process_event(const json::value& v) {
-	try {
-		/* Update last sequence received */
-		m_last_sequence = v.at("s").as_int64();
-		/* Determine the event type */
-		auto name = json::value_to<std::string_view>(v.at("t"));
-		auto type = crc32(0, reinterpret_cast<const Byte*>(name.data()), name.size());
+cGateway::implementation::process_event(const json::value& v) try {
+	/* Update last sequence received */
+	m_last_sequence = v.at("s").as_int64();
+	/* Determine the event type */
+	auto name = json::value_to<std::string_view>(v.at("t"));
+	auto type = crc32(0, reinterpret_cast<const Byte*>(name.data()), name.size());
 #ifdef GW_LOG_LVL_1
-		cUtils::PrintLog("Event: 0x{:08X} {}", type, name);
+	cUtils::PrintLog("Event: 0x{:08X} {}", type, name);
 #endif
-		/* Trigger the appropriate event methods
-		 * All JSON data is parsed BEFORE co_awaiting, as doing so will invalidate the argument reference! */
-		switch (const json::value& d = v.at("d"); type) {
-			case EVENT_READY: {
-				m_session_id = json::value_to<std::string>(d.at("session_id"));
-				m_resume_gateway_url = json::value_to<std::string>(d.at("resume_gateway_url"));
-				auto user = cHandle::MakeUnique<cUser>(d.at("user"));
-				auto app = json::value_to<cApplication>(d.at("application"));
-				co_await ResumeOnEventThread();
-				m_application = std::move(app);
-				co_await m_parent->OnReady(std::move(user));
-				break;
-			}
-			case EVENT_GUILD_CREATE: {
-				auto pGuild = cHandle::MakeUnique<cGuild>(d);
-				co_await ResumeOnEventThread();
-				co_await m_parent->OnGuildCreate(std::move(pGuild));
-				break;
-			}
-			case EVENT_GUILD_ROLE_CREATE: {
-				cSnowflake guild_id = json::value_to<cSnowflake>(d.at("guild_id"));
-				cRole role{ d.at("role") };
-				co_await ResumeOnEventThread();
-				co_await m_parent->OnGuildRoleCreate(guild_id, role);
-				break;
-			}
-			case EVENT_GUILD_ROLE_UPDATE: {
-				cSnowflake guild_id = json::value_to<cSnowflake>(d.at("guild_id"));
-				cRole role{ d.at("role") };
-				co_await ResumeOnEventThread();
-				co_await m_parent->OnGuildRoleUpdate(guild_id, role);
-				break;
-			}
-			case EVENT_GUILD_ROLE_DELETE: {
-				auto guild_id = json::value_to<cSnowflake>(d.at("guild_id"));
-				auto role_id = json::value_to<cSnowflake>(d.at("role_id"));
-				co_await ResumeOnEventThread();
-				co_await m_parent->OnGuildRoleDelete(guild_id, role_id);
-				break;
-			}
-			case EVENT_GUILD_MEMBER_ADD: {
-				auto guild_id = json::value_to<cSnowflake>(d.at("guild_id"));
-				cMember member{ d };
-				co_await ResumeOnEventThread();
-				co_await m_parent->OnGuildMemberAdd(guild_id, member);
-				break;
-			}
-			case EVENT_GUILD_MEMBER_UPDATE: {
-				auto guild_id = json::value_to<cSnowflake>(d.at("guild_id"));
-				cPartialMember member{ d };
-				co_await ResumeOnEventThread();
-				co_await m_parent->OnGuildMemberUpdate(guild_id, member);
-				break;
-			}
-			case EVENT_GUILD_MEMBER_REMOVE: {
-				auto guild_id = json::value_to<cSnowflake>(d.at("guild_id"));
-				cUser user{ d.at("user") };
-				co_await ResumeOnEventThread();
-				co_await m_parent->OnGuildMemberRemove(guild_id, user);
-				break;
-			}
-			case EVENT_INTERACTION_CREATE: {
-				cInteraction i{ d };
-				co_await ResumeOnEventThread();
-				co_await m_parent->OnInteractionCreate(i);
-				break;
-			}
-			case EVENT_MESSAGE_CREATE: {
-				cMessage m{ d };
-				co_await ResumeOnEventThread();
-				co_await m_parent->OnMessageCreate(m);
-				break;
-			}
-			case EVENT_MESSAGE_DELETE: {
-				auto id = json::value_to<cSnowflake>(d.at("id"));
-				auto channel_id = json::value_to<cSnowflake>(d.at("channel_id"));
-				std::optional<cSnowflake> guild_id;
-				if (auto p = d.as_object().if_contains("guild_id"))
-					guild_id.emplace(json::value_to<std::string_view>(*p));
-				co_await ResumeOnEventThread();
-				co_await m_parent->OnMessageDelete(id, channel_id, guild_id.has_value() ? &*guild_id : nullptr);
-				break;
-			}
-			case EVENT_MESSAGE_DELETE_BULK: {
-				auto ids = json::value_to<std::vector<cSnowflake>>(d.at("ids"));
-				auto channel_id = json::value_to<cSnowflake>(d.at("channel_id"));
-				std::optional<cSnowflake> guild_id;
-				if (auto p = d.as_object().if_contains("guild_id"))
-					guild_id.emplace(json::value_to<std::string_view>(*p));
-				co_await ResumeOnEventThread();
-				co_await m_parent->OnMessageDeleteBulk(ids, channel_id, guild_id.has_value() ? &*guild_id : nullptr);
-				break;
-			}
-			case EVENT_GUILD_MEMBERS_CHUNK: {
-				cGuildMembersChunk c{ d };
-				co_await ResumeOnEventThread();
-				auto& r = m_rgm_map[c.GetNonce()];
-				r.Fill(std::move(c));
-				break;
-			}
-			case EVENT_USER_UPDATE: {
-				auto user = cHandle::MakeUnique<cUser>(d);
-				m_application = json::value_to<cApplication>(co_await DiscordGet("/oauth2/applications/@me"));
-				co_await m_parent->OnUserUpdate(std::move(user));
-				break;
-			}
-			default:
-				break;
+	/* Trigger the appropriate event methods
+	 * All JSON data is parsed BEFORE co_awaiting, as doing so will invalidate the argument reference! */
+	switch (const json::value& d = v.at("d"); type) {
+		case EVENT_READY: {
+			m_session_id = json::value_to<std::string>(d.at("session_id"));
+			m_resume_gateway_url = json::value_to<std::string>(d.at("resume_gateway_url"));
+			auto user = cHandle::MakeUnique<cUser>(d.at("user"));
+			auto app = json::value_to<cApplication>(d.at("application"));
+			co_await ResumeOnEventThread();
+			m_application = std::move(app);
+			co_await m_parent->OnReady(std::move(user));
+			break;
 		}
+		case EVENT_GUILD_CREATE: {
+			auto pGuild = cHandle::MakeUnique<cGuild>(d);
+			co_await ResumeOnEventThread();
+			co_await m_parent->OnGuildCreate(std::move(pGuild));
+			break;
+		}
+		case EVENT_GUILD_ROLE_CREATE: {
+			cSnowflake guild_id = json::value_to<cSnowflake>(d.at("guild_id"));
+			cRole role{ d.at("role") };
+			co_await ResumeOnEventThread();
+			co_await m_parent->OnGuildRoleCreate(guild_id, role);
+			break;
+		}
+		case EVENT_GUILD_ROLE_UPDATE: {
+			cSnowflake guild_id = json::value_to<cSnowflake>(d.at("guild_id"));
+			cRole role{ d.at("role") };
+			co_await ResumeOnEventThread();
+			co_await m_parent->OnGuildRoleUpdate(guild_id, role);
+			break;
+		}
+		case EVENT_GUILD_ROLE_DELETE: {
+			auto guild_id = json::value_to<cSnowflake>(d.at("guild_id"));
+			auto role_id = json::value_to<cSnowflake>(d.at("role_id"));
+			co_await ResumeOnEventThread();
+			co_await m_parent->OnGuildRoleDelete(guild_id, role_id);
+			break;
+		}
+		case EVENT_GUILD_MEMBER_ADD: {
+			auto guild_id = json::value_to<cSnowflake>(d.at("guild_id"));
+			cMember member{ d };
+			co_await ResumeOnEventThread();
+			co_await m_parent->OnGuildMemberAdd(guild_id, member);
+			break;
+		}
+		case EVENT_GUILD_MEMBER_UPDATE: {
+			auto guild_id = json::value_to<cSnowflake>(d.at("guild_id"));
+			cPartialMember member{ d };
+			co_await ResumeOnEventThread();
+			co_await m_parent->OnGuildMemberUpdate(guild_id, member);
+			break;
+		}
+		case EVENT_GUILD_MEMBER_REMOVE: {
+			auto guild_id = json::value_to<cSnowflake>(d.at("guild_id"));
+			cUser user{ d.at("user") };
+			co_await ResumeOnEventThread();
+			co_await m_parent->OnGuildMemberRemove(guild_id, user);
+			break;
+		}
+		case EVENT_INTERACTION_CREATE: {
+			cInteraction i{ d };
+			co_await ResumeOnEventThread();
+			co_await m_parent->OnInteractionCreate(i);
+			break;
+		}
+		case EVENT_MESSAGE_CREATE: {
+			cMessage m{ d };
+			co_await ResumeOnEventThread();
+			co_await m_parent->OnMessageCreate(m);
+			break;
+		}
+		case EVENT_MESSAGE_DELETE: {
+			auto id = json::value_to<cSnowflake>(d.at("id"));
+			auto channel_id = json::value_to<cSnowflake>(d.at("channel_id"));
+			std::optional<cSnowflake> guild_id;
+			if (auto p = d.as_object().if_contains("guild_id"))
+				guild_id.emplace(json::value_to<std::string_view>(*p));
+			co_await ResumeOnEventThread();
+			co_await m_parent->OnMessageDelete(id, channel_id, guild_id.has_value() ? &*guild_id : nullptr);
+			break;
+		}
+		case EVENT_MESSAGE_DELETE_BULK: {
+			auto ids = json::value_to<std::vector<cSnowflake>>(d.at("ids"));
+			auto channel_id = json::value_to<cSnowflake>(d.at("channel_id"));
+			std::optional<cSnowflake> guild_id;
+			if (auto p = d.as_object().if_contains("guild_id"))
+				guild_id.emplace(json::value_to<std::string_view>(*p));
+			co_await ResumeOnEventThread();
+			co_await m_parent->OnMessageDeleteBulk(ids, channel_id, guild_id.has_value() ? &*guild_id : nullptr);
+			break;
+		}
+		case EVENT_GUILD_MEMBERS_CHUNK: {
+			cGuildMembersChunk c{ d };
+			co_await ResumeOnEventThread();
+			auto& r = m_rgm_map[c.GetNonce()];
+			r.Fill(std::move(c));
+			break;
+		}
+		case EVENT_USER_UPDATE: {
+			auto user = cHandle::MakeUnique<cUser>(d);
+			m_application = json::value_to<cApplication>(co_await DiscordGet("/oauth2/applications/@me"));
+			co_await m_parent->OnUserUpdate(std::move(user));
+			break;
+		}
+		default:
+			break;
 	}
-	catch (...) {
-		/* Make sure to schedule the caught exception to be rethrown at the websocket thread */
-		asio::post(m_ws_ioc, [e = std::current_exception()]() { std::rethrow_exception(e); });
-	}
+} catch (...) {
+	/* If an exception occurs, close the stream */
+	asio::dispatch(m_ws_strand, [this] () { if (m_ws) close(); });
 }

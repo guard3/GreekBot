@@ -12,34 +12,16 @@
 namespace chrono = std::chrono;
 
 #define INFLATE_BUFFER_SIZE 4096
-
-class cGatewayInfo;
-
-/* Gateway close error exception */
-class xGatewayError : public xSystemError {
-public:
-	explicit xGatewayError(const std::string& what, int code = 0) : xSystemError(what, code) {}
-	explicit xGatewayError(const char*        what, int code = 0) : xSystemError(what, code) {}
-	xGatewayError(const xGatewayError&) = default;
-	xGatewayError(xGatewayError&&)      = default;
-
-	xGatewayError& operator=(const xGatewayError&) = default;
-	xGatewayError& operator=(xGatewayError&&)      = default;
-};
-
-/* Gateway event/command opcodes */
-enum eGatewayOpcode {
-	OP_DISPATCH              = 0,  // An event was dispatched.
-	OP_HEARTBEAT             = 1,  // Fired periodically by the client to keep the connection alive.
-	// Identify              = 2,  // Starts a new session during the initial handshake.
-	// Presence update       = 3,  // Update the client's presence.
-	// Voice state update    = 4,  // Used to join/leave or move between voice channels.
-	// Resume                = 6,  // Resume a previous session that was disconnected.
-	OP_RECONNECT             = 7,  // You should attempt to reconnect and resume immediately.
-	// Request guild members = 8,  // Request information about offline guild members in a large guild.
-	OP_INVALID_SESSION       = 9,  // The session has been invalidated. You should reconnect and identify/resume accordingly.
-	OP_HELLO                 = 10, // Sent immediately after connecting, contains the heartbeat_interval to use.
-	OP_HEARTBEAT_ACK         = 11, // Sent in response to receiving a heartbeat to acknowledge that it has been received.
+/* ========== Make void a valid coroutine return type =============================================================== */
+template<typename... Args>
+struct std::coroutine_traits<void, cGateway::implementation&, Args...> {
+	struct promise_type {
+		void get_return_object() noexcept {}
+		std::suspend_never initial_suspend() noexcept { return {}; }
+		std::suspend_never final_suspend() noexcept { return {}; }
+		void return_void() noexcept {}
+		void unhandled_exception() noexcept {}
+	};
 };
 
 struct request_entry {
@@ -62,15 +44,13 @@ private:
 	/* The parent gateway object through which events are handled */
 	cGateway* m_parent;
 	/* The contexts for asio */
-	asio::io_context   m_ws_ioc;   // IO context for websocket
-	asio::io_context   m_http_ioc; // IO context for http
-	asio::ssl::context m_ctx;      // SLL context
+	asio::io_context   m_ioc;
+	asio::ssl::context m_ctx;
+	/* Strands for synchronisation */
+	asio::strand<asio::io_context::executor_type> m_ws_strand;   // A strand for WebSocket operations
+	asio::strand<asio::io_context::executor_type> m_http_strand; // A strand for HTTP operations
 	/* Resolvers */
-	asio::ip::tcp::resolver m_ws_resolver;
-	asio::ip::tcp::resolver m_http_resolver;
-	/* Work guard to prevent the http io_context from running out of work */
-	asio::executor_work_guard<asio::io_context::executor_type> m_work;
-	std::thread m_work_thread;
+	asio::ip::tcp::resolver m_resolver;
 
 	beast::flat_buffer      m_buffer;      // A buffer for reading from the websocket
 	beast::flat_buffer      m_http_buffer; // A buffer for storing http responses
@@ -113,11 +93,13 @@ private:
 	void send(std::string);
 	/* Beast/Asio async functions */
 	void on_read(const beast::error_code&, size_t);
-	void on_write(const beast::error_code&, size_t);
+	void on_write(const beast::error_code&);
 	void on_expire(const beast::error_code&);
+	void close();
+	void retry(int, std::string);
 	/* A method that initiates the gateway connection */
-	void run_session(const std::string& url);
-	cGatewayInfo get_gateway_info();
+	void run_session();
+	void run_context();
 	/* A method that's invoked for every gateway event */
 	void process_event(const json::value&);
 	/* Http functions */
@@ -192,20 +174,20 @@ public:
 	std::string_view GetHttpAuthorization() const noexcept { return m_http_auth; }
 	std::string_view GetToken() const noexcept { return GetHttpAuthorization().substr(4); }
 
-	auto ResumeOnEventThread() {
-		struct awaitable {
-			asio::io_context& ioc;
-			bool await_ready() { return ioc.get_executor().running_in_this_thread(); }
-			void await_suspend(std::coroutine_handle<> h) { asio::post([h](){ h.resume(); }); }
-			void await_resume() noexcept {}
-		};
-		return awaitable{ m_http_ioc };
-	}
+	struct strand_awaitable {
+		asio::strand<asio::io_context::executor_type>& strand;
+		bool await_ready() noexcept { return strand.running_in_this_thread(); }
+		void await_suspend(std::coroutine_handle<> h) { asio::post(strand, [h]() { h.resume(); }); }
+		void await_resume() noexcept {}
+	};
+
+	strand_awaitable ResumeOnWebSocketStrand() noexcept { return { m_ws_strand }; }
+	strand_awaitable ResumeOnEventThread() noexcept { return { m_http_strand }; }
 	auto WaitOnEventThread(std::chrono::milliseconds duration) {
 		struct awaitable {
 			asio::steady_timer timer;
 			std::exception_ptr except;
-			awaitable(asio::io_context& ioc, std::chrono::milliseconds d): timer(ioc, d) {}
+			awaitable(asio::strand<asio::io_context::executor_type>& strand, std::chrono::milliseconds d): timer(strand, d) {}
 			bool await_ready() noexcept { return false; }
 			void await_suspend(std::coroutine_handle<> h) {
 				timer.async_wait([this, h](const boost::system::error_code& ec) {
@@ -220,7 +202,7 @@ public:
 			}
 			void await_resume() { if (except) std::rethrow_exception(except); }
 		};
-		return awaitable(m_http_ioc, duration);
+		return awaitable(m_http_strand, duration);
 	}
 	cAsyncGenerator<cMember> get_guild_members(const cSnowflake& guild_id, const std::string& query, const std::vector<cSnowflake>& user_ids);
 

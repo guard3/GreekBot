@@ -9,7 +9,7 @@ cGateway::implementation::resume() {
 void
 cGateway::implementation::identify() {
 	/* Reset everything related to RequestGuildMembers command in case smth got stuck */
-	asio::post(m_http_ioc, [this](){ rgm_reset(); });
+	asio::post(m_http_strand, [this](){ rgm_reset(); });
 	/* Then send the payload */
 	send(fmt::format(R"({{"op":2,"d":{{"token":{:?},"intents":{},"compress":true,"properties":{{"os":{:?},"browser":"GreekBot","device":"GreekBot"}}}}}})", GetToken(), (int)m_intents, cUtils::GetOS()));
 }
