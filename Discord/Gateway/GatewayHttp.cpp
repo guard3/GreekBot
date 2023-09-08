@@ -145,10 +145,10 @@ cGateway::implementation::DiscordRequest(beast::http::verb m, std::string_view t
 }
 cTask<json::value>
 cGateway::implementation::DiscordRequestNoRetry(beast::http::verb method, std::string_view target, const json::object* obj, std::span<const cHttpField> fields) {
-	/* Since we're about to send a request, cancel the timeout timer */
-	m_http_timer.cancel();
 	/* First make sure that we are on the http thread */
 	co_await ResumeOnEventThread();
+	/* Since we're about to send a request, cancel the timeout timer */
+	m_http_timer.cancel();
 	/* Create a new request object and push it at the end of the queue */
 	auto &request = m_request_queue.emplace_back(method, fmt::format(DISCORD_API_ENDPOINT "{}", target), 11).request;
 	/* Set user http fields */

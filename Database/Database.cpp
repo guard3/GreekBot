@@ -120,24 +120,23 @@ cDatabase::~cDatabase() {
 }
 
 void cDatabaseTask<void>::await_suspend(std::coroutine_handle<> h) {
-	/* Add current task to the queue */
-	std::lock_guard _(g_mutex);
-	g_queue.emplace_back([this, h]() { m_func(h); });
-	if (g_queue.size() == 1) {
-		/* If there's only one task, allow thread to exit gracefully and restart */
-		g_mutex.unlock();
-		if (g_thread.joinable())
-			g_thread.join();
-		g_thread = std::thread([]() {
-			for (;;) {
-				g_queue.front()();
-				std::lock_guard _(g_mutex);
-				g_queue.pop_front();
-				if (g_queue.empty())
-					break;
-			}
-		});
+	{
+		/* Add current task to the queue */
+		std::lock_guard _(g_mutex);
+		g_queue.emplace_back([this, h] { m_func(h); });
+		/* If there's more than one tasks, return and let the queue be consumed */
+		if (g_queue.size() > 1) return;
 	}
+	if (g_thread.joinable()) g_thread.join();
+	g_thread = std::thread([] {
+		for (;;) {
+			g_queue.front()();
+			std::lock_guard _(g_mutex);
+			g_queue.pop_front();
+			if (g_queue.empty())
+				break;
+		}
+	});
 }
 
 cDatabaseTask<>

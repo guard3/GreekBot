@@ -58,7 +58,7 @@ struct cTask<T>::promise_type : promise_base {
 };
 /* ================================================================================================================== */
 template<>
-struct cTask<void>::promise_type : promise_base {
+struct cTask<void>::promise_type : cTask<void>::promise_base {
 	void return_void() {}
 };
 /* ================================================================================================================== */

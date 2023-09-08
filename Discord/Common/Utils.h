@@ -56,8 +56,10 @@ public:
 	template<std::integral T = int>
 	static T ParseInt(std::string_view str) {
 		T value;
-		auto result = std::from_chars(str.begin(), str.end(), value);
-		if (result.ec == std::errc{} && result.ptr == str.end())
+		const char* begin = str.data();
+		const char* end   = str.data() + str.size();
+		auto result = std::from_chars(begin, end, value);
+		if (result.ec == std::errc{} && result.ptr == end)
 			return value;
 		if (result.ec == std::errc::result_out_of_range)
 			throw std::out_of_range("Parsed integer is out of range");
