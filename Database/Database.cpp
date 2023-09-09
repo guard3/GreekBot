@@ -1,113 +1,80 @@
 #include "Database.h"
 #include "Queries.h"
 #include "Utils.h"
-#include <cstdlib>
 #include <sqlite3.h>
-#include <thread>
-#include <mutex>
 #include <deque>
+#include <filesystem>
+#include <mutex>
+#include <thread>
 
-/* The filename of the database */
-#define DB_FILENAME "database.db"
+namespace fs = std::filesystem;
 
-#ifdef _WIN32
-	#define WIN32_LEAN_AND_MEAN
-	#include <Windows.h>
-	#include <Shlwapi.h>
-#else
-	#include <climits>
-	#include <cstring>
-	#ifdef __APPLE__
-		#include <mach-o/dyld.h>
-	#else
-		#include <unistd.h>
-	#endif
+#if   defined _WIN32
+#  define WIN32_LEAN_AND_MEAN
+#  include <Windows.h>
+#  include <Shlwapi.h>
+#elif defined __APPLE__
+#  include <mach-o/dyld.h>
 #endif
 
-cDatabase cDatabase::ms_instance;
-static sqlite3* g_db;
+static sqlite3* g_db = nullptr;
 static std::deque<std::function<void()>> g_queue;
 static std::thread g_thread;
 static std::mutex g_mutex;
+cDatabase cDatabase::ms_instance;
 
 xDatabaseError::xDatabaseError() : std::runtime_error(sqlite3_errmsg(g_db)), m_code(sqlite3_extended_errcode(g_db)) {}
 
-cDatabase::cDatabase() {
-	/* Get the path of the database file */
-	char* db_filename = nullptr;
-#ifdef _WIN32
-	DWORD dwSize = MAX_PATH;
-	for (LPWSTR p; (p = (LPWSTR)realloc(db_filename, dwSize * sizeof(WCHAR))); dwSize <<= 1) {
-		db_filename = (char*)p;
-		DWORD dwLen = GetModuleFileNameW(NULL, p, dwSize);
-		if (dwLen == 0) break;
-		if (dwLen < dwSize) {
-			int utf8size = WideCharToMultiByte(CP_UTF8, 0, p, -1, NULL, 0, NULL, NULL);
-			if (utf8size) {
-				if (char* q = (char*)malloc(utf8size + sizeof(DB_FILENAME))) {
-					free(db_filename);
-					db_filename = q;
-					WideCharToMultiByte(CP_UTF8, 0, p, -1, db_filename, utf8size, NULL, NULL);
-					strcpy(PathFindFileNameA(db_filename), DB_FILENAME);
-					goto LABEL_RESOLVED_DBNAME;
-				}
-			}
-		}
-	}
+/* Get a fully qualified UTF-8 path for the database file */
+static std::u8string get_db_filename() {
+#if defined(_WIN32)
 #elif defined(__APPLE__)
-	uint32_t size = PATH_MAX;
-	for (char* p; (p = (char*)realloc(db_filename, size)); db_filename = p) {
-		if (0 == _NSGetExecutablePath(p, &size)) {
-			(db_filename = realpath(p, nullptr)) ? free(p) : (void)(db_filename = p);
-			if ((p = strrchr(db_filename, '/'))) {
-				if (ptrdiff_t o = (p - db_filename) + 1; (p = (char*) realloc(db_filename, o + sizeof(DB_FILENAME)))) {
-					strcpy((db_filename = p) + o, DB_FILENAME);
-					goto LABEL_RESOLVED_DBNAME;
+	std::vector<char> path(256);
+	if (uint32_t size = 256; _NSGetExecutablePath(path.data(), &size) < 0) {
+		path.resize(size);
+		_NSGetExecutablePath(path.data(), &size);
+	}
+	fs::path result = fs::canonical(path.data());
+#else
+	fs::path result = fs::canonical("/proc/self/exe");
+#endif
+	return result.replace_filename("database.db").u8string();
+}
+
+cDatabase::cDatabase() {
+	sqlite3 *db = nullptr; // The database connection handle
+	std::string err_msg;   // The error message string
+	try {
+		/* Open a database connection */
+		constexpr int DB_FLAGS = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE;
+		int rc = sqlite3_open_v2((const char*)get_db_filename().c_str(), &db, DB_FLAGS, nullptr);
+		/* If db is null after opening, a memory error occurred */
+		if (!db) throw std::bad_alloc();
+		/* If database handle is open, execute the init statements */
+		if (rc == SQLITE_OK) {
+			sqlite3_stmt *stmt = nullptr;
+			for (const char *query = QUERY_INIT, *end; SQLITE_OK == sqlite3_prepare_v2(db, query, -1, &stmt, &end); query = end) {
+				if (stmt) {
+					int status = sqlite3_step(stmt);
+					sqlite3_finalize(stmt);
+					if (status != SQLITE_DONE)
+						break;
+				} else {
+					g_db = db;
+					cUtils::PrintLog("Database initialized successfully");
+					return;
 				}
 			}
 		}
+		/* At this point, initialization was unsuccessful */
+		err_msg = sqlite3_errmsg(db);
+	} catch (const std::exception& e) {
+		err_msg = e.what();
+	} catch (...) {
+		err_msg = "An exception was thrown";
 	}
-#else
-	/* TODO add more link options */
-	size_t size = PATH_MAX;
-	for (char* p; (p = (char*)realloc(db_filename, size)); size <<= 1) {
-		ssize_t len = readlink("/proc/self/exe", db_filename = p, size);
-		if (len < 0) break;
-		if (len + sizeof(DB_FILENAME) < size) {
-			if (!(p = strrchr(db_filename, '/'))) break;
-			strcpy(p + 1, DB_FILENAME);
-			goto LABEL_RESOLVED_DBNAME;
-		}
-	}
-#endif
-	free(db_filename);
-	cUtils::PrintErr("Fatal initialisation error.");
-	exit(EXIT_FAILURE);
-
-LABEL_RESOLVED_DBNAME:
-	/* Open a database handle */
-	sqlite3* db;
-	int rc = sqlite3_open_v2(db_filename, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE /*| SQLITE_OPEN_FULLMUTEX*/, nullptr);
-	free(db_filename);
-	/* If database handle is open, create leaderboard table */
-	if (rc == SQLITE_OK) {
-		sqlite3_stmt* stmt = nullptr;
-		for (const char *query = QUERY_INIT, *end; SQLITE_OK == sqlite3_prepare_v2(db, query, -1, &stmt, &end); query = end) {
-			if (stmt) {
-				int status = sqlite3_step(stmt);
-				sqlite3_finalize(stmt);
-				if (status != SQLITE_DONE)
-					break;
-			}
-			else {
-				g_db = db;
-				cUtils::PrintLog("Database initialized successfully");
-				return;
-			}
-		}
-	}
-	cUtils::PrintErr("Fatal Database Error: {}", sqlite3_errmsg(db));
 	sqlite3_close(db);
+	cUtils::PrintErr("Database initialization error: {}", err_msg);
 	exit(EXIT_FAILURE);
 }
 
