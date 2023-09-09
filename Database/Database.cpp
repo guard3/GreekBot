@@ -12,7 +12,6 @@ namespace fs = std::filesystem;
 #if   defined _WIN32
 #  define WIN32_LEAN_AND_MEAN
 #  include <Windows.h>
-#  include <Shlwapi.h>
 #elif defined __APPLE__
 #  include <mach-o/dyld.h>
 #endif
@@ -27,22 +26,53 @@ xDatabaseError::xDatabaseError() : std::runtime_error(sqlite3_errmsg(g_db)), m_c
 
 /* Get a fully qualified UTF-8 path for the database file */
 static std::u8string get_db_filename() {
-#if defined(_WIN32)
-#elif defined(__APPLE__)
+#if defined _WIN32
+	std::vector<WCHAR> szPath(MAX_PATH);
+	for (DWORD dwLen;;) {
+		/* Retrieve the fully qualified path of the executable */
+		dwLen = GetModuleFileNameW(NULL, szPath.data(), (DWORD)szPath.size());
+		/* If the length is 0, an error occured */
+		if (dwLen == 0) {
+			const DWORD dwMsg = GetLastError();
+			LPSTR lpszMsg = NULL;
+			try {
+				constexpr DWORD FORMAT_FLAGS = FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS;
+				if (0 == FormatMessageA(FORMAT_FLAGS, NULL, dwMsg, 0, (LPSTR)&lpszMsg, 256, NULL))
+					throw std::runtime_error("Cannot find a suitable filepath.");
+				throw std::runtime_error(lpszMsg);
+			} catch (...) {
+				LocalFree(lpszMsg);
+				std::rethrow_exception(std::current_exception());
+			}
+		}
+		/* If the length is smaller than the total vector size, then the full path has been retrieved */
+		if (dwLen < szPath.size()) {
+			szPath.resize(dwLen);
+			break;
+		}
+		/* Otherwise, increase the vector size and retry */
+		szPath.resize(dwLen * 2);
+	}
+	fs::path result{ szPath.begin(), szPath.end() };
+#elif defined __APPLE__
 	std::vector<char> path(256);
+	/* Retrieve 'a' path to the executable. */
 	if (uint32_t size = 256; _NSGetExecutablePath(path.data(), &size) < 0) {
+		/* If the path vector isn't large enough, 'size' is updated to the required size */
 		path.resize(size);
+		/* Retry */
 		_NSGetExecutablePath(path.data(), &size);
 	}
 	fs::path result = fs::canonical(path.data());
 #else
 	fs::path result = fs::canonical("/proc/self/exe");
 #endif
+	/* Replace the filename and convert the final path to a UTF-8 encoded string */
 	return result.replace_filename("database.db").u8string();
 }
 
 cDatabase::cDatabase() {
-	sqlite3 *db = nullptr; // The database connection handle
+	sqlite3* db = nullptr; // The database connection handle
 	std::string err_msg;   // The error message string
 	try {
 		/* Open a database connection */
@@ -71,7 +101,7 @@ cDatabase::cDatabase() {
 	} catch (const std::exception& e) {
 		err_msg = e.what();
 	} catch (...) {
-		err_msg = "An exception was thrown";
+		err_msg = "An exception was thrown.";
 	}
 	sqlite3_close(db);
 	cUtils::PrintErr("Database initialization error: {}", err_msg);
