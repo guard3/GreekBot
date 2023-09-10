@@ -52,9 +52,14 @@ else()
 endif()
 
 # Link SQLite
-find_package(SQLite3 3.34.0 REQUIRED)
-include_directories(SYSTEM ${SQLite3_INCLUDE_DIRS})
-target_link_libraries(GreekBot SQLite::SQLite3)
+find_package(SQLite3 3.35.0)
+if(SQLite3_FOUND)
+    include_directories(SYSTEM ${SQLite3_INCLUDE_DIRS})
+    target_link_libraries(GreekBot SQLite::SQLite3)
+else()
+    target_sources(GreekBot PRIVATE sqlite3/sqlite3.c)
+    include_directories(SYSTEM sqlite3)
+endif()
 
 # Link ZLIB
 find_package(ZLIB REQUIRED)
