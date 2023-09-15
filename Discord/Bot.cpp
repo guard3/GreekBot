@@ -57,13 +57,20 @@ cBot::UpdateGuildMemberRoles(const cSnowflake& guild_id, const cSnowflake& user_
 	co_await DiscordPatch(fmt::format("/guilds/{}/members/{}", guild_id, user_id), obj);
 }
 
+cTask<>
+cBot::modify_guild_member(const cSnowflake& guild_id, const cSnowflake& user_id, const cMemberOptions& options) {
+	co_await DiscordPatch(fmt::format("/guilds/{}/members/{}", guild_id, user_id), options.ToJson());
+}
+
 /* Interaction related functions */
 enum eInteractionCallbackType {
-	INTERACTION_CALLBACK_PONG                                 = 1, // ACK a Ping
-	INTERACTION_CALLBACK_CHANNEL_MESSAGE_WITH_SOURCE          = 4, // respond to an interaction with a message
-	INTERACTION_CALLBACK_DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE = 5, // ACK an interaction and edit a response later, the user sees a loading state
-	INTERACTION_CALLBACK_DEFERRED_UPDATE_MESSAGE              = 6, // for components, ACK an interaction and edit the original message later; the user does not see a loading state
-	INTERACTION_CALLBACK_UPDATE_MESSAGE                       = 7  // for components, edit the message the component was attached to
+	INTERACTION_CALLBACK_PONG                        = 1,         // ACK a Ping
+	INTERACTION_CALLBACK_CHANNEL_MESSAGE_WITH_SOURCE = 4,         // respond to an interaction with a message
+	INTERACTION_CALLBACK_DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,    // ACK an interaction and edit a response later, the user sees a loading state
+	INTERACTION_CALLBACK_DEFERRED_UPDATE_MESSAGE,                 // for components, ACK an interaction and edit the original message later; the user does not see a loading state
+	INTERACTION_CALLBACK_UPDATE_MESSAGE,                          // for components, edit the message the component was attached to
+	INTERACTION_CALLBACK_APPLICATION_COMMAND_AUTOCOMPLETE_RESULT, // respond to an autocomplete interaction with suggested choices
+	INTERACTION_CALLBACK_MODAL                                    // respond to an interaction with a popup modal
 	// 8 TODO: implement autocomplete result interaction stuff... someday
 };
 
@@ -99,9 +106,18 @@ cBot::RespondToInteraction<>(const cInteraction& i) {
 			callback = INTERACTION_CALLBACK_DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE;
 			break;
 		case INTERACTION_MESSAGE_COMPONENT:
+		case INTERACTION_MODAL_SUBMIT:
 			callback = INTERACTION_CALLBACK_DEFERRED_UPDATE_MESSAGE;
 	}
 	co_await DiscordPost(fmt::format("/interactions/{}/{}/callback", i.GetId(), i.GetToken()), {{ "type", callback }});
+}
+
+cTask<>
+cBot::RespondToInteractionWithModal(const cInteraction& i, const cModal& modal) {
+	co_await DiscordPost(fmt::format("/interactions/{}/{}/callback", i.GetId(), i.GetToken()), {
+		{ "type", INTERACTION_CALLBACK_MODAL },
+		{ "data", modal.ToJson() }
+	});
 }
 
 cTask<>

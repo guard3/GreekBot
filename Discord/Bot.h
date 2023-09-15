@@ -9,6 +9,7 @@
 #include "User.h"
 #include "Guild.h"
 #include "Channel.h"
+#include "Modal.h"
 
 class cBot : public cGateway {
 private:
@@ -22,6 +23,7 @@ private:
 	cTask<> send_interaction_followup_message(const cInteraction& i, const cMessageParams&);
 	cTask<cMessage> create_message(const cSnowflake& channel_id, const cMessageParams&);
 	cTask<cMessage> edit_message(const cSnowflake&, const cSnowflake&, const cMessageParams&);
+	cTask<> modify_guild_member(const cSnowflake&, const cSnowflake&, const cMemberOptions&);
 
 protected:
 	using cGateway::OnInteractionCreate;
@@ -50,6 +52,11 @@ public:
 	}
 	template<>
 	cTask<> RespondToInteraction<>(const cInteraction&);
+	//template<typename... Args> requires std::is_constructible_v<cModal, Args&&...>
+	//cTask<> RespondToInteractionWithModal(const cInteraction& i, Args&&... args) {
+	//	co_await RespondToInteractionWithModal(i, { std::forward<Args>(args)... });
+	//}
+	cTask<> RespondToInteractionWithModal(const cInteraction&, const cModal&);
 	cTask<> EditInteractionResponse(const cInteraction& i, iKwArg auto&... kwargs) {
 		co_await edit_interaction_response(i, { kwargs... });
 	}
@@ -72,6 +79,9 @@ public:
 	}
 	cTask<> DeleteMessage(const cSnowflake& guild_id, const cSnowflake& msg_id, std::string_view reason = {});
 
+	cTask<> ModifyGuildMember(const cSnowflake& guild_id, const cSnowflake& user_id, iKwArg auto&... kwargs) {
+		co_await modify_guild_member(guild_id, user_id, { kwargs... });
+	}
 	cTask<> RemoveGuildMember(const cSnowflake& guild_id, const cSnowflake& user_id, std::string_view reason = {});
 	cTask<> CreateGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, std::chrono::seconds delete_message_seconds = std::chrono::seconds(0), std::string_view reason = {});
 	cTask<> RemoveGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, std::string_view reason = {});

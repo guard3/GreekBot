@@ -5,6 +5,23 @@
 #include <vector>
 #include <span>
 
+KW_DECLARE(nick, KW_NICK, std::string_view);
+
+class cMemberOptions {
+private:
+	std::optional<std::string> m_nick;
+
+	cMemberOptions(iKwPack auto&& p) {
+		auto a = KwOptMove<KW_NICK>(p);
+		if (a.has_value())
+			m_nick.emplace(a->begin(), a->end());
+	}
+public:
+	cMemberOptions(iKwArg auto&... kwargs): cMemberOptions(cKwPack{ kwargs... }) {}
+
+	json::object ToJson() const;
+};
+
 /* TODO: Make cMember derive from cPartialMember */
 class cPartialMember {
 private:

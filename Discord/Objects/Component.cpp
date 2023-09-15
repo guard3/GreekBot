@@ -62,6 +62,16 @@ cActionRow::ToJson() const {
 	return obj;
 }
 
+json::object
+cTextInput::ToJson() const {
+	return {
+		{ "type", COMPONENT_TEXT_INPUT },
+		{ "custom_id", m_custom_id },
+		{ "label", m_label },
+		{ "style", m_style }
+	};
+}
+
 template<>
 cComponent::cComponent(cButton<BUTTON_STYLE_LINK> b):
 	m_component(std::move(b)),
@@ -96,7 +106,12 @@ cComponent::cComponent(cSelectMenu m):
 	m_component(std::move(m)),
 	m_func([](const void* p) -> json::object {
 		return reinterpret_cast<const cSelectMenu*>(p)->ToJson();
-	}){}
+	}) {}
+cComponent::cComponent(cTextInput t):
+	m_component(std::move(t)),
+	m_func([](const void* p) -> json::object {
+		return static_cast<const cTextInput*>(p)->ToJson();
+	}) {}
 
 json::object
 cComponent::ToJson() const  {
@@ -107,7 +122,8 @@ cComponent::ToJson() const  {
 		case 2:  value = &std::get<2>(m_component); break;
 		case 3:  value = &std::get<3>(m_component); break;
 		case 4:  value = &std::get<4>(m_component); break;
-		default: value = &std::get<5>(m_component); break;
+		case 5:  value = &std::get<5>(m_component); break;
+		default: value = &std::get<6>(m_component); break;
 	}
 	return m_func(value);
 }

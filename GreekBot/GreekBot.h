@@ -7,6 +7,8 @@
 
 /* Define custom message component ids; used for responding to component interactions */
 #define CMP_ID_BUTTON_RANK_HELP 0
+#define CMP_ID_BUTTON_NICKNAME  1
+#define CMP_ID_BUTTON_DISMISS   2
 
 /* Specialize std::hash for cSnowflake to use in unordered maps */
 template<>
@@ -114,6 +116,8 @@ private:
 	cTask<> OnInteraction_ban(const cInteraction&);
 	cTask<> OnInteraction_unban(const cInteraction&, const cSnowflake& user_id);
 	cTask<> OnInteraction_dismiss(const cInteraction&, const cSnowflake& user_id);
+	cTask<> process_nickname_button(const cInteraction&, const cSnowflake& user_id);
+	cTask<> process_modal(const cInteraction&);
 
 	cTask<> OnGuildCreate(uhGuild guild) override;
 	cTask<> OnGuildRoleCreate(cSnowflake& guild_id, cRole& role) override;

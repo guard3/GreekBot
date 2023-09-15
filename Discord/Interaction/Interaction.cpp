@@ -85,6 +85,10 @@ cApplicationCommandOption::GetOptions() {
 	}
 }
 
+cModalSubmitData::cModalSubmitData(const json::value& v):
+	m_custom_id(json::value_to<std::string>(v.at("custom_id"))),
+	m_value(json::value_to<std::string>(v.at("value"))) {}
+
 cInteractionData<INTERACTION_APPLICATION_COMMAND>::cInteractionData(const json::object& o):
 	id(json::value_to<cSnowflake>(o.at("id"))),
 	name(json::value_to<std::string>(o.at("name"))),
@@ -104,6 +108,15 @@ cInteractionData<INTERACTION_MESSAGE_COMPONENT>::cInteractionData(const json::ob
 		Values = json::value_to<std::vector<std::string>>(*p);
 }
 cInteractionData<INTERACTION_MESSAGE_COMPONENT>::cInteractionData(const json::value& v) : cInteractionData(v.as_object()) {}
+
+cInteractionData<INTERACTION_MODAL_SUBMIT>::cInteractionData(const json::value& v):
+	m_custom_id(json::value_to<std::string>(v.at("custom_id"))) {
+	const json::array& a = v.at("components").as_array();
+	for (const json::value& e : a) {
+		for (const json::value& m : e.at("components").as_array())
+			m_submit.emplace_back(m);
+	}
+}
 
 cInteraction::cInteraction(const json::object &o):
 	m_id(json::value_to<cSnowflake>(o.at("id"))),
@@ -129,6 +142,8 @@ cInteraction::cInteraction(const json::object &o):
 		case INTERACTION_MESSAGE_COMPONENT:
 			m_data.emplace<cInteractionData<INTERACTION_MESSAGE_COMPONENT>>(o.at("data"));
 			break;
+		case INTERACTION_MODAL_SUBMIT:
+			m_data.emplace<cInteractionData<INTERACTION_MODAL_SUBMIT>>(o.at("data"));
 		default:
 			break;
 	}

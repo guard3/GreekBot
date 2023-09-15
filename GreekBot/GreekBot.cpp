@@ -120,11 +120,16 @@ cGreekBot::OnInteractionCreate(const cInteraction& interaction) {
 						co_return co_await OnInteraction_unban(interaction, data.GetCustomId().c_str() + 4);
 					if (data.GetCustomId().starts_with("DLT#"))
 						co_return co_await OnInteraction_dismiss(interaction, data.GetCustomId().c_str() + 4);
+					if (data.GetCustomId().starts_with("NCK#"))
+						co_return co_await process_nickname_button(interaction, data.GetCustomId().substr(4));
 
 					switch (cUtils::ParseInt(data.GetCustomId())) {
 						case CMP_ID_BUTTON_RANK_HELP:
 							co_await OnInteraction_button(interaction);
 							break;
+						//case CMP_ID_BUTTON_NICKNAME:
+						//	co_await process_nickname_button(interaction);
+						//	break;
 						default:
 							/* More button ids TBA here */
 							break;
@@ -137,6 +142,8 @@ cGreekBot::OnInteractionCreate(const cInteraction& interaction) {
 					break;
 			}
 		}
+		case INTERACTION_MODAL_SUBMIT:
+			co_await process_modal(interaction);
 		default:
 			break;
 	}

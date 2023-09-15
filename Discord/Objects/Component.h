@@ -7,7 +7,8 @@
 enum eComponentType {
 	COMPONENT_ACTION_ROW = 1, // A container for other components
 	COMPONENT_BUTTON,         // A button object
-	COMPONENT_SELECT_MENU     // A select menu for picking from choices
+	COMPONENT_SELECT_MENU,    // A select menu for picking from choices
+	COMPONENT_TEXT_INPUT      // A Text input object
 };
 
 enum eButtonStyle {
@@ -112,6 +113,26 @@ public:
 	json::object ToJson() const;
 };
 
+enum eTextInputStyle {
+	TEXT_INPUT_SHORT = 1,
+	TEXT_INPUT_PARAGRAPH,
+};
+
+class cTextInput final {
+private:
+	std::string m_custom_id;
+	std::string m_label;
+	eTextInputStyle m_style;
+
+public:
+	cTextInput(eTextInputStyle style, std::string custom_id, std::string label):
+		m_custom_id(std::move(custom_id)),
+		m_label(std::move(label)),
+		m_style(style) {}
+
+	json::object ToJson() const;
+};
+
 class cComponent final {
 private:
 	std::variant<
@@ -120,7 +141,8 @@ private:
 	    cButton<BUTTON_STYLE_PRIMARY>,
 		cButton<BUTTON_STYLE_SECONDARY>,
 		cButton<BUTTON_STYLE_SUCCESS>,
-		cSelectMenu> m_component;
+		cSelectMenu,
+		cTextInput> m_component;
 
 	json::object (*m_func)(const void*);
 
@@ -128,6 +150,7 @@ public:
 	template<eButtonStyle e>
 	cComponent(cButton<e>);
 	cComponent(cSelectMenu);
+	cComponent(cTextInput);
 
 	json::object ToJson() const;
 };

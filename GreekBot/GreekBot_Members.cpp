@@ -20,16 +20,40 @@ cGreekBot::OnGuildMemberUpdate(cSnowflake& guild_id, cPartialMember& member) {
 	if (guild_id == m_lmg_id && !member.GetRoles().empty() && !member.IsPending()) {
 		/* Check if there's a message registered in the database for this member */
 		const int64_t msg_id = co_await cDatabase::WC_GetMessage(member);
-		if (msg_id == 0) {
-			// TODO: add check here for nickname (if there's no nickname, send msg component with text input)
-			cMessage msg = co_await CreateMessage(NEW_MEMBERS_CHANNEL_ID, kw::content = fmt::format("<@{}> Just got a rank!", member.GetUser().GetId()));
+		if (msg_id == 0 && member.GetNickname().empty()) {
+			cMessage msg = co_await CreateMessage(
+				NEW_MEMBERS_CHANNEL_ID,
+				kw::content=fmt::format("<@{}> Just got a rank!", member.GetUser().GetId()),
+				kw::components={
+					cActionRow{
+						cButton<BUTTON_STYLE_PRIMARY>{
+							fmt::format("NCK#{}", member.GetUser().GetId()), // Save the member id
+							kw::label="Assign nickname"
+						},
+						cButton<BUTTON_STYLE_SECONDARY>{
+							fmt::format("DLT#{}", GetUser()->GetId()), // Save the GreekBot id as the author
+							kw::label="Dismiss"
+						}
+					}
+				}
+			);
 			co_await cDatabase::WC_UpdateMessage(member.GetUser(), msg);
 		}
 		else if (msg_id > 0 && !member.GetNickname().empty()) {
 			/* If the message is unedited and the member has a nickname, edit the message
 			 * If editing fails, in cases like where the original message is deleted, that's fine */
 			try {
-				co_await EditMessage(NEW_MEMBERS_CHANNEL_ID, msg_id, kw::content = fmt::format("<@{}> Just got a nickname!", member.GetUser().GetId()));
+				co_await EditMessage(NEW_MEMBERS_CHANNEL_ID, msg_id,
+					kw::content = fmt::format("<@{}> Just got a nickname!", member.GetUser().GetId()),
+					kw::components={
+						cActionRow{
+							cButton<BUTTON_STYLE_SECONDARY>{
+								fmt::format("DLT#{}", GetUser()->GetId()), // Save the GreekBot id as the author
+								kw::label="Dismiss"
+							}
+						}
+					}
+				);
 			}
 			catch (const xDiscordError&) {}
 			co_await cDatabase::WC_EditMessage(msg_id);

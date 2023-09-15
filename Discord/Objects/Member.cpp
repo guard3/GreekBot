@@ -2,6 +2,18 @@
 #include "Utils.h"
 #include "json.h"
 
+json::object
+cMemberOptions::ToJson() const {
+	json::object result;
+	if (m_nick.has_value()) {
+		if (m_nick->empty())
+			result.emplace("nick", nullptr);
+		else
+			result.emplace("nick", *m_nick);
+	}
+	return result;
+}
+
 cPartialMember::cPartialMember(const json::value& v):
 	m_user{ v.at("user") },
 	m_roles{ json::value_to<std::vector<cSnowflake>>(v.at("roles")) } {

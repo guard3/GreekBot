@@ -10,7 +10,9 @@
 enum eInteractionType {
 	INTERACTION_PING = 1,
 	INTERACTION_APPLICATION_COMMAND,
-	INTERACTION_MESSAGE_COMPONENT
+	INTERACTION_MESSAGE_COMPONENT,
+	INTERACTION_APPLICATION_COMMAND_AUTOCOMPLETE,
+	INTERACTION_MODAL_SUBMIT
 };
 eInteractionType tag_invoke(boost::json::value_to_tag<eInteractionType>, const boost::json::value&);
 /* ================================================================================================================== */
@@ -120,6 +122,19 @@ typedef  uhHandle<cApplicationCommandOption>  uhApplicationCommandInteractionDat
 typedef uchHandle<cApplicationCommandOption> uchApplicationCommandInteractionDataOption;
 typedef  uhHandle<cApplicationCommandOption>  shApplicationCommandInteractionDataOption;
 typedef uchHandle<cApplicationCommandOption> schApplicationCommandInteractionDataOption;
+
+class cModalSubmitData final {
+private:
+	std::string m_custom_id;
+	std::string m_value;
+
+public:
+	explicit cModalSubmitData(const json::value&);
+
+	std::string_view GetCustomId() const noexcept { return m_custom_id; }
+	std::string_view GetValue()    const noexcept { return m_value;     }
+};
+
 /* ================================================================================================================== */
 template<eInteractionType>
 class cInteractionData;
@@ -165,6 +180,19 @@ template<eInteractionType e> using  uhInteractionData =  uhHandle<cInteractionDa
 template<eInteractionType e> using uchInteractionData = uchHandle<cInteractionData<e>>;
 template<eInteractionType e> using  shInteractionData =  shHandle<cInteractionData<e>>;
 template<eInteractionType e> using schInteractionData = schHandle<cInteractionData<e>>;
+
+template<>
+class cInteractionData<INTERACTION_MODAL_SUBMIT> {
+private:
+	std::string m_custom_id;
+	std::vector<cModalSubmitData> m_submit;
+
+public:
+	cInteractionData(const json::value&);
+
+	std::string_view            GetCustomId()   const noexcept { return m_custom_id; }
+	std::span<const cModalSubmitData> GetSubmittedData() const noexcept { return m_submit; }
+};
 /* ================================================================================================= */
 class cInteraction final {
 private:
@@ -178,7 +206,8 @@ private:
 	std::optional<cMessage>   m_message;
 	std::variant<std::monostate,
 		cInteractionData<INTERACTION_APPLICATION_COMMAND>,
-		cInteractionData<INTERACTION_MESSAGE_COMPONENT>> m_data;
+		cInteractionData<INTERACTION_MESSAGE_COMPONENT>,
+		cInteractionData<INTERACTION_MODAL_SUBMIT>> m_data;
 	std::variant<std::monostate,
 		cUser,
 		cMember> m_um;
@@ -198,7 +227,7 @@ public:
 	chSnowflake        GetChannelId()     const noexcept { return m_channel_id ? &m_channel_id.value() : nullptr; }
 	chMessage          GetMessage()       const noexcept { return m_message    ? &m_message.value()    : nullptr; }
 
-	template<eInteractionType t> requires (t == INTERACTION_APPLICATION_COMMAND || t == INTERACTION_MESSAGE_COMPONENT)
+	template<eInteractionType t> requires (t == INTERACTION_APPLICATION_COMMAND || t == INTERACTION_MESSAGE_COMPONENT || t == INTERACTION_MODAL_SUBMIT)
 	const cInteractionData<t>& GetData() const { return std::get<cInteractionData<t>>(m_data); }
 };
 typedef   hHandle<cInteraction>   hInteraction; // handle
