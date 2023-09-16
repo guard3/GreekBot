@@ -75,8 +75,10 @@ private:
 public:
 	cMessageParams(iKwArg auto&... kwargs) : cMessageParams(cKwPack(kwargs...)) {}
 
-	json::object ToJson() const;
+	friend void tag_invoke(const json::value_from_tag&, json::value& v, const cMessageParams&);
 };
+
+void tag_invoke(const json::value_from_tag&, json::value& v, const cMessageParams&);
 
 class cMessage final {
 private:

@@ -19,8 +19,10 @@ private:
 public:
 	cMemberOptions(iKwArg auto&... kwargs): cMemberOptions(cKwPack{ kwargs... }) {}
 
-	json::object ToJson() const;
+	friend void tag_invoke(const json::value_from_tag&, json::value&, const cMemberOptions&);
 };
+
+void tag_invoke(const json::value_from_tag&, json::value&, const cMemberOptions&);
 
 /* TODO: Make cMember derive from cPartialMember */
 class cPartialMember {

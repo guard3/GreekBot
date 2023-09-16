@@ -108,41 +108,37 @@ cGreekBot::OnInteractionCreate(const cInteraction& interaction) {
 				case 904462004071313448:
 					/* connect */
 					//OnInteraction_connect(&interaction);
-					break;
+				default:
+					co_return;
 			}
 		}
 		case INTERACTION_MESSAGE_COMPONENT: {
-			auto& data = interaction.GetData<INTERACTION_MESSAGE_COMPONENT>();
-			switch (data.GetComponentType()) {
+			switch (auto& data = interaction.GetData<INTERACTION_MESSAGE_COMPONENT>(); data.GetComponentType()) {
 				case COMPONENT_BUTTON:
 					/* Check custom id */
 					if (data.GetCustomId().starts_with("BAN#"))
-						co_return co_await OnInteraction_unban(interaction, data.GetCustomId().c_str() + 4);
+						co_return co_await OnInteraction_unban(interaction, data.GetCustomId().substr(4));
 					if (data.GetCustomId().starts_with("DLT#"))
-						co_return co_await OnInteraction_dismiss(interaction, data.GetCustomId().c_str() + 4);
+						co_return co_await OnInteraction_dismiss(interaction, data.GetCustomId().substr(4));
 					if (data.GetCustomId().starts_with("NCK#"))
 						co_return co_await process_nickname_button(interaction, data.GetCustomId().substr(4));
 
 					switch (cUtils::ParseInt(data.GetCustomId())) {
 						case CMP_ID_BUTTON_RANK_HELP:
 							co_await OnInteraction_button(interaction);
-							break;
 						default:
-							/* More button ids TBA here */
-							break;
+							co_return;
 					}
-					break;
 				case COMPONENT_SELECT_MENU:
 					co_await OnInteraction_SelectMenu(interaction);
-					break;
 				default:
-					break;
+					co_return;
 			}
 		}
 		case INTERACTION_MODAL_SUBMIT:
 			co_await process_modal(interaction);
 		default:
-			break;
+			co_return;
 	}
 }
 

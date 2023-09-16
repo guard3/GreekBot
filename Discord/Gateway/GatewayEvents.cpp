@@ -140,6 +140,14 @@ cGateway::implementation::process_event(const json::value& v) try {
 			break;
 	}
 } catch (...) {
+	try {
+		std::rethrow_exception(std::current_exception());
+	} catch (const std::exception& e) {
+		cUtils::PrintErr("BONK! {}", e.what());
+	} catch (...) {
+		cUtils::PrintErr("BONK!");
+	}
+
 	/* If an exception occurs, close the stream */
 	asio::dispatch(m_ws_strand, [this] () { if (m_ws) close(); });
 }

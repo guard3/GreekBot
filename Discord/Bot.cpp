@@ -46,20 +46,17 @@ cTask<>
 cBot::UpdateGuildMemberRoles(const cSnowflake& guild_id, const cSnowflake& user_id, const std::vector<chSnowflake>& role_ids) {
 	/* Prepare json response */
 	json::object obj;
-	{
-		json::array a;
-		a.reserve(role_ids.size());
-		for (chSnowflake s: role_ids)
-			a.emplace_back(s->ToString());
-		obj["roles"] = std::move(a);
-	}
+	json::array& a = obj["roles"].emplace_array();
+	a.reserve(role_ids.size());
+	for (chSnowflake s: role_ids)
+		a.emplace_back(s->ToString());
 	/* Resolve api path */
 	co_await DiscordPatch(fmt::format("/guilds/{}/members/{}", guild_id, user_id), obj);
 }
 
 cTask<>
 cBot::modify_guild_member(const cSnowflake& guild_id, const cSnowflake& user_id, const cMemberOptions& options) {
-	co_await DiscordPatch(fmt::format("/guilds/{}/members/{}", guild_id, user_id), options.ToJson());
+	co_await DiscordPatch(fmt::format("/guilds/{}/members/{}", guild_id, user_id), json::value_from(options).get_object());
 }
 
 /* Interaction related functions */
@@ -86,10 +83,9 @@ cBot::respond_to_interaction(const cInteraction& i, const cMessageParams& params
 		case INTERACTION_MESSAGE_COMPONENT:
 			callback = INTERACTION_CALLBACK_UPDATE_MESSAGE;
 	}
-	co_await DiscordPost(fmt::format("/interactions/{}/{}/callback", i.GetId(), i.GetToken()), {
-		{ "type", callback        },
-		{ "data", params.ToJson() }
-	});
+	json::object obj{{ "type", callback }};
+	json::value_from(params, obj["data"]);
+	co_await DiscordPost(fmt::format("/interactions/{}/{}/callback", i.GetId(), i.GetToken()), obj);
 }
 
 template<>
@@ -122,7 +118,7 @@ cBot::RespondToInteractionWithModal(const cInteraction& i, const cModal& modal) 
 cTask<>
 cBot::edit_interaction_response(const cInteraction& i, const cMessageParams& params) {
 	if (i.GetType() != INTERACTION_PING)
-		co_await DiscordPatch(fmt::format("/webhooks/{}/{}/messages/@original", i.GetApplicationId(), i.GetToken()), params.ToJson());
+		co_await DiscordPatch(fmt::format("/webhooks/{}/{}/messages/@original", i.GetApplicationId(), i.GetToken()), json::value_from(params).get_object());
 }
 
 cTask<>
@@ -133,7 +129,7 @@ cBot::DeleteInteractionResponse(const cInteraction& i) {
 cTask<>
 cBot::send_interaction_followup_message(const cInteraction& i, const cMessageParams& params) {
 	if (i.GetType() != INTERACTION_PING)
-		co_await DiscordPost(fmt::format("/webhooks/{}/{}", i.GetApplicationId(), i.GetToken()), params.ToJson());
+		co_await DiscordPost(fmt::format("/webhooks/{}/{}", i.GetApplicationId(), i.GetToken()), json::value_from(params).get_object());
 }
 
 cTask<int>
@@ -155,14 +151,14 @@ cBot::CreateDM(const cSnowflake& recipient_id) {
 cTask<cMessage>
 cBot::create_message(const cSnowflake& channel_id, const cMessageParams& params) {
 	co_return cMessage {
-		co_await DiscordPost(fmt::format("/channels/{}/messages", channel_id), params.ToJson())
+		co_await DiscordPost(fmt::format("/channels/{}/messages", channel_id), json::value_from(params).get_object())
 	};
 }
 
 cTask<cMessage>
 cBot::edit_message(const cSnowflake& channel_id, const cSnowflake& msg_id, const cMessageParams& params) {
 	co_return cMessage {
-		co_await DiscordPatch(fmt::format("/channels/{}/messages/{}", channel_id, msg_id), params.ToJson())
+		co_await DiscordPatch(fmt::format("/channels/{}/messages/{}", channel_id, msg_id), json::value_from(params).get_object())
 	};
 }
 

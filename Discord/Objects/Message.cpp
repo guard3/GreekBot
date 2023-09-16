@@ -6,29 +6,29 @@ tag_invoke(json::value_to_tag<eMessageType>, const json::value& v) {
 	return static_cast<eMessageType>(v.to_number<int>());
 }
 
-json::object
-cMessageParams::ToJson() const {
-	/* Create object with flags */
-	json::object obj {
-		{ "tts", (bool)(m_flags & MESSAGE_FLAG_TTS) },
-		{ "flags", (int)(m_flags & (MESSAGE_FLAG_EPHEMERAL | MESSAGE_FLAG_SUPPRESS_EMBEDS)) }
+void
+tag_invoke(const json::value_from_tag&, json::value& v, const cMessageParams& m) {
+	json::object& obj = v.emplace_object();
+	/* Set flags */
+	obj = {
+		{ "tts", (bool)(m.m_flags & MESSAGE_FLAG_TTS) },
+		{ "flags", m.m_flags & (MESSAGE_FLAG_EPHEMERAL | MESSAGE_FLAG_SUPPRESS_EMBEDS) }
 	};
 	/* Set content */
-	if (!m_content)
+	if (!m.m_content)
 		obj["content"].emplace_string();
-	else if (!m_content->empty())
-		obj["content"] = *m_content;
+	else if (!m.m_content->empty())
+		obj.emplace("content", *m.m_content);
 	/* Set components */
-	if (!m_components)
+	if (!m.m_components)
 		obj["components"].emplace_array();
-	else if (!m_components->empty())
-		json::value_from(*m_components, obj["components"]);
+	else if (!m.m_components->empty())
+		json::value_from(*m.m_components, obj["components"]);
 	/* Set embeds */
-	if (!m_embeds)
+	if (!m.m_embeds)
 		obj["embeds"].emplace_array();
-	else if (!m_embeds->empty())
-		json::value_from(*m_embeds, obj["embeds"]);
-	return obj;
+	else if (!m.m_embeds->empty())
+		json::value_from(*m.m_embeds, obj["embeds"]);
 }
 
 cMessage::cMessage(const json::object &o):

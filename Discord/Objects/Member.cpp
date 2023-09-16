@@ -2,18 +2,6 @@
 #include "Utils.h"
 #include "json.h"
 
-json::object
-cMemberOptions::ToJson() const {
-	json::object result;
-	if (m_nick.has_value()) {
-		if (m_nick->empty())
-			result.emplace("nick", nullptr);
-		else
-			result.emplace("nick", *m_nick);
-	}
-	return result;
-}
-
 cPartialMember::cPartialMember(const json::value& v):
 	m_user{ v.at("user") },
 	m_roles{ json::value_to<std::vector<cSnowflake>>(v.at("roles")) } {
@@ -51,4 +39,14 @@ cMember::cMember(const json::value& v):
 cMember
 tag_invoke(json::value_to_tag<cMember>, const json::value& v) {
 	return cMember{ v };
+}
+void
+tag_invoke(const json::value_from_tag&, json::value& v, const cMemberOptions& m) {
+	json::object& obj = v.emplace_object();
+	if (m.m_nick) {
+		if (m.m_nick->empty())
+			obj.emplace("nick", nullptr);
+		else
+			obj.emplace("nick", *m.m_nick);
+	}
 }
