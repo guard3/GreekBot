@@ -9,12 +9,12 @@ cEmbedField::cEmbedField(const json::object &o) : m_name(o.at("name").as_string(
 
 cEmbedField::cEmbedField(const json::value& v) : cEmbedField(v.as_object()) {}
 
-json::object
-cEmbedField::ToJson() const {
-	return {
-		{ "name",   m_name   },
-		{ "value",  m_value  },
-		{ "inline", m_inline }
+void
+tag_invoke(const json::value_from_tag&, json::value& v, const cEmbedField& e) {
+	v = {
+		{ "name",   e.GetName()  },
+		{ "value",  e.GetValue() },
+		{ "inline", e.IsInline() }
 	};
 }
 /* ================================================================================================= */
@@ -81,25 +81,27 @@ cEmbed::operator=(cEmbed o) {
 }
 
 /* ================================================================================================= */
-json::object
-cEmbed::ToJson() const {
-	json::object obj {
-		{ "color",       m_color.ToInt() },
-		{ "title",       m_title         },
-		{ "description", m_description   },
-		{ "url",         m_url           },
-		{ "timestamp",   m_timestamp     }
+void
+tag_invoke(const json::value_from_tag&, json::value& v, const cEmbed& e) {
+	json::object& obj = v.emplace_object();
+	obj = {
+		{ "color",       e.GetColor().ToInt() },
+		{ "title",       e.GetTitle()         },
+		{ "description", e.GetDescription()   },
+		{ "url",         e.GetUrl()           },
+		{ "timestamp",   e.GetTimestamp()     }
 	};
-	if (m_thumbnail) obj["thumbnail"] = m_thumbnail->ToJson();
-	if (m_image    ) obj["image"    ] = m_image->ToJson();
-	if (m_footer   ) obj["footer"   ] = m_footer->ToJson();
-	if (m_author   ) obj["author"   ] = m_author->ToJson();
-	json::array a;
-	a.reserve(m_fields.size());
-	for (auto& f : m_fields)
-		a.push_back(f.ToJson());
-	obj["fields"] = std::move(a);
-	return obj;
+
+	json::value_from(e.GetFields(), obj["fields"]);
+
+	if (e.GetThumbnail())
+		json::value_from(*e.GetThumbnail(), obj["thumbnail"]);
+	if (e.GetImage())
+		json::value_from(*e.GetImage(), obj["image"]);
+	if (e.GetFooter())
+		json::value_from(*e.GetFooter(), obj["footer"]);
+	if (e.GetAuthor())
+		json::value_from(*e.GetAuthor(), obj["author"]);
 }
 
 cEmbed

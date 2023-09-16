@@ -12,8 +12,7 @@ private:
 		m_icon_url(KwMove<KW_ICON_URL>(pack)) {}
 
 public:
-	cEmbedAuthor(const json::object&);
-	cEmbedAuthor(const json::value&);
+	explicit cEmbedAuthor(const json::value&);
 	cEmbedAuthor(const char* name) : m_name(name) {}
 	cEmbedAuthor(std::string name, iKwArg auto&... kwargs) : cEmbedAuthor(std::move(name), cKwPack(kwargs...)) {}
 	/* Non const getters */
@@ -42,8 +41,6 @@ public:
 		m_proxy_icon_url.clear();
 		return *this;
 	}
-	/* Publish */
-	json::object ToJson() const;
 };
 template<>
 inline cEmbedAuthor& cEmbedAuthor::SetUrl<std::nullptr_t>(std::nullptr_t&&) { m_url.clear(); return *this; }
@@ -59,4 +56,6 @@ typedef  uhHandle<cEmbedAuthor>  uhEmbedAuthor;
 typedef uchHandle<cEmbedAuthor> uchEmbedAuthor;
 typedef  shHandle<cEmbedAuthor>  shEmbedAuthor;
 typedef schHandle<cEmbedAuthor> schEmbedAuthor;
+
+void tag_invoke(const json::value_from_tag&, json::value&, const cEmbedAuthor&);
 #endif

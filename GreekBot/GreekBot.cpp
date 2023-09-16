@@ -127,9 +127,6 @@ cGreekBot::OnInteractionCreate(const cInteraction& interaction) {
 						case CMP_ID_BUTTON_RANK_HELP:
 							co_await OnInteraction_button(interaction);
 							break;
-						//case CMP_ID_BUTTON_NICKNAME:
-						//	co_await process_nickname_button(interaction);
-						//	break;
 						default:
 							/* More button ids TBA here */
 							break;

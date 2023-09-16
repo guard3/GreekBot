@@ -7,8 +7,7 @@ private:
 	std::string m_text, m_icon_url, m_proxy_icon_url;
 
 public:
-	cEmbedFooter(const json::object&);
-	cEmbedFooter(const json::value&);
+	explicit cEmbedFooter(const json::value&);
 	cEmbedFooter(const char* text) : m_text(text) {}
 	cEmbedFooter(std::string text) : m_text(std::move(text)) {}
 	cEmbedFooter(std::string text, std::string icon_url) : m_text(std::move(text)), m_icon_url(std::move(icon_url)) {}
@@ -36,8 +35,6 @@ public:
 		m_icon_url = nullptr;
 		return *this;
 	}
-	/* Publish */
-	json::object ToJson() const;
 };
 typedef   hHandle<cEmbedFooter>   hEmbedFooter;
 typedef  chHandle<cEmbedFooter>  chEmbedFooter;
@@ -45,4 +42,6 @@ typedef  uhHandle<cEmbedFooter>  uhEmbedFooter;
 typedef uchHandle<cEmbedFooter> uchEmbedFooter;
 typedef  shHandle<cEmbedFooter>  shEmbedFooter;
 typedef schHandle<cEmbedFooter> schEmbedFooter;
+
+void tag_invoke(const json::value_from_tag&, json::value&, const cEmbedFooter&);
 #endif //GREEKBOT_EMBEDFOOTER_H

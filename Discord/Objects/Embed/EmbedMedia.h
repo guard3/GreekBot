@@ -10,8 +10,7 @@ private:
 	int         m_height = -1; // Height
 
 public:
-	cEmbedMedia(const json::object&);
-	cEmbedMedia(const json::value&);
+	explicit cEmbedMedia(const json::value&);
 	cEmbedMedia(const char* url) : m_url(url) {}
 	cEmbedMedia(std::string url) : m_url(std::move(url)) {}
 	/* Setters */
@@ -24,8 +23,6 @@ public:
 	/* Movers */
 	std::string MoveUrl()      noexcept { return std::move(m_url);       }
 	std::string MoveProxyUrl() noexcept { return std::move(m_proxy_url); }
-
-	json::object ToJson() const;
 };
 typedef   hHandle<cEmbedMedia>   hEmbedMedia;
 typedef  chHandle<cEmbedMedia>  chEmbedMedia;
@@ -33,4 +30,6 @@ typedef  uhHandle<cEmbedMedia>  uhEmbedMedia;
 typedef uchHandle<cEmbedMedia> uchEmbedMedia;
 typedef  shHandle<cEmbedMedia>  shEmbedMedia;
 typedef schHandle<cEmbedMedia> schEmbedMedia;
+
+void tag_invoke(const json::value_from_tag&, json::value&, const cEmbedMedia&);
 #endif //GREEKBOT_EMBEDMEDIA_H

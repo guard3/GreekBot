@@ -7,8 +7,6 @@
 
 /* Define custom message component ids; used for responding to component interactions */
 #define CMP_ID_BUTTON_RANK_HELP 0
-#define CMP_ID_BUTTON_NICKNAME  1
-#define CMP_ID_BUTTON_DISMISS   2
 
 /* Specialize std::hash for cSnowflake to use in unordered maps */
 template<>

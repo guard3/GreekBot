@@ -1,17 +1,19 @@
 #include "EmbedFooter.h"
 #include "json.h"
 
-cEmbedFooter::cEmbedFooter(const json::object& o) : m_text(o.at("text").as_string().c_str()) {
-	if (auto v = o.if_contains("icon_url"      )) m_icon_url       = v->as_string().c_str();
-	if (auto v = o.if_contains("proxy_icon_url")) m_proxy_icon_url = v->as_string().c_str();
+cEmbedFooter::cEmbedFooter(const json::value& v):
+	m_text(json::value_to<std::string>(v.at("text"))) {
+	const json::object& o = v.as_object();
+	if (auto p = o.if_contains("icon_url"))
+		m_icon_url = json::value_to<std::string>(*p);
+	if (auto p = o.if_contains("proxy_icon_url"))
+		m_proxy_icon_url = json::value_to<std::string>(*p);
 }
 
-cEmbedFooter::cEmbedFooter(const json::value &v) : cEmbedFooter(v.as_object()) {}
-
-json::object
-cEmbedFooter::ToJson() const {
-	return {
-		{ "text",     m_text     },
-		{ "icon_url", m_icon_url }
+void
+tag_invoke(const json::value_from_tag&, json::value& v, const cEmbedFooter& e) {
+	v = {
+		{ "text",     e.GetText()    },
+		{ "icon_url", e.GetIconUrl() }
 	};
 }

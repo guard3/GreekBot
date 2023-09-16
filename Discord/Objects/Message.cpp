@@ -15,29 +15,19 @@ cMessageParams::ToJson() const {
 	};
 	/* Set content */
 	if (!m_content)
-		obj["content"] = "";
+		obj["content"].emplace_string();
 	else if (!m_content->empty())
 		obj["content"] = *m_content;
 	/* Set components */
 	if (!m_components)
-		obj["components"] = json::array();
-	else if (!m_components->empty()) {
-		json::array a;
-		a.reserve(m_components->size());
-		for (auto& c : *m_components)
-			a.push_back(c.ToJson());
-		obj["components"] = std::move(a);
-	}
+		obj["components"].emplace_array();
+	else if (!m_components->empty())
+		json::value_from(*m_components, obj["components"]);
 	/* Set embeds */
 	if (!m_embeds)
-		obj["embeds"] = json::array();
-	else if (!m_embeds->empty()) {
-		json::array a;
-		a.reserve(m_embeds->size());
-		for (auto& e : *m_embeds)
-			a.push_back(e.ToJson());
-		obj["embeds"] = std::move(a);
-	}
+		obj["embeds"].emplace_array();
+	else if (!m_embeds->empty())
+		json::value_from(*m_embeds, obj["embeds"]);
 	return obj;
 }
 

@@ -1,17 +1,20 @@
 #include "EmbedMedia.h"
 #include "json.h"
 
-cEmbedMedia::cEmbedMedia(const json::object &o) {
-	const json::value* v;
-	if ((v = o.if_contains("url"      ))) m_url         = v->as_string().c_str();
-	if ((v = o.if_contains("proxy_url"))) m_proxy_url   = v->as_string().c_str();
-	if ((v = o.if_contains("width"    ))) m_width  = (int)v->as_int64();
-	if ((v = o.if_contains("height"   ))) m_height = (int)v->as_int64();
+cEmbedMedia::cEmbedMedia(const json::value& v) {
+	const json::object& o = v.as_object();
+	if (auto p = o.if_contains("url"))
+		m_url = json::value_to<std::string>(*p);
+	if (auto p = o.if_contains("proxy_url"))
+		m_proxy_url = json::value_to<std::string>(*p);
+	if (auto p = o.if_contains("width"))
+		m_width = p->to_number<int>();
+	if (auto p = o.if_contains("height"))
+		m_height = p->to_number<int>();
 }
 
-cEmbedMedia::cEmbedMedia(const json::value& v) : cEmbedMedia(v.as_object()) {}
-
-cEmbedMedia& cEmbedMedia::SetUrl(std::string url) noexcept {
+cEmbedMedia&
+cEmbedMedia::SetUrl(std::string url) noexcept {
 	/* Set new url */
 	m_url = std::move(url);
 	/* Clear all other fields */
@@ -20,5 +23,7 @@ cEmbedMedia& cEmbedMedia::SetUrl(std::string url) noexcept {
 	return *this;
 }
 
-json::object
-cEmbedMedia::ToJson() const { return {{ "url", m_url }}; }
+void
+tag_invoke(const json::value_from_tag&, json::value& v, const cEmbedMedia& e) {
+	v = {{ "url", e.GetUrl() }};
+}

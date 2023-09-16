@@ -166,8 +166,6 @@ public:
 	explicit cActionRow(      cSelectMenu&& m) : m_components{ std::forward<cSelectMenu>(m) } {}
 
 	const std::vector<cComponent>& GetComponents() const noexcept { return m_components; }
-
-	json::object ToJson() const;
 };
 typedef   hHandle<cActionRow>   hActionRow;
 typedef  chHandle<cActionRow>  chActionRow;
@@ -175,6 +173,8 @@ typedef  uhHandle<cActionRow>  uhActionRow;
 typedef uchHandle<cActionRow> uchActionRow;
 typedef  shHandle<cActionRow>  shActionRow;
 typedef schHandle<cActionRow> schActionRow;
+
+void tag_invoke(const json::value_from_tag&, json::value&, const cActionRow&);
 
 KW_DECLARE(components, KW_COMPONENTS, std::vector<cActionRow>)
 #endif //GREEKBOT_COMPONENT_H

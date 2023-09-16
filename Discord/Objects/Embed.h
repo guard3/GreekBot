@@ -63,8 +63,6 @@ public:
 		m_inline = inline_;
 		return *this;
 	}
-	/* Publish */
-	json::object ToJson() const;
 };
 typedef   hHandle<cEmbedField>   hEmbedField;
 typedef  chHandle<cEmbedField>  chEmbedField;
@@ -191,8 +189,6 @@ public:
 	cEmbed& SetFields(Arg&& arg, Args&&... args) { m_fields = { std::forward<Arg>(arg), std::forward<Args>(args)... }; return *this; }
 	template<typename Arg, typename... Args>
 	cEmbed& AddField(Arg&& arg, Args&&... args) { m_fields.emplace_back(std::forward<Arg>(arg), std::forward<Args>(args)...); return *this; }
-
-	json::object ToJson() const;
 };
 /* Setters for nullptr */
 template<>
@@ -221,6 +217,8 @@ typedef  shHandle<cEmbed>  shEmbed;
 typedef schHandle<cEmbed> schEmbed;
 
 cEmbed tag_invoke(boost::json::value_to_tag<cEmbed>, const boost::json::value&);
+void tag_invoke(const json::value_from_tag&, json::value&, const cEmbedField&);
+void tag_invoke(const json::value_from_tag&, json::value&, const cEmbed&);
 
 KW_DECLARE(embeds, KW_EMBEDS, std::vector<cEmbed>)
 #endif // GREEKBOT_EMBED_H

@@ -23,7 +23,9 @@ namespace boost::json {
 	class value;
 	class object;
 
-	template<typename> struct value_to_tag;
+	template<typename>
+	struct value_to_tag;
+	struct value_from_tag;
 }
 namespace json = boost::json;
 

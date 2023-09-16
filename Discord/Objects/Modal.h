@@ -14,7 +14,9 @@ public:
 		m_title(std::move(title)),
 		m_components(std::move(components)) {}
 
-	json::object ToJson() const;
+	friend void tag_invoke(const json::value_from_tag&, json::value&, const cModal&);
 };
+
+void tag_invoke(const json::value_from_tag&, json::value&, const cModal&);
 
 #endif /* GREEKBOT_MODAL_H */

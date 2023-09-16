@@ -114,10 +114,9 @@ cBot::RespondToInteraction<>(const cInteraction& i) {
 
 cTask<>
 cBot::RespondToInteractionWithModal(const cInteraction& i, const cModal& modal) {
-	co_await DiscordPost(fmt::format("/interactions/{}/{}/callback", i.GetId(), i.GetToken()), {
-		{ "type", INTERACTION_CALLBACK_MODAL },
-		{ "data", modal.ToJson() }
-	});
+	json::object obj{{ "type", INTERACTION_CALLBACK_MODAL }};
+	json::value_from(modal, obj["data"]);
+	co_await DiscordPost(fmt::format("/interactions/{}/{}/callback", i.GetId(), i.GetToken()), obj);
 }
 
 cTask<>

@@ -47,19 +47,16 @@ cSelectMenu::ToJson() const {
 	return obj;
 }
 
-json::object
-cActionRow::ToJson() const {
-	json::object obj {
-		{ "type", (int)COMPONENT_ACTION_ROW }
-	};
-	if (!m_components.empty()) {
-		json::array a;
-		a.reserve(m_components.size());
-		for (auto& c : m_components)
+void
+tag_invoke(const json::value_from_tag&, json::value& v, const cActionRow& row) {
+	json::object& obj = v.emplace_object();
+	obj = {{ "type", COMPONENT_ACTION_ROW }};
+	if (!row.GetComponents().empty()) {
+		json::array& a = obj["components"].emplace_array();
+		a.reserve(row.GetComponents().size());
+		for (auto& c : row.GetComponents())
 			a.emplace_back(c.ToJson());
-		obj["components"] = std::move(a);
 	}
-	return obj;
 }
 
 json::object
