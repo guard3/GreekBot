@@ -47,8 +47,9 @@ public:
 	cTask<> RemoveGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake& role_id);
 	cTask<> UpdateGuildMemberRoles(const cSnowflake& guild_id, const cSnowflake& user_id, const std::vector<chSnowflake>& role_ids);
 
-	cTask<> RespondToInteraction(const cInteraction& i, iKwArg auto&... kwargs) {
-		co_await respond_to_interaction(i, { kwargs... });
+	template<kw::key... Keys>
+	cTask<> RespondToInteraction(const cInteraction& i, kw::arg<Keys>&... kwargs) {
+		co_await respond_to_interaction(i, cMessageParams{ kwargs... });
 	}
 	template<>
 	cTask<> RespondToInteraction<>(const cInteraction&);
@@ -57,29 +58,35 @@ public:
 	//	co_await RespondToInteractionWithModal(i, { std::forward<Args>(args)... });
 	//}
 	cTask<> RespondToInteractionWithModal(const cInteraction&, const cModal&);
-	cTask<> EditInteractionResponse(const cInteraction& i, iKwArg auto&... kwargs) {
-		co_await edit_interaction_response(i, { kwargs... });
+	template<kw::key... Keys>
+	cTask<> EditInteractionResponse(const cInteraction& i, kw::arg<Keys>&... kwargs) {
+		co_await edit_interaction_response(i, cMessageParams{ kwargs... });
 	}
 	cTask<> DeleteInteractionResponse(const cInteraction&);
-	cTask<> SendInteractionFollowupMessage(const cInteraction& i, iKwArg auto&... kwargs) {
-		co_await send_interaction_followup_message(i, { kwargs... });
+	template<kw::key... Keys>
+	cTask<> SendInteractionFollowupMessage(const cInteraction& i, kw::arg<Keys>&... kwargs) {
+		co_await send_interaction_followup_message(i, cMessageParams{ kwargs... });
 	}
 
 	cTask<int> BeginGuildPrune(const cSnowflake& id, int days, std::string_view reason = {});
 
 	cTask<cChannel> CreateDM(const cSnowflake& recipient_id);
-	cTask<cMessage> CreateMessage(const cSnowflake& channel_id, iKwArg auto&... kwargs) {
-		co_return co_await create_message(channel_id, { kwargs... });
+	template<kw::key... Keys>
+	cTask<cMessage> CreateMessage(const cSnowflake& channel_id, kw::arg<Keys>&... kwargs) {
+		co_return co_await create_message(channel_id, cMessageParams{ kwargs... });
 	}
-	cTask<cMessage> CreateDMMessage(const cSnowflake& recipient_id, iKwArg auto&... kwargs) {
+	template<kw::key... Keys>
+	cTask<cMessage> CreateDMMessage(const cSnowflake& recipient_id, kw::arg<Keys>&... kwargs) {
 		co_return co_await CreateMessage((co_await CreateDM(recipient_id)).GetId(), kwargs...);
 	}
-	cTask<cMessage> EditMessage(const cSnowflake& channel_id, const cSnowflake& msg_id, iKwArg auto&... kwargs) {
-		co_return co_await edit_message(channel_id, msg_id, { kwargs... });
+	template<kw::key... Keys>
+	cTask<cMessage> EditMessage(const cSnowflake& channel_id, const cSnowflake& msg_id, kw::arg<Keys>&... kwargs) {
+		co_return co_await edit_message(channel_id, msg_id, cMessageParams{ kwargs... });
 	}
 	cTask<> DeleteMessage(const cSnowflake& guild_id, const cSnowflake& msg_id, std::string_view reason = {});
 
-	cTask<> ModifyGuildMember(const cSnowflake& guild_id, const cSnowflake& user_id, iKwArg auto&... kwargs) {
+	template<kw::key... Keys>
+	cTask<> ModifyGuildMember(const cSnowflake& guild_id, const cSnowflake& user_id, kw::arg<Keys>&... kwargs) {
 		co_await modify_guild_member(guild_id, user_id, { kwargs... });
 	}
 	cTask<> RemoveGuildMember(const cSnowflake& guild_id, const cSnowflake& user_id, std::string_view reason = {});

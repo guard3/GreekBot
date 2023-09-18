@@ -11,7 +11,8 @@ add_executable(GreekBot main.cpp boost/json.h Discord/Bot.cpp Discord/Bot.h Disc
         boost/impl.cpp
         GreekBot/GreekBot_Members.cpp
         Discord/Objects/Modal.h
-        Discord/Objects/Modal.cpp)
+        Discord/Objects/Modal.cpp
+        Discord/kwarg.h)
 
 target_include_directories(
     GreekBot PRIVATE

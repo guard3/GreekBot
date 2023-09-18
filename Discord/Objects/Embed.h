@@ -4,7 +4,6 @@
 #include "EmbedAuthor.h"
 #include "EmbedFooter.h"
 #include <vector>
-#include "Kwarg.h"
 
 template<typename T>
 class cWrapper {
@@ -71,11 +70,11 @@ typedef uchHandle<cEmbedField> uchEmbedField;
 typedef  shHandle<cEmbedField>  shEmbedField;
 typedef schHandle<cEmbedField> schEmbedField;
 
-KW_DECLARE(thumbnail, KW_THUMBNAIL, cWrapper<cEmbedMedia>)
-KW_DECLARE(image, KW_IMAGE, cWrapper<cEmbedMedia>)
-KW_DECLARE(footer, KW_FOOTER, cWrapper<cEmbedFooter>)
-KW_DECLARE(author, KW_AUTHOR, cWrapper<cEmbedAuthor>)
-KW_DECLARE(fields, KW_FIELDS, std::vector<cEmbedField>)
+KW_DECLARE(thumbnail, cEmbedMedia)
+KW_DECLARE(image, cEmbedMedia)
+KW_DECLARE(footer, cEmbedFooter)
+KW_DECLARE(author, cEmbedAuthor)
+KW_DECLARE(fields, std::vector<cEmbedField>)
 
 /* ================================================================================================= */
 class cEmbed final {
@@ -87,20 +86,27 @@ private:
 	uhEmbedAuthor m_author;
 	std::vector<cEmbedField> m_fields;
 
-	cEmbed(iKwPack auto&& pack):
-		m_color(KwMove<KW_COLOR>(pack)),
-		m_title(KwMove<KW_TITLE>(pack)),
-		m_description(KwMove<KW_DESCRIPTION>(pack)),
-		m_url(KwMove<KW_URL>(pack)),
-		m_timestamp(KwMove<KW_TIMESTAMP>(pack)),
-		m_thumbnail(KwMove<KW_THUMBNAIL>(pack).Move()),
-		m_image(KwMove<KW_IMAGE>(pack).Move()),
-		m_footer(KwMove<KW_FOOTER>(pack).Move()),
-		m_author(KwMove<KW_AUTHOR>(pack).Move()),
-		m_fields(KwMove<KW_FIELDS>(pack)) {}
+	template<kw::key... Keys>
+	cEmbed(kw::pack<Keys...> pack):
+		m_color(std::move(kw::get<"color">(pack))),
+		m_title(std::move(kw::get<"title">(pack))),
+		m_description(std::move(kw::get<"description">(pack))),
+		m_url(std::move(kw::get<"url">(pack))),
+		m_timestamp(std::move(kw::get<"timestamp">(pack))),
+		m_fields(std::move(kw::get<"fields">(pack))) {
+		if (auto p = kw::get_if<"thumbnail">(pack, kw::nullarg); p)
+			m_thumbnail = cHandle::MakeUnique<cEmbedMedia>(std::move(*p));
+		if (auto p = kw::get_if<"image">(pack, kw::nullarg); p)
+			m_image = cHandle::MakeUnique<cEmbedMedia>(std::move(*p));
+		if (auto p = kw::get_if<"footer">(pack, kw::nullarg); p)
+			m_footer = cHandle::MakeUnique<cEmbedFooter>(std::move(*p));
+		if (auto p = kw::get_if<"author">(pack, kw::nullarg); p)
+			m_author = cHandle::MakeUnique<cEmbedAuthor>(std::move(*p));
+	}
 
 public:
-	cEmbed(iKwArg auto&... kwargs) : cEmbed(cKwPack(kwargs...)) {}
+	template<kw::key... Keys>
+	explicit cEmbed(kw::arg<Keys>&... kwargs) : cEmbed(kw::pack{ kwargs...}) {}
 
 	cEmbed(const json::object&);
 	cEmbed(const json::value&);
@@ -220,5 +226,5 @@ cEmbed tag_invoke(boost::json::value_to_tag<cEmbed>, const boost::json::value&);
 void tag_invoke(const json::value_from_tag&, json::value&, const cEmbedField&);
 void tag_invoke(const json::value_from_tag&, json::value&, const cEmbed&);
 
-KW_DECLARE(embeds, KW_EMBEDS, std::vector<cEmbed>)
+KW_DECLARE(embeds, std::vector<cEmbed>)
 #endif // GREEKBOT_EMBED_H

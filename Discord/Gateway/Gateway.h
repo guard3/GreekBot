@@ -41,8 +41,8 @@ public:
 };
 typedef std::vector<cHttpField> tHttpFields;
 
-KW_DECLARE(query, KW_QUERY, std::string)
-KW_DECLARE(user_ids, KW_USER_IDS, std::vector<cSnowflake>)
+KW_DECLARE(query, std::string)
+KW_DECLARE(user_ids, std::vector<cSnowflake>)
 
 class cGateway {
 private:
@@ -74,9 +74,10 @@ public:
 
 	cTask<> ResumeOnEventThread();
 	cTask<> WaitOnEventThread(std::chrono::milliseconds);
-	cAsyncGenerator<cMember> GetGuildMembers(const cSnowflake& guild_id, iKwArg auto&... kwargs) {
-		cKwPack pack{ kwargs... };
-		return get_guild_members(guild_id, KwGet<KW_QUERY>(pack), KwGet<KW_USER_IDS>(pack));
+	template<kw::key... Keys>
+	cAsyncGenerator<cMember> GetGuildMembers(const cSnowflake& guild_id, kw::arg<Keys>&... kwargs) {
+		kw::pack pack{ kwargs... };
+		return get_guild_members(guild_id, kw::get<"query">(pack), kw::get<"user_ids">(pack));
 	}
 
 	virtual cTask<> OnReady(uhUser) { co_return; }

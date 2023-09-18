@@ -53,8 +53,8 @@ enum eMessageFlag {
 inline eMessageFlag operator|(eMessageFlag a, eMessageFlag b) { return (eMessageFlag)((int)a | (int)b); }
 inline eMessageFlag operator&(eMessageFlag a, eMessageFlag b) { return (eMessageFlag)((int)a & (int)b); }
 
-KW_DECLARE(flags, KW_FLAGS, eMessageFlag)
-KW_DECLARE(content, KW_CONTENT, std::string)
+KW_DECLARE(flags, eMessageFlag)
+KW_DECLARE(content, std::string)
 
 /* TODO: make cMessage inherit from here */
 /* TODO: maybe also make a base discord object class? */
@@ -66,14 +66,19 @@ private:
 	std::optional<std::vector<cActionRow>> m_components;
 	std::optional<std::vector<cEmbed>> m_embeds;
 
-	cMessageParams(iKwPack auto&& pack):
-		m_flags(KwGet<KW_FLAGS>(pack, MESSAGE_FLAG_NONE)),
-		m_content(KwOptMove<KW_CONTENT>(pack)),
-		m_components(KwOptMove<KW_COMPONENTS>(pack)),
-		m_embeds(KwOptMove<KW_EMBEDS>(pack)) {}
+	template<kw::key... Keys>
+	cMessageParams(kw::pack<Keys...> pack): m_flags(kw::get<"flags">(pack, MESSAGE_FLAG_NONE)) {
+		if (auto p = kw::get_if<"content">(pack); p)
+			m_content.emplace(std::move(*p));
+		if (auto p = kw::get_if<"components">(pack); p)
+			m_components.emplace(std::move(*p));
+		if (auto p = kw::get_if<"embeds">(pack); p)
+			m_embeds.emplace(std::move(*p));
+	}
 
 public:
-	cMessageParams(iKwArg auto&... kwargs) : cMessageParams(cKwPack(kwargs...)) {}
+	template<kw::key... Keys>
+	explicit cMessageParams(kw::arg<Keys>&... kwargs) : cMessageParams(kw::pack{ kwargs... }) {}
 
 	friend void tag_invoke(const json::value_from_tag&, json::value& v, const cMessageParams&);
 };

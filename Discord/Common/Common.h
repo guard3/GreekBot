@@ -1,7 +1,7 @@
 #ifndef GREEKBOT_COMMON_H
 #define GREEKBOT_COMMON_H
 #include "Exception.h"
-#include "Kwarg.h"
+#include "kwarg.h"
 #include "Ptr.h"
 #include <chrono>
 #include <memory>
@@ -176,10 +176,10 @@ public:
 
 cColor tag_invoke(boost::json::value_to_tag<cColor>, const boost::json::value&);
 
-KW_DECLARE(color, KW_COLOR, cColor)
-KW_DECLARE(title, KW_TITLE, std::string)
-KW_DECLARE(description, KW_DESCRIPTION, std::string)
-KW_DECLARE(url, KW_URL, std::string)
-KW_DECLARE(icon_url, KW_ICON_URL, std::string)
-KW_DECLARE(timestamp, KW_TIMESTAMP, std::string)
+KW_DECLARE(color, cColor)
+KW_DECLARE(title, std::string)
+KW_DECLARE(description, std::string)
+KW_DECLARE(url, std::string)
+KW_DECLARE(icon_url, std::string)
+KW_DECLARE(timestamp, std::string)
 #endif // GREEKBOT_COMMON_H

@@ -101,7 +101,7 @@ private:
 		}
 		/* Edit original interaction message */
 		if (i.GetData<INTERACTION_MESSAGE_COMPONENT>().GetCustomId() == "proficiency_role_menu")
-			co_await EditInteractionResponse(i, kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content="Role assigned!", kw::components=nil);
+			co_await EditInteractionResponse(i, kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content="Role assigned!", kw::components=kw::nullarg);
 	}
 
 	cTask<> OnInteraction_avatar(const cInteraction&);

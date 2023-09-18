@@ -122,7 +122,7 @@ cGreekBot::OnInteraction_unban(const cInteraction& i, const cSnowflake& user_id)
 			auto& s = e.GetAuthor()->GetName();
 			s.erase(s.end()-11, s.end());
 			e.SetFields(nullptr).SetDescription("User was unbanned");
-			co_await EditInteractionResponse(i, kw::components=nil, kw::embeds={std::move(e)});
+			co_await EditInteractionResponse(i, kw::components=kw::nullarg, kw::embeds={ std::move(e) });
 		}
 	}
 }

@@ -11,7 +11,6 @@ private:
 
 public:
 	explicit cEmbedMedia(const json::value&);
-	cEmbedMedia(const char* url) : m_url(url) {}
 	cEmbedMedia(std::string url) : m_url(std::move(url)) {}
 	/* Setters */
 	cEmbedMedia& SetUrl(std::string url) noexcept;

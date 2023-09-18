@@ -4,7 +4,7 @@
 
 /* Helper functions that create embeds */
 static cEmbed make_no_xp_embed(const cUser& user, cColor c) {
-	return {
+	return cEmbed{
 		kw::author={
 			user.GetUsername(),
 			kw::icon_url=user.GetAvatarUrl()
@@ -14,7 +14,7 @@ static cEmbed make_no_xp_embed(const cUser& user, cColor c) {
 	};
 }
 static cEmbed make_no_member_embed(const cUser& user, bool bAnymore) {
-	return {
+	return cEmbed{
 		kw::author={
 			user.GetUsername(),
 			kw::icon_url=user.GetAvatarUrl()
@@ -40,7 +40,7 @@ static cEmbed make_embed(const cUser& user, const cMember& member, cColor c, int
 		next_xp += 5 * level * level + 50 * level + 100;
 	}
 	/* Create embed */
-	return {
+	return cEmbed{
 		kw::author={
 			user.GetUsername(),
 			kw::icon_url = user.GetAvatarUrl()

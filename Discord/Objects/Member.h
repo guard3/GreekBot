@@ -5,19 +5,20 @@
 #include <vector>
 #include <span>
 
-KW_DECLARE(nick, KW_NICK, std::string_view);
+KW_DECLARE(nick, std::string_view)
 
 class cMemberOptions {
 private:
 	std::optional<std::string> m_nick;
 
-	cMemberOptions(iKwPack auto&& p) {
-		auto a = KwOptMove<KW_NICK>(p);
-		if (a.has_value())
-			m_nick.emplace(a->begin(), a->end());
+	template<kw::key... Keys>
+	cMemberOptions(kw::pack<Keys...> pack) {
+		if (auto p = kw::get_if<"nick">(pack))
+			m_nick.emplace(p->begin(), p->end());
 	}
 public:
-	cMemberOptions(iKwArg auto&... kwargs): cMemberOptions(cKwPack{ kwargs... }) {}
+	template<kw::key... Keys>
+	cMemberOptions(kw::arg<Keys>&... kwargs): cMemberOptions(kw::pack{ kwargs... }) {}
 
 	friend void tag_invoke(const json::value_from_tag&, json::value&, const cMemberOptions&);
 };

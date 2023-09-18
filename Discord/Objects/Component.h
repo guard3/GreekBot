@@ -19,9 +19,9 @@ enum eButtonStyle {
 	BUTTON_STYLE_LINK
 };
 
-KW_DECLARE(label, KW_LABEL, std::string)
-KW_DECLARE(emoji, KW_EMOJI, cEmoji)
-KW_DECLARE(disabled, KW_DISABLED, bool)
+KW_DECLARE(label, std::string)
+KW_DECLARE(emoji, cEmoji)
+KW_DECLARE(disabled, bool)
 
 class cBaseButton {
 private:
@@ -31,17 +31,19 @@ private:
 	std::string m_value; // either url or custom_id depending on button style
 	bool m_disabled;
 
-	template<typename String>
-	cBaseButton(eButtonStyle s, String&& v, iKwPack auto&& pack):
+	template<kw::key... Keys>
+	cBaseButton(eButtonStyle s, std::string v, kw::pack<Keys...> pack):
 		m_style(s),
-		m_value(std::forward<String>(v)),
-		m_label(KwMove<KW_LABEL>(pack)),
-		m_emoji(KwOptMove<KW_EMOJI>(pack, nil)),
-		m_disabled(KwGet<KW_DISABLED>(pack, false)) {}
+		m_value(std::move(v)),
+		m_label(std::move(kw::get<"label">(pack))),
+		m_disabled(kw::get<"disabled">(pack, false)) {
+		if (auto p = kw::get_if<"emoji">(pack, kw::nullarg); p)
+			m_emoji.emplace(std::move(*p));
+	}
 
 protected:
-	template<typename String>
-	cBaseButton(eButtonStyle s, String&& v, iKwArg auto&... kwargs) : cBaseButton(s, std::forward<String>(v), cKwPack(kwargs...)) {}
+	template<kw::key... Keys>
+	cBaseButton(eButtonStyle s, std::string v, kw::arg<Keys>&... kwargs) : cBaseButton(s, std::move(v), kw::pack{ kwargs... }) {}
 
 	std::string&       get_value()       noexcept { return m_value; }
 	const std::string& get_value() const noexcept { return m_value; }
@@ -62,8 +64,8 @@ public:
 template<eButtonStyle s>
 class cButton final : public cBaseButton {
 public:
-	template<typename String>
-	cButton(String&& custom_id, iKwArg auto& kwarg, iKwArg auto&... kwargs) : cBaseButton(s, std::forward<String>(custom_id), kwarg, kwargs...) {}
+	template<kw::key Key, kw::key... Keys>
+	cButton(std::string custom_id, kw::arg<Key>& kwarg, kw::arg<Keys>&... kwargs) : cBaseButton(s, std::move(custom_id), kwarg, kwargs...) {}
 
 	std::string&       GetCustomId()       noexcept { return get_value(); }
 	const std::string& GetCustomId() const noexcept { return get_value(); }
@@ -72,8 +74,8 @@ public:
 template<>
 class cButton<BUTTON_STYLE_LINK> final : public cBaseButton {
 public:
-	template<typename String>
-	cButton(String&& url_, iKwArg auto& kwarg, iKwArg auto&... kwargs) : cBaseButton(BUTTON_STYLE_LINK, std::forward<String>(url_), kwarg, kwargs...) {}
+	template<kw::key Key, kw::key... Keys>
+	cButton(std::string url, kw::arg<Key>& kwarg, kw::arg<Keys>&... kwargs) : cBaseButton(BUTTON_STYLE_LINK, std::move(url), kwarg, kwargs...) {}
 
 	std::string&       GetUrl() noexcept { return get_value(); }
 	const std::string& GetUrl() const noexcept { return get_value(); }
@@ -86,14 +88,18 @@ private:
 	std::string           m_description;
 	std::optional<cEmoji> m_emoji;
 
-	cSelectOption(std::string&& l, std::string&& v, iKwPack auto pack):
-		m_label(std::forward<std::string>(l)),
-		m_value(std::forward<std::string>(v)),
-		m_description(KwMove<KW_DESCRIPTION>(pack)),
-		m_emoji(KwOptMove<KW_EMOJI>(pack, nil)) {}
+	template<kw::key... Keys>
+	cSelectOption(std::string&& l, std::string&& v, kw::pack<Keys...> pack):
+		m_label(std::move(l)),
+		m_value(std::move(v)),
+		m_description(std::move(kw::get<"description">(pack))) {
+		if (auto p = kw::get_if<"emoji">(pack, kw::nullarg))
+			m_emoji.emplace(std::move(*p));
+	}
 
 public:
-	cSelectOption(std::string label, std::string value, iKwArg auto&... kwargs) : cSelectOption(std::move(label), std::move(value), cKwPack(kwargs...)) {}
+	template<kw::key... Keys>
+	cSelectOption(std::string label, std::string value, kw::arg<Keys>&... kwargs) : cSelectOption(std::move(label), std::move(value), kw::pack{ kwargs... }) {}
 
 	json::object ToJson() const;
 };
@@ -176,5 +182,5 @@ typedef schHandle<cActionRow> schActionRow;
 
 void tag_invoke(const json::value_from_tag&, json::value&, const cActionRow&);
 
-KW_DECLARE(components, KW_COMPONENTS, std::vector<cActionRow>)
+KW_DECLARE(components, std::vector<cActionRow>)
 #endif //GREEKBOT_COMPONENT_H
