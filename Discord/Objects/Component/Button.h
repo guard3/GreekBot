@@ -2,6 +2,7 @@
 #define GREEKBOT_BUTTON_H
 #include "Common.h"
 #include "Emoji.h"
+#include <optional>
 
 enum eButtonStyle {
 	BUTTON_STYLE_PRIMARY = 1,

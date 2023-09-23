@@ -24,7 +24,7 @@ private:
 		m_label(std::forward<S2>(label)),
 		m_style(style),
 		m_min_length(kw::get<"min_length">(pack, 0)),
-		m_max_length(kw::get<"max_length">(pack, 1)) {}
+		m_max_length(kw::get<"max_length">(pack, 4000)) {}
 
 public:
 	template<kw::key... Keys, typename Str1 = std::string, typename Str2 = std::string>

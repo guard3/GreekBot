@@ -2,6 +2,8 @@
 #define GREEKBOT_SELECTMENU_H
 #include "Common.h"
 #include "Emoji.h"
+#include <optional>
+#include <vector>
 
 class cSelectOption final {
 private:
