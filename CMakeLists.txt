@@ -7,12 +7,17 @@ if (MSVC)
     add_definitions(/bigobj)
 endif()
 
-add_executable(GreekBot main.cpp boost/json.h Discord/Bot.cpp Discord/Bot.h Discord/Common/Common.h Discord/Interaction/Interaction.cpp Discord/Interaction/Interaction.h Discord/Objects/Member.cpp Discord/Objects/Member.h Discord/Objects/User.cpp Discord/Objects/User.h Discord/Objects/Component.h Discord/Objects/Emoji.h Discord/Objects/Guild.h Discord/Objects/Channel.h Discord/Objects/Message.h Database/Database.h Database/Database.cpp Discord/Objects/Embed.h Discord/Objects/Embed.cpp Discord/Objects/Role.h Discord/Objects/Role.cpp GreekBot/GreekBot.h GreekBot/GreekBot.cpp GreekBot/GreekBot_Leaderboard.cpp GreekBot/GreekBot_Avatar.cpp GreekBot/GreekBot_Role.cpp GreekBot/GreekBot_Button.cpp Discord/Objects/Message.cpp Discord/Coroutines/Task.h Discord/Gateway/Gateway.h Discord/Gateway/Gateway.cpp Discord/Gateway/GatewayCommands.cpp Discord/Gateway/GatewayEvents.cpp Discord/Common/Common.cpp Discord/Objects/Guild.cpp boost/beast.h Discord/Gateway/GatewayImpl.h Discord/Gateway/GatewayImpl.cpp Discord/Gateway/GatewayHttp.cpp GreekBot/GreekBot_Prune.cpp Discord/Common/Exception.h Discord/Common/Exception.cpp Discord/Common/Utils.h Discord/Common/Utils.cpp GreekBot/GreekBot_Ban.cpp Discord/Objects/Channel.cpp Discord/Common/Base64.cpp Discord/Objects/Embed/EmbedMedia.h Discord/Objects/Embed/EmbedAuthor.h Discord/Objects/Embed/EmbedMedia.cpp Discord/Objects/Embed/EmbedAuthor.cpp Discord/Objects/Embed/EmbedFooter.h Discord/Objects/Embed/EmbedFooter.cpp Discord/Objects/Emoji.cpp Discord/Objects/Component.cpp GreekBot/GreekBot_Dismiss.cpp Discord/Gateway/GuildMembersResult.h Discord/Gateway/GuildMembersResult.cpp Discord/Coroutines.h Discord/Coroutines/AsyncGenerator.h Discord/Coroutines/Generator.h Discord/Gateway/Application.h Discord/Gateway/Application.cpp boost/date_time.h Discord/Common/Ptr.h
+add_executable(GreekBot main.cpp boost/json.h Discord/Bot.cpp Discord/Bot.h Discord/Common/Common.h Discord/Interaction/Interaction.cpp Discord/Interaction/Interaction.h Discord/Objects/Member.cpp Discord/Objects/Member.h Discord/Objects/User.cpp Discord/Objects/User.h Discord/Objects/Component.h Discord/Objects/Emoji.h Discord/Objects/Guild.h Discord/Objects/Channel.h Discord/Objects/Message.h Database/Database.h Database/Database.cpp Discord/Objects/Embed.h Discord/Objects/Embed/Embed.cpp Discord/Objects/Role.h Discord/Objects/Role.cpp GreekBot/GreekBot.h GreekBot/GreekBot.cpp GreekBot/GreekBot_Leaderboard.cpp GreekBot/GreekBot_Avatar.cpp GreekBot/GreekBot_Role.cpp GreekBot/GreekBot_Button.cpp Discord/Objects/Message.cpp Discord/Coroutines/Task.h Discord/Gateway/Gateway.h Discord/Gateway/Gateway.cpp Discord/Gateway/GatewayCommands.cpp Discord/Gateway/GatewayEvents.cpp Discord/Common/Common.cpp Discord/Objects/Guild.cpp boost/beast.h Discord/Gateway/GatewayImpl.h Discord/Gateway/GatewayImpl.cpp Discord/Gateway/GatewayHttp.cpp GreekBot/GreekBot_Prune.cpp Discord/Common/Exception.h Discord/Common/Exception.cpp Discord/Common/Utils.h Discord/Common/Utils.cpp GreekBot/GreekBot_Ban.cpp Discord/Objects/Channel.cpp Discord/Common/Base64.cpp Discord/Objects/Embed/EmbedMedia.h Discord/Objects/Embed/EmbedAuthor.h Discord/Objects/Embed/EmbedFooter.h Discord/Objects/Emoji.cpp GreekBot/GreekBot_Dismiss.cpp Discord/Gateway/GuildMembersResult.h Discord/Gateway/GuildMembersResult.cpp Discord/Coroutines.h Discord/Coroutines/AsyncGenerator.h Discord/Coroutines/Generator.h Discord/Gateway/Application.h Discord/Gateway/Application.cpp boost/date_time.h Discord/Common/Ptr.h
         boost/impl.cpp
         GreekBot/GreekBot_Members.cpp
         Discord/Objects/Modal.h
         Discord/Objects/Modal.cpp
-        Discord/kwarg.h)
+        Discord/kwarg.h
+        Discord/Objects/Component/TextInput.h
+        Discord/Objects/Component/Component.cpp
+        Discord/Objects/Component/Button.h
+        Discord/Objects/Component/SelectMenu.h
+        Discord/Objects/Embed/EmbedField.h)
 
 target_include_directories(
     GreekBot PRIVATE
@@ -20,7 +25,6 @@ target_include_directories(
     ${PROJECT_SOURCE_DIR}/Discord
     ${PROJECT_SOURCE_DIR}/Discord/Common
     ${PROJECT_SOURCE_DIR}/Discord/Objects
-    ${PROJECT_SOURCE_DIR}/Discord/Objects/Embed
     ${PROJECT_SOURCE_DIR}/Discord/Gateway
     ${PROJECT_SOURCE_DIR}/Discord/Interaction
     ${PROJECT_SOURCE_DIR}/Discord/Voice

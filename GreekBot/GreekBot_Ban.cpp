@@ -85,11 +85,13 @@ cGreekBot::OnInteraction_ban(const cInteraction& i) {
 			i,
 			kw::components = {
 				cActionRow{
-					cButton<BUTTON_STYLE_DANGER>{
+					cButton{
+						BUTTON_STYLE_DANGER,
 						fmt::format("BAN#{}", user->GetId()),
 						kw::label = "Revoke ban"
 					},
-					cButton<BUTTON_STYLE_SECONDARY>{
+					cButton{
+						BUTTON_STYLE_SECONDARY,
 						fmt::format("DLT#{}", member->GetUser()->GetId()),
 						kw::label = "Dismiss"
 					}
@@ -119,9 +121,10 @@ cGreekBot::OnInteraction_unban(const cInteraction& i, const cSnowflake& user_id)
 				/* Ban not found, but that's fine */
 			}
 			auto e = i.GetMessage()->GetEmbeds().front();
-			auto& s = e.GetAuthor()->GetName();
-			s.erase(s.end()-11, s.end());
-			e.SetFields(nullptr).SetDescription("User was unbanned");
+			auto name = e.GetAuthor()->GetName();
+			name.remove_suffix(11); // Remove the " was banned" part
+			e.GetAuthor()->SetName(name);
+			e.ClearFields().SetDescription("User was unbanned");
 			co_await EditInteractionResponse(i, kw::components=kw::nullarg, kw::embeds={ std::move(e) });
 		}
 	}

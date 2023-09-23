@@ -96,7 +96,8 @@ cGreekBot::OnInteraction_rank(const cInteraction& i) {
 				kw::embeds={ make_embed(*user, *member, color, res.GetRank(), res.GetXp(), res.GetNumMessages()) },
 				kw::components={
 					cActionRow{
-						cButton<BUTTON_STYLE_SECONDARY>{
+						cButton{
+							BUTTON_STYLE_SECONDARY,
 							STR(CMP_ID_BUTTON_RANK_HELP),
 							kw::label="How does this work?"
 						}
@@ -146,7 +147,8 @@ cGreekBot::OnInteraction_top(const cInteraction& i) {
 			kw::embeds=std::move(es),
 			kw::components={
 				cActionRow{
-					cButton<BUTTON_STYLE_SECONDARY>{
+					cButton{
+						BUTTON_STYLE_SECONDARY,
 						STR(CMP_ID_BUTTON_RANK_HELP),
 						kw::label="How does this work?"
 					}

@@ -1,74 +1,11 @@
 #ifndef GREEKBOT_EMBED_H
 #define GREEKBOT_EMBED_H
-#include "EmbedMedia.h"
-#include "EmbedAuthor.h"
-#include "EmbedFooter.h"
+#include "Embed/EmbedAuthor.h"
+#include "Embed/EmbedField.h"
+#include "Embed/EmbedFooter.h"
+#include "Embed/EmbedMedia.h"
+#include <span>
 #include <vector>
-
-template<typename T>
-class cWrapper {
-private:
-	uhHandle<T> m_handle;
-
-public:
-	cWrapper() = default;
-	template<typename Arg, typename... Args>
-	cWrapper(Arg&& arg, Args&&... args) : m_handle(cHandle::MakeUnique<T>(std::forward<Arg>(arg), std::forward<Args>(args)...)) {}
-	cWrapper(const cWrapper& o) : m_handle(cHandle::MakeUnique<T>(*o.m_handle)) {}
-	cWrapper(cWrapper&&) noexcept = default;
-
-	cWrapper& operator=(const cWrapper& o) {
-		if (m_handle)
-			*m_handle = *o.m_handle;
-		else
-			m_handle = cHandle::MakeUnique<T>(*o.m_handle);
-		return *this;
-	}
-	cWrapper& operator=(cWrapper&& o) noexcept {
-		m_handle.swap(o.m_handle);
-		return *this;
-	}
-
-	T* Get() const { return m_handle.get(); }
-	uhHandle<T> Move() { return std::move(m_handle); }
-};
-
-class cEmbedField final {
-private:
-	std::string m_name, m_value;
-	bool        m_inline;
-
-public:
-	cEmbedField(const json::object&);
-	cEmbedField(const json::value&);
-	cEmbedField(std::string name, std::string value, bool inline_ = false) : m_name(std::move(name)), m_value(std::move(value)), m_inline(inline_) {}
-	/* Getters */
-	const std::string& GetName()  const noexcept { return m_name;   }
-	const std::string& GetValue() const noexcept { return m_value;  }
-	bool               IsInline() const noexcept { return m_inline; }
-	/* Movers */
-	std::string MoveName()  noexcept { return std::move(m_name ); }
-	std::string MoveValue() noexcept { return std::move(m_value); }
-	/* Setters */
-	cEmbedField& SetName(std::string name) {
-		m_name = std::move(name);
-		return *this;
-	}
-	cEmbedField& SetValue(std::string value) {
-		m_value = std::move(value);
-		return *this;
-	}
-	cEmbedField& SetInline(bool inline_) {
-		m_inline = inline_;
-		return *this;
-	}
-};
-typedef   hHandle<cEmbedField>   hEmbedField;
-typedef  chHandle<cEmbedField>  chEmbedField;
-typedef  uhHandle<cEmbedField>  uhEmbedField;
-typedef uchHandle<cEmbedField> uchEmbedField;
-typedef  shHandle<cEmbedField>  shEmbedField;
-typedef schHandle<cEmbedField> schEmbedField;
 
 KW_DECLARE(thumbnail, cEmbedMedia)
 KW_DECLARE(image, cEmbedMedia)
@@ -79,149 +16,157 @@ KW_DECLARE(fields, std::vector<cEmbedField>)
 /* ================================================================================================= */
 class cEmbed final {
 private:
-	cColor        m_color;
-	std::string   m_title, m_description, m_url, m_timestamp;
-	uhEmbedMedia  m_thumbnail, m_image, m_video;
-	uhEmbedFooter m_footer;
-	uhEmbedAuthor m_author;
-	std::vector<cEmbedField> m_fields;
+	cColor                      m_color;
+	std::string                 m_title;
+	std::string                 m_description;
+	std::string                 m_url;
+	std::string                 m_timestamp;
+	std::vector<cEmbedField>    m_fields;
+	std::optional<cEmbedMedia>  m_thumbnail;
+	std::optional<cEmbedMedia>  m_image;
+	std::optional<cEmbedMedia>  m_video;
+	std::optional<cEmbedFooter> m_footer;
+	std::optional<cEmbedAuthor> m_author;
 
 	template<kw::key... Keys>
 	cEmbed(kw::pack<Keys...> pack):
-		m_color(std::move(kw::get<"color">(pack))),
+		m_color(kw::get<"color">(pack)),
 		m_title(std::move(kw::get<"title">(pack))),
 		m_description(std::move(kw::get<"description">(pack))),
 		m_url(std::move(kw::get<"url">(pack))),
 		m_timestamp(std::move(kw::get<"timestamp">(pack))),
 		m_fields(std::move(kw::get<"fields">(pack))) {
 		if (auto p = kw::get_if<"thumbnail">(pack, kw::nullarg); p)
-			m_thumbnail = cHandle::MakeUnique<cEmbedMedia>(std::move(*p));
+			m_thumbnail.emplace(std::move(*p));
 		if (auto p = kw::get_if<"image">(pack, kw::nullarg); p)
-			m_image = cHandle::MakeUnique<cEmbedMedia>(std::move(*p));
+			m_image.emplace(std::move(*p));
 		if (auto p = kw::get_if<"footer">(pack, kw::nullarg); p)
-			m_footer = cHandle::MakeUnique<cEmbedFooter>(std::move(*p));
+			m_footer.emplace(std::move(*p));
 		if (auto p = kw::get_if<"author">(pack, kw::nullarg); p)
-			m_author = cHandle::MakeUnique<cEmbedAuthor>(std::move(*p));
+			m_author.emplace(std::move(*p));
 	}
 
 public:
+	explicit cEmbed(const json::value&);
 	template<kw::key... Keys>
 	explicit cEmbed(kw::arg<Keys>&... kwargs) : cEmbed(kw::pack{ kwargs...}) {}
-
-	cEmbed(const json::object&);
-	cEmbed(const json::value&);
-	cEmbed(const cEmbed& o);
-	cEmbed(cEmbed&& o) noexcept = default;
-
-	cEmbed& operator=(cEmbed o);
-
-	/* Non const getters */
-	std::string& GetTitle()       noexcept { return m_title;           }
-	std::string& GetDescription() noexcept { return m_description;     }
-	std::string& GetUrl()         noexcept { return m_url;             }
-	std::string& GetTimestamp()   noexcept { return m_timestamp;       }
-	hEmbedMedia  GetThumbnail()   noexcept { return m_thumbnail.get(); }
-	hEmbedMedia  GetImage()       noexcept { return m_image.get();     }
-	hEmbedMedia  GetVideo()       noexcept { return m_video.get();     }
-	hEmbedFooter GetFooter()      noexcept { return m_footer.get();    }
-	hEmbedAuthor GetAuthor()      noexcept { return m_author.get();    }
-	std::vector<cEmbedField>& GetFields() noexcept { return m_fields;  }
-	/* Const getters */
-	cColor             GetColor()       const noexcept { return m_color;           }
-	const std::string& GetTitle()       const noexcept { return m_title;           }
-	const std::string& GetDescription() const noexcept { return m_description;     }
-	const std::string& GetUrl()         const noexcept { return m_url;             }
-	const std::string& GetTimestamp()   const noexcept { return m_timestamp;       }
-	chEmbedMedia       GetThumbnail()   const noexcept { return m_thumbnail.get(); }
-	chEmbedMedia       GetImage()       const noexcept { return m_image.get();     }
-	chEmbedMedia       GetVideo()       const noexcept { return m_video.get();     }
-	chEmbedFooter      GetFooter()      const noexcept { return m_footer.get();    }
-	chEmbedAuthor      GetAuthor()      const noexcept { return m_author.get();    }
-	const std::vector<cEmbedField>& GetFields() const noexcept { return m_fields;  }
-	/* Movers */
-	std::string   MoveTitle()       noexcept { return std::move(m_title);        }
-	std::string   MoveDescription() noexcept { return std::move(m_description);  }
-	std::string   MoveUrl()         noexcept { return std::move(m_url);          }
-	std::string   MoveTimestamp()   noexcept { return std::move(m_timestamp);    }
-	uhEmbedMedia  MoveThumbnail()   noexcept { return std::move(m_thumbnail);    }
-	uhEmbedMedia  MoveImage()       noexcept { return std::move(m_image);        }
-	uhEmbedMedia  MoveVideo()       noexcept { return std::move(m_video);        }
-	uhEmbedFooter MoveFooter()      noexcept { return std::move(m_footer);       }
-	uhEmbedAuthor MoveAuthor()      noexcept { return std::move(m_author);       }
-	std::vector<cEmbedField> MoveFields() noexcept { return std::move(m_fields); }
+	/* Getters */
+	cColor           GetColor()       const noexcept { return m_color;           }
+	std::string_view GetTitle()       const noexcept { return m_title;           }
+	std::string_view GetDescription() const noexcept { return m_description;     }
+	std::string_view GetUrl()         const noexcept { return m_url;             }
+	std::string_view GetTimestamp()   const noexcept { return m_timestamp;       }
+	std::span<const cEmbedField> GetFields() const noexcept { return m_fields; }
+	std::span<      cEmbedField> GetFields()       noexcept { return m_fields; }
+	chEmbedMedia  GetThumbnail() const noexcept { return m_thumbnail ? &*m_thumbnail : nullptr; }
+	hEmbedMedia   GetThumbnail()       noexcept { return m_thumbnail ? &*m_thumbnail : nullptr; }
+	chEmbedMedia  GetImage() const noexcept { return m_image ? &*m_image : nullptr; }
+	hEmbedMedia   GetImage()       noexcept { return m_image ? &*m_image : nullptr; }
+	chEmbedMedia  GetVideo() const noexcept { return m_video ? &*m_video : nullptr; }
+	hEmbedMedia   GetVideo()       noexcept { return m_video ? &*m_video : nullptr; }
+	chEmbedFooter GetFooter() const noexcept { return m_footer ? &*m_footer : nullptr; }
+	hEmbedFooter  GetFooter()       noexcept { return m_footer ? &*m_footer : nullptr; }
+	chEmbedAuthor GetAuthor() const noexcept { return m_author ? &*m_author : nullptr; }
+	hEmbedAuthor  GetAuthor()       noexcept { return m_author ? &*m_author : nullptr; }
 	/* Setters */
-	cEmbed& SetColor(cColor c) { m_color = c; return *this; }
-	template<typename Arg, typename... Args>
-	cEmbed& SetTitle(Arg&& arg, Args&&... args) { m_title = { std::forward<Arg>(arg), std::forward<Args>(args)... }; return *this; }
-	template<typename Arg, typename... Args>
-	cEmbed& SetDescription(Arg&& arg, Args&&... args) { m_description = { std::forward<Arg>(arg), std::forward<Args>(args)... }; return *this; }
-	template<typename Arg, typename... Args>
-	cEmbed& SetUrl(Arg&& arg, Args&&... args) { m_url = { std::forward<Arg>(arg), std::forward<Args>(args)... }; return *this; }
-	template<typename Arg, typename... Args>
-	cEmbed& SetTimestamp(Arg&& arg, Args&&... args) { m_timestamp = { std::forward<Arg>(arg), std::forward<Args>(args)...}; return *this; }
-	template<typename Arg, typename... Args>
+	cEmbed& SetColor(cColor c) {
+		m_color = c;
+		return *this;
+	}
+	template<typename Str = std::string> requires std::assignable_from<std::string&, Str&&>
+	cEmbed& SetTitle(Str&& arg) {
+		m_title = std::forward<Str>(arg);
+		return *this;
+	}
+	template<typename Str = std::string> requires std::assignable_from<std::string&, Str&&>
+	cEmbed& SetDescription(Str&& arg) {
+		m_description = std::forward<Str>(arg);
+		return *this;
+	}
+	template<typename Str = std::string> requires std::assignable_from<std::string&, Str&&>
+	cEmbed& SetUrl(Str&& arg) {
+		m_url = std::forward<Str>(arg);
+		return *this;
+	}
+	template<typename Str = std::string> requires std::assignable_from<std::string&, Str&&>
+	cEmbed& SetTimestamp(Str&& arg) {
+		m_timestamp = std::forward<Str>(arg);
+		return *this;
+	}
+	template<typename Arg = cEmbedMedia, typename... Args> requires std::constructible_from<cEmbedMedia, Arg&&, Args&&...>
 	cEmbed& SetThumbnail(Arg&& arg, Args&&... args) {
-		if (m_thumbnail)
-			*m_thumbnail = { std::forward<Arg>(arg), std::forward<Args>(args)...};
-		else
-			m_thumbnail = cHandle::MakeUnique<cEmbedMedia>(std::forward<Arg>(arg), std::forward<Args>(args)...);
+		m_thumbnail.emplace(std::forward<Arg>(arg), std::forward<Args>(args)...);
 		return *this;
 	}
-	template<typename Arg, typename... Args>
+	template<typename Arg = cEmbedMedia, typename... Args> requires std::constructible_from<cEmbedMedia, Arg&&, Args&&...>
 	cEmbed& SetImage(Arg&& arg, Args&&... args) {
-		if (m_image)
-			*m_image = { std::forward<Arg>(arg), std::forward<Args>(args)...};
-		else
-			m_image = cHandle::MakeUnique<cEmbedMedia>(std::forward<Arg>(arg), std::forward<Args>(args)...);
+		m_image.emplace(std::forward<Arg>(arg), std::forward<Args>(args)...);
 		return *this;
 	}
-	template<typename Arg, typename... Args>
+	template<typename Arg = cEmbedFooter, typename... Args> requires std::constructible_from<cEmbedFooter, Arg&&, Args&&...>
 	cEmbed& SetFooter(Arg&& arg, Args&&... args) {
-		if (m_footer)
-			*m_footer = { std::forward<Arg>(arg), std::forward<Args>(args)...};
-		else
-			m_footer = cHandle::MakeUnique<cEmbedFooter>(std::forward<Arg>(arg), std::forward<Args>(args)...);
+		m_footer.emplace(std::forward<Arg>(arg), std::forward<Args>(args)...);
 		return *this;
 	}
-	template<typename Arg, typename... Args>
+	template<typename Arg = cEmbedAuthor, typename... Args> requires std::constructible_from<cEmbedAuthor, Arg&&, Args&&...>
 	cEmbed& SetAuthor(Arg&& arg, Args&&... args) {
-		if (m_author)
-			*m_author = { std::forward<Arg>(arg), std::forward<Args>(args)... };
-		else
-			m_author = cHandle::MakeUnique<cEmbedAuthor>(std::forward<Arg>(arg), std::forward<Args>(args)...);
+		m_author.emplace(std::forward<Arg>(arg), std::forward<Args>(args)...);
 		return *this;
 	}
-	template<typename Arg, typename... Args>
-	cEmbed& SetFields(Arg&& arg, Args&&... args) { m_fields = { std::forward<Arg>(arg), std::forward<Args>(args)... }; return *this; }
-	template<typename Arg, typename... Args>
-	cEmbed& AddField(Arg&& arg, Args&&... args) { m_fields.emplace_back(std::forward<Arg>(arg), std::forward<Args>(args)...); return *this; }
+	template<typename Arg = std::vector<cEmbedField>> requires std::assignable_from<std::vector<cEmbedField>&, Arg&&>
+	cEmbed& SetFields(Arg&& arg) {
+		m_fields = std::forward<Arg>(arg);
+		return *this;
+	}
+	template<typename Arg = cEmbedField, typename... Args> requires std::constructible_from<cEmbedField, Arg&&, Args&&...>
+	cEmbed& AddField(Arg&& arg, Args&&... args) {
+		m_fields.emplace_back(std::forward<Arg>(arg), std::forward<Args>(args)...);
+		return *this;
+	}
+	/* Deleters */
+	cEmbed& ClearTitle() noexcept {
+		m_title.clear();
+		return *this;
+	}
+	cEmbed& ClearDescription() noexcept {
+		m_description.clear();
+		return *this;
+	}
+	cEmbed& ClearUrl() noexcept {
+		m_url.clear();
+		return *this;
+	}
+	cEmbed& ClearTimestamp() noexcept {
+		m_timestamp.clear();
+		return *this;
+	}
+	cEmbed& ClearThumbnail() noexcept {
+		m_thumbnail.reset();
+		return *this;
+	}
+	cEmbed& ClearImage() noexcept {
+		m_image.reset();
+		return *this;
+	}
+	cEmbed& ClearFooter() noexcept {
+		m_footer.reset();
+		return *this;
+	}
+	cEmbed& ClearAuthor() noexcept {
+		m_author.reset();
+		return *this;
+	}
+	cEmbed& ClearFields() noexcept {
+		m_fields.clear();
+		return *this;
+	}
 };
-/* Setters for nullptr */
-template<>
-inline cEmbed& cEmbed::SetTitle<std::nullptr_t>(std::nullptr_t&&) { m_title.clear(); return *this; }
-template<>
-inline cEmbed& cEmbed::SetDescription<std::nullptr_t>(std::nullptr_t&&) { m_description.clear(); return *this; }
-template<>
-inline cEmbed& cEmbed::SetUrl<std::nullptr_t>(std::nullptr_t&&) { m_url.clear(); return *this; }
-template<>
-inline cEmbed& cEmbed::SetTimestamp<std::nullptr_t>(std::nullptr_t&&) { m_timestamp.clear(); return *this; }
-template<>
-inline cEmbed& cEmbed::SetThumbnail<std::nullptr_t>(std::nullptr_t&&) { m_thumbnail.reset(); return *this; }
-template<>
-inline cEmbed& cEmbed::SetImage<std::nullptr_t>(std::nullptr_t&&) { m_image.reset(); return *this; }
-template<>
-inline cEmbed& cEmbed::SetFooter<std::nullptr_t>(std::nullptr_t&&) { m_footer.reset(); return *this; }
-template<>
-inline cEmbed& cEmbed::SetAuthor<std::nullptr_t>(std::nullptr_t&&) { m_author.reset(); return *this; }
-template<>
-inline cEmbed& cEmbed::SetFields<std::nullptr_t>(std::nullptr_t&&) { m_fields.clear(); return *this; }
 typedef   hHandle<cEmbed>   hEmbed;
 typedef  chHandle<cEmbed>  chEmbed;
 typedef  uhHandle<cEmbed>  uhEmbed;
 typedef uchHandle<cEmbed> uchEmbed;
-typedef  shHandle<cEmbed>  shEmbed;
-typedef schHandle<cEmbed> schEmbed;
 
+cEmbedField tag_invoke(json::value_to_tag<cEmbedField>, const json::value&);
 cEmbed tag_invoke(boost::json::value_to_tag<cEmbed>, const boost::json::value&);
 void tag_invoke(const json::value_from_tag&, json::value&, const cEmbedField&);
 void tag_invoke(const json::value_from_tag&, json::value&, const cEmbed&);

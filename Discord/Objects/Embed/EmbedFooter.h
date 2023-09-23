@@ -8,31 +8,33 @@ private:
 
 public:
 	explicit cEmbedFooter(const json::value&);
-	cEmbedFooter(const char* text) : m_text(text) {}
-	cEmbedFooter(std::string text) : m_text(std::move(text)) {}
-	cEmbedFooter(std::string text, std::string icon_url) : m_text(std::move(text)), m_icon_url(std::move(icon_url)) {}
+	template<typename Str1 = std::string, typename Str2 = std::string>
+	requires std::constructible_from<std::string, Str1&&> && std::constructible_from<std::string, Str2&&>
+	cEmbedFooter(Str1&& text, Str2&& icon_url = {}): m_text(std::forward<Str1>(text)), m_icon_url(std::forward<Str2>(icon_url)) {}
 	/* Getters */
-	const std::string& GetText()         const noexcept { return m_text;           }
-	const std::string& GetIconUrl()      const noexcept { return m_icon_url;       }
-	const std::string& GetProxyIconUrl() const noexcept { return m_proxy_icon_url; }
+	std::string_view GetText()         const noexcept { return m_text;           }
+	std::string_view GetIconUrl()      const noexcept { return m_icon_url;       }
+	std::string_view GetProxyIconUrl() const noexcept { return m_proxy_icon_url; }
 	/* Movers */
 	std::string MoveText()         noexcept { return std::move(m_text);           }
 	std::string MoveIconUrl()      noexcept { return std::move(m_icon_url);       }
 	std::string MoveProxyIconUrl() noexcept { return std::move(m_proxy_icon_url); }
 	/* Setters */
-	cEmbedFooter& SetText(std::string text) {
-		m_text = std::move(text);
+	template<typename Str = std::string> requires std::assignable_from<std::string&, Str&&>
+	cEmbedFooter& SetText(Str&& arg) {
+		m_text = std::forward<Str>(arg);
 		return *this;
 	}
-	cEmbedFooter& SetIconUrl(std::string url) {
-		m_icon_url = std::move(url);
+	template<typename Str = std::string> requires std::assignable_from<std::string&, Str&&>
+	cEmbedFooter& SetIconUrl(Str&& arg) {
+		m_icon_url = std::forward<Str>(arg);
 		m_proxy_icon_url.clear();
 		return *this;
 	}
 	/* Deleters */
-	cEmbedFooter& ClearIconUrl() {
+	cEmbedFooter& ClearIconUrl() noexcept {
+		m_icon_url.clear();
 		m_proxy_icon_url.clear();
-		m_icon_url = nullptr;
 		return *this;
 	}
 };
@@ -40,8 +42,6 @@ typedef   hHandle<cEmbedFooter>   hEmbedFooter;
 typedef  chHandle<cEmbedFooter>  chEmbedFooter;
 typedef  uhHandle<cEmbedFooter>  uhEmbedFooter;
 typedef uchHandle<cEmbedFooter> uchEmbedFooter;
-typedef  shHandle<cEmbedFooter>  shEmbedFooter;
-typedef schHandle<cEmbedFooter> schEmbedFooter;
 
 void tag_invoke(const json::value_from_tag&, json::value&, const cEmbedFooter&);
 #endif //GREEKBOT_EMBEDFOOTER_H

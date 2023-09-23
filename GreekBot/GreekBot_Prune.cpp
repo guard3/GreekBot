@@ -29,9 +29,10 @@ cGreekBot::OnInteraction_prune(const cInteraction& i) {
 		co_return co_await EditInteractionResponse(
 			i,
 			kw::content=std::move(str),
-			kw::components = {
+			kw::components={
 				cActionRow{
-					cButton<BUTTON_STYLE_SECONDARY>{
+					cButton{
+						BUTTON_STYLE_SECONDARY,
 						fmt::format("DLT#{}", member->GetUser()->GetId()),
 						kw::label = "Dismiss"
 					}
@@ -99,8 +100,9 @@ cGreekBot::OnInteraction_prune_lmg(const cInteraction& i) {
 		co_return co_await EditInteractionResponse(i,
 			kw::content=fmt::format("Pruned **{}** member{}", total, total == 1 ? "" : "s"),
 			kw::components={
-				cActionRow {
-					cButton<BUTTON_STYLE_SECONDARY> {
+				cActionRow{
+					cButton{
+						BUTTON_STYLE_SECONDARY,
 						fmt::format("DLT#{}", invoking_member->GetUser()->GetId()),
 						kw::label="Dismiss"
 					}

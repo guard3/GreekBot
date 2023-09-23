@@ -26,11 +26,13 @@ cGreekBot::OnGuildMemberUpdate(cSnowflake& guild_id, cPartialMember& member) {
 				kw::content=fmt::format("<@{}> Just got a rank!", member.GetUser().GetId()),
 				kw::components={
 					cActionRow{
-						cButton<BUTTON_STYLE_PRIMARY>{
+						cButton{
+							BUTTON_STYLE_PRIMARY,
 							fmt::format("NCK#{}", member.GetUser().GetId()), // Save the member id
 							kw::label="Assign nickname"
 						},
-						cButton<BUTTON_STYLE_SECONDARY>{
+						cButton{
+							BUTTON_STYLE_SECONDARY,
 							fmt::format("DLT#{}", GetUser()->GetId()), // Save the GreekBot id as the author
 							kw::label="Dismiss"
 						}
@@ -47,7 +49,8 @@ cGreekBot::OnGuildMemberUpdate(cSnowflake& guild_id, cPartialMember& member) {
 					kw::content = fmt::format("<@{}> Just got a nickname!", member.GetUser().GetId()),
 					kw::components={
 						cActionRow{
-							cButton<BUTTON_STYLE_SECONDARY>{
+							cButton{
+								BUTTON_STYLE_SECONDARY,
 								fmt::format("DLT#{}", GetUser()->GetId()), // Save the GreekBot id as the author
 								kw::label="Dismiss"
 							}

@@ -23,8 +23,10 @@ cGreekBot::process_nickname_button(const cInteraction& i, const cSnowflake& user
 			cActionRow{
 				cTextInput{
 					TEXT_INPUT_SHORT,
-					fmt::format("{}", user_id), // Save the member id
-					"Greek nickname"
+					user_id.ToString(), // Save the member id
+					"Greek nickname",
+					kw::min_length=1, //
+					kw::max_length=30 // Nicknames can be up to 30 characters
 				}
 			}
 		}

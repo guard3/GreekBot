@@ -2,14 +2,15 @@
 #include "json.h"
 #include <fmt/format.h>
 
-std::string cEmoji::ToString() const {
+std::string
+cEmoji::ToString() const {
 	return fmt::format("<{}:{}:{}>", m_animated ? "a" : "", m_name, m_id);
 }
-
-json::object cEmoji::ToJson() const {
-	return {
-		{ "name",     m_name          },
-		{ "animated", m_animated      },
-		{ "id",       m_id.ToString() }
+void
+tag_invoke(const json::value_from_tag&, json::value& v, const cEmoji& e) {
+	v = {
+		{ "name",     e.GetName()          },
+		{ "animated", e.IsAnimated()       },
+		{ "id",       e.GetId().ToString() }
 	};
 }
