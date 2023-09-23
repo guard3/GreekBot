@@ -45,6 +45,13 @@ cGreekBot::process_modal(const cInteraction& i) {
 		);
 	}
 	/* Modify the member referenced in the modal */
-	auto& text_input = i.GetData<INTERACTION_MODAL_SUBMIT>().GetSubmittedData().front();
-	co_await ModifyGuildMember(m_lmg_id, text_input.GetCustomId(), kw::nick=text_input.GetValue());
+	try {
+		auto &text_input = i.GetData<INTERACTION_MODAL_SUBMIT>().GetSubmittedData().front();
+		co_return co_await ModifyGuildMember(m_lmg_id, text_input.GetCustomId(), kw::nick = text_input.GetValue());
+	} catch (...) {}
+	/* If member couldn't be modified for whatever reason, send an error message */
+	co_await SendInteractionFollowupMessage(i,
+		kw::flags=MESSAGE_FLAG_EPHEMERAL,
+		kw::content="Something went wrong. Check your input and try again."
+	);
 }
