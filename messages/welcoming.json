@@ -1,5 +1,5 @@
 {
-  "content": "Γεια σας! Welcome to **Learning Greek**!\n\n**Step 1 - Read the rules**\nRead the rules <#630486369495679007> and make sure this server is for you <#645650358042886175> \n\n**Step 2 - Verify your phone**\nVerify your phone number to be able to send messages!\\*\n\n**Step 3 - Get a rank**\nGet a proficiency rank to unlock the rest of the server by selecting one from below:\n\n\\**If you have trouble verifying your phone, DM a moderator for alternative verification through another social media platform.*\n\\*\\**If you don't get a rank you may be kicked. You're welcome to rejoin later.*",
+  "content": "🇬🇷 Welcome to **Learning Greek**! 📚\n\nΓεια σου! Whether you're learning modern greek or you just want to chat, we're thrilled to have you here as part of our vibrant community!\n\nIn this server you can talk with native greek speakers who are here to assist you and fellow learners with whom you can practice. Feel free to ask any question anytime!\n\nDon't forget to read the rules in <#630486369495679007>. You may also want to check out <#645650358042886175> to make sure this server is right for you.\n\nIn order to gain full access, please choose a proficiency rank from the drop down menu below:*\n\n*\\*If I'm not responding to your choice, contact a moderator*",
   "components": [
     {
       "type": 1,
@@ -75,7 +75,7 @@
             {
               "label": "Non Learner",
               "value": "opt_no",
-              "description": "If you don't want to learn greek",
+              "description": "If you don't know greek and you don't want to learn it",
               "emoji": {
                 "name": "level_no",
                 "id": "875469185466109992"
