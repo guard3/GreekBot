@@ -1,0 +1,27 @@
+{
+  "content": "## Misc roles\n- ☎️ <@&650330610358943755>\n  if you're a <@&350483752490631181> and you would like to take part in some statistical questions we ask from time to time\n- 🎮 <@&357714047698993162>\n  if you'd like to be notified about game discounts or events in <#357713113321046016>\n- 🗣️ <@&886625423167979541>\n  if you'd like to be pinged to join voice chats. You may also ping others.\n- 📚 <@&928364890601685033>\n  if you'd like to join the Book Club. You will be pinged when meetings take place.",
+  "components": [{
+    "type": 1,
+    "components": [{
+      "type": 2,
+      "style": 1,
+      "label": "☎️",
+      "custom_id": "POLL"
+    }, {
+      "type": 2,
+      "style": 1,
+      "label": "🎮",
+      "custom_id": "GAMER"
+    }, {
+      "type": 2,
+      "style": 1,
+      "label": "🗣️",
+      "custom_id": "VCER"
+    }, {
+      "type": 2,
+      "style": 1,
+      "label": "📚",
+      "custom_id": "BOOK_CLUB"
+    }]
+  }]
+}

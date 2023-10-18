@@ -116,6 +116,8 @@ private:
 	cTask<> OnInteraction_dismiss(const cInteraction&, const cSnowflake& user_id);
 	cTask<> process_nickname_button(const cInteraction&, const cSnowflake& user_id);
 	cTask<> process_modal(const cInteraction&);
+	cTask<> process_role_button(const cInteraction&, uint32_t);
+	cTask<> process_booster_menu(const cInteraction&);
 
 	cTask<> OnGuildCreate(uhGuild guild) override;
 	cTask<> OnGuildRoleCreate(cSnowflake& guild_id, cRole& role) override;

@@ -1,0 +1,100 @@
+{
+  "content": "# Proficiency roles\nSelect one of the following roles to change your proficiency level",
+  "components": [
+    {
+      "type": 1,
+      "components": [
+        {
+          "type": 3,
+          "custom_id": "welcome_role_menu",
+          "placeholder": "Choose an option...",
+          "options": [
+            {
+              "label": "Native",
+              "value": "opt_gr",
+              "description": "If greek is your native language",
+              "emoji": {
+                "name": "level_gr",
+                "id": "875469185529036880"
+              }
+            },
+            {
+              "label": "Beginner",
+              "value": "opt_a1",
+              "description": "If you just started learning greek or your level is A1",
+              "emoji": {
+                "name": "level_a1",
+                "id": "875469185793286164"
+              }
+            },
+            {
+              "label": "Elementary",
+              "value": "opt_a2",
+              "description": "If your greek level is A2",
+              "emoji": {
+                "name": "level_a2",
+                "id": "875469185394827355"
+              }
+            },
+            {
+              "label": "Intermediate",
+              "value": "opt_b1",
+              "description": "If your greek level is B1",
+              "emoji": {
+                "name": "level_b1",
+                "id": "875469185659056138"
+              }
+            },
+            {
+              "label": "Upper Intermediate",
+              "value": "opt_b2",
+              "description": "If your greek level is B2",
+              "emoji": {
+                "name": "level_b2",
+                "id": "875469185751347251"
+              }
+            },
+            {
+              "label": "Advanced",
+              "value": "opt_c1",
+              "description": "If your greek level is C1",
+              "emoji": {
+                "name": "level_c1",
+                "id": "875469185726173276"
+              }
+            },
+            {
+              "label": "Fluent",
+              "value": "opt_c2",
+              "description": "If your greek level is C2",
+              "emoji": {
+                "name": "level_c2",
+                "id": "875469185734541382"
+              }
+            },
+            {
+              "label": "Non Learner",
+              "value": "opt_no",
+              "description": "If you don't know greek and you don't want to learn it",
+              "emoji": {
+                "name": "level_no",
+                "id": "875469185466109992"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": 1,
+      "components": [
+        {
+          "type": 2,
+          "style": 5,
+          "label": "Don't know what to pick?",
+          "url": "https://en.wikipedia.org/wiki/Common_European_Framework_of_Reference_for_Languages"
+        }
+      ]
+    }
+  ]
+}

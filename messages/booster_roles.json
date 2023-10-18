@@ -1,0 +1,103 @@
+{
+  "content": "# Exclusive colors for <@&593038680608735233>s\nSupport the server by nitro boosting and you may choose one of our color roles! If you're feeling extra special, you can request any custom color you want!",
+  "components": [{
+    "type": 1,
+    "components": [{
+      "type": 3,
+      "custom_id": "booster_role_menu",
+      "placeholder": "Choose a color...",
+      "options": [{
+        "label": "No color",
+        "value": "0",
+        "emoji":{
+          "id": "1163928603273203742",
+          "name": "no_color"
+        }
+      }, {
+        "label": "Μπεκρής",
+        "value": "777323857018617877",
+        "emoji": {
+          "id": "1163930127068057681",
+          "name": "bekris"
+        }
+      }, {
+        "label": "Κακούλης",
+        "value": "657145859439329280",
+        "emoji": {
+          "id": "1163930132487081984",
+          "name": "kakoulis"
+        }
+      }, {
+        "label": "Πορτοκαλί",
+        "value": "677183404743327764",
+        "emoji": {
+          "id": "1163930130515767436",
+          "name": "portokali"
+        }
+      }, {
+        "label": "Μέλας",
+        "value": "735954079355895889",
+        "emoji": {
+          "id": "1163932479120490666",
+          "name": "melas"
+        }
+      }, {
+        "label": "Ροζουλής",
+        "value": "585252617278586880",
+        "emoji": {
+          "id": "1163932477606334525",
+          "name": "rozoulis"
+        }
+      }, {
+        "label": "Τούρκος",
+        "value": "1109212629882392586",
+        "emoji": {
+          "id": "1163932474972311552",
+          "name": "tourkos"
+        }
+      }, {
+        "label": "Πολωνός",
+        "value": "941041008169336913",
+        "emoji": {
+          "id": "1163932473277816832",
+          "name": "polwnos"
+        }
+      }, {
+        "label": "Λεμόνι",
+        "value": "755763454266179595",
+        "emoji": {
+          "id": "1163932470165655602",
+          "name": "lemoni"
+        }
+      }, {
+        "label": "Πίκατσου",
+        "value": "1156980445058170991",
+        "emoji": {
+          "id": "1163932468462768218",
+          "name": "pikachu"
+        }
+      }, {
+        "label": "Γύπας",
+        "value": "793570278084968488",
+        "emoji": {
+          "id": "1163932465845518366",
+          "name": "gypas"
+        }
+      }, {
+        "label": "Δογκ",
+        "value": "925379778251485206",
+        "emoji": {
+          "id": "1163932463878373456",
+          "name": "dog"
+        }
+      }, {
+        "label": "Πέγκω",
+        "value": "1121773567785308181",
+        "emoji": {
+          "id": "1163932461206622258",
+          "name": "pegkw"
+        }
+      }]
+    }]
+  }]
+}

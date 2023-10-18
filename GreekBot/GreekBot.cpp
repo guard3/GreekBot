@@ -1,6 +1,7 @@
 #include "GreekBot.h"
 #include "Database.h"
 #include "Utils.h"
+#include <zlib.h>
 
 std::span<const cRole>
 cGreekBot::get_lmg_roles() {
@@ -114,7 +115,7 @@ cGreekBot::OnInteractionCreate(const cInteraction& interaction) {
 		}
 		case INTERACTION_MESSAGE_COMPONENT: {
 			switch (auto& data = interaction.GetData<INTERACTION_MESSAGE_COMPONENT>(); data.GetComponentType()) {
-				case COMPONENT_BUTTON:
+				case COMPONENT_BUTTON: {
 					/* Check custom id */
 					if (data.GetCustomId().starts_with("BAN#"))
 						co_return co_await OnInteraction_unban(interaction, data.GetCustomId().substr(4));
@@ -123,14 +124,23 @@ cGreekBot::OnInteractionCreate(const cInteraction& interaction) {
 					if (data.GetCustomId().starts_with("NCK#"))
 						co_return co_await process_nickname_button(interaction, data.GetCustomId().substr(4));
 
-					switch (cUtils::ParseInt(data.GetCustomId())) {
-						case CMP_ID_BUTTON_RANK_HELP:
-							co_await OnInteraction_button(interaction);
-						default:
-							co_return;
+					try {
+						switch (cUtils::ParseInt(data.GetCustomId())) {
+							case CMP_ID_BUTTON_RANK_HELP:
+								co_await OnInteraction_button(interaction);
+							default:
+								co_return;
+						}
 					}
+					catch (const std::invalid_argument&) {}
+					std::string_view custom_id = data.GetCustomId();
+					co_return co_await process_role_button(interaction, crc32(0, reinterpret_cast<const Byte *>(custom_id.data()), custom_id.size()));
+				}
 				case COMPONENT_SELECT_MENU:
-					co_await OnInteraction_SelectMenu(interaction);
+					if (data.GetCustomId() == "booster_role_menu")
+						co_await process_booster_menu(interaction);
+					else
+						co_await OnInteraction_SelectMenu(interaction);
 				default:
 					co_return;
 			}

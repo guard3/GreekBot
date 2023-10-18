@@ -1,0 +1,17 @@
+{
+  "content": "# Extra roles\nHere's an overview of all the extra roles that we offer to customize your experience in the server! You may choose as many as you want by clicking at the appropriate button.\n## Language roles\n- 🇬🇷 <@&762747975164100608>\n  if you are a [heritage speaker](<https://en.wikipedia.org/wiki/Heritage_language>) of modern Greek, no matter your greek level\n- 👅 <@&481544681520365577>\n  if you know the [International Phonetic Alphabet](<https://en.wikipedia.org/wiki/International_Phonetic_Alphabet>)",
+  "components": [{
+    "type": 1,
+    "components": [{
+      "type": 2,
+      "style": 1,
+      "label": "🇬🇷",
+      "custom_id": "HERITAGE_SPEAKER"
+    }, {
+      "type": 2,
+      "style": 1,
+      "label": "👅",
+      "custom_id": "IPA_LITERATE"
+    }]
+  }]
+}
