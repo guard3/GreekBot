@@ -1,8 +1,8 @@
 #include "GreekBot.h"
 #include "Utils.h"
 #include <algorithm>
-
-enum {
+/* ================================================================================================================== */
+enum : uint32_t {
 	CMP_ID_HERITAGE_SPEAKER    = 0x6691F68D,
 	CMP_ID_IPA_LITERATE        = 0x59A60FDC,
 	CMP_ID_STUDENT             = 0x88665129,
@@ -15,7 +15,18 @@ enum {
 	CMP_ID_VCER                = 0xB5953763,
 	CMP_ID_BOOK_CLUB           = 0x24704291
 };
-
+/* ================================================================================================================== */
+enum : uint64_t {
+	ROLE_ID_NATIVE             = 350483752490631181, // @Native
+	ROLE_ID_BEGINNER           = 351117824300679169, // @Beginner
+	ROLE_ID_ELEMENTARY         = 351117954974482435, // @Elementary
+	ROLE_ID_INTERMEDIATE       = 350485376109903882, // @Intermediate
+	ROLE_ID_UPPER_INTERMEDIATE = 351118486426091521, // @Upper Intermediate
+	ROLE_ID_ADVANCED           = 350485279238258689, // @Advanced
+	ROLE_ID_FLUENT             = 350483489461895168, // @Fluent
+	ROLE_ID_NON_LEARNER        = 352001527780474881  // @Non Learner
+};
+/* ================================================================================================================== */
 cTask<>
 cGreekBot::process_role_button(const cInteraction& i, uint32_t button_id) {
 	co_await RespondToInteraction(i);
@@ -51,8 +62,11 @@ cGreekBot::process_role_button(const cInteraction& i, uint32_t button_id) {
 			break;
 		case CMP_ID_POLL:
 			role_id = 650330610358943755;
-			if (std::find(roles.begin(), roles.end(), 350483752490631181) == roles.end()) {
-				co_return co_await SendInteractionFollowupMessage(i, kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content=fmt::format("Sorry, the <@&{}> role is only available for <@&350483752490631181>s!", role_id));
+			if (std::find(roles.begin(), roles.end(), ROLE_ID_NATIVE) == roles.end()) {
+				co_return co_await SendInteractionFollowupMessage(i,
+					kw::flags=MESSAGE_FLAG_EPHEMERAL,
+					kw::content=fmt::format("Sorry, <@&{}> is only available for <@{}>s!", role_id, (uint64_t)ROLE_ID_NATIVE)
+				);
 			}
 			break;
 		case CMP_ID_VCER:
@@ -66,13 +80,43 @@ cGreekBot::process_role_button(const cInteraction& i, uint32_t button_id) {
 			co_return;
 	}
 
-	auto it = std::find(roles.begin(), roles.end(), role_id);
-	if (it == roles.end())
+	if (std::find(roles.begin(), roles.end(), role_id) == roles.end())
 		co_await AddGuildMemberRole(m_lmg_id, member->GetUser()->GetId(), role_id);
 	else
 		co_await RemoveGuildMemberRole(m_lmg_id, member->GetUser()->GetId(), role_id);
 }
-
+/* ================================================================================================================== */
+cTask<>
+cGreekBot::process_proficiency_menu(const cInteraction& i) {
+	/* The proficiency roles of Learning Greek */
+	static const cSnowflake pr_roles[] {
+		ROLE_ID_NATIVE,
+		ROLE_ID_BEGINNER,
+		ROLE_ID_ELEMENTARY,
+		ROLE_ID_INTERMEDIATE,
+		ROLE_ID_UPPER_INTERMEDIATE,
+		ROLE_ID_ADVANCED,
+		ROLE_ID_FLUENT,
+		ROLE_ID_NON_LEARNER
+	};
+	/* Acknowledge interaction */
+	co_await RespondToInteraction(i);
+	/* Create a role vector */
+	chMember member = i.GetMember();
+	std::vector<chSnowflake> roles;
+	roles.reserve(member->GetRoles().size() + 1);
+	/* Copy every member role except the proficiency ones */
+	for (auto& s : member->GetRoles()) {
+		if (std::find(std::begin(pr_roles), std::end(pr_roles), s) == std::end(pr_roles))
+			roles.push_back(&s);
+	}
+	/* Append the selected role id */
+	cSnowflake id = i.GetData<INTERACTION_MESSAGE_COMPONENT>().Values.front();
+	roles.push_back(&id);
+	/* Update member */
+	co_await UpdateGuildMemberRoles(m_lmg_id, member->GetUser()->GetId(), roles);
+}
+/* ================================================================================================================== */
 cTask<>
 cGreekBot::process_booster_menu(const cInteraction& i) {
 	using namespace std::chrono_literals;
@@ -103,7 +147,7 @@ cGreekBot::process_booster_menu(const cInteraction& i) {
 			roles.push_back(&id);
 	}
 	/* Retrieve the selected role id */
-	cSnowflake selected_id = cUtils::ParseInt<uint64_t>(i.GetData<INTERACTION_MESSAGE_COMPONENT>().Values.front());
+	cSnowflake selected_id = i.GetData<INTERACTION_MESSAGE_COMPONENT>().Values.front();
 	/* Include the selected role id if the user is boosting */
 	if (member->PremiumSince().time_since_epoch() > 0s) {
 		if (selected_id != 0) {
@@ -113,73 +157,4 @@ cGreekBot::process_booster_menu(const cInteraction& i) {
 	}
 	if (selected_id != 0)
 		co_await SendInteractionFollowupMessage(i, kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content="Sorry, custom colors are only available for <@&593038680608735233>s!");
-}
-
-cTask<>
-cGreekBot::OnInteraction_role(const cInteraction& interaction) try {
-	co_await RespondToInteraction(
-		interaction,
-		kw::flags=MESSAGE_FLAG_EPHEMERAL,
-		kw::content="Select a role depending on your greek level:",
-		kw::components={
-			cActionRow {
-				cSelectMenu {
-					"proficiency_role_menu",
-					{
-						{
-							"Native",
-							"opt_gr",
-							kw::description = "If greek is your native language",
-							kw::emoji = cEmoji("level_gr", "875469185529036880")
-						}, {
-							"Beginner",
-							"opt_a1",
-							kw::description = "If you just started learning greek or your level is A1",
-							kw::emoji = cEmoji("level_a1", "875469185793286164")
-						}, {
-							"Elementary",
-							"opt_a2",
-							kw::description = "If your greek level is A2",
-							kw::emoji = cEmoji("level_a2", "875469185394827355")
-						}, {
-							"Intermediate",
-							"opt_b1",
-							kw::description = "If your greek level is B1",
-							kw::emoji = cEmoji("level_b1", "875469185659056138")
-						}, {
-							"Upper Intermediate",
-							"opt_b2",
-							kw::description = "If your greek level is B2",
-							kw::emoji = cEmoji("level_b2", "875469185751347251")
-						}, {
-							"Advanced",
-							"opt_c1",
-							kw::description = "If your greek level is C1",
-							kw::emoji = cEmoji("level_c1", "875469185726173276")
-						}, {
-							"Fluent",
-							"opt_c2",
-							kw::description = "If your greek level is C2",
-							kw::emoji = cEmoji("level_c2", "875469185734541382")
-						}, {
-							"Non Learner",
-							"opt_no",
-							kw::description = "If you don't want to learn greek",
-							kw::emoji = cEmoji("level_no", "875469185466109992")
-						}
-					},
-					kw::placeholder="Choose an option..."
-				}
-			},
-			cActionRow{
-				cLinkButton{
-					"https://en.wikipedia.org/wiki/Common_European_Framework_of_Reference_for_Languages",
-					kw::label="Don't know what to pick?"
-				}
-			}
-		}
-	);
-}
-catch (const std::exception& e) {
-	cUtils::PrintErr("OnInteraction_role: {}", e.what());
 }

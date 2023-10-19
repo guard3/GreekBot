@@ -3,6 +3,11 @@
 #include "Utils.h"
 #include <zlib.h>
 
+enum : uint32_t {
+	CMP_ID_PROFICIENCY_MENU = 0xAE90F56B,
+	CMP_ID_BOOSTER_MENU     = 0x90DD7D88
+};
+
 std::span<const cRole>
 cGreekBot::get_lmg_roles() {
 	/* Make sure the roles are sorted on position before returning */
@@ -88,9 +93,6 @@ cGreekBot::OnInteractionCreate(const cInteraction& interaction) {
 				case 878391425568473098:
 					/* avatar */
 					co_return co_await OnInteraction_avatar(interaction);
-				case 874634186374414356:
-					/* role */
-					co_return co_await OnInteraction_role(interaction);
 				case 938199801420456066:
 					/* rank */
 					co_return co_await OnInteraction_rank(interaction);
@@ -137,10 +139,14 @@ cGreekBot::OnInteractionCreate(const cInteraction& interaction) {
 					co_return co_await process_role_button(interaction, crc32(0, reinterpret_cast<const Byte *>(custom_id.data()), custom_id.size()));
 				}
 				case COMPONENT_SELECT_MENU:
-					if (data.GetCustomId() == "booster_role_menu")
-						co_await process_booster_menu(interaction);
-					else
-						co_await OnInteraction_SelectMenu(interaction);
+					switch (uint32_t hash = crc32(0, (const Byte*)data.GetCustomId().data(), data.GetCustomId().size()); hash) {
+						case CMP_ID_PROFICIENCY_MENU:
+							co_return co_await process_proficiency_menu(interaction);
+						case CMP_ID_BOOSTER_MENU:
+							co_return co_await process_booster_menu(interaction);
+						default:
+							cUtils::PrintLog("0x{:X}", hash);
+					}
 				default:
 					co_return;
 			}

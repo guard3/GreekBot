@@ -1,7 +1,6 @@
 #ifndef GREEKBOT_GREEKBOT_H
 #define GREEKBOT_GREEKBOT_H
 #include "Bot.h"
-#include <algorithm>
 #include <unordered_map>
 #include <span>
 
@@ -19,28 +18,7 @@ public:
 
 class cGreekBot final : public cBot {
 private:
-	enum eLmgProficiencyRoleId {
-		LMG_PROFICIENCY_NATIVE,
-		LMG_PROFICIENCY_BEGINNER,
-		LMG_PROFICIENCY_ELEMENTARY,
-		LMG_PROFICIENCY_INTERMEDIATE,
-		LMG_PROFICIENCY_UPPER_INTERMEDIATE,
-		LMG_PROFICIENCY_ADVANCED,
-		LMG_PROFICIENCY_FLUENT,
-		LMG_PROFICIENCY_NON_LEARNER,
-		LMG_NUM_PROFICIENCY_ROLES
-	};
 	const cSnowflake m_lmg_id = 350234668680871946; // Learning Greek
-	const cSnowflake m_lmg_proficiency_roles[8] {
-		350483752490631181, // @Native
-		351117824300679169, // @Beginner
-		351117954974482435, // @Elementary
-		350485376109903882, // @Intermediate
-		351118486426091521, // @Upper Intermediate
-		350485279238258689, // @Advanced
-		350483489461895168, // @Fluent
-		352001527780474881  // @Non Learner
-	};
 
 	std::vector<cRole> m_lmg_roles;
 	bool m_bSorted = false;
@@ -54,58 +32,7 @@ private:
 	std::vector<uint64_t> m_lmg_voice_channels;
 	std::vector<std::vector<uint64_t>> m_lmg_users_connected_to_voice;
 
-	cTask<> lmg_update_proficiency_role(chMember member, eLmgProficiencyRoleId proficiency_role) {
-		/* The new roles for the member */
-		std::vector<chSnowflake> roles;
-		roles.reserve(member->GetRoles().size());
-		/* Copy all existing roles except proficiency roles */
-		const cSnowflake *proficiency_roles_begin = m_lmg_proficiency_roles, *proficiency_roles_end = m_lmg_proficiency_roles + LMG_NUM_PROFICIENCY_ROLES;
-		for (auto& id : member->GetRoles()) {
-			if (proficiency_roles_end == std::find_if(proficiency_roles_begin, proficiency_roles_end, [&](const cSnowflake& s) { return s == id; }))
-				roles.push_back(&id);
-		}
-		/* Add specified proficiency role */
-		roles.push_back(&m_lmg_proficiency_roles[proficiency_role]);
-		co_await UpdateGuildMemberRoles(m_lmg_id, member->GetUser()->GetId(), roles);
-	}
-
-	cTask<> OnInteraction_SelectMenu(const cInteraction& i) {
-		/* Acknowledge interaction */
-		co_await RespondToInteraction(i);
-		std::string value = i.GetData<INTERACTION_MESSAGE_COMPONENT>().Values[0];
-		auto member = i.GetMember();
-
-		if (value == "opt_gr") {
-			co_await lmg_update_proficiency_role(member, LMG_PROFICIENCY_NATIVE);
-		}
-		else if (value == "opt_a1") {
-			co_await lmg_update_proficiency_role(member, LMG_PROFICIENCY_BEGINNER);
-		}
-		else if (value == "opt_a2") {
-			co_await lmg_update_proficiency_role(member, LMG_PROFICIENCY_ELEMENTARY);
-		}
-		else if (value == "opt_b1") {
-			co_await lmg_update_proficiency_role(member, LMG_PROFICIENCY_INTERMEDIATE);
-		}
-		else if (value == "opt_b2") {
-			co_await lmg_update_proficiency_role(member, LMG_PROFICIENCY_UPPER_INTERMEDIATE);
-		}
-		else if (value == "opt_c1") {
-			co_await lmg_update_proficiency_role(member, LMG_PROFICIENCY_ADVANCED);
-		}
-		else if (value == "opt_c2") {
-			co_await lmg_update_proficiency_role(member, LMG_PROFICIENCY_FLUENT);
-		}
-		else if (value == "opt_no") {
-			co_await lmg_update_proficiency_role(member, LMG_PROFICIENCY_NON_LEARNER);
-		}
-		/* Edit original interaction message */
-		if (i.GetData<INTERACTION_MESSAGE_COMPONENT>().GetCustomId() == "proficiency_role_menu")
-			co_await EditInteractionResponse(i, kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content="Role assigned!", kw::components=kw::nullarg);
-	}
-
 	cTask<> OnInteraction_avatar(const cInteraction&);
-	cTask<> OnInteraction_role(const cInteraction&);
 	cTask<> OnInteraction_rank(const cInteraction&);
 	cTask<> OnInteraction_top(const cInteraction&);
 	cTask<> OnInteraction_button(const cInteraction&);
@@ -118,6 +45,7 @@ private:
 	cTask<> process_modal(const cInteraction&);
 	cTask<> process_role_button(const cInteraction&, uint32_t);
 	cTask<> process_booster_menu(const cInteraction&);
+	cTask<> process_proficiency_menu(const cInteraction&);
 
 	cTask<> OnGuildCreate(uhGuild guild) override;
 	cTask<> OnGuildRoleCreate(cSnowflake& guild_id, cRole& role) override;
