@@ -26,7 +26,7 @@ cGateway::implementation::process_event(const json::value& v) try {
 	m_last_sequence = v.at("s").as_int64();
 	/* Determine the event type */
 	auto name = json::value_to<std::string_view>(v.at("t"));
-	auto type = crc32(0, reinterpret_cast<const Byte*>(name.data()), name.size());
+	auto type = cUtils::CRC32(0, name);
 #ifdef GW_LOG_LVL_1
 	cUtils::PrintLog("Event: 0x{:08X} {}", type, name);
 #endif

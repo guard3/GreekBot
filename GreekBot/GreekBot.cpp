@@ -1,9 +1,9 @@
 #include "GreekBot.h"
 #include "Database.h"
 #include "Utils.h"
-#include <zlib.h>
 
 enum : uint32_t {
+	CMP_ID_LEADERBOARD_HELP = 0x4ECEBDEC,
 	CMP_ID_PROFICIENCY_MENU = 0xAE90F56B,
 	CMP_ID_BOOSTER_MENU     = 0x90DD7D88
 };
@@ -116,39 +116,22 @@ cGreekBot::OnInteractionCreate(const cInteraction& interaction) {
 			}
 		}
 		case INTERACTION_MESSAGE_COMPONENT: {
-			switch (auto& data = interaction.GetData<INTERACTION_MESSAGE_COMPONENT>(); data.GetComponentType()) {
-				case COMPONENT_BUTTON: {
-					/* Check custom id */
-					if (data.GetCustomId().starts_with("BAN#"))
-						co_return co_await OnInteraction_unban(interaction, data.GetCustomId().substr(4));
-					if (data.GetCustomId().starts_with("DLT#"))
-						co_return co_await OnInteraction_dismiss(interaction, data.GetCustomId().substr(4));
-					if (data.GetCustomId().starts_with("NCK#"))
-						co_return co_await process_nickname_button(interaction, data.GetCustomId().substr(4));
-
-					try {
-						switch (cUtils::ParseInt(data.GetCustomId())) {
-							case CMP_ID_BUTTON_RANK_HELP:
-								co_await OnInteraction_button(interaction);
-							default:
-								co_return;
-						}
-					}
-					catch (const std::invalid_argument&) {}
-					std::string_view custom_id = data.GetCustomId();
-					co_return co_await process_role_button(interaction, crc32(0, reinterpret_cast<const Byte *>(custom_id.data()), custom_id.size()));
-				}
-				case COMPONENT_SELECT_MENU:
-					switch (uint32_t hash = crc32(0, (const Byte*)data.GetCustomId().data(), data.GetCustomId().size()); hash) {
-						case CMP_ID_PROFICIENCY_MENU:
-							co_return co_await process_proficiency_menu(interaction);
-						case CMP_ID_BOOSTER_MENU:
-							co_return co_await process_booster_menu(interaction);
-						default:
-							cUtils::PrintLog("0x{:X}", hash);
-					}
+			std::string_view custom_id = interaction.GetData<INTERACTION_MESSAGE_COMPONENT>().GetCustomId();
+			switch (uint32_t hash = cUtils::CRC32(0, custom_id); hash) {
+				case CMP_ID_LEADERBOARD_HELP:
+					co_return co_await OnInteraction_button(interaction);
+				case CMP_ID_PROFICIENCY_MENU:
+					co_return co_await process_proficiency_menu(interaction);
+				case CMP_ID_BOOSTER_MENU:
+					co_return co_await process_booster_menu(interaction);
 				default:
-					co_return;
+					if (custom_id.starts_with("BAN#"))
+						co_return co_await OnInteraction_unban(interaction, custom_id.substr(4));
+					if (custom_id.starts_with("DLT#"))
+						co_return co_await OnInteraction_dismiss(interaction, custom_id.substr(4));
+					if (custom_id.starts_with("NCK#"))
+						co_return co_await process_nickname_button(interaction, custom_id.substr(4));
+					co_return co_await process_role_button(interaction, hash);
 			}
 		}
 		case INTERACTION_MODAL_SUBMIT:

@@ -76,7 +76,7 @@ cGreekBot::process_role_button(const cInteraction& i, uint32_t button_id) {
 			role_id = 928364890601685033;
 			break;
 		default:
-			cUtils::PrintLog("0x{:X}", button_id);
+			cUtils::PrintLog("COMPONENT ID: 0x{:08X}", button_id);
 			co_return;
 	}
 

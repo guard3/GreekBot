@@ -4,9 +4,6 @@
 #include <unordered_map>
 #include <span>
 
-/* Define custom message component ids; used for responding to component interactions */
-#define CMP_ID_BUTTON_RANK_HELP 0
-
 /* Specialize std::hash for cSnowflake to use in unordered maps */
 template<>
 class std::hash<cSnowflake> : std::hash<uint64_t> {

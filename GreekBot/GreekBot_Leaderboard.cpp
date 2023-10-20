@@ -98,7 +98,7 @@ cGreekBot::OnInteraction_rank(const cInteraction& i) {
 					cActionRow{
 						cButton{
 							BUTTON_STYLE_SECONDARY,
-							STR(CMP_ID_BUTTON_RANK_HELP),
+							"LEADERBOARD_HELP",
 							kw::label="How does this work?"
 						}
 					}
@@ -149,7 +149,7 @@ cGreekBot::OnInteraction_top(const cInteraction& i) {
 				cActionRow{
 					cButton{
 						BUTTON_STYLE_SECONDARY,
-						STR(CMP_ID_BUTTON_RANK_HELP),
+						"LEADERBOARD_HELP",
 						kw::label="How does this work?"
 					}
 				}

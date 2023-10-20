@@ -65,6 +65,8 @@ public:
 			throw std::out_of_range("Parsed integer is out of range");
 		throw std::invalid_argument("Input string can't be parsed into an integer");
 	}
+	/* Calculate crc32 checksums of strings */
+	static uint32_t CRC32(uint32_t, std::string_view) noexcept;
 	/* Base64 encode/decode */
 	static std::string Base64Encode(const void* data, size_t size);
 	static std::vector<uint8_t> Base64Decode(std::string_view);

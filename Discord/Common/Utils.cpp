@@ -1,10 +1,16 @@
 #include "Utils.h"
 #include "date_time.h"
+#include <zlib.h>
 
 /* Random engine stuff */
 static std::random_device g_rd;
 std::mt19937    cUtils::ms_gen(g_rd());
 std::mt19937_64 cUtils::ms_gen64(g_rd());
+
+uint32_t
+cUtils::CRC32(uint32_t hash, std::string_view str) noexcept {
+	return crc32(hash, reinterpret_cast<const Byte*>(str.data()), str.size());
+}
 
 std::chrono::sys_seconds
 cUtils::ParseTimestamp(std::string_view t) {
