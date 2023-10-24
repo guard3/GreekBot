@@ -262,6 +262,129 @@ cDatabase::WC_UpdateMessage(const cUser& user, const cMessage& msg) {
 	};
 }
 
+cDatabaseTask<std::pair<int64_t, int64_t>>
+cDatabase::SB_RegisterReaction(const cSnowflake& msg_id) {
+	return [&msg_id] {
+		sqlite3_stmt* stmt = nullptr;
+		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_SB_REGISTER_REACTION, sizeof(QUERY_SB_REGISTER_REACTION), &stmt, nullptr)) {
+			if (stmt) {
+				if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, msg_id.ToInt())) {
+					if (SQLITE_ROW == sqlite3_step(stmt)) {
+						std::pair<int64_t, int64_t> result{ sqlite3_column_int64(stmt, 0), sqlite3_column_int64(stmt, 1) };
+						sqlite3_finalize(stmt);
+						return result;
+					}
+				}
+			}
+		}
+		sqlite3_finalize(stmt);
+		throw xDatabaseError();
+	};
+}
+
+cDatabaseTask<>
+cDatabase::SB_RegisterMessage(const cSnowflake& msg_id, const cSnowflake& sb_msg_id) {
+	return [&msg_id, &sb_msg_id] {
+		sqlite3_stmt* stmt = nullptr;
+		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_SB_REGISTER_MESSAGE, sizeof(QUERY_SB_REGISTER_MESSAGE), &stmt, nullptr)) {
+			if (stmt) {
+				if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, msg_id.ToInt())) {
+					if (SQLITE_OK == sqlite3_bind_int64(stmt, 2, sb_msg_id.ToInt())) {
+						if (SQLITE_DONE == sqlite3_step(stmt)) {
+							sqlite3_finalize(stmt);
+							return;
+						}
+					}
+				}
+			}
+		}
+		sqlite3_finalize(stmt);
+		throw xDatabaseError();
+	};
+}
+
+cDatabaseTask<std::pair<int64_t, int64_t>>
+cDatabase::SB_RemoveReaction(const cSnowflake& msg_id) {
+	return [&msg_id] {
+		std::pair<int64_t, int64_t> result;
+
+		sqlite3_stmt* stmt = nullptr;
+		for (const char* query = QUERY_SB_REMOVE_REACTION, *end; SQLITE_OK == sqlite3_prepare_v2(g_db, query, -1, &stmt, &end); query = end) {
+			if (!stmt)
+				return result;
+			if (SQLITE_OK != sqlite3_bind_int64(stmt, 1, msg_id.ToInt()))
+				break;
+			switch (sqlite3_step(stmt)) {
+				case SQLITE_ROW:
+					result = {sqlite3_column_int64(stmt, 0), sqlite3_column_int64(stmt, 1)};
+				case SQLITE_OK:
+					sqlite3_finalize(stmt);
+					return result;
+				default:
+					break;
+			}
+		}
+#if 0
+		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_SB_REMOVE_REACTION, sizeof(QUERY_SB_REMOVE_REACTION), &stmt, nullptr)) {
+			if (stmt) {
+				if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, msg_id.ToInt())) {
+					if (SQLITE_ROW == sqlite3_step(stmt)) {
+						std::pair<cSnowflake, uint64_t> result{ sqlite3_column_int64(stmt, 0), sqlite3_column_int64(stmt, 1) };
+						sqlite3_finalize(stmt);
+						return result;
+					}
+				}
+			}
+		}
+#endif
+		sqlite3_finalize(stmt);
+		throw xDatabaseError();
+	};
+}
+
+cDatabaseTask<>
+cDatabase::SB_RemoveMessage(const cSnowflake& msg_id) {
+	return [&msg_id] {
+		sqlite3_stmt* stmt = nullptr;
+		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_SB_REMOVE_MESSAGE, sizeof(QUERY_SB_REMOVE_MESSAGE), &stmt, nullptr)) {
+			if (stmt) {
+				if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, msg_id.ToInt())) {
+					if (SQLITE_DONE == sqlite3_step(stmt)) {
+						sqlite3_finalize(stmt);
+						return;
+					}
+				}
+			}
+		}
+		sqlite3_finalize(stmt);
+		throw xDatabaseError();
+	};
+}
+
+cDatabaseTask<int64_t>
+cDatabase::SB_RemoveAll(const cSnowflake& msg_id) {
+	return [&msg_id] {
+		sqlite3_stmt* stmt = nullptr;
+		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_SB_REMOVE_ALL, sizeof(QUERY_SB_REMOVE_ALL), &stmt, nullptr)) {
+			if (stmt) {
+				if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, msg_id.ToInt())) {
+					switch (int64_t result = 0; sqlite3_step(stmt)) {
+						case SQLITE_ROW:
+							result = sqlite3_column_int64(stmt, 0);
+						case SQLITE_DONE:
+							sqlite3_finalize(stmt);
+							return result;
+						default:
+							break;
+					}
+				}
+			}
+		}
+		sqlite3_finalize(stmt);
+		throw xDatabaseError();
+	};
+}
+
 cDatabaseTask<tRankQueryData>
 cDatabase::GetUserRank(const cUser& user) {
 	return [&user]() {

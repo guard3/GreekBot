@@ -10,3 +10,8 @@ CREATE TABLE IF NOT EXISTS welcoming(
     old_id INTEGER UNIQUE,
     joined_at INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS starboard(
+    msg_id INTEGER PRIMARY KEY,
+    sb_msg_id INTEGER UNIQUE,
+    num INTEGER NOT NULL CHECK(num > 0)
+);

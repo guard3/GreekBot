@@ -1,0 +1,1 @@
+DELETE FROM starboard WHERE msg_id is ?1 RETURNING sb_msg_id;

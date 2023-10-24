@@ -1,0 +1,1 @@
+UPDATE starboard SET sb_msg_id=NULL WHERE msg_id is ?1;

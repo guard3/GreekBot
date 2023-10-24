@@ -54,6 +54,12 @@ public:
 	static cDatabaseTask<int64_t> WC_GetMessage(const cPartialMember&);
 	static cDatabaseTask<> WC_EditMessage(int64_t);
 	static cDatabaseTask<uint64_t> WC_DeleteMember(const cUser&);
+
+	static cDatabaseTask<std::pair<int64_t, int64_t>> SB_RegisterReaction(const cSnowflake&);
+	static cDatabaseTask<> SB_RegisterMessage(const cSnowflake&, const cSnowflake&);
+	static cDatabaseTask<std::pair<int64_t, int64_t>> SB_RemoveReaction(const cSnowflake&);
+	static cDatabaseTask<> SB_RemoveMessage(const cSnowflake&);
+	static cDatabaseTask<int64_t> SB_RemoveAll(const cSnowflake&);
 };
 /* ================================================================================================================== */
 template<>

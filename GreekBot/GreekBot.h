@@ -43,6 +43,7 @@ private:
 	cTask<> process_role_button(const cInteraction&, uint32_t);
 	cTask<> process_booster_menu(const cInteraction&);
 	cTask<> process_proficiency_menu(const cInteraction&);
+	cTask<> process_reaction(const cSnowflake&, const cSnowflake&, int64_t, int64_t);
 
 	cTask<> OnGuildCreate(uhGuild guild) override;
 	cTask<> OnGuildRoleCreate(cSnowflake& guild_id, cRole& role) override;
@@ -53,6 +54,7 @@ private:
 	cTask<> OnGuildMemberRemove(cSnowflake& guild_id, cUser& user) override;
 	cTask<> OnInteractionCreate(const cInteraction&) override;
 	cTask<> OnMessageCreate(const cMessage& msg) override;
+	cTask<> OnMessageDelete(cSnowflake& id, cSnowflake& channel_id, hSnowflake guild_id) override;
 	cTask<> OnMessageReactionAdd(cSnowflake&, cSnowflake&, cSnowflake&, hSnowflake, hSnowflake, hMember, cEmoji&) override;
 	cTask<> OnMessageReactionRemove(cSnowflake&, cSnowflake&, cSnowflake&, hSnowflake, cEmoji&) override;
 	cTask<> OnMessageReactionRemoveAll(cSnowflake&, cSnowflake&, hSnowflake) override;
