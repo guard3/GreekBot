@@ -84,6 +84,7 @@ public:
 		co_return co_await edit_message(channel_id, msg_id, cMessageParams{ kwargs... });
 	}
 	cTask<> DeleteMessage(const cSnowflake& channel_id, const cSnowflake& msg_id, std::string_view reason = {});
+	cTask<cMessage> GetChannelMessage(const cSnowflake& channel_id, const cSnowflake& message_id);
 
 	template<kw::key... Keys>
 	cTask<> ModifyGuildMember(const cSnowflake& guild_id, const cSnowflake& user_id, kw::arg<Keys>&... kwargs) {

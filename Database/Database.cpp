@@ -262,17 +262,43 @@ cDatabase::WC_UpdateMessage(const cUser& user, const cMessage& msg) {
 	};
 }
 
-cDatabaseTask<std::pair<int64_t, int64_t>>
-cDatabase::SB_RegisterReaction(const cSnowflake& msg_id) {
+cDatabaseTask<int64_t>
+cDatabase::SB_GetMessageAuthor(const cSnowflake& msg_id) {
 	return [&msg_id] {
+		sqlite3_stmt* stmt = nullptr;
+		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_SB_GET_MESSAGE_AUTHOR, sizeof(QUERY_SB_GET_MESSAGE_AUTHOR), &stmt, nullptr)) {
+			if (stmt) {
+				if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, msg_id.ToInt())) {
+					switch(int64_t result = 0; sqlite3_step(stmt)) {
+						case SQLITE_ROW:
+							result = sqlite3_column_int64(stmt, 0);
+						case SQLITE_DONE:
+							sqlite3_finalize(stmt);
+							return result;
+						default:
+							break;
+					}
+				}
+			}
+		}
+		sqlite3_finalize(stmt);
+		throw xDatabaseError();
+	};
+}
+
+cDatabaseTask<std::pair<int64_t, int64_t>>
+cDatabase::SB_RegisterReaction(const cSnowflake& msg_id, const cSnowflake& author_id) {
+	return [&msg_id, &author_id] {
 		sqlite3_stmt* stmt = nullptr;
 		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_SB_REGISTER_REACTION, sizeof(QUERY_SB_REGISTER_REACTION), &stmt, nullptr)) {
 			if (stmt) {
 				if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, msg_id.ToInt())) {
-					if (SQLITE_ROW == sqlite3_step(stmt)) {
-						std::pair<int64_t, int64_t> result{ sqlite3_column_int64(stmt, 0), sqlite3_column_int64(stmt, 1) };
-						sqlite3_finalize(stmt);
-						return result;
+					if (SQLITE_OK == sqlite3_bind_int64(stmt, 2, author_id.ToInt())) {
+						if (SQLITE_ROW == sqlite3_step(stmt)) {
+							std::pair<int64_t, int64_t> result{sqlite3_column_int64(stmt, 0), sqlite3_column_int64(stmt, 1)};
+							sqlite3_finalize(stmt);
+							return result;
+						}
 					}
 				}
 			}

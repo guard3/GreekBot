@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS welcoming(
 );
 CREATE TABLE IF NOT EXISTS starboard(
     msg_id INTEGER PRIMARY KEY,
+    author_id INTEGER NOT NULL,
     sb_msg_id INTEGER UNIQUE,
     num INTEGER NOT NULL CHECK(num > 0)
 );

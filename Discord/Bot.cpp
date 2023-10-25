@@ -170,6 +170,13 @@ cBot::DeleteMessage(const cSnowflake& channel_id, const cSnowflake& msg_id, std:
 	co_await DiscordDelete(fmt::format("/channels/{}/messages/{}", channel_id, msg_id), fields);
 }
 
+cTask<cMessage>
+cBot::GetChannelMessage(const cSnowflake& channel_id, const cSnowflake& msg_id) {
+	co_return cMessage{
+		co_await DiscordGet(fmt::format("/channels/{}/messages/{}", channel_id, msg_id))
+	};
+}
+
 cTask<>
 cBot::RemoveGuildMember(const cSnowflake& guild_id, const cSnowflake& user_id, std::string_view reason) {
 	tHttpFields fields;
