@@ -38,7 +38,8 @@ cMessage::cMessage(const json::object &o):
 	content(json::value_to<std::string>(o.at("content"))),
 	timestamp(json::value_to<std::string>(o.at("timestamp"))),
 	type(json::value_to<eMessageType>(o.at("type"))),
-	embeds(json::value_to<std::vector<cEmbed>>(o.at("embeds"))) {
+	embeds(json::value_to<std::vector<cEmbed>>(o.at("embeds"))),
+	attachments(json::value_to<std::vector<cAttachment>>(o.at("attachments"))) {
 	/* Parse guild_id */
 	const json::value* f;
 	if ((f = o.if_contains("guild_id")))
@@ -53,7 +54,7 @@ cMessage::cMessage(const json::object &o):
 
 cMessage::cMessage(const json::value &v) : cMessage(v.as_object()) {}
 
-cMessage::cMessage(const cMessage &o) : id(o.id), channel_id(o.channel_id), author(o.author), content(o.content), timestamp(o.timestamp), edited_timestamp(o.edited_timestamp), type(o.type), flags(o.flags), embeds(o.embeds) {
+cMessage::cMessage(const cMessage &o) : id(o.id), channel_id(o.channel_id), author(o.author), content(o.content), timestamp(o.timestamp), edited_timestamp(o.edited_timestamp), type(o.type), flags(o.flags), embeds(o.embeds), attachments(o.attachments) {
 	if (o.guild_id) guild_id = cHandle::MakeUnique<cSnowflake>(*o.guild_id);
 	if (o.member  ) member   = cHandle::MakeUnique<cMember   >(*o.member  );
 }
@@ -66,6 +67,8 @@ cMessage::operator=(cMessage o) {
 	std::swap(content,          o.content         );
 	std::swap(timestamp,        o.timestamp       );
 	std::swap(edited_timestamp, o.edited_timestamp);
+	std::swap(embeds,           o.embeds);
+	std::swap(attachments,      o.attachments);
 	id         = o.id;
 	channel_id = o.channel_id;
 	type       = o.type;

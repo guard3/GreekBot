@@ -18,7 +18,9 @@ add_executable(GreekBot main.cpp boost/json.h Discord/Bot.cpp Discord/Bot.h Disc
         Discord/Objects/Component/Button.h
         Discord/Objects/Component/SelectMenu.h
         Discord/Objects/Embed/EmbedField.h
-        GreekBot/GreekBot_Starboard.cpp)
+        GreekBot/GreekBot_Starboard.cpp
+        Discord/Objects/Attachment.h
+        Discord/Objects/Attachment.cpp)
 
 target_include_directories(
     GreekBot PRIVATE

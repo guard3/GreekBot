@@ -4,6 +4,7 @@
 #include "Embed.h"
 #include "Member.h"
 #include "Component.h"
+#include "Attachment.h"
 #include <span>
 
 enum eMessageType {
@@ -101,6 +102,7 @@ private:
 	eMessageFlag flags;
 
 	std::vector<cEmbed> embeds;
+	std::vector<cAttachment> attachments;
 
 public:
 	cMessage(const json::object&);
@@ -110,7 +112,8 @@ public:
 
 	cMessage& operator=(cMessage o);
 
-	std::span<cEmbed> GetEmbeds() noexcept { return embeds; }
+	cUser& GetAuthor() noexcept { return author; };
+
 
 	const cSnowflake&  GetId()              const noexcept { return id;               }
 	const cSnowflake&  GetChannelId()       const noexcept { return channel_id;       }
@@ -123,6 +126,10 @@ public:
 	eMessageType       GetType()            const noexcept { return type;             }
 	eMessageFlag       GetFlags()           const noexcept { return flags;            }
 	std::span<const cEmbed> GetEmbeds() const noexcept { return embeds; }
+	std::span<const cAttachment> GetAttachments() const noexcept { return attachments; }
+
+	std::span<cEmbed> GetEmbeds() noexcept { return embeds; }
+	std::span<cAttachment> GetAttachments() noexcept { return attachments; }
 
 	std::vector<cEmbed> CloneEmbeds() const { return embeds; }
 

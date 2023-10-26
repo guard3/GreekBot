@@ -14,6 +14,8 @@ private:
 public:
 	explicit cUser(const json::object&);
 	explicit cUser(const json::value&);
+
+	cSnowflake& GetId() noexcept { return id; }
 	
 	const cSnowflake&  GetId()        const { return id;       }
 	const std::string& GetUsername()  const { return username; }
