@@ -2,15 +2,34 @@
 #include "Database.h"
 
 static const cSnowflake HOLY_EMOJI_ID = 409075809723219969;
-static const cSnowflake BOTS_CHANNEL_ID = 354924532479295498;
+static const cSnowflake HOLY_CHANNEL_ID = 978993330694266920;
 
-static constexpr int REACTION_THRESHOLD = 2; // Test value
+static constexpr int REACTION_THRESHOLD = 4; // Test value
+
+/* This array must be sorted for binary search to work */
+static const cSnowflake excluded_channels[] {
+	355242373380308993, // #moderators
+	366366855117668383, // #controversial
+	486311040477298690, // #word-of-the-day
+	595658812128624670, // #deepest-lore
+	598873442288271423, // #contributors
+	611889781227520003, // #travel-and-meetups
+	618350374348390406, // #bulletin-board
+	627084297123266561, // #moderators-voice
+	650331739293745172, // #native-polls
+	817078394331856907, // #private-discussions
+};
 
 cTask<>
 cGreekBot::OnMessageReactionAdd(cSnowflake& user_id, cSnowflake& channel_id, cSnowflake& message_id, hSnowflake guild_id, hSnowflake message_author_id, hMember member, cEmoji& emoji) {
 	/* Make sure that we're in Learning Greek and that the emoji is :Holy: */
-	if (!guild_id || !emoji.GetId()) co_return;
-	if (*guild_id != m_lmg_id || *emoji.GetId() != HOLY_EMOJI_ID) co_return;
+	if (!guild_id || !emoji.GetId())
+		co_return;
+	if (*guild_id != m_lmg_id || *emoji.GetId() != HOLY_EMOJI_ID)
+		co_return;
+	/* Also make sure that we're not in an excluded channel */
+	if (std::binary_search(std::begin(excluded_channels), std::end(excluded_channels), channel_id))
+		co_return;
 	/* Also make sure that the message author id is provided */
 	uhMessage pMsg;
 	if (!message_author_id) {
@@ -31,6 +50,9 @@ cGreekBot::OnMessageReactionRemove(cSnowflake& user_id, cSnowflake& channel_id, 
 	/* Make sure that we're in Learning Greek and that the emoji is :Holy: */
 	if (!guild_id || !emoji.GetId()) co_return;
 	if (*guild_id != m_lmg_id || *emoji.GetId() != HOLY_EMOJI_ID) co_return;
+	/* Also make sure that we're not in an excluded channel */
+	if (std::binary_search(std::begin(excluded_channels), std::end(excluded_channels), channel_id))
+		co_return;
 	/* Make sure that reactions from the author don't count */
 	int64_t author_id = co_await cDatabase::SB_GetMessageAuthor(message_id);
 	if (author_id)
@@ -46,24 +68,22 @@ cGreekBot::process_reaction(const cSnowflake& channel_id, const cSnowflake& mess
 	/* If the number of reactions is less than the threshold, delete the starboard message if it was posted before */
 	if (num_reactions < REACTION_THRESHOLD) {
 		if (sb_msg_id) {
-			co_await DeleteMessage(BOTS_CHANNEL_ID, sb_msg_id);
+			co_await DeleteMessage(HOLY_CHANNEL_ID, sb_msg_id);
 			co_await cDatabase::SB_RemoveMessage(message_id);
 		}
 		co_return;
 	}
 	/* Otherwise, prepare the message content with the :Holy: count */
-	const char* reaction1 = "<:Holy:409075809723219969> ";
-	const char* reaction2 = "";
-	const char* reaction3 = "";
-	if (num_reactions > 2) {
-		reaction2 = reaction1;
+	const char* reaction = "<:Holy:409075809723219969>";
+	if (num_reactions > REACTION_THRESHOLD) {
+		reaction = "<:magik:1167594533849149450>";
 		if (num_reactions > 3)
-			reaction3 = reaction1;
+			reaction = "<a:spin:1167594572050866207>";
 	}
-	auto content = fmt::format("{}{}{}**{}** https://discord.com/channels/{}/{}/{}", reaction1, reaction2, reaction3, num_reactions, m_lmg_id, channel_id, message_id);
+	auto content = fmt::format("{} **{}** https://discord.com/channels/{}/{}/{}", reaction, num_reactions, m_lmg_id, channel_id, message_id);
 	/* If there is a message id registered in the database, edit the message with the new number of reactions */
 	if (sb_msg_id) {
-		co_await EditMessage(BOTS_CHANNEL_ID, sb_msg_id, kw::content=std::move(content));
+		co_await EditMessage(HOLY_CHANNEL_ID, sb_msg_id, kw::content=std::move(content));
 		co_return;
 	}
 	/* Make sure that we have the message object available */
@@ -147,7 +167,7 @@ cGreekBot::process_reaction(const cSnowflake& channel_id, const cSnowflake& mess
 	if (!bProcessed)
 		preview.SetDescription(msg->MoveContent());
 	/* Send the starboard message and save it in the database */
-	cMessage sb_msg = co_await CreateMessage(BOTS_CHANNEL_ID,
+	cMessage sb_msg = co_await CreateMessage(HOLY_CHANNEL_ID,
 		kw::content=std::move(content),
 		kw::embeds=std::move(embed_vector)
 	);
@@ -161,7 +181,7 @@ cGreekBot::OnMessageReactionRemoveAll(cSnowflake& channel_id, cSnowflake& messag
 	if (*guild_id != m_lmg_id) co_return;
 	/* Delete the message from the channel and the database (if found) */
 	if (int64_t sb_msg_id = co_await cDatabase::SB_RemoveAll(message_id))
-		co_await DeleteMessage(BOTS_CHANNEL_ID, sb_msg_id);
+		co_await DeleteMessage(HOLY_CHANNEL_ID, sb_msg_id);
 }
 cTask<>
 cGreekBot::OnMessageReactionRemoveEmoji(cSnowflake& channel_id, cSnowflake& message_id, hSnowflake guild_id, cEmoji& emoji) {
@@ -170,7 +190,7 @@ cGreekBot::OnMessageReactionRemoveEmoji(cSnowflake& channel_id, cSnowflake& mess
 	if (*guild_id != m_lmg_id || *emoji.GetId() != HOLY_EMOJI_ID) co_return;
 	/* Delete the message from the channel and the database (if found) */
 	if (int64_t sb_msg_id = co_await cDatabase::SB_RemoveAll(message_id))
-		co_await DeleteMessage(BOTS_CHANNEL_ID, sb_msg_id);
+		co_await DeleteMessage(HOLY_CHANNEL_ID, sb_msg_id);
 }
 cTask<>
 cGreekBot::OnMessageDelete(cSnowflake& message_id, cSnowflake& channel_id, hSnowflake guild_id) {
@@ -179,5 +199,16 @@ cGreekBot::OnMessageDelete(cSnowflake& message_id, cSnowflake& channel_id, hSnow
 	if (*guild_id != m_lmg_id) co_return;
 	/* Delete the starboard message from the channel and the database (if found) */
 	if (int64_t sb_msg_id = co_await cDatabase::SB_RemoveAll(message_id))
-		co_await DeleteMessage(BOTS_CHANNEL_ID, sb_msg_id);
+		co_await DeleteMessage(HOLY_CHANNEL_ID, sb_msg_id);
+}
+cTask<>
+cGreekBot::OnMessageDeleteBulk(std::span<cSnowflake> ids, cSnowflake& channel_id, hSnowflake guild_id) {
+	/* Make sure we're in Learning Greek */
+	if (!guild_id) co_return;
+	if (*guild_id != m_lmg_id) co_return;
+	/* Delete the starboard message from the channel and the database (if found) */
+	for (cSnowflake& id : ids) {
+		if (int64_t sb_msg_id = co_await cDatabase::SB_RemoveAll(id))
+			co_await DeleteMessage(HOLY_CHANNEL_ID, sb_msg_id);
+	}
 }
