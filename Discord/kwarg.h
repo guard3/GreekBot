@@ -46,7 +46,7 @@ namespace kw {
 		arg(const arg&) = delete;
 		arg& operator=(const arg&) = delete;
 		/* Assignment of values */
-		template<std::convertible_to<value_type> Arg = value_type>
+		template<typename Arg = value_type> requires std::constructible_from<value_type, Arg&&>
 		arg& operator=(Arg&& arg) {
 			emplace(std::forward<Arg>(arg));
 			return *this;

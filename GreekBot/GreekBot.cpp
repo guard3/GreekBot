@@ -142,15 +142,13 @@ cGreekBot::OnInteractionCreate(const cInteraction& interaction) {
 }
 
 cTask<>
-cGreekBot::OnMessageCreate(const cMessage& msg) {
+cGreekBot::OnMessageCreate(cMessage& msg, hSnowflake guild_id, hMember member) {
 	/* Update leaderboard for Learning Greek */
-	if (chSnowflake guild_id = msg.GetGuildId()) {
-		if (*guild_id == m_lmg_id) {
-			/* Ignore messages of bots and system users */
-			if (msg.GetAuthor().IsBotUser() || msg.GetAuthor().IsSystemUser())
-				co_return;
-			/* Update leaderboard */
-			co_await cDatabase::UpdateLeaderboard(msg);
-		}
+	if (guild_id && *guild_id == m_lmg_id) {
+		/* Ignore messages of bots and system users */
+		if (msg.GetAuthor().IsBotUser() || msg.GetAuthor().IsSystemUser())
+			co_return;
+		/* Update leaderboard */
+		co_await cDatabase::UpdateLeaderboard(msg);
 	}
 }

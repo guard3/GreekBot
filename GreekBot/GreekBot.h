@@ -53,7 +53,7 @@ private:
 	cTask<> OnGuildMemberUpdate(cSnowflake& guild_id, cPartialMember& member) override;
 	cTask<> OnGuildMemberRemove(cSnowflake& guild_id, cUser& user) override;
 	cTask<> OnInteractionCreate(const cInteraction&) override;
-	cTask<> OnMessageCreate(const cMessage& msg) override;
+	cTask<> OnMessageCreate(cMessage& msg, hSnowflake guild_id, hMember member) override;
 	cTask<> OnMessageDelete(cSnowflake& id, cSnowflake& channel_id, hSnowflake guild_id) override;
 	cTask<> OnMessageReactionAdd(cSnowflake&, cSnowflake&, cSnowflake&, hSnowflake, hSnowflake, hMember, cEmoji&) override;
 	cTask<> OnMessageReactionRemove(cSnowflake&, cSnowflake&, cSnowflake&, hSnowflake, cEmoji&) override;

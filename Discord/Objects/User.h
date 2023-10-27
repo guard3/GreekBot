@@ -15,14 +15,16 @@ public:
 	explicit cUser(const json::object&);
 	explicit cUser(const json::value&);
 
-	cSnowflake& GetId() noexcept { return id; }
-	
-	const cSnowflake&  GetId()        const { return id;       }
-	const std::string& GetUsername()  const { return username; }
-	const std::string& GetAvatarUrl() const { return avatar;   }
+	const cSnowflake& GetId()        const noexcept { return id;       }
+	std::string_view  GetUsername()  const noexcept { return username; }
+	std::string_view  GetAvatarUrl() const noexcept { return avatar;   }
+	bool              IsBotUser()    const noexcept { return bot;      }
+	bool              IsSystemUser() const noexcept { return system;   }
 
-	bool IsBotUser()    const { return bot;    }
-	bool IsSystemUser() const { return system; }
+	cSnowflake& GetId() noexcept { return id; }
+
+	std::string MoveUsername()  noexcept { return std::move(username); }
+	std::string MoveAvatarUrl() noexcept { return std::move(avatar);   }
 };
 typedef   hHandle<cUser>   hUser;
 typedef  chHandle<cUser>  chUser;

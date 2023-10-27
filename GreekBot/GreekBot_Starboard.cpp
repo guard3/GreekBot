@@ -43,120 +43,115 @@ cGreekBot::OnMessageReactionRemove(cSnowflake& user_id, cSnowflake& channel_id, 
 
 cTask<>
 cGreekBot::process_reaction(const cSnowflake& channel_id, const cSnowflake& message_id, int64_t sb_msg_id, int64_t num_reactions, cMessage* msg) {
+	/* If the number of reactions is less than the threshold, delete the starboard message if it was posted before */
 	if (num_reactions < REACTION_THRESHOLD) {
-		/* If the number of reactions is less than the threshold, delete the starboard message if it was posted before */
 		if (sb_msg_id) {
 			co_await DeleteMessage(BOTS_CHANNEL_ID, sb_msg_id);
 			co_await cDatabase::SB_RemoveMessage(message_id);
 		}
-	} else {
-		/* Otherwise... */
-		std::optional<cMessage> opt;
-		if (!msg)
-			msg = &opt.emplace(co_await GetChannelMessage(channel_id, message_id));
-
-		const char* reaction1 = "<:Holy:409075809723219969> ";
-		const char* reaction2 = "";
-		const char* reaction3 = "";
-		if (num_reactions > 2) {
-			reaction2 = reaction1;
-			if (num_reactions > 3)
-				reaction3 = reaction1;
-		}
-
-		cMember author = co_await GetGuildMember(m_lmg_id, msg->GetAuthor().GetId());
-
-		auto content = fmt::format("{}{}{}**{}** https://discord.com/channels/{}/{}/{}", reaction1, reaction2, reaction3, num_reactions, m_lmg_id, channel_id, message_id);
-		if (sb_msg_id) {
-			/* If there is a message id registered in the database, edit the message with the new number of reactions */
-			co_await EditMessage(BOTS_CHANNEL_ID, sb_msg_id, kw::content=std::move(content));
-			co_return;
-		}
-		/* Prepare the message preview embed */
-		std::vector<cEmbed> embed_vector {
-			cEmbed{
-				kw::author=cEmbedAuthor{
-					author.GetUser()->GetUsername(),
-					kw::icon_url=author.GetUser()->GetAvatarUrl()
-				},
-				kw::color=get_lmg_member_color(author),
-				kw::timestamp=msg->GetTimestamp()
+		co_return;
+	}
+	/* Otherwise, prepare the message content with the :Holy: count */
+	const char* reaction1 = "<:Holy:409075809723219969> ";
+	const char* reaction2 = "";
+	const char* reaction3 = "";
+	if (num_reactions > 2) {
+		reaction2 = reaction1;
+		if (num_reactions > 3)
+			reaction3 = reaction1;
+	}
+	auto content = fmt::format("{}{}{}**{}** https://discord.com/channels/{}/{}/{}", reaction1, reaction2, reaction3, num_reactions, m_lmg_id, channel_id, message_id);
+	/* If there is a message id registered in the database, edit the message with the new number of reactions */
+	if (sb_msg_id) {
+		co_await EditMessage(BOTS_CHANNEL_ID, sb_msg_id, kw::content=std::move(content));
+		co_return;
+	}
+	/* Make sure that we have the message object available */
+	std::optional<cMessage> opt;
+	if (!msg)
+		msg = &opt.emplace(co_await GetChannelMessage(channel_id, message_id));
+	cMember author_member = co_await GetGuildMember(m_lmg_id, msg->GetAuthor().GetId());
+	cUser&  author_user = *author_member.GetUser();
+	/* Prepare the message preview embed */
+	std::vector<cEmbed> embed_vector;
+	cEmbed& preview = embed_vector.emplace_back(
+		kw::author=cEmbedAuthor{
+			author_user.MoveUsername(),
+			kw::icon_url=author_user.MoveAvatarUrl()
+		},
+		kw::color=get_lmg_member_color(author_member),
+		kw::timestamp=msg->GetTimestamp()
+	);
+	/* First, check if the original message has any media attachments that need to be previewed */
+	bool bProcessed = false;
+	if (auto attachments = msg->GetAttachments(); !attachments.empty()) {
+		/* Search for at least one image and one video attachment */
+		cAttachment* pImage = nullptr, *pVideo = nullptr;
+		for (cAttachment& a : attachments) {
+			std::string_view content_type = a.GetContentType();
+			if (content_type.starts_with("image/")) {
+				if (pImage) continue;
+				pImage = &a;
 			}
-		};
-		cEmbed& e = embed_vector.front();
-		/* First, check if the original message has any media attachments that need to be previewed */
-		bool bProcessed = false;
-		if (auto attachments = msg->GetAttachments(); !attachments.empty()) {
-			/* Search for at least one image and one video attachment */
-			cAttachment* pImage = nullptr, *pVideo = nullptr;
-			for (cAttachment& a : attachments) {
-				std::string_view content_type = a.GetContentType();
-				if (content_type.starts_with("image/")) {
-					if (pImage)
-						continue;
-					pImage = &a;
-				}
-				if (content_type.starts_with("video/")) {
-					if (pVideo)
-						continue;
-					pVideo = &a;
-				}
-			}
-			/* If an image is found, save it in the embedded preview */
-			if (pImage) {
-				e.SetImage(pImage->MoveUrl());
-				if (!pVideo)
-					e.SetDescription(msg->GetContent());
-				bProcessed = true;
-			}
-			/* If a video is found, add its link to the preview content since discord doesn't support client video embeds */
-			if (pVideo) {
-				if (msg->GetContent().empty()) {
-					e.SetTitle("Video");
-					e.SetDescription(pVideo->MoveUrl());
-				} else {
-					e.SetDescription(fmt::format("{}\n\n**Video**\n{}", msg->GetContent(), pVideo->GetUrl()));
-				}
-				bProcessed = true;
+			if (content_type.starts_with("video/")) {
+				if (pVideo) continue;
+				pVideo = &a;
 			}
 		}
-		/* If no suitable attachments are found, check any embedded thumbnails of images */
-		if (!bProcessed) {
-			if (auto embeds = msg->GetEmbeds(); !embeds.empty()) {
-				std::string url;
-				for (cEmbed& embed : embeds) {
-					if (auto t = embed.GetThumbnail()) {
-						if (t->GetUrl().starts_with("https://media.tenor.com/")) {
-							/* NASTY HACK! If we detect that the embedded link is a tenor gif, we modify the url to get a link to a .gif file! */
-							url = t->MoveUrl();
-							url[url.rfind('/') - 1] = 'C';
-							url.replace(url.size() - 3, 3, "gif");
-							break;
-						}
-						if (t->GetUrl() == msg->GetContent()) {
-							/* If the message content is the link to the embedded image, save it to be embedded */
-							url = t->MoveUrl();
-							break;
-						}
+		/* If an image is found, save it in the embedded preview */
+		if (pImage) {
+			preview.SetImage(pImage->MoveUrl());
+			if (!pVideo)
+				preview.SetDescription(msg->MoveContent());
+			bProcessed = true;
+		}
+		/* If a video is found, add its link to the preview content since discord doesn't support client video embeds */
+		if (pVideo) {
+			if (msg->GetContent().empty()) {
+				preview.SetTitle("Video");
+				preview.SetDescription(pVideo->MoveUrl());
+			} else {
+				preview.SetDescription(fmt::format("{}\n\n**Video**\n{}", msg->GetContent(), pVideo->GetUrl()));
+			}
+			bProcessed = true;
+		}
+	}
+	/* If no suitable attachments are found, check any embedded thumbnails of images */
+	if (!bProcessed) {
+		if (auto embeds = msg->GetEmbeds(); !embeds.empty()) {
+			std::string url;
+			for (cEmbed& e : embeds) {
+				if (auto t = e.GetThumbnail()) {
+					if (t->GetUrl().starts_with("https://media.tenor.com/")) {
+						/* NASTY HACK! If we detect that the embedded link is a tenor gif, we modify the url to get a link to a .gif file! */
+						url = t->MoveUrl();
+						url[url.rfind('/') - 1] = 'C';
+						url.replace(url.size() - 3, 3, "gif");
+						break;
+					}
+					if (t->GetUrl() == msg->GetContent()) {
+						/* If the message content is the link to the embedded image, save it to be embedded */
+						url = t->MoveUrl();
+						break;
 					}
 				}
-				/* If a suitable thumbnail is found, save it to the message preview */
-				if (!url.empty()) {
-					e.SetImage(std::move(url));
-					bProcessed = true;
-				}
+			}
+			/* If a suitable thumbnail is found, save it to the message preview */
+			if (!url.empty()) {
+				preview.SetImage(std::move(url));
+				bProcessed = true;
 			}
 		}
-		/* If no embedded media was processed, save the message content as is */
-		if (!bProcessed)
-			e.SetDescription(msg->GetContent());
-		/* If there's no registered message id in the database, send a new message */
-		cMessage sb_msg = co_await CreateMessage(BOTS_CHANNEL_ID,
-			kw::content=std::move(content),
-			kw::embeds=std::move(embed_vector)
-		);
-		co_await cDatabase::SB_RegisterMessage(message_id, sb_msg.GetId());
 	}
+	/* If no embedded media was processed, save the message content as is */
+	if (!bProcessed)
+		preview.SetDescription(msg->MoveContent());
+	/* Send the starboard message and save it in the database */
+	cMessage sb_msg = co_await CreateMessage(BOTS_CHANNEL_ID,
+		kw::content=std::move(content),
+		kw::embeds=std::move(embed_vector)
+	);
+	co_await cDatabase::SB_RegisterMessage(message_id, sb_msg.GetId());
 }
 /* ========== Delete messages when all reactions are removed or when the original message is deleted ================ */
 cTask<>

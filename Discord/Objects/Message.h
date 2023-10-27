@@ -90,9 +90,7 @@ class cMessage final {
 private:
 	cSnowflake  id;
 	cSnowflake  channel_id;
-	uhSnowflake guild_id;
 	cUser       author;
-	uhMember    member;
 	std::string content;
 	std::string timestamp;
 	std::string edited_timestamp;
@@ -105,36 +103,31 @@ private:
 	std::vector<cAttachment> attachments;
 
 public:
-	cMessage(const json::object&);
-	cMessage(const json::value& v);
-	cMessage(const cMessage& o);
-	cMessage(cMessage&&) = default;
+	explicit cMessage(const json::object&);
+	explicit cMessage(const json::value&);
 
-	cMessage& operator=(cMessage o);
-
-	cUser& GetAuthor() noexcept { return author; };
-
-
-	const cSnowflake&  GetId()              const noexcept { return id;               }
-	const cSnowflake&  GetChannelId()       const noexcept { return channel_id;       }
-	chSnowflake        GetGuildId()         const noexcept { return guild_id.get();   }
-	const cUser&       GetAuthor()          const noexcept { return author;           }
-	chMember           GetMember()          const noexcept { return member.get();     }
-	const std::string& GetContent()         const noexcept { return content;          }
-	const std::string& GetTimestamp()       const noexcept { return timestamp;        }
-	const std::string& GetEditedTimestamp() const noexcept { return edited_timestamp; }
-	eMessageType       GetType()            const noexcept { return type;             }
-	eMessageFlag       GetFlags()           const noexcept { return flags;            }
+	const cSnowflake& GetId() const noexcept { return id; }
+	const cSnowflake& GetChannelId() const noexcept { return channel_id; }
+	const cUser& GetAuthor() const noexcept { return author; }
+	std::string_view GetContent() const noexcept { return content; }
+	std::string_view GetTimestamp() const noexcept { return timestamp; }
+	std::string_view GetEditedTimestamp() const noexcept { return edited_timestamp; }
+	eMessageType GetType() const noexcept { return type; }
+	eMessageFlag GetFlags() const noexcept { return flags; }
 	std::span<const cEmbed> GetEmbeds() const noexcept { return embeds; }
 	std::span<const cAttachment> GetAttachments() const noexcept { return attachments; }
 
+	cSnowflake& GetId() noexcept { return id; }
+	cSnowflake& GetChannelId() noexcept { return channel_id; }
+	cUser& GetAuthor() noexcept { return author; };
 	std::span<cEmbed> GetEmbeds() noexcept { return embeds; }
 	std::span<cAttachment> GetAttachments() noexcept { return attachments; }
 
-	std::vector<cEmbed> CloneEmbeds() const { return embeds; }
-
+	std::string MoveContent() noexcept { return std::move(content); }
+	std::string MoveTimestamp() noexcept { return std::move(timestamp); }
+	std::string MoveEditedTimestamp() noexcept { return std::move(edited_timestamp); }
 	std::vector<cEmbed> MoveEmbeds() noexcept { return std::move(embeds); }
-	std::vector<cEmbed> MoveEmbeds() const { return embeds; }
+	std::vector<cAttachment> MoveAttachments() noexcept { return std::move(attachments); }
 };
 typedef   hHandle<cMessage>   hMessage;
 typedef  chHandle<cMessage>  chMessage;
