@@ -39,7 +39,6 @@ cGreekBot::OnMessageReactionAdd(cSnowflake& user_id, cSnowflake& channel_id, cSn
 	/* Check that reactions from the author don't count */
 	if (*message_author_id == user_id || *message_author_id == GetUser()->GetId()) co_return;
 	/* Register received reaction in the database */
-	// TODO: split this into 2 separate queries cuz there's some delay and some messages get sent twice
 	auto[sb_msg_id, num_reactions] = co_await cDatabase::SB_RegisterReaction(message_id, *message_author_id);
 	/* Process */
 	co_await process_reaction(channel_id, message_id, sb_msg_id, num_reactions, pMsg.get());
@@ -55,8 +54,7 @@ cGreekBot::OnMessageReactionRemove(cSnowflake& user_id, cSnowflake& channel_id, 
 		co_return;
 	/* Make sure that reactions from the author don't count */
 	int64_t author_id = co_await cDatabase::SB_GetMessageAuthor(message_id);
-	if (author_id)
-		if (author_id == user_id || author_id == GetUser()->GetId()) co_return;
+	if (author_id == 0 || author_id == user_id || author_id == GetUser()->GetId()) co_return;
 	/* Remove one reaction from the database */
 	auto[sb_msg_id, num_reactions] = co_await cDatabase::SB_RemoveReaction(message_id);
 	/* Process */
@@ -74,11 +72,17 @@ cGreekBot::process_reaction(const cSnowflake& channel_id, const cSnowflake& mess
 		co_return;
 	}
 	/* Otherwise, prepare the message content with the :Holy: count */
-	const char* reaction = "<:Holy:409075809723219969>";
-	if (num_reactions > REACTION_THRESHOLD) {
-		reaction = "<:magik:1167594533849149450>";
-		if (num_reactions > 3)
+	const char* reaction;
+	switch (num_reactions) {
+		case REACTION_THRESHOLD:
+			reaction = "<:Holy:409075809723219969>";
+			break;
+		case REACTION_THRESHOLD + 1:
+			reaction = "<:magik:1167594533849149450>";
+			break;
+		default:
 			reaction = "<a:spin:1167594572050866207>";
+			break;
 	}
 	auto content = fmt::format("{} **{}** https://discord.com/channels/{}/{}/{}", reaction, num_reactions, m_lmg_id, channel_id, message_id);
 	/* If there is a message id registered in the database, edit the message with the new number of reactions */
