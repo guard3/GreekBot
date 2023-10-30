@@ -1,0 +1,23 @@
+{
+	"name": "holy",
+	"description": "Check statistics",
+	"options": [
+		{
+			"name": "top",
+			"type": 1,
+			"description": "Get the top 10"
+		},
+		{
+			"name": "rank",
+			"type": 1,
+			"description": "Check holy stats for a user",
+			"options": [
+				{
+					"name": "user",
+					"type": 6,
+					"description": "Check holy stats for a user"
+				}
+			]
+		}
+	]
+}

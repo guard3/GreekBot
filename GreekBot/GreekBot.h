@@ -44,6 +44,7 @@ private:
 	cTask<> process_booster_menu(const cInteraction&);
 	cTask<> process_proficiency_menu(const cInteraction&);
 	cTask<> process_reaction(const cSnowflake&, const cSnowflake&, int64_t, int64_t, cMessage*);
+	cTask<> process_starboard_leaderboard(const cInteraction&);
 
 	cTask<> OnGuildCreate(uhGuild guild) override;
 	cTask<> OnGuildRoleCreate(cSnowflake& guild_id, cRole& role) override;

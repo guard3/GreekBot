@@ -109,8 +109,8 @@ cGreekBot::OnInteractionCreate(const cInteraction& interaction) {
 					/* prune (Learning Greek) */
 					co_return co_await OnInteraction_prune_lmg(interaction);
 				case 904462004071313448:
-					/* connect */
-					//OnInteraction_connect(&interaction);
+					/* holy */
+					co_return co_await process_starboard_leaderboard(interaction);
 				default:
 					co_return;
 			}

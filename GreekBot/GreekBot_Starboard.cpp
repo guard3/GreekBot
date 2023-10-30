@@ -1,5 +1,6 @@
 #include "GreekBot.h"
 #include "Database.h"
+#include "Utils.h"
 
 static const cSnowflake HOLY_EMOJI_ID = 409075809723219969;
 static const cSnowflake HOLY_CHANNEL_ID = 978993330694266920;
@@ -116,10 +117,12 @@ cGreekBot::process_reaction(const cSnowflake& channel_id, const cSnowflake& mess
 			if (content_type.starts_with("image/")) {
 				if (pImage) continue;
 				pImage = &a;
+				if (pVideo) break;
 			}
 			if (content_type.starts_with("video/")) {
 				if (pVideo) continue;
 				pVideo = &a;
+				if (pImage) break;
 			}
 		}
 		/* If an image is found, save it in the embedded preview */
@@ -215,4 +218,142 @@ cGreekBot::OnMessageDeleteBulk(std::span<cSnowflake> ids, cSnowflake& channel_id
 		if (int64_t sb_msg_id = co_await cDatabase::SB_RemoveAll(id))
 			co_await DeleteMessage(HOLY_CHANNEL_ID, sb_msg_id);
 	}
+}
+
+static cEmbed make_embed(const cMember& member, const starboard_entry& e, cColor color) {
+	const char* medal;
+	switch (e.rank) {
+		case 1:  medal = "🥇"; break;
+		case 2:  medal = "🥈"; break;
+		case 3:  medal = "🥉"; break;
+		default: medal = "🏅"; break;
+	}
+
+	return cEmbed{
+		kw::author={
+			member.GetUser()->GetUsername(),
+			kw::icon_url=member.GetUser()->GetAvatarUrl()
+		},
+		kw::title=fmt::format("{} Rank#{}", medal, e.rank),
+		kw::color=color,
+		kw::fields={
+			{ "Total <:Holy:409075809723219969>", std::to_string(e.react_total), true },
+			{ "Messages", std::to_string(e.num_msg), true },
+			{ "Most in a single message", std::to_string(e.max_react_per_msg) }
+		}
+	};
+}
+
+static cEmbed make_no_member_embed(const cUser* pUser, std::string_view guild_name, bool bAnymore) {
+	return cEmbed{
+		kw::author=pUser ? cEmbedAuthor{
+				pUser->GetUsername(),
+				kw::icon_url=pUser->GetAvatarUrl()
+			} : cEmbedAuthor{
+				"Deleted User",
+				kw::icon_url=fmt::format("{}embed/avatars/0.png", DISCORD_IMAGE_BASE_URL)
+			},
+		kw::color=0x0096FF,
+		kw::description=fmt::format("User is not a member of **{}**{}.", guild_name, bAnymore ? " anymore" : "")
+	};
+}
+
+cTask<>
+cGreekBot::process_starboard_leaderboard(const cInteraction& i) {
+	auto& subcommand = i.GetData<INTERACTION_APPLICATION_COMMAND>().Options.front();
+
+	std::vector<starboard_entry> results;
+
+	if (subcommand.GetName() == "rank") {
+		/* Acknowledge the interaction since we'll be accessing the database */
+		co_await RespondToInteraction(i);
+		/* Figure out which member to retrieve starboard entries for */
+		auto& options = subcommand.GetOptions();
+		chMember member;
+		chUser   user;
+		if (options.empty()) {
+			member = i.GetMember();
+			user = member->GetUser();
+		} else {
+			member = options.front().GetMember();
+			user = &options.front().GetValue<APP_CMD_OPT_USER>();
+		}
+		results = co_await cDatabase::SB_GetRank(*user, REACTION_THRESHOLD);
+		/* Handle the case of the selected user not being a member of Learning Greek */
+		if (!member) {
+			co_await EditInteractionResponse(i, kw::embeds={make_no_member_embed(user.Get(), m_guilds[m_lmg_id]->GetName(), !results.empty())});
+			co_return;
+		}
+		/* Handle the case of the selected member not having any registered messages */
+		std::vector<cEmbed> embeds;
+		cColor color = get_lmg_member_color(*member);
+		if (results.empty()) {
+			/* Pick a funny message, cuz why not */
+			const char* msg;
+			switch (cUtils::Random(0, 3)) {
+				case 0:  msg = "Booooring!"; break;
+				case 1:  msg = "SAD!";       break;
+				case 2:  msg = "Meh...";     break;
+				default: msg = "Laaaaame!"; break;
+			}
+			embeds.emplace_back(
+				kw::author={
+					user->GetUsername(),
+					kw::icon_url=user->GetAvatarUrl()
+				},
+				kw::color=color,
+				kw::description=fmt::format("User has no <:Holy:409075809723219969>ed messages. {}", msg)
+			);
+		} else {
+			embeds.push_back(make_embed(*member, results.front(), color));
+		}
+		co_await EditInteractionResponse(i, kw::embeds=std::move(embeds));
+		co_return;
+	}
+	if (subcommand.GetName() != "top") {
+		co_await RespondToInteraction(i, kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content="Unknown subcommand.");
+		co_return;
+	}
+	/* Acknowledge the interaction since we'll be accessing the database */
+	co_await RespondToInteraction(i);
+	/* Retrieve the top 10 entries for starboard */
+	results = co_await cDatabase::SB_GetTop10(REACTION_THRESHOLD);
+	if (results.empty()) {
+		co_await EditInteractionResponse(i, kw::content="I have no <:Holy:409075809723219969> data yet. Y'all boring as fuck!");
+		co_return;
+	}
+	/* Retrieve members */
+	std::vector<cMember> members;
+	{
+		std::vector<cSnowflake> ids;
+		ids.reserve(results.size());
+		for (auto &e: results)
+			ids.push_back(e.author_id);
+		auto gen = GetGuildMembers(m_lmg_id, kw::user_ids=std::move(ids));
+		members.reserve(results.size());
+		while (co_await gen.HasValue())
+			members.push_back(co_await gen.Next());
+	}
+	/* Create embeds */
+	std::vector<cEmbed> embeds;
+	for (auto& entry : results) {
+		auto it = std::find_if(members.begin(), members.end(), [&entry](const cMember& m) {
+			return m.GetUser()->GetId() == entry.author_id;
+		});
+		if (it == members.end()) {
+			/* If there's no member object for a user, then this user isn't a member of Learning Greek anymore */
+			auto& guild_name = m_guilds[m_lmg_id]->GetName();
+			try {
+				cUser user = co_await GetUser(entry.author_id);
+				embeds.push_back(make_no_member_embed(&user, guild_name, true));
+			} catch (const xDiscordError&) {
+				/* User object couldn't be retrieved, likely deleted */
+				embeds.push_back(make_no_member_embed(nullptr, guild_name, true));
+			}
+		} else {
+			/* If the member is found, create an embed */
+			embeds.push_back(make_embed(*it, entry, get_lmg_member_color(*it)));
+		}
+	}
+	co_await EditInteractionResponse(i, kw::embeds=std::move(embeds));
 }

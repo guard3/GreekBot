@@ -411,6 +411,68 @@ cDatabase::SB_RemoveAll(const cSnowflake& msg_id) {
 	};
 }
 
+cDatabaseTask<std::vector<starboard_entry>>
+cDatabase::SB_GetTop10(int threshold) {
+	return [threshold] {
+		std::vector<starboard_entry> result;
+		sqlite3_stmt* stmt = nullptr;
+		int res = SQLITE_OK;
+		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_SB_GET_TOP_10, sizeof(QUERY_SB_GET_TOP_10), &stmt, nullptr)) {
+			if (stmt) {
+				if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, threshold)) {
+					result.reserve(10);
+					for (int64_t rank = 1; SQLITE_ROW == (res = sqlite3_step(stmt)); ++rank) {
+						result.emplace_back(
+							sqlite3_column_int64(stmt, 0),
+							sqlite3_column_int64(stmt, 1),
+							sqlite3_column_int64(stmt, 2),
+							sqlite3_column_int64(stmt, 3),
+							rank
+						);
+					}
+				}
+			}
+		}
+		sqlite3_finalize(stmt);
+		if (res == SQLITE_DONE)
+			return result;
+		throw xDatabaseError();
+	};
+}
+
+cDatabaseTask<std::vector<starboard_entry>>
+cDatabase::SB_GetRank(const cUser& user, int threshold) {
+	return [&user, threshold] {
+		std::vector<starboard_entry> result;
+		sqlite3_stmt* stmt = nullptr;
+		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_SB_GET_RANK, sizeof(QUERY_SB_GET_RANK), &stmt, nullptr)) {
+			if (stmt) {
+				if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, user.GetId().ToInt())) {
+					if (SQLITE_OK == sqlite3_bind_int64(stmt, 2, threshold)) {
+						switch (sqlite3_step(stmt)) {
+							case SQLITE_ROW:
+								result.emplace_back(
+									sqlite3_column_int64(stmt, 0),
+									sqlite3_column_int64(stmt, 1),
+									sqlite3_column_int64(stmt, 2),
+									sqlite3_column_int64(stmt, 3),
+									sqlite3_column_int64(stmt, 4)
+								);
+							case SQLITE_DONE:
+								sqlite3_finalize(stmt);
+								return result;
+							default:
+								break;
+						}
+					}
+				}
+			}
+		}
+		sqlite3_finalize(stmt);
+		throw xDatabaseError();
+	};
+}
+
 cDatabaseTask<tRankQueryData>
 cDatabase::GetUserRank(const cUser& user) {
 	return [&user]() {

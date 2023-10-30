@@ -31,6 +31,16 @@ public:
 	chSnowflake GetUserId() const { return &id; }
 };
 typedef std::vector<cRankQueryDataElement> tRankQueryData;
+
+struct starboard_entry {
+	cSnowflake author_id;
+	int64_t num_msg;
+	int64_t react_total;
+	int64_t max_react_per_msg;
+	int64_t rank;
+
+	starboard_entry(int64_t a, int64_t b, int64_t c, int64_t d, int64_t e): author_id(a), num_msg(b), react_total(c), max_react_per_msg(d), rank(e) {}
+};
 /* ================================================================================================================== */
 template<typename T = void>
 class cDatabaseTask;
@@ -61,6 +71,8 @@ public:
 	static cDatabaseTask<std::pair<int64_t, int64_t>> SB_RemoveReaction(const cSnowflake&);
 	static cDatabaseTask<> SB_RemoveMessage(const cSnowflake&);
 	static cDatabaseTask<int64_t> SB_RemoveAll(const cSnowflake&);
+	static cDatabaseTask<std::vector<starboard_entry>> SB_GetTop10(int);
+	static cDatabaseTask<std::vector<starboard_entry>> SB_GetRank(const cUser&, int);
 };
 /* ================================================================================================================== */
 template<>
