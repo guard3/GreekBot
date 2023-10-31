@@ -5,7 +5,7 @@
 static const cSnowflake HOLY_EMOJI_ID = 409075809723219969;
 static const cSnowflake HOLY_CHANNEL_ID = 978993330694266920;
 
-static constexpr int REACTION_THRESHOLD = 4; // Test value
+static constexpr int REACTION_THRESHOLD = 5;
 
 /* This array must be sorted for binary search to work */
 static const cSnowflake excluded_channels[] {
@@ -315,7 +315,7 @@ cGreekBot::process_starboard_leaderboard(const cInteraction& i) {
 				);
 				break;
 			}
-			case 0x1ED91FCA: { // top
+			case 0x1D400909: { // top10
 				/* Acknowledge the interaction since we'll be accessing the database */
 				co_await RespondToInteraction(i);
 				/* Retrieve the top 10 entries for starboard */
@@ -358,7 +358,7 @@ cGreekBot::process_starboard_leaderboard(const cInteraction& i) {
 				break;
 			}
 			default:
-				co_return co_await RespondToInteraction(i, kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content="Unknown subcommand.");
+				co_return co_await RespondToInteraction(i, kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content="Unknown subcommand");
 		}
 		/* Send the message with the created embeds */
 		co_return co_await EditInteractionResponse(i, kw::embeds=std::move(embeds));

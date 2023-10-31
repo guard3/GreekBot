@@ -1,23 +1,18 @@
 {
 	"name": "holy",
-	"description": "Check statistics",
-	"options": [
-		{
-			"name": "top",
-			"type": 1,
-			"description": "Get the top 10"
-		},
-		{
-			"name": "rank",
-			"type": 1,
-			"description": "Check holy stats for a user",
-			"options": [
-				{
-					"name": "user",
-					"type": 6,
-					"description": "Check holy stats for a user"
-				}
-			]
-		}
-	]
+	"description": "Check reaction stats",
+	"options": [{
+		"name": "top10",
+		"type": 1,
+		"description": "Check reaction stats on the top 10 funniest members"
+	}, {
+		"name": "rank",
+		"type": 1,
+		"description": "Check reaction stats on a member",
+		"options": [{
+			"name": "user",
+			"type": 6,
+			"description": "The user to check the stats for"
+		}]
+	}]
 }

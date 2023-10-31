@@ -13,17 +13,20 @@ static cEmbed make_no_xp_embed(const cUser& user, cColor c) {
 		kw::color=c
 	};
 }
-static cEmbed make_no_member_embed(const cUser& user, bool bAnymore) {
+static cEmbed make_no_member_embed(const cUser* pUser, std::string_view guild_name, bool bAnymore) {
 	return cEmbed{
-		kw::author={
-			user.GetUsername(),
-			kw::icon_url=user.GetAvatarUrl()
+		kw::author=pUser ? cEmbedAuthor{
+			pUser->GetUsername(),
+			kw::icon_url=pUser->GetAvatarUrl()
+		} : cEmbedAuthor{
+			"Deleted user",
+			kw::icon_url=fmt::format("{}embed/avatars/0.png", DISCORD_IMAGE_BASE_URL)
 		},
-		kw::description=fmt::format("User is not a member of **Learning Greek**{}.", bAnymore ? " anymore" : ""),
+		kw::description=fmt::format("User is not a member of **{}**{}.", guild_name, bAnymore ? " anymore" : ""),
 		kw::color=0x0096FF
 	};
 }
-static cEmbed make_embed(const cUser& user, const cMember& member, cColor c, int64_t rank, int64_t xp, int64_t num_msg) {
+static cEmbed make_embed(const cUser& user, cColor c, int64_t rank, int64_t xp, int64_t num_msg) {
 	/* Choose a medal emoji depending on the user's rank */
 	const char* medal;
 	switch (rank) {
@@ -80,10 +83,8 @@ cGreekBot::OnInteraction_rank(const cInteraction& i) {
 		tRankQueryData db_result = co_await cDatabase::GetUserRank(*user);
 		co_await ResumeOnEventThread();
 		/* Make sure that the selected user is a member of Learning Greek */
-		if (!member) {
-			co_await EditInteractionResponse(i, kw::embeds={make_no_member_embed(*user, !db_result.empty())});
-			co_return;
-		}
+		if (!member)
+			co_return co_await EditInteractionResponse(i, kw::embeds={ make_no_member_embed(user.Get(), m_guilds[m_lmg_id]->GetName(), !db_result.empty()) });
 		/* Respond */
 		cColor color = get_lmg_member_color(*member);
 		if (db_result.empty()) {
@@ -93,7 +94,7 @@ cGreekBot::OnInteraction_rank(const cInteraction& i) {
 			/* Respond to interaction with a proper embed */
 			auto &res = db_result[0];
 			co_await EditInteractionResponse(i,
-				kw::embeds={ make_embed(*user, *member, color, res.GetRank(), res.GetXp(), res.GetNumMessages()) },
+				kw::embeds={ make_embed(*user, color, res.GetRank(), res.GetXp(), res.GetNumMessages()) },
 				kw::components={
 					cActionRow{
 						cButton{
@@ -135,12 +136,21 @@ cGreekBot::OnInteraction_top(const cInteraction& i) {
 		std::vector<cEmbed> es;
 		es.reserve(db_result.size());
 		for (auto &d: db_result) {
+			/* If the user is still a member of Learning Greek, make a regular embed */
 			auto m = std::find_if(members.begin(), members.end(), [&](const cMember& k) { return k.GetUser()->GetId() == *d.GetUserId(); });
-			if (m == members.end())
-				// TODO: if GetUser() fails?
-				es.push_back(make_no_member_embed(co_await GetUser(*d.GetUserId()), true));
-			else
-				es.push_back(make_embed(*m->GetUser(), *m, get_lmg_member_color(*m), d.GetRank(), d.GetXp(), d.GetNumMessages()));
+			if (m != members.end()) {
+				es.push_back(make_embed(*m->GetUser(), get_lmg_member_color(*m), d.GetRank(), d.GetXp(), d.GetNumMessages()));
+				continue;
+			}
+			/* Otherwise, make a no-member embed */
+			std::string_view guild_name = m_guilds[m_lmg_id]->GetName();
+			try {
+				cUser user = co_await GetUser(*d.GetUserId());
+				es.push_back(make_no_member_embed(&user, guild_name, true));
+			} catch (const xDiscordError& e) {
+				/* User object couldn't be retrieved, likely deleted */
+				es.push_back(make_no_member_embed(nullptr, guild_name, true));
+			}
 		}
 		/* Respond to interaction */
 		co_await EditInteractionResponse(i,
