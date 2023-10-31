@@ -361,7 +361,18 @@ cGreekBot::process_starboard_leaderboard(const cInteraction& i) {
 				co_return co_await RespondToInteraction(i, kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content="Unknown subcommand");
 		}
 		/* Send the message with the created embeds */
-		co_return co_await EditInteractionResponse(i, kw::embeds=std::move(embeds));
+		co_return co_await EditInteractionResponse(i,
+			kw::embeds=std::move(embeds),
+			kw::components={
+				cActionRow{
+					cButton{
+						BUTTON_STYLE_SECONDARY,
+						"STARBOARD_HELP",
+						kw::label="How does this work?"
+					}
+				}
+			}
+		);
 	} catch (const std::exception& e) {
 		cUtils::PrintErr("process_starboard_leaderboard: {}", e.what());
 	} catch (...) {
@@ -373,4 +384,10 @@ cGreekBot::process_starboard_leaderboard(const cInteraction& i) {
 		co_await EditInteractionResponse(i, kw::content=err_msg);
 	else
 		co_await RespondToInteraction(i, kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content=err_msg);
+}
+
+cTask<>
+cGreekBot::process_starboard_help(const cInteraction& i) {
+	co_await RespondToInteraction(i);
+	co_await SendInteractionFollowupMessage(i, kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content="When a message receives **5 or more** <:Holy:409075809723219969> reactions, it gets to appear in <#978993330694266920>. Reacting to *your own* messages doesn't count!");
 }

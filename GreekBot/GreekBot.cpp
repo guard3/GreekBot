@@ -4,6 +4,7 @@
 
 enum : uint32_t {
 	CMP_ID_LEADERBOARD_HELP = 0x4ECEBDEC,
+	CMP_ID_STARBOARD_HELP   = 0x33330ADE,
 	CMP_ID_PROFICIENCY_MENU = 0xAE90F56B,
 	CMP_ID_BOOSTER_MENU     = 0x90DD7D88
 };
@@ -120,6 +121,8 @@ cGreekBot::OnInteractionCreate(const cInteraction& interaction) {
 			switch (uint32_t hash = cUtils::CRC32(0, custom_id); hash) {
 				case CMP_ID_LEADERBOARD_HELP:
 					co_return co_await OnInteraction_button(interaction);
+				case CMP_ID_STARBOARD_HELP:
+					co_return co_await process_starboard_help(interaction);
 				case CMP_ID_PROFICIENCY_MENU:
 					co_return co_await process_proficiency_menu(interaction);
 				case CMP_ID_BOOSTER_MENU:
