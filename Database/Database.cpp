@@ -1,31 +1,24 @@
 #include "Database.h"
 #include "Queries.h"
 #include "Utils.h"
-#include <sqlite3.h>
-#include <deque>
 #include <filesystem>
-#include <mutex>
-#include <thread>
-
-namespace fs = std::filesystem;
-
+#include <boost/asio/ts/executor.hpp>
+#include <sqlite3.h>
 #if   defined _WIN32
 #  define WIN32_LEAN_AND_MEAN
 #  include <Windows.h>
 #elif defined __APPLE__
 #  include <mach-o/dyld.h>
 #endif
-
+/* ========== The global sqlite connection handle =================================================================== */
 static sqlite3* g_db = nullptr;
-static std::deque<std::function<void()>> g_queue;
-static std::thread g_thread;
-static std::mutex g_mutex;
+/* ========== The database instance which invokes the constructor that initializes the sqlite connection ============ */
 cDatabase cDatabase::ms_instance;
-
+/* ========== The database exception which uses the global sqlite connection's error message and error code ========= */
 xDatabaseError::xDatabaseError() : std::runtime_error(sqlite3_errmsg(g_db)), m_code(sqlite3_extended_errcode(g_db)) {}
-
-/* Get a fully qualified UTF-8 path for the database file */
+/* ========== A helper function which returns a fully qualified UTF-8 path for the database file ==================== */
 static std::u8string get_db_filename() {
+	namespace fs = std::filesystem;
 #if defined _WIN32
 	std::vector<WCHAR> szPath(MAX_PATH);
 	for (DWORD dwLen;;) {
@@ -70,13 +63,13 @@ static std::u8string get_db_filename() {
 	/* Replace the filename and convert the final path to a UTF-8 encoded string */
 	return result.replace_filename("database.db").u8string();
 }
-
+/* ========== The database instance constructor which initializes the global sqlite connection ====================== */
 cDatabase::cDatabase() {
 	sqlite3* db = nullptr; // The database connection handle
 	std::string err_msg;   // The error message string
 	try {
-		/* Open a database connection */
-		constexpr int DB_FLAGS = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE;
+		/* Open a database connection; NOMUTEX since we make sure to use the connection in a strand */
+		constexpr int DB_FLAGS = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX;
 		int rc = sqlite3_open_v2((const char*)get_db_filename().c_str(), &db, DB_FLAGS, nullptr);
 		/* If db is null after opening, a memory error occurred */
 		if (!db) throw std::bad_alloc();
@@ -105,422 +98,371 @@ cDatabase::cDatabase() {
 	}
 	sqlite3_close(db);
 	cUtils::PrintErr("Database initialization error: {}", err_msg);
-	exit(EXIT_FAILURE);
+	std::terminate();
 }
-
+/* ========== The database instance destructor which simply closes the sqlite connection ============================ */
 cDatabase::~cDatabase() {
-	/* Wait for all tasks to complete */
-	if (g_thread.joinable())
-		g_thread.join();
 	/* Close the database connection */
 	sqlite3_close(g_db);
 }
-
-void cDatabaseTask<void>::await_suspend(std::coroutine_handle<> h) {
-	{
-		/* Add current task to the queue */
-		std::lock_guard _(g_mutex);
-		g_queue.emplace_back([this, h] { m_func(h); });
-		/* If there's more than one tasks, return and let the queue be consumed */
-		if (g_queue.size() > 1) return;
+/* ========== An awaitable which resumes a coroutine to the sqlite connection strand ================================ */
+namespace net = boost::asio;
+class resume_on_db_strand {
+private:
+	static inline net::system_executor ms_executor;
+	static inline auto ms_strand = net::make_strand(ms_executor);
+public:
+	bool await_ready() {
+		return ms_strand.running_in_this_thread();
 	}
-	if (g_thread.joinable()) g_thread.join();
-	g_thread = std::thread([] {
-		for (;;) {
-			g_queue.front()();
-			std::lock_guard _(g_mutex);
-			g_queue.pop_front();
-			if (g_queue.empty())
-				break;
-		}
-	});
-}
-
-cDatabaseTask<>
+	void await_suspend(std::coroutine_handle<> h) {
+		net::post(ms_strand, [h]{ h.resume(); });
+	}
+	void await_resume() {}
+};
+/* ================================================================================================================== */
+cTask<>
 cDatabase::UpdateLeaderboard(const cMessage& msg) {
-	return [&msg]() {
-		using namespace std::chrono;
-		/* Execute QUERY_UPDATE_LB */
-		sqlite3_stmt* stmt;
-		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_UPDATE_LB, sizeof(QUERY_UPDATE_LB), &stmt, nullptr)) {
-			if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, msg.GetAuthor().GetId().ToInt())) {
-				// TODO: update db and save discord epoch milliseconds directly
-				if (SQLITE_OK == sqlite3_bind_int64(stmt, 2, duration_cast<seconds>(cDiscordClock::to_sys(msg.GetId().GetTimestamp()).time_since_epoch()).count())) {
-					if (SQLITE_DONE == sqlite3_step(stmt)) {
-						sqlite3_finalize(stmt);
-						return;
-					}
-				}
-			}
-		}
-		sqlite3_finalize(stmt);
-		throw xDatabaseError();
-	};
-}
+	co_await resume_on_db_strand();
 
-cDatabaseTask<uint64_t>
-cDatabase::WC_RegisterMember(const cMember& member) {
-	return [&member]() -> uint64_t {
-		sqlite3_stmt* stmt = nullptr;
-		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_WC_REG_MBR, sizeof(QUERY_WC_REG_MBR), &stmt, nullptr)) {
-			if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, member.GetUser()->GetId().ToInt())) {
-				if (SQLITE_OK == sqlite3_bind_int64(stmt, 2, member.JoinedAt().time_since_epoch().count())) {
-					if (SQLITE_ROW == sqlite3_step(stmt)) {
-						int64_t result = sqlite3_column_int64(stmt, 0);
-						sqlite3_finalize(stmt);
-						return static_cast<uint64_t>(result);
-					}
-				}
-			}
-		}
-		sqlite3_finalize(stmt);
-		throw xDatabaseError();
-	};
-}
-
-cDatabaseTask<int64_t>
-cDatabase::WC_GetMessage(const cPartialMember& member) {
-	return [&member]() -> int64_t {
-		sqlite3_stmt* stmt = nullptr;
-		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_WC_GET_MSG, sizeof(QUERY_WC_GET_MSG), &stmt, nullptr)) {
-			if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, member.GetUser().GetId().ToInt())) {
-				switch (int64_t result; sqlite3_step(stmt)) {
-					case SQLITE_DONE:
-						result = -1;
-						goto LABEL_DONE;
-					case SQLITE_ROW:
-						result = sqlite3_column_int64(stmt, 0);
-					LABEL_DONE:
-						sqlite3_finalize(stmt);
-						return result;
-					default:
-						break;
-				}
-			}
-		}
-		sqlite3_finalize(stmt);
-		throw xDatabaseError();
-	};
-}
-
-cDatabaseTask<>
-cDatabase::WC_EditMessage(int64_t msg_id) {
-	return [msg_id]() {
-		sqlite3_stmt* stmt = nullptr;
-		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_WC_EDT_MSG, sizeof(QUERY_WC_EDT_MSG), &stmt, nullptr)) {
-			if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, msg_id)) {
+	using namespace std::chrono;
+	/* Execute QUERY_UPDATE_LB */
+	sqlite3_stmt* stmt;
+	if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_UPDATE_LB, sizeof(QUERY_UPDATE_LB), &stmt, nullptr)) {
+		if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, msg.GetAuthor().GetId().ToInt())) {
+			// TODO: update db and save discord epoch milliseconds directly
+			if (SQLITE_OK == sqlite3_bind_int64(stmt, 2, duration_cast<seconds>(cDiscordClock::to_sys(msg.GetId().GetTimestamp()).time_since_epoch()).count())) {
 				if (SQLITE_DONE == sqlite3_step(stmt)) {
 					sqlite3_finalize(stmt);
-					return;
+					co_return;
 				}
 			}
 		}
-		sqlite3_finalize(stmt);
-		throw xDatabaseError();
-	};
+	}
+	sqlite3_finalize(stmt);
+	throw xDatabaseError();
 }
+cTask<uint64_t>
+cDatabase::WC_RegisterMember(const cMember& member) {
+	co_await resume_on_db_strand();
 
-cDatabaseTask<uint64_t>
-cDatabase::WC_DeleteMember(const cUser& user) {
-	return [&user]() {
-		sqlite3_stmt* stmt = nullptr;
-		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_WC_DEL_MBR, sizeof(QUERY_WC_DEL_MBR), &stmt, nullptr)) {
-			if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, user.GetId().ToInt())) {
-				switch (uint64_t result; sqlite3_step(stmt)) {
-					case SQLITE_DONE:
-						result = 0;
-						goto LABEL_DONE;
-					case SQLITE_ROW:
-						result = static_cast<uint64_t>(sqlite3_column_int64(stmt, 0));
-					LABEL_DONE:
-						sqlite3_finalize(stmt);
-						return result;
-				}
-			}
-		}
-		sqlite3_finalize(stmt);
-		throw xDatabaseError();
-	};
-}
-
-cDatabaseTask<>
-cDatabase::WC_UpdateMessage(const cUser& user, const cMessage& msg) {
-	return [&user, &msg]() {
-		sqlite3_stmt* stmt = nullptr;
-		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_WC_UPD_MSG, sizeof(QUERY_WC_UPD_MSG), &stmt, nullptr)) {
-			if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, user.GetId().ToInt())) {
-				if (SQLITE_OK == sqlite3_bind_int64(stmt, 2, msg.GetId().ToInt())) {
-					if (SQLITE_DONE == sqlite3_step(stmt)) {
-						sqlite3_finalize(stmt);
-						return;
-					}
-				}
-			}
-		}
-		sqlite3_finalize(stmt);
-		throw xDatabaseError();
-	};
-}
-
-cDatabaseTask<int64_t>
-cDatabase::SB_GetMessageAuthor(const cSnowflake& msg_id) {
-	return [&msg_id] {
-		sqlite3_stmt* stmt = nullptr;
-		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_SB_GET_MESSAGE_AUTHOR, sizeof(QUERY_SB_GET_MESSAGE_AUTHOR), &stmt, nullptr)) {
-			if (stmt) {
-				if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, msg_id.ToInt())) {
-					switch(int64_t result = 0; sqlite3_step(stmt)) {
-						case SQLITE_ROW:
-							result = sqlite3_column_int64(stmt, 0);
-						case SQLITE_DONE:
-							sqlite3_finalize(stmt);
-							return result;
-						default:
-							break;
-					}
-				}
-			}
-		}
-		sqlite3_finalize(stmt);
-		throw xDatabaseError();
-	};
-}
-
-cDatabaseTask<std::pair<int64_t, int64_t>>
-cDatabase::SB_RegisterReaction(const cSnowflake& msg_id, const cSnowflake& author_id) {
-	return [&msg_id, &author_id] {
-		sqlite3_stmt* stmt = nullptr;
-		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_SB_REGISTER_REACTION, sizeof(QUERY_SB_REGISTER_REACTION), &stmt, nullptr)) {
-			if (stmt) {
-				if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, msg_id.ToInt())) {
-					if (SQLITE_OK == sqlite3_bind_int64(stmt, 2, author_id.ToInt())) {
-						if (SQLITE_ROW == sqlite3_step(stmt)) {
-							std::pair<int64_t, int64_t> result{sqlite3_column_int64(stmt, 0), sqlite3_column_int64(stmt, 1)};
-							sqlite3_finalize(stmt);
-							return result;
-						}
-					}
-				}
-			}
-		}
-		sqlite3_finalize(stmt);
-		throw xDatabaseError();
-	};
-}
-
-cDatabaseTask<>
-cDatabase::SB_RegisterMessage(const cSnowflake& msg_id, const cSnowflake& sb_msg_id) {
-	return [&msg_id, &sb_msg_id] {
-		sqlite3_stmt* stmt = nullptr;
-		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_SB_REGISTER_MESSAGE, sizeof(QUERY_SB_REGISTER_MESSAGE), &stmt, nullptr)) {
-			if (stmt) {
-				if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, msg_id.ToInt())) {
-					if (SQLITE_OK == sqlite3_bind_int64(stmt, 2, sb_msg_id.ToInt())) {
-						if (SQLITE_DONE == sqlite3_step(stmt)) {
-							sqlite3_finalize(stmt);
-							return;
-						}
-					}
-				}
-			}
-		}
-		sqlite3_finalize(stmt);
-		throw xDatabaseError();
-	};
-}
-
-cDatabaseTask<std::pair<int64_t, int64_t>>
-cDatabase::SB_RemoveReaction(const cSnowflake& msg_id) {
-	return [&msg_id] {
-		std::pair<int64_t, int64_t> result;
-
-		sqlite3_stmt* stmt = nullptr;
-		for (const char* query = QUERY_SB_REMOVE_REACTION, *end; SQLITE_OK == sqlite3_prepare_v2(g_db, query, -1, &stmt, &end); query = end) {
-			if (!stmt)
-				return result;
-			if (SQLITE_OK != sqlite3_bind_int64(stmt, 1, msg_id.ToInt()))
-				break;
-			switch (sqlite3_step(stmt)) {
-				case SQLITE_ROW:
-					result = {sqlite3_column_int64(stmt, 0), sqlite3_column_int64(stmt, 1)};
-				case SQLITE_OK:
+	sqlite3_stmt* stmt = nullptr;
+	if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_WC_REG_MBR, sizeof(QUERY_WC_REG_MBR), &stmt, nullptr)) {
+		if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, member.GetUser()->GetId().ToInt())) {
+			if (SQLITE_OK == sqlite3_bind_int64(stmt, 2, member.JoinedAt().time_since_epoch().count())) {
+				if (SQLITE_ROW == sqlite3_step(stmt)) {
+					int64_t result = sqlite3_column_int64(stmt, 0);
 					sqlite3_finalize(stmt);
-					return result;
+					co_return static_cast<uint64_t>(result);
+				}
+			}
+		}
+	}
+	sqlite3_finalize(stmt);
+	throw xDatabaseError();
+}
+cTask<int64_t>
+cDatabase::WC_GetMessage(const cPartialMember& member) {
+	co_await resume_on_db_strand();
+
+	sqlite3_stmt* stmt = nullptr;
+	if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_WC_GET_MSG, sizeof(QUERY_WC_GET_MSG), &stmt, nullptr)) {
+		if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, member.GetUser().GetId().ToInt())) {
+			switch (int64_t result; sqlite3_step(stmt)) {
+				case SQLITE_DONE:
+					result = -1;
+					goto LABEL_DONE;
+				case SQLITE_ROW:
+					result = sqlite3_column_int64(stmt, 0);
+				LABEL_DONE:
+					sqlite3_finalize(stmt);
+					co_return result;
 				default:
 					break;
 			}
 		}
-#if 0
-		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_SB_REMOVE_REACTION, sizeof(QUERY_SB_REMOVE_REACTION), &stmt, nullptr)) {
-			if (stmt) {
-				if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, msg_id.ToInt())) {
-					if (SQLITE_ROW == sqlite3_step(stmt)) {
-						std::pair<cSnowflake, uint64_t> result{ sqlite3_column_int64(stmt, 0), sqlite3_column_int64(stmt, 1) };
-						sqlite3_finalize(stmt);
-						return result;
-					}
+	}
+	sqlite3_finalize(stmt);
+	throw xDatabaseError();
+}
+cTask<>
+cDatabase::WC_EditMessage(int64_t msg_id) {
+	co_await resume_on_db_strand();
+
+	sqlite3_stmt* stmt = nullptr;
+	if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_WC_EDT_MSG, sizeof(QUERY_WC_EDT_MSG), &stmt, nullptr)) {
+		if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, msg_id)) {
+			if (SQLITE_DONE == sqlite3_step(stmt)) {
+				sqlite3_finalize(stmt);
+				co_return;
+			}
+		}
+	}
+	sqlite3_finalize(stmt);
+	throw xDatabaseError();
+}
+cTask<uint64_t>
+cDatabase::WC_DeleteMember(const cUser& user) {
+	co_await resume_on_db_strand();
+
+	sqlite3_stmt* stmt = nullptr;
+	if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_WC_DEL_MBR, sizeof(QUERY_WC_DEL_MBR), &stmt, nullptr)) {
+		if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, user.GetId().ToInt())) {
+			switch (uint64_t result; sqlite3_step(stmt)) {
+				case SQLITE_DONE:
+					result = 0;
+					goto LABEL_DONE;
+				case SQLITE_ROW:
+					result = static_cast<uint64_t>(sqlite3_column_int64(stmt, 0));
+				LABEL_DONE:
+					sqlite3_finalize(stmt);
+					co_return result;
+			}
+		}
+	}
+	sqlite3_finalize(stmt);
+	throw xDatabaseError();
+}
+cTask<>
+cDatabase::WC_UpdateMessage(const cUser& user, const cMessage& msg) {
+	co_await resume_on_db_strand();
+
+	sqlite3_stmt* stmt = nullptr;
+	if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_WC_UPD_MSG, sizeof(QUERY_WC_UPD_MSG), &stmt, nullptr)) {
+		if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, user.GetId().ToInt())) {
+			if (SQLITE_OK == sqlite3_bind_int64(stmt, 2, msg.GetId().ToInt())) {
+				if (SQLITE_DONE == sqlite3_step(stmt)) {
+					sqlite3_finalize(stmt);
+					co_return;
 				}
 			}
 		}
-#endif
-		sqlite3_finalize(stmt);
-		throw xDatabaseError();
-	};
+	}
+	sqlite3_finalize(stmt);
+	throw xDatabaseError();
 }
+cTask<int64_t>
+cDatabase::SB_GetMessageAuthor(const cSnowflake& msg_id) {
+	co_await resume_on_db_strand();
 
-cDatabaseTask<>
+	sqlite3_stmt* stmt = nullptr;
+	if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_SB_GET_MESSAGE_AUTHOR, sizeof(QUERY_SB_GET_MESSAGE_AUTHOR), &stmt, nullptr)) {
+		if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, msg_id.ToInt())) {
+			switch(int64_t result = 0; sqlite3_step(stmt)) {
+				case SQLITE_ROW:
+					result = sqlite3_column_int64(stmt, 0);
+				case SQLITE_DONE:
+					sqlite3_finalize(stmt);
+					co_return result;
+				default:
+					break;
+			}
+		}
+	}
+	sqlite3_finalize(stmt);
+	throw xDatabaseError();
+}
+cTask<std::pair<int64_t, int64_t>>
+cDatabase::SB_RegisterReaction(const cSnowflake& msg_id, const cSnowflake& author_id) {
+	co_await resume_on_db_strand();
+
+	sqlite3_stmt* stmt = nullptr;
+	if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_SB_REGISTER_REACTION, sizeof(QUERY_SB_REGISTER_REACTION), &stmt, nullptr)) {
+		if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, msg_id.ToInt())) {
+			if (SQLITE_OK == sqlite3_bind_int64(stmt, 2, author_id.ToInt())) {
+				if (SQLITE_ROW == sqlite3_step(stmt)) {
+					std::pair<int64_t, int64_t> result{sqlite3_column_int64(stmt, 0), sqlite3_column_int64(stmt, 1)};
+					sqlite3_finalize(stmt);
+					co_return result;
+				}
+			}
+		}
+	}
+	sqlite3_finalize(stmt);
+	throw xDatabaseError();
+}
+cTask<>
+cDatabase::SB_RegisterMessage(const cSnowflake& msg_id, const cSnowflake& sb_msg_id) {
+	co_await resume_on_db_strand();
+
+	sqlite3_stmt* stmt = nullptr;
+	if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_SB_REGISTER_MESSAGE, sizeof(QUERY_SB_REGISTER_MESSAGE), &stmt, nullptr)) {
+		if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, msg_id.ToInt())) {
+			if (SQLITE_OK == sqlite3_bind_int64(stmt, 2, sb_msg_id.ToInt())) {
+				if (SQLITE_DONE == sqlite3_step(stmt)) {
+					sqlite3_finalize(stmt);
+					co_return;
+				}
+			}
+		}
+	}
+	sqlite3_finalize(stmt);
+	throw xDatabaseError();
+}
+cTask<std::pair<int64_t, int64_t>>
+cDatabase::SB_RemoveReaction(const cSnowflake& msg_id) {
+	co_await resume_on_db_strand();
+
+	std::pair<int64_t, int64_t> result;
+
+	sqlite3_stmt* stmt = nullptr;
+	for (const char* query = QUERY_SB_REMOVE_REACTION, *end; SQLITE_OK == sqlite3_prepare_v2(g_db, query, -1, &stmt, &end); query = end) {
+		if (!stmt)
+			co_return result;
+		if (SQLITE_OK != sqlite3_bind_int64(stmt, 1, msg_id.ToInt()))
+			break;
+		switch (sqlite3_step(stmt)) {
+			case SQLITE_ROW:
+				result = {sqlite3_column_int64(stmt, 0), sqlite3_column_int64(stmt, 1)};
+			case SQLITE_OK:
+				sqlite3_finalize(stmt);
+				co_return result;
+			default:
+				break;
+		}
+	}
+	sqlite3_finalize(stmt);
+	throw xDatabaseError();
+}
+cTask<>
 cDatabase::SB_RemoveMessage(const cSnowflake& msg_id) {
-	return [&msg_id] {
-		sqlite3_stmt* stmt = nullptr;
-		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_SB_REMOVE_MESSAGE, sizeof(QUERY_SB_REMOVE_MESSAGE), &stmt, nullptr)) {
-			if (stmt) {
-				if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, msg_id.ToInt())) {
-					if (SQLITE_DONE == sqlite3_step(stmt)) {
-						sqlite3_finalize(stmt);
-						return;
-					}
-				}
+	co_await resume_on_db_strand();
+
+	sqlite3_stmt* stmt = nullptr;
+	if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_SB_REMOVE_MESSAGE, sizeof(QUERY_SB_REMOVE_MESSAGE), &stmt, nullptr)) {
+		if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, msg_id.ToInt())) {
+			if (SQLITE_DONE == sqlite3_step(stmt)) {
+				sqlite3_finalize(stmt);
+				co_return;
 			}
 		}
-		sqlite3_finalize(stmt);
-		throw xDatabaseError();
-	};
+	}
+	sqlite3_finalize(stmt);
+	throw xDatabaseError();
 }
-
-cDatabaseTask<int64_t>
+cTask<int64_t>
 cDatabase::SB_RemoveAll(const cSnowflake& msg_id) {
-	return [&msg_id] {
-		sqlite3_stmt* stmt = nullptr;
-		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_SB_REMOVE_ALL, sizeof(QUERY_SB_REMOVE_ALL), &stmt, nullptr)) {
-			if (stmt) {
-				if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, msg_id.ToInt())) {
-					switch (int64_t result = 0; sqlite3_step(stmt)) {
-						case SQLITE_ROW:
-							result = sqlite3_column_int64(stmt, 0);
-						case SQLITE_DONE:
-							sqlite3_finalize(stmt);
-							return result;
-						default:
-							break;
-					}
-				}
+	co_await resume_on_db_strand();
+
+	sqlite3_stmt* stmt = nullptr;
+	if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_SB_REMOVE_ALL, sizeof(QUERY_SB_REMOVE_ALL), &stmt, nullptr)) {
+		if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, msg_id.ToInt())) {
+			switch (int64_t result = 0; sqlite3_step(stmt)) {
+				case SQLITE_ROW:
+					result = sqlite3_column_int64(stmt, 0);
+				case SQLITE_DONE:
+					sqlite3_finalize(stmt);
+					co_return result;
+				default:
+					break;
 			}
 		}
-		sqlite3_finalize(stmt);
-		throw xDatabaseError();
-	};
+	}
+	sqlite3_finalize(stmt);
+	throw xDatabaseError();
 }
-
-cDatabaseTask<std::vector<starboard_entry>>
+cTask<std::vector<starboard_entry>>
 cDatabase::SB_GetTop10(int threshold) {
-	return [threshold] {
-		std::vector<starboard_entry> result;
-		sqlite3_stmt* stmt = nullptr;
-		int res = SQLITE_OK;
-		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_SB_GET_TOP_10, sizeof(QUERY_SB_GET_TOP_10), &stmt, nullptr)) {
-			if (stmt) {
-				if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, threshold)) {
-					result.reserve(10);
-					for (int64_t rank = 1; SQLITE_ROW == (res = sqlite3_step(stmt)); ++rank) {
+	co_await resume_on_db_strand();
+
+	std::vector<starboard_entry> result;
+	sqlite3_stmt* stmt = nullptr;
+	int res = SQLITE_OK;
+	if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_SB_GET_TOP_10, sizeof(QUERY_SB_GET_TOP_10), &stmt, nullptr)) {
+		if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, threshold)) {
+			result.reserve(10);
+			for (int64_t rank = 1; SQLITE_ROW == (res = sqlite3_step(stmt)); ++rank) {
+				result.emplace_back(
+					sqlite3_column_int64(stmt, 0),
+					sqlite3_column_int64(stmt, 1),
+					sqlite3_column_int64(stmt, 2),
+					sqlite3_column_int64(stmt, 3),
+					rank
+				);
+			}
+		}
+	}
+	sqlite3_finalize(stmt);
+	if (res == SQLITE_DONE)
+		co_return result;
+	throw xDatabaseError();
+}
+cTask<std::vector<starboard_entry>>
+cDatabase::SB_GetRank(const cUser& user, int threshold) {
+	co_await resume_on_db_strand();
+	sqlite3_stmt* stmt = nullptr;
+	if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_SB_GET_RANK, sizeof(QUERY_SB_GET_RANK), &stmt, nullptr)) {
+		if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, user.GetId().ToInt())) {
+			if (SQLITE_OK == sqlite3_bind_int64(stmt, 2, threshold)) {
+				std::vector<starboard_entry> result;
+				switch (sqlite3_step(stmt)) {
+					case SQLITE_ROW:
 						result.emplace_back(
 							sqlite3_column_int64(stmt, 0),
 							sqlite3_column_int64(stmt, 1),
 							sqlite3_column_int64(stmt, 2),
 							sqlite3_column_int64(stmt, 3),
-							rank
-						);
-					}
-				}
-			}
-		}
-		sqlite3_finalize(stmt);
-		if (res == SQLITE_DONE)
-			return result;
-		throw xDatabaseError();
-	};
-}
-
-cDatabaseTask<std::vector<starboard_entry>>
-cDatabase::SB_GetRank(const cUser& user, int threshold) {
-	return [&user, threshold] {
-		std::vector<starboard_entry> result;
-		sqlite3_stmt* stmt = nullptr;
-		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_SB_GET_RANK, sizeof(QUERY_SB_GET_RANK), &stmt, nullptr)) {
-			if (stmt) {
-				if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, user.GetId().ToInt())) {
-					if (SQLITE_OK == sqlite3_bind_int64(stmt, 2, threshold)) {
-						switch (sqlite3_step(stmt)) {
-							case SQLITE_ROW:
-								result.emplace_back(
-									sqlite3_column_int64(stmt, 0),
-									sqlite3_column_int64(stmt, 1),
-									sqlite3_column_int64(stmt, 2),
-									sqlite3_column_int64(stmt, 3),
-									sqlite3_column_int64(stmt, 4)
-								);
-							case SQLITE_DONE:
-								sqlite3_finalize(stmt);
-								return result;
-							default:
-								break;
-						}
-					}
-				}
-			}
-		}
-		sqlite3_finalize(stmt);
-		throw xDatabaseError();
-	};
-}
-
-cDatabaseTask<tRankQueryData>
-cDatabase::GetUserRank(const cUser& user) {
-	return [&user]() {
-		sqlite3_stmt* stmt;
-		tRankQueryData res;
-		if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_GET_RANK, sizeof(QUERY_GET_RANK), &stmt, nullptr)) {
-			if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, user.GetId().ToInt())) {
-				switch (sqlite3_step(stmt)) {
-					case SQLITE_ROW:
-						/* Statement returned data for the user */
-						res.emplace_back(
-							sqlite3_column_int64(stmt, 0),
-							user.GetId(),
-							sqlite3_column_int64(stmt, 1),
-							sqlite3_column_int64(stmt, 2)
+							sqlite3_column_int64(stmt, 4)
 						);
 					case SQLITE_DONE:
-						/* Statement didn't return, no user data found */
 						sqlite3_finalize(stmt);
-						return res;
+						co_return result;
+					default:
+						break;
 				}
 			}
 		}
-		sqlite3_finalize(stmt);
-		throw xDatabaseError();
-	};
+	}
+	sqlite3_finalize(stmt);
+	throw xDatabaseError();
 }
-
-cDatabaseTask<tRankQueryData>
-cDatabase::GetTop10() {
-	return []() {
-		int rc;
-		tRankQueryData res;
-		sqlite3_stmt* stmt;
-		if (SQLITE_OK == (rc = sqlite3_prepare_v2(g_db, QUERY_GET_TOP_10, sizeof(QUERY_GET_TOP_10), &stmt, nullptr))) {
-			res.reserve(10);
-			while (SQLITE_ROW == (rc = sqlite3_step(stmt))) {
-				res.emplace_back(
-					sqlite3_column_int64(stmt, 0),
-					sqlite3_column_int64(stmt, 1),
-					sqlite3_column_int64(stmt, 2),
-					sqlite3_column_int64(stmt, 3)
-				);
+cTask<tRankQueryData>
+cDatabase::GetUserRank(const cUser& user) {
+	co_await resume_on_db_strand();
+	sqlite3_stmt* stmt = nullptr;
+	if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_GET_RANK, sizeof(QUERY_GET_RANK), &stmt, nullptr)) {
+		if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, user.GetId().ToInt())) {
+			tRankQueryData result;
+			switch (sqlite3_step(stmt)) {
+				case SQLITE_ROW:
+					/* Statement returned data for the user */
+					result.emplace_back(
+						sqlite3_column_int64(stmt, 0),
+						user.GetId(),
+						sqlite3_column_int64(stmt, 1),
+						sqlite3_column_int64(stmt, 2)
+					);
+				case SQLITE_DONE:
+					/* Statement didn't return, no user data found */
+					sqlite3_finalize(stmt);
+					co_return result;
+				default:
+					break;
 			}
 		}
-		sqlite3_finalize(stmt);
-		if (rc == SQLITE_DONE)
-			return res;
-		throw xDatabaseError();
-	};
+	}
+	sqlite3_finalize(stmt);
+	throw xDatabaseError();
+}
+cTask<tRankQueryData>
+cDatabase::GetTop10() {
+	co_await resume_on_db_strand();
+	int rc = SQLITE_OK;
+	tRankQueryData res;
+	sqlite3_stmt* stmt = nullptr;
+	if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_GET_TOP_10, sizeof(QUERY_GET_TOP_10), &stmt, nullptr)) {
+		res.reserve(10);
+		while (SQLITE_ROW == (rc = sqlite3_step(stmt))) {
+			res.emplace_back(
+				sqlite3_column_int64(stmt, 0),
+				sqlite3_column_int64(stmt, 1),
+				sqlite3_column_int64(stmt, 2),
+				sqlite3_column_int64(stmt, 3)
+			);
+		}
+	}
+	sqlite3_finalize(stmt);
+	if (rc == SQLITE_DONE)
+		co_return res;
+	throw xDatabaseError();
 }

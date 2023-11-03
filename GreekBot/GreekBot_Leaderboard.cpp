@@ -119,6 +119,7 @@ cGreekBot::OnInteraction_top(const cInteraction& i) {
 		co_await RespondToInteraction(i);
 		/* Get data from the database */
 		tRankQueryData db_result = co_await cDatabase::GetTop10();
+		co_await ResumeOnEventThread();
 		if (db_result.empty()) {
 			co_await EditInteractionResponse(i, kw::content="I don't have any data yet. Start talking!");
 			co_return;

@@ -72,6 +72,7 @@ cGreekBot::process_reaction(const cSnowflake& channel_id, const cSnowflake& mess
 		}
 		co_return;
 	}
+	co_await ResumeOnEventThread();
 	/* Otherwise, prepare the message content with the :Holy: count */
 	const char* reaction;
 	switch (num_reactions) {
@@ -286,6 +287,7 @@ cGreekBot::process_starboard_leaderboard(const cInteraction& i) {
 				bAck = true;
 				/* Retrieve user's starboard entry */
 				auto results = co_await cDatabase::SB_GetRank(*user, REACTION_THRESHOLD);
+				co_await ResumeOnEventThread();
 				/* If the user isn't a member of Learning Greek... */
 				if (!member) {
 					embeds.push_back(make_no_member_embed(user.Get(), m_guilds[m_lmg_id]->GetName(), !results.empty()));
@@ -323,6 +325,7 @@ cGreekBot::process_starboard_leaderboard(const cInteraction& i) {
 				if (results.empty())
 					co_return co_await EditInteractionResponse(i, kw::content="I have no <:Holy:409075809723219969> data yet. Y'all boring as fuck!");
 				/* Retrieve members */
+				co_await ResumeOnEventThread();
 				std::vector<cMember> members;
 				{
 					std::vector<cSnowflake> ids;
