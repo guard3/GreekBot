@@ -29,23 +29,27 @@ private:
 	std::vector<uint64_t> m_lmg_voice_channels;
 	std::vector<std::vector<uint64_t>> m_lmg_users_connected_to_voice;
 
-	cTask<> OnInteraction_avatar(const cInteraction&);
-	cTask<> OnInteraction_rank(const cInteraction&);
-	cTask<> OnInteraction_top(const cInteraction&);
-	cTask<> OnInteraction_button(const cInteraction&);
-	cTask<> OnInteraction_prune(const cInteraction&);
-	cTask<> OnInteraction_prune_lmg(const cInteraction&);
-	cTask<> OnInteraction_ban(const cInteraction&);
-	cTask<> OnInteraction_unban(const cInteraction&, const cSnowflake& user_id);
-	cTask<> OnInteraction_dismiss(const cInteraction&, const cSnowflake& user_id);
-	cTask<> process_nickname_button(const cInteraction&, const cSnowflake& user_id);
-	cTask<> process_modal(const cInteraction&);
-	cTask<> process_role_button(const cInteraction&, uint32_t);
-	cTask<> process_booster_menu(const cInteraction&);
-	cTask<> process_proficiency_menu(const cInteraction&);
+	cTask<> process_avatar(cApplicationCommandInteraction&);
+	cTask<> process_rank(cApplicationCommandInteraction&);
+	cTask<> process_top(cApplicationCommandInteraction&);
+	cTask<> process_prune(cApplicationCommandInteraction&);
+	cTask<> process_prune_lmg(cApplicationCommandInteraction&);
+	cTask<> process_ban(cApplicationCommandInteraction&);
+	cTask<> process_unban(cMessageComponentInteraction&, const cSnowflake& user_id);
+	cTask<> process_dismiss(cMessageComponentInteraction&, const cSnowflake& user_id);
+	cTask<> process_nickname_button(cMessageComponentInteraction&, const cSnowflake& user_id);
+	cTask<> process_modal(cModalSubmitInteraction&);
+	cTask<> process_role_button(cMessageComponentInteraction&, uint32_t);
+	cTask<> process_booster_menu(cMessageComponentInteraction&);
+	cTask<> process_proficiency_menu(cMessageComponentInteraction&);
 	cTask<> process_reaction(const cSnowflake&, const cSnowflake&, int64_t, int64_t, cMessage*);
-	cTask<> process_starboard_leaderboard(const cInteraction&);
-	cTask<> process_starboard_help(const cInteraction&);
+	cTask<> process_starboard_leaderboard(cApplicationCommandInteraction&);
+	cTask<> process_starboard_help(cMessageComponentInteraction&);
+	cTask<> process_leaderboard_help(cMessageComponentInteraction&);
+
+	cTask<> process_interaction(cApplicationCommandInteraction&);
+	cTask<> process_interaction(cMessageComponentInteraction&);
+	cTask<> process_interaction(cModalSubmitInteraction&);
 
 	cTask<> OnGuildCreate(uhGuild guild) override;
 	cTask<> OnGuildRoleCreate(cSnowflake& guild_id, cRole& role) override;
@@ -54,7 +58,7 @@ private:
 	cTask<> OnGuildMemberAdd(cSnowflake& guild_id, cMember& member) override;
 	cTask<> OnGuildMemberUpdate(cSnowflake& guild_id, cPartialMember& member) override;
 	cTask<> OnGuildMemberRemove(cSnowflake& guild_id, cUser& user) override;
-	cTask<> OnInteractionCreate(const cInteraction&) override;
+	cTask<> OnInteractionCreate(cInteraction&) override;
 	cTask<> OnMessageCreate(cMessage& msg, hSnowflake guild_id, hMember member) override;
 	cTask<> OnMessageDelete(cSnowflake& id, cSnowflake& channel_id, hSnowflake guild_id) override;
 	cTask<> OnMessageDeleteBulk(std::span<cSnowflake> ids, cSnowflake& channel_id, hSnowflake guild_id) override;

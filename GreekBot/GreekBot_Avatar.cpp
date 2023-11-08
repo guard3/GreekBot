@@ -2,18 +2,13 @@
 #include "Utils.h"
 
 cTask<>
-cGreekBot::OnInteraction_avatar(const cInteraction& i) try {
-	/* Get interaction data */
-	auto& data = i.GetData<INTERACTION_APPLICATION_COMMAND>();
+cGreekBot::process_avatar(cApplicationCommandInteraction& i) {
 	/* Resolve user option */
-	chUser user;
-	if (data.Options.empty())
-		user = i.GetUser() ? i.GetUser() : i.GetMember()->GetUser();
+	hUser user;
+	if (auto options = i.GetOptions(); !options.empty())
+		user = &options.front().GetValue<APP_CMD_OPT_USER>();
 	else
-		user = &data.Options.front().GetValue<APP_CMD_OPT_USER>();
+		user = i.GetUser() ? i.GetUser() : i.GetMember()->GetUser();
 	/* Respond */
-	co_await RespondToInteraction(i, kw::content=user->GetAvatarUrl());
-}
-catch (const std::exception& e) {
-	cUtils::PrintErr("OnInteraction_avatar: {}", e.what());
+	co_await RespondToInteraction(i, kw::content=user->MoveAvatarUrl());
 }

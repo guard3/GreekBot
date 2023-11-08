@@ -96,9 +96,29 @@ cGateway::implementation::process_event(const json::value& v) try {
 			break;
 		}
 		case INTERACTION_CREATE: {
-			cInteraction i{ d };
-			co_await ResumeOnEventThread();
-			co_await m_parent->OnInteractionCreate(i);
+			switch (d.at("type").to_number<int>()) {
+				case INTERACTION_APPLICATION_COMMAND: {
+					cApplicationCommandInteraction i(d);
+					co_await ResumeOnEventThread();
+					co_await m_parent->OnInteractionCreate(i);
+					break;
+				}
+				case INTERACTION_MESSAGE_COMPONENT: {
+					cMessageComponentInteraction i(d.as_object(), d.at("data").as_object());
+					co_await ResumeOnEventThread();
+					co_await m_parent->OnInteractionCreate(i);
+					break;
+				}
+				case INTERACTION_MODAL_SUBMIT: {
+					cModalSubmitInteraction i(d.as_object(), d.at("data").as_object());
+					co_await ResumeOnEventThread();
+					co_await m_parent->OnInteractionCreate(i);
+					break;
+				}
+				default:
+					cUtils::PrintLog("Unimplemented interaction type");
+					break;
+			}
 			break;
 		}
 		case MESSAGE_CREATE: {

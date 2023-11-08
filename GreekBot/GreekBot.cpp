@@ -87,64 +87,6 @@ cGreekBot::OnGuildRoleDelete(cSnowflake& guild_id, cSnowflake& role_id) {
 }
 
 cTask<>
-cGreekBot::OnInteractionCreate(const cInteraction& interaction) {
-	switch (interaction.GetType()) {
-		case INTERACTION_APPLICATION_COMMAND: {
-			switch (interaction.GetData<INTERACTION_APPLICATION_COMMAND>().GetCommandId().ToInt()) {
-				case 878391425568473098:
-					/* avatar */
-					co_return co_await OnInteraction_avatar(interaction);
-				case 938199801420456066:
-					/* rank */
-					co_return co_await OnInteraction_rank(interaction);
-				case 938863857466757131:
-					/* top */
-					co_return co_await OnInteraction_top(interaction);
-				case 1020026874119864381:
-					/* prune */
-					co_return co_await OnInteraction_prune(interaction);
-				case 1031907652541890621:
-					/* ban */
-					co_return co_await OnInteraction_ban(interaction);
-				case 1072131488478404621:
-					/* prune (Learning Greek) */
-					co_return co_await OnInteraction_prune_lmg(interaction);
-				case 904462004071313448:
-					/* holy */
-					co_return co_await process_starboard_leaderboard(interaction);
-				default:
-					co_return;
-			}
-		}
-		case INTERACTION_MESSAGE_COMPONENT: {
-			std::string_view custom_id = interaction.GetData<INTERACTION_MESSAGE_COMPONENT>().GetCustomId();
-			switch (uint32_t hash = cUtils::CRC32(0, custom_id); hash) {
-				case CMP_ID_LEADERBOARD_HELP:
-					co_return co_await OnInteraction_button(interaction);
-				case CMP_ID_STARBOARD_HELP:
-					co_return co_await process_starboard_help(interaction);
-				case CMP_ID_PROFICIENCY_MENU:
-					co_return co_await process_proficiency_menu(interaction);
-				case CMP_ID_BOOSTER_MENU:
-					co_return co_await process_booster_menu(interaction);
-				default:
-					if (custom_id.starts_with("BAN#"))
-						co_return co_await OnInteraction_unban(interaction, custom_id.substr(4));
-					if (custom_id.starts_with("DLT#"))
-						co_return co_await OnInteraction_dismiss(interaction, custom_id.substr(4));
-					if (custom_id.starts_with("NCK#"))
-						co_return co_await process_nickname_button(interaction, custom_id.substr(4));
-					co_return co_await process_role_button(interaction, hash);
-			}
-		}
-		case INTERACTION_MODAL_SUBMIT:
-			co_await process_modal(interaction);
-		default:
-			co_return;
-	}
-}
-
-cTask<>
 cGreekBot::OnMessageCreate(cMessage& msg, hSnowflake guild_id, hMember member) {
 	/* Update leaderboard for Learning Greek */
 	if (guild_id && *guild_id == m_lmg_id) {
@@ -154,4 +96,83 @@ cGreekBot::OnMessageCreate(cMessage& msg, hSnowflake guild_id, hMember member) {
 		/* Update leaderboard */
 		co_await cDatabase::UpdateLeaderboard(msg);
 	}
+}
+
+cTask<>
+cGreekBot::OnInteractionCreate(cInteraction& i) {
+	return i.Visit([this](auto&& i) mutable {
+		return process_interaction(i);
+	});
+}
+
+cTask<>
+cGreekBot::process_interaction(cApplicationCommandInteraction& i) {
+	switch (i.GetCommandId().ToInt()) {
+		case 878391425568473098: // avatar
+			co_await process_avatar(i);
+			break;
+		case 938199801420456066: // rank
+			co_await process_rank(i);
+			break;
+		case 938863857466757131: // top
+			co_await process_top(i);
+			break;
+		case 1020026874119864381: // prune - TODO: combine lmg prune and regular prune into one command only
+			co_await process_prune(i);
+			break;
+		case 1031907652541890621: // ban
+			co_await process_ban(i);
+			break;
+		case 1072131488478404621: // prune (Learning Greek)
+			co_await process_prune_lmg(i);
+			break;
+		case 904462004071313448: // holy
+			co_await process_starboard_leaderboard(i);
+			break;
+		case 1170787836434317363: {
+			/* ban - THIS IS JUST A TEST */
+			auto& option = i.GetOptions().front();
+			auto& user = option.GetValue<APP_CMD_OPT_USER>();
+			auto  member = option.GetMember();
+
+			cUtils::PrintLog("{} {} {}", user.GetUsername(), member->GetNickname(), user.GetId());
+			break;
+		}
+		default:
+			break;
+	}
+}
+
+cTask<>
+cGreekBot::process_interaction(cMessageComponentInteraction& i) {
+	const std::string_view custom_id = i.GetCustomId();
+	switch (const uint32_t hash = cUtils::CRC32(0, custom_id)) {
+		case CMP_ID_LEADERBOARD_HELP:
+			co_await process_leaderboard_help(i);
+			break;
+		case CMP_ID_STARBOARD_HELP:
+			co_await process_starboard_help(i);
+			break;
+		case CMP_ID_PROFICIENCY_MENU:
+			co_await process_proficiency_menu(i);
+			break;
+		case CMP_ID_BOOSTER_MENU:
+			co_await process_booster_menu(i);
+			break;
+		default:
+			if (custom_id.starts_with("BAN#"))
+				co_await process_unban(i, custom_id.substr(4));
+			else if (custom_id.starts_with("DLT#"))
+				co_await process_dismiss(i, custom_id.substr(4));
+			else if (custom_id.starts_with("NCK#"))
+				co_await process_nickname_button(i, custom_id.substr(4));
+			else
+				co_await process_role_button(i, hash); // TODO: Make custom_id use one specific prefix for roles
+			break;
+	}
+}
+
+cTask<>
+cGreekBot::process_interaction(cModalSubmitInteraction& i) {
+	co_await process_modal(i);
 }

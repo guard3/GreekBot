@@ -71,18 +71,21 @@ enum eInteractionCallbackType {
 	// 8 TODO: implement autocomplete result interaction stuff... someday
 };
 
+template<typename... Ts>
+struct visitor : Ts... { using Ts::operator()...; };
+
+template<class... Ts>
+visitor(Ts...) -> visitor<Ts...>;
+
 cTask<>
 cBot::respond_to_interaction(const cInteraction& i, const cMessageParams& params) {
-	int callback;
-	switch (i.GetType()) {
-		default:
-			co_return;
-		case INTERACTION_APPLICATION_COMMAND:
-			callback = INTERACTION_CALLBACK_CHANNEL_MESSAGE_WITH_SOURCE;
-			break;
-		case INTERACTION_MESSAGE_COMPONENT:
-			callback = INTERACTION_CALLBACK_UPDATE_MESSAGE;
-	}
+	int callback = i.Visit<int>(visitor{
+		[](const cMessageComponentInteraction&) { return INTERACTION_CALLBACK_UPDATE_MESSAGE; },
+		[](const cApplicationCommandInteraction&) { return INTERACTION_CALLBACK_CHANNEL_MESSAGE_WITH_SOURCE; },
+		[](auto&&) { return 0; }
+	});
+	if (callback == 0)
+		co_return;
 	json::object obj{{ "type", callback }};
 	json::value_from(params, obj["data"]);
 	co_await DiscordPost(fmt::format("/interactions/{}/{}/callback", i.GetId(), i.GetToken()), obj);
@@ -91,20 +94,14 @@ cBot::respond_to_interaction(const cInteraction& i, const cMessageParams& params
 template<>
 cTask<>
 cBot::RespondToInteraction<>(const cInteraction& i) {
-	int callback;
-	switch (i.GetType()) {
-		default:
-			co_return;
-		case INTERACTION_PING:
-			callback = INTERACTION_CALLBACK_PONG;
-			break;
-		case INTERACTION_APPLICATION_COMMAND:
-			callback = INTERACTION_CALLBACK_DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE;
-			break;
-		case INTERACTION_MESSAGE_COMPONENT:
-		case INTERACTION_MODAL_SUBMIT:
-			callback = INTERACTION_CALLBACK_DEFERRED_UPDATE_MESSAGE;
-	}
+	int callback = i.Visit(visitor{
+		[](const cApplicationCommandInteraction&) {
+			return INTERACTION_CALLBACK_DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE;
+		},
+		[](auto&&) {
+			return INTERACTION_CALLBACK_DEFERRED_UPDATE_MESSAGE;
+		}
+	});
 	co_await DiscordPost(fmt::format("/interactions/{}/{}/callback", i.GetId(), i.GetToken()), {{ "type", callback }});
 }
 
@@ -117,8 +114,7 @@ cBot::RespondToInteractionWithModal(const cInteraction& i, const cModal& modal) 
 
 cTask<>
 cBot::edit_interaction_response(const cInteraction& i, const cMessageParams& params) {
-	if (i.GetType() != INTERACTION_PING)
-		co_await DiscordPatch(fmt::format("/webhooks/{}/{}/messages/@original", i.GetApplicationId(), i.GetToken()), json::value_from(params).get_object());
+	co_await DiscordPatch(fmt::format("/webhooks/{}/{}/messages/@original", i.GetApplicationId(), i.GetToken()), json::value_from(params).get_object());
 }
 
 cTask<>
@@ -128,8 +124,7 @@ cBot::DeleteInteractionResponse(const cInteraction& i) {
 
 cTask<>
 cBot::send_interaction_followup_message(const cInteraction& i, const cMessageParams& params) {
-	if (i.GetType() != INTERACTION_PING)
-		co_await DiscordPost(fmt::format("/webhooks/{}/{}", i.GetApplicationId(), i.GetToken()), json::value_from(params).get_object());
+	co_await DiscordPost(fmt::format("/webhooks/{}/{}", i.GetApplicationId(), i.GetToken()), json::value_from(params).get_object());
 }
 
 cTask<int>

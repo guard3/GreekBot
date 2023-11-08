@@ -89,7 +89,7 @@ public:
 	virtual cTask<> OnGuildMemberAdd(cSnowflake& guild_id, cMember& member) { co_return; }
 	virtual cTask<> OnGuildMemberUpdate(cSnowflake& guild_id, cPartialMember& member) { co_return; }
 	virtual cTask<> OnGuildMemberRemove(cSnowflake& guild_id, cUser& user) { co_return; }
-	virtual cTask<> OnInteractionCreate(const cInteraction&) { co_return; }
+	virtual cTask<> OnInteractionCreate(cInteraction&) { co_return; }
 	virtual cTask<> OnMessageCreate(cMessage& msg, hSnowflake guild_id, hMember member) { co_return; }
 	virtual cTask<> OnMessageDelete(cSnowflake& id, cSnowflake& channel_id, hSnowflake guild_id) { co_return; }
 	virtual cTask<> OnMessageDeleteBulk(std::span<cSnowflake> ids, cSnowflake& channel_id, hSnowflake guild_id) { co_return; }

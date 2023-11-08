@@ -9,7 +9,7 @@ enum : uint32_t {
 };
 
 cTask<>
-cGreekBot::OnInteraction_ban(const cInteraction& i) {
+cGreekBot::process_ban(cApplicationCommandInteraction& i) {
 	using namespace std::chrono;
 	/* Acknowledge the interaction first */
 	co_await RespondToInteraction(i);
@@ -21,7 +21,7 @@ cGreekBot::OnInteraction_ban(const cInteraction& i) {
 		if (!(member->GetPermissions() & PERM_BAN_MEMBERS))
 			co_return co_await EditInteractionResponse(i, kw::content="You can't do that. You're missing the `BAN_MEMBERS` permission.");
 		/* Get the subcommand and its options */
-		auto& subcommand = i.GetData<INTERACTION_APPLICATION_COMMAND>().Options.front();
+		auto& subcommand = i.GetOptions().front();
 		uint32_t subcmd = cUtils::CRC32(0, subcommand.GetName());
 		/* Collect options */
 		chUser user;
@@ -138,7 +138,7 @@ cGreekBot::OnInteraction_ban(const cInteraction& i) {
 }
 
 cTask<>
-cGreekBot::OnInteraction_unban(const cInteraction& i, const cSnowflake& user_id) {
+cGreekBot::process_unban(cMessageComponentInteraction& i, const cSnowflake& user_id) {
 	if (chMember member = i.GetMember()) {
 		/* Make sure that the invoking user has the appropriate permissions */
 		if (!(member->GetPermissions() & PERM_BAN_MEMBERS)) {
@@ -153,7 +153,7 @@ cGreekBot::OnInteraction_unban(const cInteraction& i, const cSnowflake& user_id)
 			catch (xDiscordError& e) {
 				/* Ban not found, but that's fine */
 			}
-			auto e = i.GetMessage()->GetEmbeds().front();
+			auto e = i.GetMessage().GetEmbeds().front();
 			auto name = e.GetAuthor()->GetName();
 			name.remove_suffix(11); // Remove the " was banned" part
 			e.ClearFields().SetColor(0x248046).SetDescription("User was unbanned").GetAuthor()->SetName(name);

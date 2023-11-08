@@ -1,13 +1,7 @@
 #include "GreekBot.h"
 
 cTask<>
-cGreekBot::OnInteraction_button(const cInteraction& i) {
-	co_await RespondToInteraction(i);
-	co_await SendInteractionFollowupMessage(i, kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content="Every minute that you're messaging, you randomly gain between 15 and 25 **XP**.");
-}
-
-cTask<>
-cGreekBot::process_nickname_button(const cInteraction& i, const cSnowflake& user_id) {
+cGreekBot::process_nickname_button(cMessageComponentInteraction& i, const cSnowflake& user_id) {
 	/* Make sure that the invoking member has the appropriate permissions */
 	if (!(i.GetMember()->GetPermissions() & PERM_MANAGE_NICKNAMES)) {
 		co_await RespondToInteraction(i);
@@ -34,7 +28,7 @@ cGreekBot::process_nickname_button(const cInteraction& i, const cSnowflake& user
 }
 
 cTask<>
-cGreekBot::process_modal(const cInteraction& i) {
+cGreekBot::process_modal(cModalSubmitInteraction& i) {
 	/* Acknowledge the interaction immediately */
 	co_await RespondToInteraction(i);
 	/* Make sure, yet again, that the invoking member has the appropriate permissions */
@@ -46,7 +40,7 @@ cGreekBot::process_modal(const cInteraction& i) {
 	}
 	/* Modify the member referenced in the modal */
 	try {
-		auto &text_input = i.GetData<INTERACTION_MODAL_SUBMIT>().GetSubmittedData().front();
+		auto &text_input = i.GetSubmittedData().front();
 		co_return co_await ModifyGuildMember(m_lmg_id, text_input.GetCustomId(), kw::nick = text_input.GetValue());
 	} catch (...) {}
 	/* If member couldn't be modified for whatever reason, send an error message */

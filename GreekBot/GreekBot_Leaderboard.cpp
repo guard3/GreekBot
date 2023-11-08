@@ -59,18 +59,17 @@ static cEmbed make_embed(const cUser& user, cColor c, int64_t rank, int64_t xp, 
 }
 
 cTask<>
-cGreekBot::OnInteraction_rank(const cInteraction& i) {
+cGreekBot::process_rank(cApplicationCommandInteraction& i) {
 	try {
 		/* Resolve user and member data */
-		auto& data = i.GetData<INTERACTION_APPLICATION_COMMAND>();
 		chUser user;
 		chMember member;
-		if (data.Options.empty()) {
+		if (auto options = i.GetOptions(); !options.empty()) {
+			user = &options.front().GetValue<APP_CMD_OPT_USER>();
+			member = options.front().GetMember();
+		} else {
 			member = i.GetMember();
 			user = member->GetUser();
-		} else {
-			user = &data.Options[0].GetValue<APP_CMD_OPT_USER>();
-			member = data.Options[0].GetMember();
 		}
 		/* Don't display data for bot users */
 		if (user->IsBotUser())
@@ -113,7 +112,7 @@ cGreekBot::OnInteraction_rank(const cInteraction& i) {
 }
 
 cTask<>
-cGreekBot::OnInteraction_top(const cInteraction& i) {
+cGreekBot::process_top(cApplicationCommandInteraction& i) {
 	try {
 		/* Acknowledge interaction */
 		co_await RespondToInteraction(i);
@@ -170,4 +169,10 @@ cGreekBot::OnInteraction_top(const cInteraction& i) {
 	catch (const std::exception& e) {
 		cUtils::PrintErr("OnInteraction_top: {}", e.what());
 	}
+}
+
+cTask<>
+cGreekBot::process_leaderboard_help(cMessageComponentInteraction& i) {
+	co_await RespondToInteraction(i);
+	co_await SendInteractionFollowupMessage(i, kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content="Every minute that you're messaging, you randomly gain between 15 and 25 **XP**.");
 }

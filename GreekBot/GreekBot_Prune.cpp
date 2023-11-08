@@ -4,7 +4,7 @@
 #include <fmt/chrono.h>
 
 cTask<>
-cGreekBot::OnInteraction_prune(const cInteraction& i) {
+cGreekBot::process_prune(cApplicationCommandInteraction& i) {
 	/* Acknowledge interaction first */
 	co_await RespondToInteraction(i);
 	try {
@@ -14,8 +14,7 @@ cGreekBot::OnInteraction_prune(const cInteraction& i) {
 		if (!(member->GetPermissions() & PERM_KICK_MEMBERS))
 			co_return co_await EditInteractionResponse(i, kw::content="You can't do that. You're missing the `KICK_MEMBERS` permission.");
 		/* How many days of inactivity to consider */
-		auto& options = i.GetData<INTERACTION_APPLICATION_COMMAND>().Options;
-		int days = options.empty() ? 2 : options.front().GetValue<APP_CMD_OPT_INTEGER>();
+		int days = i.GetOptions().empty() ? 2 : i.GetOptions().front().GetValue<APP_CMD_OPT_INTEGER>();
 		/* Prune */
 		std::string str;
 		try {
@@ -45,7 +44,7 @@ cGreekBot::OnInteraction_prune(const cInteraction& i) {
 }
 
 cTask<>
-cGreekBot::OnInteraction_prune_lmg(const cInteraction& i) {
+cGreekBot::process_prune_lmg(cApplicationCommandInteraction& i) {
 	using namespace std::chrono;
 	using namespace std::chrono_literals;
 	/* Check that the invoking member has the appropriate permissions for extra security measure */

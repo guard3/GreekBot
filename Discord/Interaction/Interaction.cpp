@@ -55,6 +55,14 @@ cApplicationCommandOption::cApplicationCommandOption(const json::value& v, cPtr<
 	}
 }
 
+cApplicationCommandOption::cApplicationCommandOption(eApplicationCommandType type, std::string_view id, const json::object& resolved) {
+	if (type == APP_CMD_USER) {
+		m_type = APP_CMD_OPT_USER;
+		const json::value* a = resolved.if_contains("members");
+		m_value.emplace<2>(resolved.at("users").at(id), a ? cHandle::MakeUnique<cMember>(a->at(id)) : uhMember());
+	}
+}
+
 hMember
 cApplicationCommandOption::GetMember() {
 	try {
@@ -89,64 +97,24 @@ cModalSubmitData::cModalSubmitData(const json::value& v):
 	m_custom_id(json::value_to<std::string>(v.at("custom_id"))),
 	m_value(json::value_to<std::string>(v.at("value"))) {}
 
-cInteractionData<INTERACTION_APPLICATION_COMMAND>::cInteractionData(const json::object& o):
-	id(json::value_to<cSnowflake>(o.at("id"))),
-	name(json::value_to<std::string>(o.at("name"))),
-	type(json::value_to<eApplicationCommandType>(o.at("type"))) {
-	if (auto p = o.if_contains("options")) {
-		auto& a = p->as_array();
-		auto  r = o.if_contains("resolved");
-		Options.reserve(a.size());
-		for (auto &v: a)
-			Options.emplace_back(v, r);
-	}
-}
-cInteractionData<INTERACTION_APPLICATION_COMMAND>::cInteractionData(const json::value& v) : cInteractionData(v.as_object()) {}
+cInteraction::guild_data::guild_data(std::string_view s, const json::value& v): guild_id(s), member(v) {}
 
-cInteractionData<INTERACTION_MESSAGE_COMPONENT>::cInteractionData(const json::object& o) : custom_id(json::value_to<std::string>(o.at("custom_id"))), component_type((eComponentType)o.at("component_type").as_int64()) {
-	if (auto p = o.if_contains("values"))
-		Values = json::value_to<std::vector<std::string>>(*p);
-}
-cInteractionData<INTERACTION_MESSAGE_COMPONENT>::cInteractionData(const json::value& v) : cInteractionData(v.as_object()) {}
-
-cInteractionData<INTERACTION_MODAL_SUBMIT>::cInteractionData(const json::value& v):
-	m_custom_id(json::value_to<std::string>(v.at("custom_id"))) {
-	const json::array& a = v.at("components").as_array();
-	for (const json::value& e : a) {
-		for (const json::value& m : e.at("components").as_array())
-			m_submit.emplace_back(m);
-	}
-}
-
-cInteraction::cInteraction(const json::object &o):
-	m_id(json::value_to<cSnowflake>(o.at("id"))),
-	m_application_id(json::value_to<cSnowflake>(o.at("application_id"))),
-	m_type(json::value_to<eInteractionType>(o.at("type"))),
+cInteraction::cInteraction(eInteractionType type, const json::value& v): cInteraction(type, v.as_object()) {}
+cInteraction::cInteraction(eInteractionType type, const json::object& o):
+	m_type(type),
+	m_id(json::value_to<std::string_view>(o.at("id"))),
+	m_application_id(json::value_to<std::string_view>(o.at("application_id"))),
 	m_token(json::value_to<std::string>(o.at("token"))),
-	m_version(o.at("version").to_number<int>()) {
-	/* Check if interaction was triggered from a guild or DMs */
-	if (auto p = o.if_contains("member")) {
-		m_um.emplace<cMember>(*p);
-		m_guild_id   = json::value_to<cSnowflake>(o.at("guild_id"));
-		m_channel_id = json::value_to<cSnowflake>(o.at("channel_id"));
+	m_app_permissions(PERM_NONE) {
+	const json::value* p;
+	if ((p = o.if_contains("channel_id")))
+		m_channel_id.emplace(json::value_to<std::string_view>(*p));
+	/* If the interaction was triggered from DMs... */
+	if ((p = o.if_contains("user"))) {
+		m_variant.emplace<cUser>(*p);
+		return;
 	}
-	else m_um.emplace<cUser>(o.at("user"));
-	/* Linked message for component interactions */
-	if (auto p = o.if_contains("message"))
-		m_message.emplace(*p);
-	/* Initialize data */
-	switch (m_type) {
-		case INTERACTION_APPLICATION_COMMAND:
-			m_data.emplace<cInteractionData<INTERACTION_APPLICATION_COMMAND>>(o.at("data"));
-			break;
-		case INTERACTION_MESSAGE_COMPONENT:
-			m_data.emplace<cInteractionData<INTERACTION_MESSAGE_COMPONENT>>(o.at("data"));
-			break;
-		case INTERACTION_MODAL_SUBMIT:
-			m_data.emplace<cInteractionData<INTERACTION_MODAL_SUBMIT>>(o.at("data"));
-		default:
-			break;
-	}
+	/* Otherwise collect guild related data */
+	m_app_permissions = json::value_to<ePermission>(o.at("app_permissions"));
+	m_variant.emplace<guild_data>(json::value_to<std::string_view>(o.at("guild_id")), o.at("member"));
 }
-
-cInteraction::cInteraction(const json::value &v) : cInteraction(v.as_object()) {}

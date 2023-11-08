@@ -28,7 +28,7 @@ enum : uint64_t {
 };
 /* ================================================================================================================== */
 cTask<>
-cGreekBot::process_role_button(const cInteraction& i, uint32_t button_id) {
+cGreekBot::process_role_button(cMessageComponentInteraction& i, uint32_t button_id) {
 	co_await RespondToInteraction(i);
 
 	chMember member = i.GetMember();
@@ -87,7 +87,7 @@ cGreekBot::process_role_button(const cInteraction& i, uint32_t button_id) {
 }
 /* ================================================================================================================== */
 cTask<>
-cGreekBot::process_proficiency_menu(const cInteraction& i) {
+cGreekBot::process_proficiency_menu(cMessageComponentInteraction& i) {
 	/* The proficiency roles of Learning Greek */
 	static const cSnowflake pr_roles[] {
 		ROLE_ID_NATIVE,
@@ -111,14 +111,14 @@ cGreekBot::process_proficiency_menu(const cInteraction& i) {
 			roles.push_back(&s);
 	}
 	/* Append the selected role id */
-	cSnowflake id = i.GetData<INTERACTION_MESSAGE_COMPONENT>().Values.front();
+	cSnowflake id = i.GetValues().front();
 	roles.push_back(&id);
 	/* Update member */
 	co_await UpdateGuildMemberRoles(m_lmg_id, member->GetUser()->GetId(), roles);
 }
 /* ================================================================================================================== */
 cTask<>
-cGreekBot::process_booster_menu(const cInteraction& i) {
+cGreekBot::process_booster_menu(cMessageComponentInteraction& i) {
 	using namespace std::chrono_literals;
 	/* All the color roles available in Learning Greek */
 	static const cSnowflake color_roles[] {
@@ -147,7 +147,7 @@ cGreekBot::process_booster_menu(const cInteraction& i) {
 			roles.push_back(&id);
 	}
 	/* Retrieve the selected role id */
-	cSnowflake selected_id = i.GetData<INTERACTION_MESSAGE_COMPONENT>().Values.front();
+	cSnowflake selected_id = i.GetValues().front();
 	/* Include the selected role id if the user is boosting */
 	if (member->PremiumSince().time_since_epoch() > 0s) {
 		if (selected_id != 0) {
