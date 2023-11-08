@@ -3,6 +3,7 @@
 #include "ApplicationCommandInteraction.h"
 #include "MessageComponentInteraction.h"
 #include "ModalSubmitInteraction.h"
+#include <functional>
 
 template<iInteractionVisitor Visitor>
 inline decltype(auto) cInteraction::Visit(Visitor&& visitor) {
