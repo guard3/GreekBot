@@ -98,13 +98,13 @@ cGateway::implementation::process_event(const json::value& v) try {
 		case INTERACTION_CREATE: {
 			switch (d.at("type").to_number<int>()) {
 				case INTERACTION_APPLICATION_COMMAND: {
-					cApplicationCommandInteraction i(d);
+					cAppCmdInteraction i(d);
 					co_await ResumeOnEventThread();
 					co_await m_parent->OnInteractionCreate(i);
 					break;
 				}
 				case INTERACTION_MESSAGE_COMPONENT: {
-					cMessageComponentInteraction i(d);
+					cMsgCompInteraction i(d);
 					co_await ResumeOnEventThread();
 					co_await m_parent->OnInteractionCreate(i);
 					break;

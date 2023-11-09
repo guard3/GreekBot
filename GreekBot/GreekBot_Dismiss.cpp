@@ -1,7 +1,7 @@
 #include "GreekBot.h"
 
 cTask<>
-cGreekBot::process_dismiss(cMessageComponentInteraction& i, const cSnowflake& user_id) {
+cGreekBot::process_dismiss(cMsgCompInteraction& i, const cSnowflake& user_id) {
 	/* Acknowledge interaction first */
 	co_await RespondToInteraction(i);
 	try {

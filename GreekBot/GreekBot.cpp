@@ -106,7 +106,7 @@ cGreekBot::OnInteractionCreate(cInteraction& i) {
 }
 
 cTask<>
-cGreekBot::process_interaction(cApplicationCommandInteraction& i) {
+cGreekBot::process_interaction(cAppCmdInteraction& i) {
 	switch (i.GetCommandId().ToInt()) {
 		case 878391425568473098: // avatar
 			co_await process_avatar(i);
@@ -144,7 +144,7 @@ cGreekBot::process_interaction(cApplicationCommandInteraction& i) {
 }
 
 cTask<>
-cGreekBot::process_interaction(cMessageComponentInteraction& i) {
+cGreekBot::process_interaction(cMsgCompInteraction& i) {
 	const std::string_view custom_id = i.GetCustomId();
 	switch (const uint32_t hash = cUtils::CRC32(0, custom_id)) {
 		case CMP_ID_LEADERBOARD_HELP:

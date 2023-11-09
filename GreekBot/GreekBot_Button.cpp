@@ -1,7 +1,7 @@
 #include "GreekBot.h"
 
 cTask<>
-cGreekBot::process_nickname_button(cMessageComponentInteraction& i, const cSnowflake& user_id) {
+cGreekBot::process_nickname_button(cMsgCompInteraction& i, const cSnowflake& user_id) {
 	/* Make sure that the invoking member has the appropriate permissions */
 	if (!(i.GetMember()->GetPermissions() & PERM_MANAGE_NICKNAMES)) {
 		co_await RespondToInteraction(i);

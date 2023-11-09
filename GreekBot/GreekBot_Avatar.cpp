@@ -2,7 +2,7 @@
 #include "Utils.h"
 
 cTask<>
-cGreekBot::process_avatar(cApplicationCommandInteraction& i) {
+cGreekBot::process_avatar(cAppCmdInteraction& i) {
 	/* Resolve user option */
 	hUser user;
 	if (auto options = i.GetOptions(); !options.empty())

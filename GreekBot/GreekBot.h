@@ -29,26 +29,26 @@ private:
 	std::vector<uint64_t> m_lmg_voice_channels;
 	std::vector<std::vector<uint64_t>> m_lmg_users_connected_to_voice;
 
-	cTask<> process_avatar(cApplicationCommandInteraction&);
-	cTask<> process_rank(cApplicationCommandInteraction&);
-	cTask<> process_top(cApplicationCommandInteraction&);
-	cTask<> process_prune(cApplicationCommandInteraction&);
-	cTask<> process_prune_lmg(cApplicationCommandInteraction&);
-	cTask<> process_ban(cApplicationCommandInteraction&);
-	cTask<> process_unban(cMessageComponentInteraction&, const cSnowflake& user_id);
-	cTask<> process_dismiss(cMessageComponentInteraction&, const cSnowflake& user_id);
-	cTask<> process_nickname_button(cMessageComponentInteraction&, const cSnowflake& user_id);
+	cTask<> process_avatar(cAppCmdInteraction&);
+	cTask<> process_rank(cAppCmdInteraction&);
+	cTask<> process_top(cAppCmdInteraction&);
+	cTask<> process_prune(cAppCmdInteraction&);
+	cTask<> process_prune_lmg(cAppCmdInteraction&);
+	cTask<> process_ban(cAppCmdInteraction&);
+	cTask<> process_unban(cMsgCompInteraction&, const cSnowflake& user_id);
+	cTask<> process_dismiss(cMsgCompInteraction&, const cSnowflake& user_id);
+	cTask<> process_nickname_button(cMsgCompInteraction&, const cSnowflake& user_id);
 	cTask<> process_modal(cModalSubmitInteraction&);
-	cTask<> process_role_button(cMessageComponentInteraction&, uint32_t);
-	cTask<> process_booster_menu(cMessageComponentInteraction&);
-	cTask<> process_proficiency_menu(cMessageComponentInteraction&);
+	cTask<> process_role_button(cMsgCompInteraction&, uint32_t);
+	cTask<> process_booster_menu(cMsgCompInteraction&);
+	cTask<> process_proficiency_menu(cMsgCompInteraction&);
 	cTask<> process_reaction(const cSnowflake&, const cSnowflake&, int64_t, int64_t, cMessage*);
-	cTask<> process_starboard_leaderboard(cApplicationCommandInteraction&);
-	cTask<> process_starboard_help(cMessageComponentInteraction&);
-	cTask<> process_leaderboard_help(cMessageComponentInteraction&);
+	cTask<> process_starboard_leaderboard(cAppCmdInteraction&);
+	cTask<> process_starboard_help(cMsgCompInteraction&);
+	cTask<> process_leaderboard_help(cMsgCompInteraction&);
 
-	cTask<> process_interaction(cApplicationCommandInteraction&);
-	cTask<> process_interaction(cMessageComponentInteraction&);
+	cTask<> process_interaction(cAppCmdInteraction&);
+	cTask<> process_interaction(cMsgCompInteraction&);
 	cTask<> process_interaction(cModalSubmitInteraction&);
 
 	cTask<> OnGuildCreate(uhGuild guild) override;

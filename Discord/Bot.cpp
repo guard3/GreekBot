@@ -80,8 +80,8 @@ visitor(Ts...) -> visitor<Ts...>;
 cTask<>
 cBot::respond_to_interaction(const cInteraction& i, const cMessageParams& params) {
 	int callback = i.Visit<int>(visitor{
-		[](const cMessageComponentInteraction&) { return INTERACTION_CALLBACK_UPDATE_MESSAGE; },
-		[](const cApplicationCommandInteraction&) { return INTERACTION_CALLBACK_CHANNEL_MESSAGE_WITH_SOURCE; },
+		[](const cMsgCompInteraction&) { return INTERACTION_CALLBACK_UPDATE_MESSAGE; },
+		[](const cAppCmdInteraction&) { return INTERACTION_CALLBACK_CHANNEL_MESSAGE_WITH_SOURCE; },
 		[](auto&&) { return 0; }
 	});
 	if (callback == 0)
@@ -95,7 +95,7 @@ template<>
 cTask<>
 cBot::RespondToInteraction<>(const cInteraction& i) {
 	int callback = i.Visit(visitor{
-		[](const cApplicationCommandInteraction&) {
+		[](const cAppCmdInteraction&) {
 			return INTERACTION_CALLBACK_DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE;
 		},
 		[](auto&&) {

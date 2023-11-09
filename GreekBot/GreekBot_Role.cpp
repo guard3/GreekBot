@@ -28,7 +28,7 @@ enum : uint64_t {
 };
 /* ================================================================================================================== */
 cTask<>
-cGreekBot::process_role_button(cMessageComponentInteraction& i, uint32_t button_id) {
+cGreekBot::process_role_button(cMsgCompInteraction& i, uint32_t button_id) {
 	co_await RespondToInteraction(i);
 
 	chMember member = i.GetMember();
@@ -87,7 +87,7 @@ cGreekBot::process_role_button(cMessageComponentInteraction& i, uint32_t button_
 }
 /* ================================================================================================================== */
 cTask<>
-cGreekBot::process_proficiency_menu(cMessageComponentInteraction& i) {
+cGreekBot::process_proficiency_menu(cMsgCompInteraction& i) {
 	/* The proficiency roles of Learning Greek */
 	static const cSnowflake pr_roles[] {
 		ROLE_ID_NATIVE,
@@ -118,7 +118,7 @@ cGreekBot::process_proficiency_menu(cMessageComponentInteraction& i) {
 }
 /* ================================================================================================================== */
 cTask<>
-cGreekBot::process_booster_menu(cMessageComponentInteraction& i) {
+cGreekBot::process_booster_menu(cMsgCompInteraction& i) {
 	using namespace std::chrono_literals;
 	/* All the color roles available in Learning Greek */
 	static const cSnowflake color_roles[] {

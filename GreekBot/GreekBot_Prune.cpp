@@ -4,7 +4,7 @@
 #include <fmt/chrono.h>
 
 cTask<>
-cGreekBot::process_prune(cApplicationCommandInteraction& i) {
+cGreekBot::process_prune(cAppCmdInteraction& i) {
 	/* Acknowledge interaction first */
 	co_await RespondToInteraction(i);
 	try {
@@ -44,7 +44,7 @@ cGreekBot::process_prune(cApplicationCommandInteraction& i) {
 }
 
 cTask<>
-cGreekBot::process_prune_lmg(cApplicationCommandInteraction& i) {
+cGreekBot::process_prune_lmg(cAppCmdInteraction& i) {
 	using namespace std::chrono;
 	using namespace std::chrono_literals;
 	/* Check that the invoking member has the appropriate permissions for extra security measure */

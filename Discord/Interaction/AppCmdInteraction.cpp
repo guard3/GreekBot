@@ -1,12 +1,12 @@
-#include "ApplicationCommandInteraction.h"
+#include "AppCmdInteraction.h"
 #include "json.h"
 
-cApplicationCommandInteraction::cApplicationCommandInteraction(const json::value& v): cApplicationCommandInteraction(v.as_object()) {}
-cApplicationCommandInteraction::cApplicationCommandInteraction(const json::object& o): cApplicationCommandInteraction(o, o.at("data").as_object()) {}
-cApplicationCommandInteraction::cApplicationCommandInteraction(const json::object& o, const json::object& d):
+cAppCmdInteraction::cAppCmdInteraction(const json::value& v): cAppCmdInteraction(v.as_object()) {}
+cAppCmdInteraction::cAppCmdInteraction(const json::object& o): cAppCmdInteraction(o, o.at("data").as_object()) {}
+cAppCmdInteraction::cAppCmdInteraction(const json::object& o, const json::object& d):
 	cInteraction(INTERACTION_APPLICATION_COMMAND, o),
 	m_id(json::value_to<std::string_view>(d.at("id"))),
-	m_type(json::value_to<eApplicationCommandType>(d.at("type"))),
+	m_type(json::value_to<eAppCmdType>(d.at("type"))),
 	m_name(json::value_to<std::string>(d.at("name"))) {
 	/* Parse guild_id */
 	const json::value* p;

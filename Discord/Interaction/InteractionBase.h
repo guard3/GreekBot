@@ -16,14 +16,14 @@ enum eInteractionType {
 };
 eInteractionType tag_invoke(boost::json::value_to_tag<eInteractionType>, const boost::json::value&);
 /* ================================================================================================================== */
-enum eApplicationCommandType {
+enum eAppCmdType {
 	APP_CMD_CHAT_INPUT = 1,
 	APP_CMD_USER,
 	APP_CMD_MESSAGE
 };
-eApplicationCommandType tag_invoke(boost::json::value_to_tag<eApplicationCommandType>, const boost::json::value&);
+eAppCmdType tag_invoke(boost::json::value_to_tag<eAppCmdType>, const boost::json::value&);
 /* ================================================================================================================== */
-enum eApplicationCommandOptionType {
+enum eAppCmdOptionType {
 	APP_CMD_OPT_SUB_COMMAND = 1,
 	APP_CMD_OPT_SUB_COMMAND_GROUP,
 	APP_CMD_OPT_STRING,
@@ -35,7 +35,7 @@ enum eApplicationCommandOptionType {
 	APP_CMD_OPT_MENTIONABLE,
 	APP_CMD_OPT_NUMBER
 };
-eApplicationCommandOptionType tag_invoke(boost::json::value_to_tag<eApplicationCommandOptionType>, const boost::json::value&);
+eAppCmdOptionType tag_invoke(boost::json::value_to_tag<eAppCmdOptionType>, const boost::json::value&);
 /* ================================================================================================================== */
 class xInvalidAttributeError : public std::runtime_error {
 public:
@@ -43,15 +43,15 @@ public:
 	xInvalidAttributeError(const std::string& m) : std::runtime_error(m) {}
 };
 /* ================================================================================================================== */
-class cApplicationCommandOption final {
+class cAppCmdOption final {
 private:
-	template<eApplicationCommandOptionType> struct a;
+	template<eAppCmdOptionType> struct a;
 
-	std::string                   m_name;
-	eApplicationCommandOptionType m_type;
+	std::string       m_name;
+	eAppCmdOptionType m_type;
 
 	std::variant<std::monostate,
-		std::vector<cApplicationCommandOption>,
+		std::vector<cAppCmdOption>,
 		std::tuple<cUser, uhMember>,
 		std::string,
 		int,
@@ -60,32 +60,32 @@ private:
 		cSnowflake> m_value;
 	
 public:
-	explicit cApplicationCommandOption(const json::value& v, cPtr<const json::value> r);
-	explicit cApplicationCommandOption(eApplicationCommandType, std::string_view, const json::object&);
+	explicit cAppCmdOption(const json::value& v, cPtr<const json::value> r);
+	explicit cAppCmdOption(eAppCmdType, std::string_view, const json::object&);
 
 	/* Return types */
-	template<eApplicationCommandOptionType t>
+	template<eAppCmdOptionType t>
 	using tMoveType = typename a<t>::value_type;
-	template<eApplicationCommandOptionType t>
+	template<eAppCmdOptionType t>
 	using tValueType = std::conditional_t<t == APP_CMD_OPT_INTEGER || t == APP_CMD_OPT_BOOLEAN || t == APP_CMD_OPT_NUMBER, tMoveType<t>, tMoveType<t>&>;
-	template<eApplicationCommandOptionType t>
+	template<eAppCmdOptionType t>
 	using tConstValueType = std::conditional_t<std::is_reference_v<tValueType<t>>, const tMoveType<t>&, tMoveType<t>>;
 	/* Access type */
-	eApplicationCommandOptionType GetType() const noexcept { return m_type; }
+	eAppCmdOptionType GetType() const noexcept { return m_type; }
 	/* Access name */
 	std::string& GetName() noexcept { return m_name; }
 	const std::string& GetName() const noexcept { return m_name; }
 	std::string MoveName() noexcept { return std::move(m_name); }
 	/* Access options - subcommands only */
-	std::vector<cApplicationCommandOption>& GetOptions();
-	const std::vector<cApplicationCommandOption>& GetOptions() const {
-		return const_cast<cApplicationCommandOption*>(this)->GetOptions();
+	std::vector<cAppCmdOption>& GetOptions();
+	const std::vector<cAppCmdOption>& GetOptions() const {
+		return const_cast<cAppCmdOption*>(this)->GetOptions();
 	}
-	std::vector<cApplicationCommandOption> MoveOptions() {
+	std::vector<cAppCmdOption> MoveOptions() {
 		return std::move(GetOptions());
 	}
 	/* Access value */
-	template<eApplicationCommandOptionType t> requires (t != APP_CMD_OPT_SUB_COMMAND && t != APP_CMD_OPT_SUB_COMMAND_GROUP)
+	template<eAppCmdOptionType t> requires (t != APP_CMD_OPT_SUB_COMMAND && t != APP_CMD_OPT_SUB_COMMAND_GROUP)
 	tValueType<t> GetValue() {
 		try {
 			if constexpr (t == APP_CMD_OPT_USER)
@@ -97,46 +97,46 @@ public:
 			throw xInvalidAttributeError(fmt::format("Application command option is not of type {}", a<t>::name));
 		}
 	}
-	template<eApplicationCommandOptionType t> requires (t != APP_CMD_OPT_SUB_COMMAND && t != APP_CMD_OPT_SUB_COMMAND_GROUP)
+	template<eAppCmdOptionType t> requires (t != APP_CMD_OPT_SUB_COMMAND && t != APP_CMD_OPT_SUB_COMMAND_GROUP)
 	tConstValueType<t> GetValue() const {
-		return const_cast<cApplicationCommandOption*>(this)->template GetValue<t>();
+		return const_cast<cAppCmdOption*>(this)->template GetValue<t>();
 	}
-	template<eApplicationCommandOptionType t>
+	template<eAppCmdOptionType t>
 	tMoveType<t> MoveValue() { return std::move(GetValue<t>()); }
 	/* Access member */
 	hMember GetMember();
-	chMember GetMember() const { return const_cast<cApplicationCommandOption*>(this)->GetMember(); }
+	chMember GetMember() const { return const_cast<cAppCmdOption*>(this)->GetMember(); }
 	uhMember MoveMember();
 };
-template<> struct cApplicationCommandOption::a<APP_CMD_OPT_STRING>      { using value_type = std::string; static inline auto name = "APP_CMD_OPT_STRING";      };
-template<> struct cApplicationCommandOption::a<APP_CMD_OPT_INTEGER>     { using value_type = int;         static inline auto name = "APP_CMD_OPT_INTEGER";     };
-template<> struct cApplicationCommandOption::a<APP_CMD_OPT_BOOLEAN>     { using value_type = bool;        static inline auto name = "APP_CMD_OPT_BOOLEAN";     };
-template<> struct cApplicationCommandOption::a<APP_CMD_OPT_USER>        { using value_type = cUser;       static inline auto name = "APP_CMD_OPT_USER";        };
-template<> struct cApplicationCommandOption::a<APP_CMD_OPT_CHANNEL>     { using value_type = cSnowflake;  static inline auto name = "APP_CMD_OPT_CHANNEL";     };
-template<> struct cApplicationCommandOption::a<APP_CMD_OPT_ROLE>        { using value_type = cSnowflake;  static inline auto name = "APP_CMD_OPT_ROLE";        };
-template<> struct cApplicationCommandOption::a<APP_CMD_OPT_MENTIONABLE> { using value_type = cSnowflake;  static inline auto name = "APP_CMD_OPT_MENTIONABLE"; };
-template<> struct cApplicationCommandOption::a<APP_CMD_OPT_NUMBER>      { using value_type = double;      static inline auto name = "APP_CMD_OPT_NUMBER";      };
+template<> struct cAppCmdOption::a<APP_CMD_OPT_STRING>      { using value_type = std::string; static inline auto name = "APP_CMD_OPT_STRING";      };
+template<> struct cAppCmdOption::a<APP_CMD_OPT_INTEGER>     { using value_type = int;         static inline auto name = "APP_CMD_OPT_INTEGER";     };
+template<> struct cAppCmdOption::a<APP_CMD_OPT_BOOLEAN>     { using value_type = bool;        static inline auto name = "APP_CMD_OPT_BOOLEAN";     };
+template<> struct cAppCmdOption::a<APP_CMD_OPT_USER>        { using value_type = cUser;       static inline auto name = "APP_CMD_OPT_USER";        };
+template<> struct cAppCmdOption::a<APP_CMD_OPT_CHANNEL>     { using value_type = cSnowflake;  static inline auto name = "APP_CMD_OPT_CHANNEL";     };
+template<> struct cAppCmdOption::a<APP_CMD_OPT_ROLE>        { using value_type = cSnowflake;  static inline auto name = "APP_CMD_OPT_ROLE";        };
+template<> struct cAppCmdOption::a<APP_CMD_OPT_MENTIONABLE> { using value_type = cSnowflake;  static inline auto name = "APP_CMD_OPT_MENTIONABLE"; };
+template<> struct cAppCmdOption::a<APP_CMD_OPT_NUMBER>      { using value_type = double;      static inline auto name = "APP_CMD_OPT_NUMBER";      };
 
-typedef   hHandle<cApplicationCommandOption>   hApplicationCommandInteractionDataOption;
-typedef  chHandle<cApplicationCommandOption>  chApplicationCommandInteractionDataOption;
-typedef  uhHandle<cApplicationCommandOption>  uhApplicationCommandInteractionDataOption;
-typedef uchHandle<cApplicationCommandOption> uchApplicationCommandInteractionDataOption;
-typedef  uhHandle<cApplicationCommandOption>  shApplicationCommandInteractionDataOption;
-typedef uchHandle<cApplicationCommandOption> schApplicationCommandInteractionDataOption;
+typedef   hHandle<cAppCmdOption>   hApplicationCommandInteractionDataOption;
+typedef  chHandle<cAppCmdOption>  chApplicationCommandInteractionDataOption;
+typedef  uhHandle<cAppCmdOption>  uhApplicationCommandInteractionDataOption;
+typedef uchHandle<cAppCmdOption> uchApplicationCommandInteractionDataOption;
+typedef  uhHandle<cAppCmdOption>  shApplicationCommandInteractionDataOption;
+typedef uchHandle<cAppCmdOption> schApplicationCommandInteractionDataOption;
 /* ========== Forward declarations of interaction types ============================================================= */
-class cApplicationCommandInteraction;
-class cMessageComponentInteraction;
+class cAppCmdInteraction;
+class cMsgCompInteraction;
 class cModalSubmitInteraction;
 /* ========== Concepts for valid interaction visitor types ========================================================== */
 template<typename T>
 concept iInteractionVisitor = requires {
-	std::same_as<std::invoke_result_t<T&&, cModalSubmitInteraction&>, std::invoke_result_t<T&&, cApplicationCommandInteraction&>>;
-	std::same_as<std::invoke_result_t<T&&, cModalSubmitInteraction&>, std::invoke_result_t<T&&, cMessageComponentInteraction&>>;
+	std::same_as<std::invoke_result_t<T&&, cAppCmdInteraction&>, std::invoke_result_t<T&&, cMsgCompInteraction&>>;
+	std::same_as<std::invoke_result_t<T&&, cAppCmdInteraction&>, std::invoke_result_t<T&&, cModalSubmitInteraction&>>;
 };
 template<typename T, typename R>
 concept iInteractionVisitorR = requires {
-	std::convertible_to<std::invoke_result_t<T&&, cApplicationCommandInteraction&>, R>;
-	std::convertible_to<std::invoke_result_t<T&&, cMessageComponentInteraction&>, R>;
+	std::convertible_to<std::invoke_result_t<T&&, cAppCmdInteraction&>, R>;
+	std::convertible_to<std::invoke_result_t<T&&, cMsgCompInteraction&>, R>;
 	std::convertible_to<std::invoke_result_t<T&&, cModalSubmitInteraction&>, R>;
 };
 /* ========== The base interaction class ============================================================================ */
@@ -157,12 +157,11 @@ private:
 	};
 	std::variant<std::monostate, cUser, guild_data> m_variant;
 
+protected:
+	cInteraction(eInteractionType, const json::object&);
+	cInteraction(const cInteraction&) = default;
+
 public:
-	explicit cInteraction(eInteractionType, const json::value&  v);
-	explicit cInteraction(eInteractionType, const json::object& v);
-
-	cInteraction(const cInteraction&) = delete;
-
 	const cSnowflake&            GetId() const noexcept { return m_id;              }
 	const cSnowflake& GetApplicationId() const noexcept { return m_application_id;  }
 	std::string_view          GetToken() const noexcept { return m_token;           }
@@ -205,4 +204,4 @@ typedef   hHandle<cInteraction>   hInteraction;
 typedef  chHandle<cInteraction>  chInteraction;
 typedef  uhHandle<cInteraction>  uhInteraction;
 typedef uchHandle<cInteraction> uchInteraction;
-#endif //GREEKBOT_INTERACTIONBASE_H
+#endif /* GREEKBOT_INTERACTIONBASE_H */

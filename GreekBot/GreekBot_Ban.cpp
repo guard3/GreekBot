@@ -9,7 +9,7 @@ enum : uint32_t {
 };
 
 cTask<>
-cGreekBot::process_ban(cApplicationCommandInteraction& i) {
+cGreekBot::process_ban(cAppCmdInteraction& i) {
 	using namespace std::chrono;
 	/* Acknowledge the interaction first */
 	co_await RespondToInteraction(i);
@@ -138,7 +138,7 @@ cGreekBot::process_ban(cApplicationCommandInteraction& i) {
 }
 
 cTask<>
-cGreekBot::process_unban(cMessageComponentInteraction& i, const cSnowflake& user_id) {
+cGreekBot::process_unban(cMsgCompInteraction& i, const cSnowflake& user_id) {
 	if (chMember member = i.GetMember()) {
 		/* Make sure that the invoking user has the appropriate permissions */
 		if (!(member->GetPermissions() & PERM_BAN_MEMBERS)) {

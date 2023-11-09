@@ -5,18 +5,18 @@ eInteractionType
 tag_invoke(json::value_to_tag<eInteractionType>, const json::value& v) {
 	return static_cast<eInteractionType>(v.to_number<int>());
 }
-eApplicationCommandType
-tag_invoke(json::value_to_tag<eApplicationCommandType>, const json::value& v) {
-	return static_cast<eApplicationCommandType>(v.to_number<int>());
+eAppCmdType
+tag_invoke(json::value_to_tag<eAppCmdType>, const json::value& v) {
+	return static_cast<eAppCmdType>(v.to_number<int>());
 }
-eApplicationCommandOptionType
-tag_invoke(json::value_to_tag<eApplicationCommandOptionType>, const json::value& v) {
-	return static_cast<eApplicationCommandOptionType>(v.to_number<int>());
+eAppCmdOptionType
+tag_invoke(json::value_to_tag<eAppCmdOptionType>, const json::value& v) {
+	return static_cast<eAppCmdOptionType>(v.to_number<int>());
 }
 
-cApplicationCommandOption::cApplicationCommandOption(const json::value& v, cPtr<const json::value> r):
+cAppCmdOption::cAppCmdOption(const json::value& v, cPtr<const json::value> r):
 	m_name(json::value_to<std::string>(v.at("name"))),
-	m_type(json::value_to<eApplicationCommandOptionType>(v.at("type"))) {
+	m_type(json::value_to<eAppCmdOptionType>(v.at("type"))) {
 	switch (m_type) {
 		case APP_CMD_OPT_SUB_COMMAND:
 		case APP_CMD_OPT_SUB_COMMAND_GROUP: {
@@ -55,7 +55,7 @@ cApplicationCommandOption::cApplicationCommandOption(const json::value& v, cPtr<
 	}
 }
 
-cApplicationCommandOption::cApplicationCommandOption(eApplicationCommandType type, std::string_view id, const json::object& resolved) {
+cAppCmdOption::cAppCmdOption(eAppCmdType type, std::string_view id, const json::object& resolved) {
 	if (type == APP_CMD_USER) {
 		m_type = APP_CMD_OPT_USER;
 		const json::value* a = resolved.if_contains("members");
@@ -64,7 +64,7 @@ cApplicationCommandOption::cApplicationCommandOption(eApplicationCommandType typ
 }
 
 hMember
-cApplicationCommandOption::GetMember() {
+cAppCmdOption::GetMember() {
 	try {
 		return std::get<1>(std::get<2>(m_value)).get();
 	}
@@ -74,7 +74,7 @@ cApplicationCommandOption::GetMember() {
 }
 
 uhMember
-cApplicationCommandOption::MoveMember() {
+cAppCmdOption::MoveMember() {
 	try {
 		return std::move(std::get<1>(std::get<2>(m_value)));
 	}
@@ -83,8 +83,8 @@ cApplicationCommandOption::MoveMember() {
 	}
 }
 
-std::vector<cApplicationCommandOption>&
-cApplicationCommandOption::GetOptions() {
+std::vector<cAppCmdOption>&
+cAppCmdOption::GetOptions() {
 	try {
 		return std::get<1>(m_value);
 	}
@@ -95,7 +95,7 @@ cApplicationCommandOption::GetOptions() {
 
 cInteraction::guild_data::guild_data(std::string_view s, const json::value& v): guild_id(s), member(v) {}
 
-cInteraction::cInteraction(eInteractionType type, const json::value& v): cInteraction(type, v.as_object()) {}
+//cInteraction::cInteraction(eInteractionType type, const json::value& v): cInteraction(type, v.as_object()) {}
 cInteraction::cInteraction(eInteractionType type, const json::object& o):
 	m_type(type),
 	m_id(json::value_to<std::string_view>(o.at("id"))),

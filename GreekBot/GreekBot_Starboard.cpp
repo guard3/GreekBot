@@ -260,7 +260,7 @@ static cEmbed make_no_member_embed(const cUser* pUser, std::string_view guild_na
 }
 
 cTask<>
-cGreekBot::process_starboard_leaderboard(cApplicationCommandInteraction& i) {
+cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) {
 	bool bAck = false;
 	try {
 		std::vector<cEmbed> embeds;
@@ -390,7 +390,7 @@ cGreekBot::process_starboard_leaderboard(cApplicationCommandInteraction& i) {
 }
 
 cTask<>
-cGreekBot::process_starboard_help(cMessageComponentInteraction& i) {
+cGreekBot::process_starboard_help(cMsgCompInteraction& i) {
 	co_await RespondToInteraction(i);
 	co_await SendInteractionFollowupMessage(i, kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content="When a message receives **5 or more** <:Holy:409075809723219969> reactions, it gets to appear in <#978993330694266920>. Reacting to *your own* messages doesn't count!");
 }

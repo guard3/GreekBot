@@ -59,7 +59,7 @@ static cEmbed make_embed(const cUser& user, cColor c, int64_t rank, int64_t xp, 
 }
 
 cTask<>
-cGreekBot::process_rank(cApplicationCommandInteraction& i) {
+cGreekBot::process_rank(cAppCmdInteraction& i) {
 	try {
 		/* Resolve user and member data */
 		chUser user;
@@ -112,7 +112,7 @@ cGreekBot::process_rank(cApplicationCommandInteraction& i) {
 }
 
 cTask<>
-cGreekBot::process_top(cApplicationCommandInteraction& i) {
+cGreekBot::process_top(cAppCmdInteraction& i) {
 	try {
 		/* Acknowledge interaction */
 		co_await RespondToInteraction(i);
@@ -172,7 +172,7 @@ cGreekBot::process_top(cApplicationCommandInteraction& i) {
 }
 
 cTask<>
-cGreekBot::process_leaderboard_help(cMessageComponentInteraction& i) {
+cGreekBot::process_leaderboard_help(cMsgCompInteraction& i) {
 	co_await RespondToInteraction(i);
 	co_await SendInteractionFollowupMessage(i, kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content="Every minute that you're messaging, you randomly gain between 15 and 25 **XP**.");
 }

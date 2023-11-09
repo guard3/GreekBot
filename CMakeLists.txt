@@ -22,10 +22,10 @@ add_executable(GreekBot main.cpp boost/json.h Discord/Bot.cpp Discord/Bot.h Disc
         Discord/Objects/Attachment.h
         Discord/Objects/Attachment.cpp
         Discord/Interaction.h
-        Discord/Interaction/ApplicationCommandInteraction.h
-        Discord/Interaction/MessageComponentInteraction.h
-        Discord/Interaction/ApplicationCommandInteraction.cpp
-        Discord/Interaction/MessageComponentInteraction.cpp
+        Discord/Interaction/AppCmdInteraction.h
+        Discord/Interaction/MsgCompInteraction.h
+        Discord/Interaction/AppCmdInteraction.cpp
+        Discord/Interaction/MsgCompInteraction.cpp
         Discord/Interaction/ModalSubmitInteraction.h
         Discord/Interaction/ModalSubmitInteraction.cpp)
 
