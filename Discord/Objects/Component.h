@@ -15,11 +15,14 @@ enum eComponentType {
 
 using cComponent = std::variant<cButton, cLinkButton, cSelectMenu, cTextInput>;
 
-class cActionRow {
+class cActionRow final {
 private:
 	std::vector<cComponent> m_components;
 
 public:
+	explicit cActionRow(const json::value&);
+	explicit cActionRow(const json::object&);
+
 	template<std::convertible_to<cButton>... Buttons> requires (sizeof...(Buttons) < 6)
 	explicit cActionRow(Buttons&&... buttons): m_components{ std::forward<Buttons>(buttons)... } {}
 	template<std::convertible_to<cComponent> Comp>
@@ -37,5 +40,6 @@ typedef schHandle<cActionRow> schActionRow;
 
 KW_DECLARE(components, std::vector<cActionRow>)
 
+cActionRow tag_invoke(json::value_to_tag<cActionRow>, const json::value&);
 void tag_invoke(const json::value_from_tag&, json::value&, const cActionRow&);
 #endif /* GREEKBOT_COMPONENT_H */

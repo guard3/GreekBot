@@ -1,6 +1,8 @@
 #include "MessageComponentInteraction.h"
 #include "json.h"
 
+cMessageComponentInteraction::cMessageComponentInteraction(const json::value& v) : cMessageComponentInteraction(v.as_object()) {}
+cMessageComponentInteraction::cMessageComponentInteraction(const json::object& o) : cMessageComponentInteraction(o, o.at("data").as_object()) {}
 cMessageComponentInteraction::cMessageComponentInteraction(const json::object& obj, const json::object& data) :
 	cInteraction(INTERACTION_MESSAGE_COMPONENT, obj),
 	m_message(obj.at("message")),

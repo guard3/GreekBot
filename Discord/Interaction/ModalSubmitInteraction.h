@@ -5,12 +5,25 @@
 class cModalSubmitInteraction final : public cInteraction {
 private:
 	std::string m_custom_id;
-	std::vector<cModalSubmitData> m_submit; // TODO: Use component objects
+	std::vector<cActionRow> m_components;
+
+	explicit cModalSubmitInteraction(const json::object&, const json::object&);
+	using cInteraction::Visit;
 
 public:
-	explicit cModalSubmitInteraction(const json::object&, const json::object&);
+	explicit cModalSubmitInteraction(const json::value&);
+	explicit cModalSubmitInteraction(const json::object&);
 
-	std::string_view GetCustomId() const noexcept { return m_custom_id; }
-	std::span<const cModalSubmitData> GetSubmittedData() const noexcept { return m_submit; }
+	std::string_view              GetCustomId() const noexcept { return m_custom_id;  }
+	std::span<const cActionRow> GetComponents() const noexcept { return m_components; }
+
+	std::span<cActionRow> GetComponents() noexcept { return m_components; }
+
+	decltype(auto)   MoveCustomId() noexcept { return std::move(m_custom_id);  }
+	decltype(auto) MoveComponents() noexcept { return std::move(m_components); }
 };
+typedef   hHandle<cModalSubmitInteraction>   hModalSubmitInteraction;
+typedef  chHandle<cModalSubmitInteraction>  chModalSubmitInteraction;
+typedef  uhHandle<cModalSubmitInteraction>  uhModalSubmitInteraction;
+typedef uchHandle<cModalSubmitInteraction> uchModalSubmitInteraction;
 #endif /* GREEKBOT_MODALSUBMITINTERACTION_H */

@@ -10,10 +10,12 @@ private:
 	std::optional<cSnowflake> m_guild_id;
 	std::vector<cApplicationCommandOption> m_options;
 
+	explicit cApplicationCommandInteraction(const json::object&, const json::object&);
+	using cInteraction::Visit;
+
 public:
 	explicit cApplicationCommandInteraction(const json::value&);
 	explicit cApplicationCommandInteraction(const json::object&);
-	explicit cApplicationCommandInteraction(const json::object&, const json::object&);
 
 	const cSnowflake&         GetCommandId() const noexcept { return m_id;   }
 	eApplicationCommandType GetCommandType() const noexcept { return m_type; }

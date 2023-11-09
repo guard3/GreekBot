@@ -123,18 +123,6 @@ typedef  uhHandle<cApplicationCommandOption>  uhApplicationCommandInteractionDat
 typedef uchHandle<cApplicationCommandOption> uchApplicationCommandInteractionDataOption;
 typedef  uhHandle<cApplicationCommandOption>  shApplicationCommandInteractionDataOption;
 typedef uchHandle<cApplicationCommandOption> schApplicationCommandInteractionDataOption;
-
-class cModalSubmitData final {
-private:
-	std::string m_custom_id;
-	std::string m_value;
-
-public:
-	explicit cModalSubmitData(const json::value&);
-
-	std::string_view GetCustomId() const noexcept { return m_custom_id; }
-	std::string_view GetValue()    const noexcept { return m_value;     }
-};
 /* ========== Forward declarations of interaction types ============================================================= */
 class cApplicationCommandInteraction;
 class cMessageComponentInteraction;

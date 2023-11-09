@@ -40,7 +40,7 @@ cGreekBot::process_modal(cModalSubmitInteraction& i) {
 	}
 	/* Modify the member referenced in the modal */
 	try {
-		auto &text_input = i.GetSubmittedData().front();
+		auto& text_input = std::get<cTextInput>(i.GetComponents().front().GetComponents().front());
 		co_return co_await ModifyGuildMember(m_lmg_id, text_input.GetCustomId(), kw::nick = text_input.GetValue());
 	} catch (...) {}
 	/* If member couldn't be modified for whatever reason, send an error message */

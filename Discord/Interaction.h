@@ -1,8 +1,8 @@
 #ifndef GREEKBOT_INTERACTION_H
 #define GREEKBOT_INTERACTION_H
-#include "ApplicationCommandInteraction.h"
-#include "MessageComponentInteraction.h"
-#include "ModalSubmitInteraction.h"
+#include "Interaction/ApplicationCommandInteraction.h"
+#include "Interaction/MessageComponentInteraction.h"
+#include "Interaction/ModalSubmitInteraction.h"
 #include <functional>
 
 template<iInteractionVisitor Visitor>
@@ -12,10 +12,8 @@ inline decltype(auto) cInteraction::Visit(Visitor&& visitor) {
 			return std::invoke(std::forward<Visitor>(visitor), *static_cast<cApplicationCommandInteraction*>(this));
 		case INTERACTION_MESSAGE_COMPONENT:
 			return std::invoke(std::forward<Visitor>(visitor), *static_cast<cMessageComponentInteraction*>(this));
-		case INTERACTION_MODAL_SUBMIT:
-			return std::invoke(std::forward<Visitor>(visitor), *static_cast<cModalSubmitInteraction*>(this));
 		default:
-			throw std::runtime_error("skata");
+			return std::invoke(std::forward<Visitor>(visitor), *static_cast<cModalSubmitInteraction*>(this));
 	}
 }
 template<iInteractionVisitor Visitor>
@@ -25,10 +23,8 @@ inline decltype(auto) cInteraction::Visit(Visitor&& visitor) const {
 			return std::invoke(std::forward<Visitor>(visitor), *static_cast<const cApplicationCommandInteraction*>(this));
 		case INTERACTION_MESSAGE_COMPONENT:
 			return std::invoke(std::forward<Visitor>(visitor), *static_cast<const cMessageComponentInteraction*>(this));
-		case INTERACTION_MODAL_SUBMIT:
-			return std::invoke(std::forward<Visitor>(visitor), *static_cast<const cModalSubmitInteraction*>(this));
 		default:
-			throw std::runtime_error("skata");
+			return std::invoke(std::forward<Visitor>(visitor), *static_cast<const cModalSubmitInteraction*>(this));
 	}
 }
 template<typename R, iInteractionVisitorR<R> Visitor>
@@ -38,10 +34,8 @@ inline R cInteraction::Visit(Visitor&& visitor) {
 			return static_cast<R>(std::invoke(std::forward<Visitor>(visitor), *static_cast<cApplicationCommandInteraction*>(this)));
 		case INTERACTION_MESSAGE_COMPONENT:
 			return static_cast<R>(std::invoke(std::forward<Visitor>(visitor), *static_cast<cMessageComponentInteraction*>(this)));
-		case INTERACTION_MODAL_SUBMIT:
-			return static_cast<R>(std::invoke(std::forward<Visitor>(visitor), *static_cast<cModalSubmitInteraction*>(this)));
 		default:
-			throw std::runtime_error("skata");
+			return static_cast<R>(std::invoke(std::forward<Visitor>(visitor), *static_cast<cModalSubmitInteraction*>(this)));
 	}
 }
 template<typename R, iInteractionVisitorR<R> Visitor>
@@ -51,10 +45,8 @@ inline R cInteraction::Visit(Visitor&& visitor) const {
 			return static_cast<R>(std::invoke(std::forward<Visitor>(visitor), *static_cast<const cApplicationCommandInteraction*>(this)));
 		case INTERACTION_MESSAGE_COMPONENT:
 			return static_cast<R>(std::invoke(std::forward<Visitor>(visitor), *static_cast<const cMessageComponentInteraction*>(this)));
-		case INTERACTION_MODAL_SUBMIT:
-			return static_cast<R>(std::invoke(std::forward<Visitor>(visitor), *static_cast<const cModalSubmitInteraction*>(this)));
 		default:
-			throw std::runtime_error("skata");
+			return static_cast<R>(std::invoke(std::forward<Visitor>(visitor), *static_cast<const cModalSubmitInteraction*>(this)));
 	}
 }
 #endif //GREEKBOT_INTERACTION_H

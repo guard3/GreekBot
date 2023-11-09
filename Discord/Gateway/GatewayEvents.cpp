@@ -104,13 +104,13 @@ cGateway::implementation::process_event(const json::value& v) try {
 					break;
 				}
 				case INTERACTION_MESSAGE_COMPONENT: {
-					cMessageComponentInteraction i(d.as_object(), d.at("data").as_object());
+					cMessageComponentInteraction i(d);
 					co_await ResumeOnEventThread();
 					co_await m_parent->OnInteractionCreate(i);
 					break;
 				}
 				case INTERACTION_MODAL_SUBMIT: {
-					cModalSubmitInteraction i(d.as_object(), d.at("data").as_object());
+					cModalSubmitInteraction i(d);
 					co_await ResumeOnEventThread();
 					co_await m_parent->OnInteractionCreate(i);
 					break;

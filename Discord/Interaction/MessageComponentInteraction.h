@@ -9,8 +9,12 @@ private:
 	eComponentType m_component_type;
 	std::vector<std::string> m_values;
 
-public:
 	explicit cMessageComponentInteraction(const json::object&, const json::object&);
+	using cInteraction::Visit;
+
+public:
+	explicit cMessageComponentInteraction(const json::value&);
+	explicit cMessageComponentInteraction(const json::object&);
 
 	const cMessage&             GetMessage() const noexcept { return m_message;        }
 	std::string_view           GetCustomId() const noexcept { return m_custom_id;      }

@@ -93,10 +93,6 @@ cApplicationCommandOption::GetOptions() {
 	}
 }
 
-cModalSubmitData::cModalSubmitData(const json::value& v):
-	m_custom_id(json::value_to<std::string>(v.at("custom_id"))),
-	m_value(json::value_to<std::string>(v.at("value"))) {}
-
 cInteraction::guild_data::guild_data(std::string_view s, const json::value& v): guild_id(s), member(v) {}
 
 cInteraction::cInteraction(eInteractionType type, const json::value& v): cInteraction(type, v.as_object()) {}

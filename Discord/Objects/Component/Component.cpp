@@ -1,6 +1,31 @@
 #include "Component.h"
 #include "json.h"
 
+cTextInput::cTextInput(const json::value& v) : cTextInput(v.as_object()) {}
+cTextInput::cTextInput(const json::object& o) :
+	m_custom_id(json::value_to<std::string>(o.at("custom_id"))),
+	m_value(json::value_to<std::string>(o.at("value"))) {}
+
+cActionRow::cActionRow(const json::value& v) : cActionRow(v.as_object()) {}
+cActionRow::cActionRow(const json::object& o) : m_components(json::value_to<std::vector<cComponent>>(o.at("components"))) {}
+
+json::result_for<cButton, json::value>::type
+tag_invoke(json::try_value_to_tag<cButton>, const json::value& v) {
+	return json::error::exception;
+}
+json::result_for<cLinkButton, json::value>::type
+tag_invoke(json::try_value_to_tag<cLinkButton>, const json::value&) {
+	return json::error::exception;
+}
+json::result_for<cSelectMenu, json::value>::type
+tag_invoke(json::try_value_to_tag<cSelectMenu>, const json::value&) {
+	return json::error::exception;
+}
+cTextInput
+tag_invoke(json::value_to_tag<cTextInput>, const json::value& v) {
+	return cTextInput{ v };
+}
+
 void
 tag_invoke(const json::value_from_tag&, json::value& v, const cButton& b) {
 	json::object& obj = v.emplace_object();
@@ -41,11 +66,11 @@ void
 tag_invoke(const json::value_from_tag&, json::value& v, const cTextInput& ti) {
 	v = {
 		{ "type",       COMPONENT_TEXT_INPUT },
-		{ "custom_id",  ti.m_custom_id       },
-		{ "label",      ti.m_label           },
-		{ "style",      ti.m_style           },
-		{ "min_length", ti.m_min_length      },
-		{ "max_length", ti.m_max_length      }
+		{ "custom_id",  ti.GetCustomId()     },
+		{ "label",      ti.GetLabel()        },
+		{ "style",      ti.GetStyle()        },
+		{ "min_length", ti.GetMinLength()    },
+		{ "max_length", ti.GetMaxLength()    }
 	};
 }
 void
@@ -53,4 +78,8 @@ tag_invoke(const json::value_from_tag&, json::value& v, const cActionRow& row) {
 	json::object& obj = v.emplace_object();
 	obj.emplace("type", COMPONENT_ACTION_ROW);
 	json::value_from(row.GetComponents(), obj["components"]);
+}
+cActionRow
+tag_invoke(json::value_to_tag<cActionRow>, const json::value& v) {
+	return cActionRow{ v };
 }
