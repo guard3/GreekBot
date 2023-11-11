@@ -1,5 +1,5 @@
 #include "Utils.h"
-#include "date_time.h"
+#include <date/date.h>
 #include <zlib.h>
 
 /* Random engine stuff */
@@ -12,11 +12,14 @@ cUtils::CRC32(uint32_t hash, std::string_view str) noexcept {
 	return crc32(hash, reinterpret_cast<const Byte*>(str.data()), str.size());
 }
 
-std::chrono::sys_seconds
-cUtils::ParseTimestamp(std::string_view t) {
-	// Dirty hack since, for some reason, DateTime doesn't recognize timezones...
-	std::string_view sub = t.substr(0, t.find_last_of("+-Z"));
-	return std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::from_time_t(posix_time::to_time_t(posix_time::from_iso_extended_string(std::string(sub.begin(), sub.end())))));
+std::chrono::sys_time<std::chrono::nanoseconds>
+cUtils::parse_timestamp(const std::string& str) {
+	std::istringstream ss{ str };
+	std::chrono::sys_time<std::chrono::nanoseconds> result;
+	ss >> date::parse("%FT%T%Ez", result);
+	if (ss.fail())
+		throw std::invalid_argument("Input string is not a valid ISO8601 timestamp");
+	return result;
 }
 
 std::string

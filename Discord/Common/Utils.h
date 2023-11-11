@@ -23,6 +23,7 @@ private:
 	                                        std::uniform_real_distribution<T>>;
 	/* Private constructor */
 	cUtils() = default;
+	static std::chrono::sys_time<std::chrono::nanoseconds> parse_timestamp(const std::string&);
 public:
 	cUtils(const cUtils&) = delete;
 	cUtils& operator=(const cUtils&) = delete;
@@ -73,7 +74,13 @@ public:
 	/* Percent encoding */
 	static std::string PercentEncode(std::string_view);
 	/* Parse ISO8601 timestamp */
-	static std::chrono::sys_seconds ParseTimestamp(std::string_view);
+	template<typename Duration = std::chrono::seconds, typename Str = std::string> requires requires(std::chrono::nanoseconds n) {
+		std::chrono::duration_cast<Duration>(n);
+		std::constructible_from<std::string, Str&&>;
+	}
+	static std::chrono::sys_time<Duration> ParseTimestamp(Str&& str) {
+		return std::chrono::time_point_cast<Duration>(parse_timestamp(static_cast<std::string>(str)));
+	}
 	/* Resolving the OS we're running on */
 	static const char* GetOS();
 };
