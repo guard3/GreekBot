@@ -87,7 +87,7 @@ cGreekBot::OnGuildRoleDelete(cSnowflake& guild_id, cSnowflake& role_id) {
 }
 
 cTask<>
-cGreekBot::OnMessageCreate(cMessage& msg, hSnowflake guild_id, hMember member) {
+cGreekBot::OnMessageCreate(cMessage& msg, hSnowflake guild_id, hPartialMember member) {
 	/* Update leaderboard for Learning Greek */
 	if (guild_id && *guild_id == m_lmg_id) {
 		/* Ignore messages of bots and system users */
@@ -135,7 +135,7 @@ cGreekBot::process_interaction(cAppCmdInteraction& i) {
 			auto& user = option.GetValue<APP_CMD_OPT_USER>();
 			auto  member = option.GetMember();
 
-			cUtils::PrintLog("{} {} {}", user.GetUsername(), member->GetNickname(), user.GetId());
+			cUtils::PrintLog("{} {} {}", user.GetUsername(), member->GetNick(), user.GetId());
 			break;
 		}
 		default:

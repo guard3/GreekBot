@@ -14,7 +14,7 @@ cGreekBot::OnGuildMemberAdd(cSnowflake& guild_id, cMember& member) {
 }
 
 cTask<>
-cGreekBot::OnGuildMemberUpdate(cSnowflake& guild_id, cPartialMember& member) {
+cGreekBot::OnGuildMemberUpdate(cSnowflake& guild_id, cMemberUpdate& member) {
 	/* If a member has 1 or more roles, it means they *may* be candidates for welcoming */
 	// TODO: Actually check for proficiency roles since MEE6 gives old roles to members that come back, YIKES!
 	if (guild_id == m_lmg_id && !member.GetRoles().empty() && !member.IsPending()) {

@@ -83,7 +83,7 @@ cGateway::implementation::process_event(const json::value& v) try {
 		}
 		case GUILD_MEMBER_UPDATE: {
 			auto guild_id = json::value_to<cSnowflake>(d.at("guild_id"));
-			cPartialMember member{ d };
+			cMemberUpdate member{d };
 			co_await ResumeOnEventThread();
 			co_await m_parent->OnGuildMemberUpdate(guild_id, member);
 			break;
@@ -124,10 +124,10 @@ cGateway::implementation::process_event(const json::value& v) try {
 		case MESSAGE_CREATE: {
 			auto& o = d.as_object();
 			std::optional<cSnowflake> opt1;
-			std::optional<cMember> opt2;
+			std::optional<cPartialMember> opt2;
 			cMessage m{ d };
 			hSnowflake guild_id;
-			hMember member;
+			hPartialMember member;
 			if (auto p = o.if_contains("guild_id"))
 				guild_id = &opt1.emplace(json::value_to<std::string_view>(*p));
 			if (auto p = o.if_contains("member"))
@@ -139,21 +139,23 @@ cGateway::implementation::process_event(const json::value& v) try {
 		case MESSAGE_DELETE: {
 			auto id = json::value_to<cSnowflake>(d.at("id"));
 			auto channel_id = json::value_to<cSnowflake>(d.at("channel_id"));
-			std::optional<cSnowflake> guild_id;
+			std::optional<cSnowflake> opt;
+			hSnowflake guild_id;
 			if (auto p = d.as_object().if_contains("guild_id"))
-				guild_id.emplace(json::value_to<std::string_view>(*p));
+				guild_id = &opt.emplace(json::value_to<std::string_view>(*p));
 			co_await ResumeOnEventThread();
-			co_await m_parent->OnMessageDelete(id, channel_id, guild_id.has_value() ? &*guild_id : nullptr);
+			co_await m_parent->OnMessageDelete(id, channel_id, guild_id);
 			break;
 		}
 		case MESSAGE_DELETE_BULK: {
 			auto ids = json::value_to<std::vector<cSnowflake>>(d.at("ids"));
 			auto channel_id = json::value_to<cSnowflake>(d.at("channel_id"));
-			std::optional<cSnowflake> guild_id;
+			std::optional<cSnowflake> opt;
+			hSnowflake guild_id;
 			if (auto p = d.as_object().if_contains("guild_id"))
-				guild_id.emplace(json::value_to<std::string_view>(*p));
+				guild_id = &opt.emplace(json::value_to<std::string_view>(*p));
 			co_await ResumeOnEventThread();
-			co_await m_parent->OnMessageDeleteBulk(ids, channel_id, guild_id.has_value() ? &*guild_id : nullptr);
+			co_await m_parent->OnMessageDeleteBulk(ids, channel_id, guild_id);
 			break;
 		}
 		case MESSAGE_REACTION_ADD: {

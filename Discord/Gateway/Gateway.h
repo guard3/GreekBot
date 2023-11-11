@@ -87,10 +87,10 @@ public:
 	virtual cTask<> OnGuildRoleUpdate(cSnowflake& guild_id, cRole& role) { co_return; }
 	virtual cTask<> OnGuildRoleDelete(cSnowflake& guild_id, cSnowflake& role_id) { co_return; }
 	virtual cTask<> OnGuildMemberAdd(cSnowflake& guild_id, cMember& member) { co_return; }
-	virtual cTask<> OnGuildMemberUpdate(cSnowflake& guild_id, cPartialMember& member) { co_return; }
+	virtual cTask<> OnGuildMemberUpdate(cSnowflake& guild_id, cMemberUpdate& member) { co_return; }
 	virtual cTask<> OnGuildMemberRemove(cSnowflake& guild_id, cUser& user) { co_return; }
 	virtual cTask<> OnInteractionCreate(cInteraction&) { co_return; }
-	virtual cTask<> OnMessageCreate(cMessage& msg, hSnowflake guild_id, hMember member) { co_return; }
+	virtual cTask<> OnMessageCreate(cMessage& msg, hSnowflake guild_id, hPartialMember member) { co_return; }
 	virtual cTask<> OnMessageDelete(cSnowflake& id, cSnowflake& channel_id, hSnowflake guild_id) { co_return; }
 	virtual cTask<> OnMessageDeleteBulk(std::span<cSnowflake> ids, cSnowflake& channel_id, hSnowflake guild_id) { co_return; }
 	virtual cTask<> OnMessageReactionAdd(cSnowflake& user_id, cSnowflake& channel_id, cSnowflake& message_id, hSnowflake guild_id, hSnowflake message_author_id, hMember member, cEmoji& emoji) { co_return; }

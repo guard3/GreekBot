@@ -162,7 +162,7 @@ cDatabase::WC_RegisterMember(const cMember& member) {
 	throw xDatabaseError();
 }
 cTask<int64_t>
-cDatabase::WC_GetMessage(const cPartialMember& member) {
+cDatabase::WC_GetMessage(const cMemberUpdate& member) {
 	co_await resume_on_db_strand();
 
 	sqlite3_stmt* stmt = nullptr;

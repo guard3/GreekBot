@@ -56,10 +56,10 @@ private:
 	cTask<> OnGuildRoleUpdate(cSnowflake& guild_id, cRole& role) override;
 	cTask<> OnGuildRoleDelete(cSnowflake& guild_id, cSnowflake& role_id) override;
 	cTask<> OnGuildMemberAdd(cSnowflake& guild_id, cMember& member) override;
-	cTask<> OnGuildMemberUpdate(cSnowflake& guild_id, cPartialMember& member) override;
+	cTask<> OnGuildMemberUpdate(cSnowflake& guild_id, cMemberUpdate& member) override;
 	cTask<> OnGuildMemberRemove(cSnowflake& guild_id, cUser& user) override;
 	cTask<> OnInteractionCreate(cInteraction&) override;
-	cTask<> OnMessageCreate(cMessage& msg, hSnowflake guild_id, hMember member) override;
+	cTask<> OnMessageCreate(cMessage& msg, hSnowflake guild_id, hPartialMember member) override;
 	cTask<> OnMessageDelete(cSnowflake& id, cSnowflake& channel_id, hSnowflake guild_id) override;
 	cTask<> OnMessageDeleteBulk(std::span<cSnowflake> ids, cSnowflake& channel_id, hSnowflake guild_id) override;
 	cTask<> OnMessageReactionAdd(cSnowflake&, cSnowflake&, cSnowflake&, hSnowflake, hSnowflake, hMember, cEmoji&) override;

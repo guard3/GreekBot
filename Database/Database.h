@@ -57,7 +57,7 @@ public:
 
 	static cTask<uint64_t> WC_RegisterMember(const cMember&);
 	static cTask<> WC_UpdateMessage(const cUser&, const cMessage&);
-	static cTask<int64_t> WC_GetMessage(const cPartialMember&);
+	static cTask<int64_t> WC_GetMessage(const cMemberUpdate&);
 	static cTask<> WC_EditMessage(int64_t);
 	static cTask<uint64_t> WC_DeleteMember(const cUser&);
 
