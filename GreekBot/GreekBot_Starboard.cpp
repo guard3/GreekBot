@@ -268,14 +268,14 @@ cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) {
 		switch (auto& subcommand = i.GetOptions().front(); cUtils::CRC32(0, subcommand.GetName())) {
 			case 0x8879E8E5: { // rank
 				/* Retrieve selected member and user */
-				chMember member;
-				chUser   user;
+				hUser user;
+				hPartialMember member;
 				if (auto& options = subcommand.GetOptions(); !options.empty()) {
 					member = options.front().GetMember();
 					user = &options.front().GetValue<APP_CMD_OPT_USER>();
 				} else {
+					user = &i.GetUser();
 					member = i.GetMember();
-					user = member->GetUser();
 				}
 				/* Limit the command to regular users */
 				if (user->IsBotUser())
@@ -290,7 +290,7 @@ cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) {
 				co_await ResumeOnEventThread();
 				/* If the user isn't a member of Learning Greek... */
 				if (!member) {
-					embeds.push_back(make_no_member_embed(user.Get(), m_guilds[m_lmg_id]->GetName(), !results.empty()));
+					embeds.push_back(make_no_member_embed(user.Get(), m_guilds.at(m_lmg_id)->GetName(), !results.empty()));
 					break;
 				}
 				cColor color = get_lmg_member_color(*member);
@@ -345,7 +345,7 @@ cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) {
 					});
 					if (it == members.end()) {
 						/* If there's no member object for a user, then this user isn't a member of Learning Greek anymore */
-						auto& guild_name = m_guilds[m_lmg_id]->GetName();
+						auto& guild_name = m_guilds.at(m_lmg_id)->GetName();
 						try {
 							cUser user = co_await GetUser(entry.author_id);
 							embeds.push_back(make_no_member_embed(&user, guild_name, true));

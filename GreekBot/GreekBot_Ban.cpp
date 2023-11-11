@@ -15,10 +15,9 @@ cGreekBot::process_ban(cAppCmdInteraction& i) {
 	co_await RespondToInteraction(i);
 	try {
 		/* Collect interaction data */
-		chSnowflake guild_id = i.GetGuildId();
-		chMember    member   = i.GetMember();
+		const cSnowflake& guild_id = *i.GetGuildId();
 		/* Check that the invoking user has appropriate permissions, for extra measure */
-		if (!(member->GetPermissions() & PERM_BAN_MEMBERS))
+		if (!(i.GetMember()->GetPermissions() & PERM_BAN_MEMBERS))
 			co_return co_await EditInteractionResponse(i, kw::content="You can't do that. You're missing the `BAN_MEMBERS` permission.");
 		/* Get the subcommand and its options */
 		auto& subcommand = i.GetOptions().front();
@@ -102,7 +101,7 @@ cGreekBot::process_ban(cAppCmdInteraction& i) {
 		try {
 			co_await CreateDMMessage(
 				user->GetId(),
-				kw::content=fmt::format("You've been banned from **{}** with reason:\n```{}```", m_guilds.at(*guild_id)->GetName(), goodbye)
+				kw::content=fmt::format("You've been banned from **{}** with reason:\n```{}```", m_guilds.at(guild_id)->GetName(), goodbye)
 			);
 			/* Add the goodbye message field only after the DM was sent successfully */
 			if (reason != goodbye)
@@ -112,7 +111,7 @@ cGreekBot::process_ban(cAppCmdInteraction& i) {
 			/* Couldn't send ban reason in DMs, the user may not be a member of the guild but that's fine */
 		}
 		/* Ban */
-		co_await CreateGuildBan(*guild_id, user->GetId(), delete_messages, reason);
+		co_await CreateGuildBan(guild_id, user->GetId(), delete_messages, reason);
 		/* Send confirmation message */
 		co_return co_await EditInteractionResponse(
 			i,
@@ -125,7 +124,7 @@ cGreekBot::process_ban(cAppCmdInteraction& i) {
 					},
 					cButton{
 						BUTTON_STYLE_SECONDARY,
-						fmt::format("DLT#{}", member->GetUser()->GetId()),
+						fmt::format("DLT#{}", i.GetUser().GetId()),
 						kw::label="Dismiss"
 					}
 				}
@@ -139,36 +138,34 @@ cGreekBot::process_ban(cAppCmdInteraction& i) {
 
 cTask<>
 cGreekBot::process_unban(cMsgCompInteraction& i, const cSnowflake& user_id) {
-	if (chMember member = i.GetMember()) {
-		/* Make sure that the invoking user has the appropriate permissions */
-		if (!(member->GetPermissions() & PERM_BAN_MEMBERS)) {
-			co_await RespondToInteraction(i);
-			co_return co_await SendInteractionFollowupMessage(i, kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content="You can't do that. You're missing the `BAN_MEMBERS` permission.");
+	/* Make sure that the invoking user has the appropriate permissions */
+	if (!(i.GetMember()->GetPermissions() & PERM_BAN_MEMBERS)) {
+		co_await RespondToInteraction(i);
+		co_return co_await SendInteractionFollowupMessage(i, kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content="You can't do that. You're missing the `BAN_MEMBERS` permission.");
+	}
+	if (chSnowflake pGuildId = i.GetGuildId()) {
+		co_await RespondToInteraction(i);
+		try {
+			co_await RemoveGuildBan(*pGuildId, user_id);
 		}
-		if (chSnowflake pGuildId = i.GetGuildId()) {
-			co_await RespondToInteraction(i);
-			try {
-				co_await RemoveGuildBan(*pGuildId, user_id);
-			}
-			catch (xDiscordError& e) {
-				/* Ban not found, but that's fine */
-			}
-			auto e = i.GetMessage().GetEmbeds().front();
-			auto name = e.GetAuthor()->GetName();
-			name.remove_suffix(11); // Remove the " was banned" part
-			e.ClearFields().SetColor(0x248046).SetDescription("User was unbanned").GetAuthor()->SetName(name);
-			co_await EditInteractionResponse(i,
-				kw::embeds={ std::move(e) },
-				kw::components={
-					cActionRow{
-						cButton{
-							BUTTON_STYLE_SECONDARY,
-							fmt::format("DLT#{}", member->GetUser()->GetId()),
-							kw::label = "Dismiss"
-						}
+		catch (xDiscordError& e) {
+			/* Ban not found, but that's fine */
+		}
+		auto e = i.GetMessage().GetEmbeds().front();
+		auto name = e.GetAuthor()->GetName();
+		name.remove_suffix(11); // Remove the " was banned" part
+		e.ClearFields().SetColor(0x248046).SetDescription("User was unbanned").GetAuthor()->SetName(name);
+		co_await EditInteractionResponse(i,
+			kw::embeds={ std::move(e) },
+			kw::components={
+				cActionRow{
+					cButton{
+						BUTTON_STYLE_SECONDARY,
+						fmt::format("DLT#{}", i.GetUser().GetId()),
+						kw::label="Dismiss"
 					}
 				}
-			);
-		}
+			}
+		);
 	}
 }

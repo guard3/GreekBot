@@ -147,15 +147,15 @@ private:
 	std::string               m_token;
 	eInteractionType          m_type;
 	ePermission               m_app_permissions;
+	cUser                     m_user;
 	std::optional<cSnowflake> m_channel_id;
 
 	struct guild_data {
-		cSnowflake guild_id;
-		cMember    member;
-
-		guild_data(std::string_view, const json::value&);
+		cSnowflake   guild_id;
+		cPartialMember member;
+		guild_data(const json::value&, const json::value&);
 	};
-	std::variant<std::monostate, cUser, guild_data> m_variant;
+	std::optional<guild_data> m_guild_data;
 
 protected:
 	cInteraction(eInteractionType, const json::object&);
@@ -166,30 +166,13 @@ public:
 	const cSnowflake& GetApplicationId() const noexcept { return m_application_id;  }
 	std::string_view          GetToken() const noexcept { return m_token;           }
 	ePermission      GetAppPermissions() const noexcept { return m_app_permissions; }
+	const cUser&               GetUser() const noexcept { return m_user;            }
+	chPartialMember          GetMember() const noexcept { return m_guild_data ? &m_guild_data->member   : nullptr; }
+	chSnowflake             GetGuildId() const noexcept { return m_guild_data ? &m_guild_data->guild_id : nullptr; }
 
-	chUser GetUser() const noexcept {
-		return std::get_if<cUser>(&m_variant);
-	}
-	chMember GetMember() const noexcept {
-		auto p = std::get_if<guild_data>(&m_variant);
-		return p ? &p->member : nullptr;
-	}
-	chSnowflake GetGuildId() const noexcept {
-		auto p = std::get_if<guild_data>(&m_variant);
-		return p ? &p->guild_id : nullptr;
-	}
-
-	hUser GetUser() noexcept {
-		return std::get_if<cUser>(&m_variant);
-	}
-	hMember GetMember() noexcept {
-		auto p = std::get_if<guild_data>(&m_variant);
-		return p ? &p->member : nullptr;
-	}
-	hSnowflake GetGuildId() noexcept {
-		auto p = std::get_if<guild_data>(&m_variant);
-		return p ? &p->guild_id : nullptr;
-	}
+	cUser&           GetUser() noexcept { return m_user; }
+	hPartialMember GetMember() noexcept { return m_guild_data ? &m_guild_data->member   : nullptr; }
+	hSnowflake    GetGuildId() noexcept { return m_guild_data ? &m_guild_data->guild_id : nullptr; }
 
 	template<iInteractionVisitor Visitor>
 	decltype(auto) Visit(Visitor&&);

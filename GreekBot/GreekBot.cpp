@@ -22,7 +22,7 @@ cGreekBot::get_lmg_roles() {
 }
 
 cColor
-cGreekBot::get_lmg_member_color(const cMember& member) {
+cGreekBot::get_lmg_member_color(const cPartialMember& member) {
 	/* Find the member's color */
 	cColor color;
 	for (auto& r : get_lmg_roles()) {

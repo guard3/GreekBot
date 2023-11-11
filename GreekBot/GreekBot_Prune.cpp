@@ -8,17 +8,15 @@ cGreekBot::process_prune(cAppCmdInteraction& i) {
 	/* Acknowledge interaction first */
 	co_await RespondToInteraction(i);
 	try {
-		/* Make sure that we're on a guild and that we have the necessary permissions */
-		chSnowflake guild_id = i.GetGuildId();
-		chMember member = i.GetMember();
-		if (!(member->GetPermissions() & PERM_KICK_MEMBERS))
+		/* Make sure that the user has the necessary permissions */
+		if (!(i.GetMember()->GetPermissions() & PERM_KICK_MEMBERS))
 			co_return co_await EditInteractionResponse(i, kw::content="You can't do that. You're missing the `KICK_MEMBERS` permission.");
 		/* How many days of inactivity to consider */
 		int days = i.GetOptions().empty() ? 2 : i.GetOptions().front().GetValue<APP_CMD_OPT_INTEGER>();
 		/* Prune */
 		std::string str;
 		try {
-			int pruned = co_await BeginGuildPrune(*guild_id, days, "Failed to get a rank");
+			int pruned = co_await BeginGuildPrune(*i.GetGuildId(), days, "Failed to get a rank");
 			str = fmt::format("Pruned **{}** member{} for **{}** day{} of inactivity.", pruned, pruned == 1 ? "" : "s", days, days == 1 ? "" : "s");
 		}
 		catch (const xRateLimitError& e) {
@@ -32,7 +30,7 @@ cGreekBot::process_prune(cAppCmdInteraction& i) {
 				cActionRow{
 					cButton{
 						BUTTON_STYLE_SECONDARY,
-						fmt::format("DLT#{}", member->GetUser()->GetId()),
+						fmt::format("DLT#{}", i.GetUser().GetId()),
 						kw::label = "Dismiss"
 					}
 				}
@@ -48,8 +46,7 @@ cGreekBot::process_prune_lmg(cAppCmdInteraction& i) {
 	using namespace std::chrono;
 	using namespace std::chrono_literals;
 	/* Check that the invoking member has the appropriate permissions for extra security measure */
-	chMember invoking_member = i.GetMember();
-	if (!(invoking_member->GetPermissions() & PERM_KICK_MEMBERS))
+	if (!(i.GetMember()->GetPermissions() & PERM_KICK_MEMBERS))
 		co_return co_await RespondToInteraction(i, kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content="You can't do that. You're missing the `KICK_MEMBERS` permission.");
 	/* Otherwise, carry on normally */
 	co_await RespondToInteraction(i);
@@ -102,7 +99,7 @@ cGreekBot::process_prune_lmg(cAppCmdInteraction& i) {
 				cActionRow{
 					cButton{
 						BUTTON_STYLE_SECONDARY,
-						fmt::format("DLT#{}", invoking_member->GetUser()->GetId()),
+						fmt::format("DLT#{}", i.GetUser().GetId()),
 						kw::label="Dismiss"
 					}
 				}

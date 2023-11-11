@@ -23,7 +23,7 @@ private:
 
 	std::unordered_map<cSnowflake, uhGuild> m_guilds;
 
-	cColor get_lmg_member_color(const cMember&);
+	cColor get_lmg_member_color(const cPartialMember&);
 
 	/* Voice */
 	std::vector<uint64_t> m_lmg_voice_channels;

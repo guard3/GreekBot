@@ -62,14 +62,14 @@ cTask<>
 cGreekBot::process_rank(cAppCmdInteraction& i) {
 	try {
 		/* Resolve user and member data */
-		chUser user;
-		chMember member;
+		hUser user;
+		hPartialMember member;
 		if (auto options = i.GetOptions(); !options.empty()) {
 			user = &options.front().GetValue<APP_CMD_OPT_USER>();
 			member = options.front().GetMember();
 		} else {
+			user = &i.GetUser();
 			member = i.GetMember();
-			user = member->GetUser();
 		}
 		/* Don't display data for bot users */
 		if (user->IsBotUser())
@@ -83,7 +83,7 @@ cGreekBot::process_rank(cAppCmdInteraction& i) {
 		co_await ResumeOnEventThread();
 		/* Make sure that the selected user is a member of Learning Greek */
 		if (!member)
-			co_return co_await EditInteractionResponse(i, kw::embeds={ make_no_member_embed(user.Get(), m_guilds[m_lmg_id]->GetName(), !db_result.empty()) });
+			co_return co_await EditInteractionResponse(i, kw::embeds={ make_no_member_embed(user.Get(), m_guilds.at(m_lmg_id)->GetName(), !db_result.empty()) });
 		/* Respond */
 		cColor color = get_lmg_member_color(*member);
 		if (db_result.empty()) {

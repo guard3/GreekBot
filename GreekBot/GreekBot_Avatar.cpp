@@ -8,7 +8,7 @@ cGreekBot::process_avatar(cAppCmdInteraction& i) {
 	if (auto options = i.GetOptions(); !options.empty())
 		user = &options.front().GetValue<APP_CMD_OPT_USER>();
 	else
-		user = i.GetUser() ? i.GetUser() : i.GetMember()->GetUser();
+		user = &i.GetUser();
 	/* Respond */
 	co_await RespondToInteraction(i, kw::content=user->MoveAvatarUrl());
 }

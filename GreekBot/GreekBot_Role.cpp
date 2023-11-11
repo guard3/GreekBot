@@ -31,8 +31,7 @@ cTask<>
 cGreekBot::process_role_button(cMsgCompInteraction& i, uint32_t button_id) {
 	co_await RespondToInteraction(i);
 
-	chMember member = i.GetMember();
-	auto roles = member->GetRoles();
+	auto roles = i.GetMember()->GetRoles();
 
 	uint64_t role_id;
 	switch (button_id) {
@@ -81,9 +80,9 @@ cGreekBot::process_role_button(cMsgCompInteraction& i, uint32_t button_id) {
 	}
 
 	if (std::find(roles.begin(), roles.end(), role_id) == roles.end())
-		co_await AddGuildMemberRole(m_lmg_id, member->GetUser()->GetId(), role_id);
+		co_await AddGuildMemberRole(m_lmg_id, i.GetUser().GetId(), role_id);
 	else
-		co_await RemoveGuildMemberRole(m_lmg_id, member->GetUser()->GetId(), role_id);
+		co_await RemoveGuildMemberRole(m_lmg_id, i.GetUser().GetId(), role_id);
 }
 /* ================================================================================================================== */
 cTask<>
@@ -102,7 +101,7 @@ cGreekBot::process_proficiency_menu(cMsgCompInteraction& i) {
 	/* Acknowledge interaction */
 	co_await RespondToInteraction(i);
 	/* Create a role vector */
-	chMember member = i.GetMember();
+	hPartialMember member = i.GetMember();
 	std::vector<chSnowflake> roles;
 	roles.reserve(member->GetRoles().size() + 1);
 	/* Copy every member role except the proficiency ones */
@@ -114,7 +113,7 @@ cGreekBot::process_proficiency_menu(cMsgCompInteraction& i) {
 	cSnowflake id = i.GetValues().front();
 	roles.push_back(&id);
 	/* Update member */
-	co_await UpdateGuildMemberRoles(m_lmg_id, member->GetUser()->GetId(), roles);
+	co_await UpdateGuildMemberRoles(m_lmg_id, i.GetUser().GetId(), roles);
 }
 /* ================================================================================================================== */
 cTask<>
@@ -138,7 +137,7 @@ cGreekBot::process_booster_menu(cMsgCompInteraction& i) {
 	/* Acknowledge interaction */
 	co_await RespondToInteraction(i);
 	/* Create a new role vector */
-	chMember member = i.GetMember();
+	hPartialMember member = i.GetMember();
 	std::vector<chSnowflake> roles;
 	roles.reserve(member->GetRoles().size() + 1);
 	/* Fill the vector with all the roles the member has except the color ones */
@@ -153,7 +152,7 @@ cGreekBot::process_booster_menu(cMsgCompInteraction& i) {
 		if (selected_id != 0) {
 			roles.push_back(&selected_id);
 		}
-		co_return co_await UpdateGuildMemberRoles(m_lmg_id, member->GetUser()->GetId(), roles);
+		co_return co_await UpdateGuildMemberRoles(m_lmg_id, i.GetUser().GetId(), roles);
 	}
 	if (selected_id != 0)
 		co_await SendInteractionFollowupMessage(i, kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content="Sorry, custom colors are only available for <@&593038680608735233>s!");

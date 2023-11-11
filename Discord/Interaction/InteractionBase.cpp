@@ -93,24 +93,25 @@ cAppCmdOption::GetOptions() {
 	}
 }
 
-cInteraction::guild_data::guild_data(std::string_view s, const json::value& v): guild_id(s), member(v) {}
+cInteraction::guild_data::guild_data(const json::value& s, const json::value& v): guild_id(json::value_to<cSnowflake>(s)), member(v) {}
 
-//cInteraction::cInteraction(eInteractionType type, const json::value& v): cInteraction(type, v.as_object()) {}
 cInteraction::cInteraction(eInteractionType type, const json::object& o):
 	m_type(type),
 	m_id(json::value_to<std::string_view>(o.at("id"))),
 	m_application_id(json::value_to<std::string_view>(o.at("application_id"))),
 	m_token(json::value_to<std::string>(o.at("token"))),
-	m_app_permissions(PERM_NONE) {
+	m_app_permissions(PERM_NONE),
+	m_user([](const json::object& o) -> const json::value& {
+		const json::value* p;
+		return (p = o.if_contains("user")) ? *p : o.at("member").at("user");
+	}(o)) {
 	const json::value* p;
 	if ((p = o.if_contains("channel_id")))
 		m_channel_id.emplace(json::value_to<std::string_view>(*p));
 	/* If the interaction was triggered from DMs... */
-	if ((p = o.if_contains("user"))) {
-		m_variant.emplace<cUser>(*p);
+	if (o.contains("user"))
 		return;
-	}
 	/* Otherwise collect guild related data */
 	m_app_permissions = json::value_to<ePermission>(o.at("app_permissions"));
-	m_variant.emplace<guild_data>(json::value_to<std::string_view>(o.at("guild_id")), o.at("member"));
+	m_guild_data.emplace(o.at("guild_id"), o.at("member"));
 }
