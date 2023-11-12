@@ -13,10 +13,6 @@ eAppCmdOptionType
 tag_invoke(json::value_to_tag<eAppCmdOptionType>, const json::value& v) {
 	return static_cast<eAppCmdOptionType>(v.to_number<int>());
 }
-cAppCmdOption
-tag_invoke(json::value_to_tag<cAppCmdOption>, const json::value& v, cPtr<const json::value> r) {
-	return cAppCmdOption(v, r);
-}
 /* ========== A simple struct that holds a pair of user and an optional partial member ============================== */
 cAppCmdOption::user_data::user_data(const json::value& v, const json::value* p) : user(v) { if (p) member.emplace(*p); }
 /* ================================================================================================================== */
@@ -25,10 +21,15 @@ cAppCmdOption::cAppCmdOption(const json::value& v, cPtr<const json::value> r):
 	m_type(json::value_to<eAppCmdOptionType>(v.at("type"))) {
 	switch (m_type) {
 		case APP_CMD_OPT_SUB_COMMAND:
-		case APP_CMD_OPT_SUB_COMMAND_GROUP:
-			typedef std::vector<cAppCmdOption> options_t;
-			m_value.emplace<options_t>(json::value_to<options_t>(v.at("options"), r));
+		case APP_CMD_OPT_SUB_COMMAND_GROUP: {
+			// TODO: use tag_invoke with context in version 1.83.0
+			auto& arr = v.at("options").as_array();
+			auto& options = m_value.emplace<std::vector<cAppCmdOption>>();
+			options.reserve(arr.size());
+			for (auto& value : arr)
+				options.emplace_back(value, r);
 			break;
+		}
 		case APP_CMD_OPT_STRING:
 			m_value.emplace<std::string>(json::value_to<std::string>(v.at("value")));
 			break;

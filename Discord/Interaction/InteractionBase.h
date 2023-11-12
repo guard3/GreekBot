@@ -106,7 +106,6 @@ typedef   hHandle<cAppCmdOption>   hAppCmdOption;
 typedef  chHandle<cAppCmdOption>  chAppCmdOption;
 typedef  uhHandle<cAppCmdOption>  uhAppCmdOption;
 typedef uchHandle<cAppCmdOption> uchAppCmdOption;
-cAppCmdOption tag_invoke(boost::json::value_to_tag<cAppCmdOption>, const json::value&, cPtr<const json::value>);
 /* ========== Forward declarations of interaction types ============================================================= */
 class cAppCmdInteraction;
 class cMsgCompInteraction;
