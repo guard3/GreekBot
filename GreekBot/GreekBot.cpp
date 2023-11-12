@@ -132,10 +132,10 @@ cGreekBot::process_interaction(cAppCmdInteraction& i) {
 		case 1170787836434317363: {
 			/* ban - THIS IS JUST A TEST */
 			auto& option = i.GetOptions().front();
-			auto& user = option.GetValue<APP_CMD_OPT_USER>();
-			auto  member = option.GetMember();
 
-			cUtils::PrintLog("{} {} {}", user.GetUsername(), member->GetNick(), user.GetId());
+			auto[pUser, pMember] = option.GetValue<APP_CMD_OPT_USER>();
+
+			cUtils::PrintLog("{} {} {}", pUser->GetUsername(), pMember->GetNick(), pUser->GetId());
 			break;
 		}
 		default:

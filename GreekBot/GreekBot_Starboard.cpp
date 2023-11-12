@@ -270,9 +270,8 @@ cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) {
 				/* Retrieve selected member and user */
 				hUser user;
 				hPartialMember member;
-				if (auto& options = subcommand.GetOptions(); !options.empty()) {
-					member = options.front().GetMember();
-					user = &options.front().GetValue<APP_CMD_OPT_USER>();
+				if (auto options = subcommand.GetOptions(); !options.empty()) {
+					std::tie(user, member) = options.front().GetValue<APP_CMD_OPT_USER>();
 				} else {
 					user = &i.GetUser();
 					member = i.GetMember();

@@ -65,8 +65,7 @@ cGreekBot::process_rank(cAppCmdInteraction& i) {
 		hUser user;
 		hPartialMember member;
 		if (auto options = i.GetOptions(); !options.empty()) {
-			user = &options.front().GetValue<APP_CMD_OPT_USER>();
-			member = options.front().GetMember();
+			std::tie(user, member) = options.front().GetValue<APP_CMD_OPT_USER>();
 		} else {
 			user = &i.GetUser();
 			member = i.GetMember();

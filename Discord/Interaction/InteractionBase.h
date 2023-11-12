@@ -37,92 +37,104 @@ enum eAppCmdOptionType {
 };
 eAppCmdOptionType tag_invoke(boost::json::value_to_tag<eAppCmdOptionType>, const boost::json::value&);
 /* ================================================================================================================== */
-class xInvalidAttributeError : public std::runtime_error {
+class xInvalidAttributeError : public std::invalid_argument {
 public:
-	xInvalidAttributeError(const char* m)        : std::runtime_error(m) {}
-	xInvalidAttributeError(const std::string& m) : std::runtime_error(m) {}
+	xInvalidAttributeError(const char* m)        : std::invalid_argument(m) {}
+	xInvalidAttributeError(const std::string& m) : std::invalid_argument(m) {}
 };
 /* ================================================================================================================== */
 class cAppCmdOption final {
 private:
-	template<eAppCmdOptionType> struct a;
-
 	std::string       m_name;
 	eAppCmdOptionType m_type;
 
-	std::variant<std::monostate,
-		std::vector<cAppCmdOption>,
-		std::tuple<cUser, uhMember>,
-		std::string,
-		int,
-		bool,
-		double,
-		cSnowflake> m_value;
+	typedef std::vector<cAppCmdOption> options_t;
+
+	struct user_data {
+		cUser user;
+		std::optional<cPartialMember> member;
+
+		user_data(const json::value&, const json::value*);
+	};
+	std::variant<int, double, bool, std::string, cSnowflake, options_t, user_data> m_value;
 	
 public:
 	explicit cAppCmdOption(const json::value& v, cPtr<const json::value> r);
 	explicit cAppCmdOption(eAppCmdType, std::string_view, const json::object&);
 
-	/* Return types */
-	template<eAppCmdOptionType t>
-	using tMoveType = typename a<t>::value_type;
-	template<eAppCmdOptionType t>
-	using tValueType = std::conditional_t<t == APP_CMD_OPT_INTEGER || t == APP_CMD_OPT_BOOLEAN || t == APP_CMD_OPT_NUMBER, tMoveType<t>, tMoveType<t>&>;
-	template<eAppCmdOptionType t>
-	using tConstValueType = std::conditional_t<std::is_reference_v<tValueType<t>>, const tMoveType<t>&, tMoveType<t>>;
-	/* Access type */
-	eAppCmdOptionType GetType() const noexcept { return m_type; }
-	/* Access name */
-	std::string& GetName() noexcept { return m_name; }
-	const std::string& GetName() const noexcept { return m_name; }
-	std::string MoveName() noexcept { return std::move(m_name); }
-	/* Access options - subcommands only */
-	std::vector<cAppCmdOption>& GetOptions();
-	const std::vector<cAppCmdOption>& GetOptions() const {
-		return const_cast<cAppCmdOption*>(this)->GetOptions();
-	}
-	std::vector<cAppCmdOption> MoveOptions() {
-		return std::move(GetOptions());
-	}
-	/* Access value */
-	template<eAppCmdOptionType t> requires (t != APP_CMD_OPT_SUB_COMMAND && t != APP_CMD_OPT_SUB_COMMAND_GROUP)
-	tValueType<t> GetValue() {
-		try {
-			if constexpr (t == APP_CMD_OPT_USER)
-				return std::get<0>(std::get<2>(m_value));
-			else
-				return std::get<tMoveType<t>>(m_value);
-		}
-		catch (const std::bad_variant_access&) {
-			throw xInvalidAttributeError(fmt::format("Application command option is not of type {}", a<t>::name));
-		}
-	}
-	template<eAppCmdOptionType t> requires (t != APP_CMD_OPT_SUB_COMMAND && t != APP_CMD_OPT_SUB_COMMAND_GROUP)
-	tConstValueType<t> GetValue() const {
-		return const_cast<cAppCmdOption*>(this)->template GetValue<t>();
-	}
-	template<eAppCmdOptionType t>
-	tMoveType<t> MoveValue() { return std::move(GetValue<t>()); }
-	/* Access member */
-	hMember GetMember();
-	chMember GetMember() const { return const_cast<cAppCmdOption*>(this)->GetMember(); }
-	uhMember MoveMember();
-};
-template<> struct cAppCmdOption::a<APP_CMD_OPT_STRING>      { using value_type = std::string; static inline auto name = "APP_CMD_OPT_STRING";      };
-template<> struct cAppCmdOption::a<APP_CMD_OPT_INTEGER>     { using value_type = int;         static inline auto name = "APP_CMD_OPT_INTEGER";     };
-template<> struct cAppCmdOption::a<APP_CMD_OPT_BOOLEAN>     { using value_type = bool;        static inline auto name = "APP_CMD_OPT_BOOLEAN";     };
-template<> struct cAppCmdOption::a<APP_CMD_OPT_USER>        { using value_type = cUser;       static inline auto name = "APP_CMD_OPT_USER";        };
-template<> struct cAppCmdOption::a<APP_CMD_OPT_CHANNEL>     { using value_type = cSnowflake;  static inline auto name = "APP_CMD_OPT_CHANNEL";     };
-template<> struct cAppCmdOption::a<APP_CMD_OPT_ROLE>        { using value_type = cSnowflake;  static inline auto name = "APP_CMD_OPT_ROLE";        };
-template<> struct cAppCmdOption::a<APP_CMD_OPT_MENTIONABLE> { using value_type = cSnowflake;  static inline auto name = "APP_CMD_OPT_MENTIONABLE"; };
-template<> struct cAppCmdOption::a<APP_CMD_OPT_NUMBER>      { using value_type = double;      static inline auto name = "APP_CMD_OPT_NUMBER";      };
+	eAppCmdOptionType GetType() const noexcept { return m_type;            }
+	std::string_view  GetName() const noexcept { return m_name;            }
+	std::string      MoveName()       noexcept { return std::move(m_name); }
 
-typedef   hHandle<cAppCmdOption>   hApplicationCommandInteractionDataOption;
-typedef  chHandle<cAppCmdOption>  chApplicationCommandInteractionDataOption;
-typedef  uhHandle<cAppCmdOption>  uhApplicationCommandInteractionDataOption;
-typedef uchHandle<cAppCmdOption> uchApplicationCommandInteractionDataOption;
-typedef  uhHandle<cAppCmdOption>  shApplicationCommandInteractionDataOption;
-typedef uchHandle<cAppCmdOption> schApplicationCommandInteractionDataOption;
+	std::span<const cAppCmdOption> GetOptions() const noexcept;
+	std::span<cAppCmdOption>       GetOptions()       noexcept;
+	std::vector<cAppCmdOption>    MoveOptions()       noexcept;
+
+	template<eAppCmdOptionType Type> requires (Type == APP_CMD_OPT_STRING)
+	std::string_view GetValue() const {
+		if (auto pValue = std::get_if<std::string>(&m_value))
+			return *pValue;
+		throw xInvalidAttributeError("exception");
+	}
+	template<eAppCmdOptionType Type> requires (Type == APP_CMD_OPT_INTEGER)
+	int GetValue() const {
+		if (auto pValue = std::get_if<int>(&m_value))
+			return *pValue;
+		throw xInvalidAttributeError("exception");
+	}
+	template<eAppCmdOptionType Type> requires (Type == APP_CMD_OPT_BOOLEAN)
+	bool GetValue() const {
+		if (auto pValue = std::get_if<bool>(&m_value))
+			return *pValue;
+		throw xInvalidAttributeError("exception");
+	}
+	template<eAppCmdOptionType Type> requires (Type == APP_CMD_OPT_NUMBER)
+	double GetValue() const {
+		if (auto pValue = std::get_if<double>(&m_value))
+			return *pValue;
+		throw xInvalidAttributeError("exception");
+	}
+	template<eAppCmdOptionType Type> requires (Type == APP_CMD_OPT_CHANNEL || Type == APP_CMD_OPT_ROLE || Type == APP_CMD_OPT_MENTIONABLE)
+	const cSnowflake& GetValue() const {
+		if (auto pValue = std::get_if<cSnowflake>(&m_value); pValue && m_type == Type)
+			return *pValue;
+		throw xInvalidAttributeError("exception");
+	}
+	template<eAppCmdOptionType Type> requires (Type == APP_CMD_OPT_USER)
+	std::pair<chUser, chPartialMember> GetValue() const {
+		if (auto pValue = std::get_if<user_data>(&m_value))
+			return { &pValue->user, pValue->member ? &*pValue->member : nullptr };
+		throw xInvalidAttributeError("exception");
+	}
+
+	template<eAppCmdOptionType Type> requires (Type == APP_CMD_OPT_CHANNEL || Type == APP_CMD_OPT_ROLE || Type == APP_CMD_OPT_MENTIONABLE)
+	cSnowflake& GetValue() {
+		return const_cast<cSnowflake&>(const_cast<const cAppCmdOption*>(this)->GetValue<Type>());
+	}
+	template<eAppCmdOptionType Type> requires (Type == APP_CMD_OPT_USER)
+	std::pair<hUser, hPartialMember> GetValue() {
+		auto[u, m] = const_cast<const cAppCmdOption*>(this)->GetValue<Type>();
+		return { const_cast<cUser*>(u.Get()), const_cast<cPartialMember*>(m.Get()) };
+	}
+
+	template<eAppCmdOptionType Type> requires (Type != APP_CMD_OPT_SUB_COMMAND && Type != APP_CMD_OPT_SUB_COMMAND_GROUP)
+	auto MoveValue() {
+		if constexpr (Type == APP_CMD_OPT_STRING) {
+			if (auto v = std::get_if<std::string>(&m_value))
+				return std::move(*v);
+		} else if constexpr (Type == APP_CMD_OPT_USER) {
+			if (auto p = std::get_if<user_data>(&m_value))
+				return std::pair<cUser, std::optional<cPartialMember>>{ std::move(p->user), std::move(p->member) };
+		} else {
+			return GetValue<Type>();
+		}
+		throw xInvalidAttributeError("exception");
+	}
+};
+typedef   hHandle<cAppCmdOption>   hAppCmdOption;
+typedef  chHandle<cAppCmdOption>  chAppCmdOption;
+typedef  uhHandle<cAppCmdOption>  uhAppCmdOption;
+typedef uchHandle<cAppCmdOption> uchAppCmdOption;
 /* ========== Forward declarations of interaction types ============================================================= */
 class cAppCmdInteraction;
 class cMsgCompInteraction;

@@ -29,7 +29,7 @@ cGreekBot::process_ban(cAppCmdInteraction& i) {
 		for (auto& opt: subcommand.GetOptions()) {
 			switch (cUtils::CRC32(0, opt.GetName())) {
 				case 0x8D93D649: // "user"
-					user = &opt.GetValue<APP_CMD_OPT_USER>();
+					user = std::get<0>(opt.GetValue<APP_CMD_OPT_USER>());
 					break;
 				case 0x3A127C87: // "delete"
 					delete_messages = hours(cUtils::ParseInt(opt.GetValue<APP_CMD_OPT_STRING>()));
