@@ -70,7 +70,8 @@ tag_invoke(const json::value_from_tag&, json::value& v, const cTextInput& ti) {
 		{ "label",      ti.GetLabel()        },
 		{ "style",      ti.GetStyle()        },
 		{ "min_length", ti.GetMinLength()    },
-		{ "max_length", ti.GetMaxLength()    }
+		{ "max_length", ti.GetMaxLength()    },
+		{ "required",   ti.IsRequired()      }
 	};
 }
 void

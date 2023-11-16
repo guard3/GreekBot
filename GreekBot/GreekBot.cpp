@@ -6,7 +6,10 @@ enum : uint32_t {
 	CMP_ID_LEADERBOARD_HELP = 0x4ECEBDEC,
 	CMP_ID_STARBOARD_HELP   = 0x33330ADE,
 	CMP_ID_PROFICIENCY_MENU = 0xAE90F56B,
-	CMP_ID_BOOSTER_MENU     = 0x90DD7D88
+	CMP_ID_BOOSTER_MENU     = 0x90DD7D88,
+
+	MODAL_NICKNAME = 0x41732EB9,
+	MODAL_BAN      = 0x9839CB2A
 };
 
 std::span<const cRole>
@@ -129,15 +132,9 @@ cGreekBot::process_interaction(cAppCmdInteraction& i) {
 		case 904462004071313448: // holy
 			co_await process_starboard_leaderboard(i);
 			break;
-		case 1170787836434317363: {
-			/* ban - THIS IS JUST A TEST */
-			auto& option = i.GetOptions().front();
-
-			auto[pUser, pMember] = option.GetValue<APP_CMD_OPT_USER>();
-
-			cUtils::PrintLog("{} {} {}", pUser->GetUsername(), pMember->GetNick(), pUser->GetId());
+		case 1170787836434317363:
+			co_await process_ban_ctx_menu(i);
 			break;
-		}
 		default:
 			break;
 	}
@@ -174,5 +171,14 @@ cGreekBot::process_interaction(cMsgCompInteraction& i) {
 
 cTask<>
 cGreekBot::process_interaction(cModalSubmitInteraction& i) {
-	co_await process_modal(i);
+	std::string_view custom_id = i.GetCustomId();
+	if (custom_id.starts_with("ban:"))
+		return process_ban_modal(i);
+	if (custom_id == "NICKNAME_MODAL")
+		return process_modal(i);
+
+	return [](std::string_view id) -> cTask<> {
+		cUtils::PrintLog("Unknown modal id: {} 0x{:08X}", id, cUtils::CRC32(0, id));
+		co_return;
+	} (custom_id);
 }

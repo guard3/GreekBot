@@ -20,6 +20,10 @@ cUser::cUser(const json::object& o):
 	} else {
 		avatar = fmt::format("{}embed/avatars/{}.png", DISCORD_IMAGE_BASE_URL, disc_int ? disc_int % 5 : (id.ToInt() >> 22) % 6);
 	}
+
+	auto& gn = o.at("global_name");
+	if (!gn.is_null())
+		global_name = json::value_to<std::string>(gn);
 	const json::value* p;
 	p = o.if_contains("bot");
 	bot = p && p->as_bool();

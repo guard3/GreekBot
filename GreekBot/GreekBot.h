@@ -35,6 +35,11 @@ private:
 	cTask<> process_prune(cAppCmdInteraction&);
 	cTask<> process_prune_lmg(cAppCmdInteraction&);
 	cTask<> process_ban(cAppCmdInteraction&);
+	cTask<> process_ban_ctx_menu(cAppCmdInteraction&);
+	cTask<> process_ban_turk_ctx_menu(cAppCmdInteraction&);
+	cTask<> process_ban_greek_ctx_menu(cAppCmdInteraction&);
+	cTask<> process_ban_modal(cModalSubmitInteraction&);
+	cTask<cMessageParams> process_ban2(cInteraction&, uint32_t, cUser&, std::chrono::seconds, std::string_view, std::string_view);
 	cTask<> process_unban(cMsgCompInteraction&, const cSnowflake& user_id);
 	cTask<> process_dismiss(cMsgCompInteraction&, const cSnowflake& user_id);
 	cTask<> process_nickname_button(cMsgCompInteraction&, const cSnowflake& user_id);

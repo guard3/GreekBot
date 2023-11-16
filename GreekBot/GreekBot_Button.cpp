@@ -12,7 +12,7 @@ cGreekBot::process_nickname_button(cMsgCompInteraction& i, const cSnowflake& use
 	}
 	/* Respond with a modal */
 	co_await RespondToInteractionWithModal(i, cModal{
-		"null", // We don't depend on a custom id since this is the only modal sent, at least at the moment, so we use that, YOLO
+		"NICKNAME_MODAL",
 		"Assign a nickname!", {
 			cActionRow{
 				cTextInput{

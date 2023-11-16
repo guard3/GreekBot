@@ -4,6 +4,7 @@
 
 KW_DECLARE(min_length, int)
 KW_DECLARE(max_length, int)
+KW_DECLARE(required, bool)
 
 enum eTextInputStyle {
 	TEXT_INPUT_SHORT = 1,
@@ -18,6 +19,7 @@ private:
 	eTextInputStyle m_style;
 	int m_min_length;
 	int m_max_length;
+	bool m_required;
 
 	template<kw::key... Keys, typename S1, typename S2>
 	cTextInput(eTextInputStyle style, S1&& custom_id, S2&& label, kw::pack<Keys...> pack):
@@ -25,7 +27,8 @@ private:
 		m_label(std::forward<S2>(label)),
 		m_style(style),
 		m_min_length(kw::get<"min_length">(pack, 0)),
-		m_max_length(kw::get<"max_length">(pack, 4000)) {}
+		m_max_length(kw::get<"max_length">(pack, 4000)),
+		m_required(kw::get<"required">(pack, true)) {}
 
 public:
 	explicit cTextInput(const json::value&);
@@ -41,6 +44,8 @@ public:
 	eTextInputStyle     GetStyle() const noexcept { return m_style;      }
 	int             GetMinLength() const noexcept { return m_min_length; }
 	int             GetMaxLength() const noexcept { return m_max_length; }
+
+	bool IsRequired() const noexcept { return m_required; }
 
 	decltype(auto) MoveCustomId() noexcept { return std::move(m_custom_id); }
 	decltype(auto)    MoveLabel() noexcept { return std::move(m_label);     }

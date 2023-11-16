@@ -1,6 +1,6 @@
 {
   "type": 2,
-  "name": "ban",
+  "name": "Ban",
   "description": "",
   "default_member_permissions": "4"
 }

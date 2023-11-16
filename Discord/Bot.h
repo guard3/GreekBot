@@ -67,6 +67,9 @@ public:
 	cTask<> SendInteractionFollowupMessage(const cInteraction& i, kw::arg<Keys>&... kwargs) {
 		co_await send_interaction_followup_message(i, cMessageParams{ kwargs... });
 	}
+	cTask<> SendInteractionFollowupMessage(const cInteraction& i, const cMessageParams& p) {
+		return send_interaction_followup_message(i, p);
+	}
 
 	cTask<int> BeginGuildPrune(const cSnowflake& id, int days, std::string_view reason = {});
 
