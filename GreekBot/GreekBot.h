@@ -13,6 +13,12 @@ public:
 	}
 };
 
+enum eSubcommand : uint32_t {
+	SUBCMD_USER  = 0x8D93D649, // "user"
+	SUBCMD_TURK  = 0x504AE1C8, // "turk"
+	SUBCMD_GREEK = 0xA0F01AAE  // "greek"
+};
+
 class cGreekBot final : public cBot {
 private:
 	const cSnowflake m_lmg_id = 350234668680871946; // Learning Greek
@@ -35,11 +41,9 @@ private:
 	cTask<> process_prune(cAppCmdInteraction&);
 	cTask<> process_prune_lmg(cAppCmdInteraction&);
 	cTask<> process_ban(cAppCmdInteraction&);
-	cTask<> process_ban_ctx_menu(cAppCmdInteraction&);
-	cTask<> process_ban_turk_ctx_menu(cAppCmdInteraction&);
-	cTask<> process_ban_greek_ctx_menu(cAppCmdInteraction&);
+	cTask<> process_ban_ctx_menu(cAppCmdInteraction&, eSubcommand);
 	cTask<> process_ban_modal(cModalSubmitInteraction&);
-	cTask<cMessageParams> process_ban2(cInteraction&, uint32_t, cUser&, std::chrono::seconds, std::string_view, std::string_view);
+	cTask<cMessageParams> process_ban(cInteraction&, uint32_t, cUser&, std::chrono::seconds, std::string_view, std::string_view);
 	cTask<> process_unban(cMsgCompInteraction&, const cSnowflake& user_id);
 	cTask<> process_dismiss(cMsgCompInteraction&, const cSnowflake& user_id);
 	cTask<> process_nickname_button(cMsgCompInteraction&, const cSnowflake& user_id);

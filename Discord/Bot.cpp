@@ -78,7 +78,7 @@ template<class... Ts>
 visitor(Ts...) -> visitor<Ts...>;
 
 cTask<>
-cBot::respond_to_interaction(const cInteraction& i, const cMessageParams& params) {
+cBot::RespondToInteraction(const cInteraction& i, const cMessageParams& params) {
 	int callback = i.Visit<int>(visitor{
 		[](const cMsgCompInteraction&) { return INTERACTION_CALLBACK_UPDATE_MESSAGE; },
 		[](const cAppCmdInteraction&) { return INTERACTION_CALLBACK_CHANNEL_MESSAGE_WITH_SOURCE; },
@@ -113,7 +113,7 @@ cBot::RespondToInteractionWithModal(const cInteraction& i, const cModal& modal) 
 }
 
 cTask<>
-cBot::edit_interaction_response(const cInteraction& i, const cMessageParams& params) {
+cBot::EditInteractionResponse(const cInteraction& i, const cMessageParams& params) {
 	co_await DiscordPatch(fmt::format("/webhooks/{}/{}/messages/@original", i.GetApplicationId(), i.GetToken()), json::value_from(params).get_object());
 }
 
@@ -123,7 +123,7 @@ cBot::DeleteInteractionResponse(const cInteraction& i) {
 }
 
 cTask<>
-cBot::send_interaction_followup_message(const cInteraction& i, const cMessageParams& params) {
+cBot::SendInteractionFollowupMessage(const cInteraction& i, const cMessageParams& params) {
 	co_await DiscordPost(fmt::format("/webhooks/{}/{}", i.GetApplicationId(), i.GetToken()), json::value_from(params).get_object());
 }
 

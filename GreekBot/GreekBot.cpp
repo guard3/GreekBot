@@ -132,9 +132,14 @@ cGreekBot::process_interaction(cAppCmdInteraction& i) {
 		case 904462004071313448: // holy
 			co_await process_starboard_leaderboard(i);
 			break;
-		case 1170787836434317363:
-			co_await process_ban_ctx_menu(i);
+		case 1170787836434317363: // Apps > Ban
+			co_await process_ban_ctx_menu(i, SUBCMD_USER);
 			break;
+		case 1174826008474570892: // Apps > Ban Turk
+			co_await process_ban_ctx_menu(i, SUBCMD_TURK);
+			break;
+		case 1174836455714078740: // Apps > Ban Greek
+			co_await process_ban_ctx_menu(i, SUBCMD_GREEK);
 		default:
 			break;
 	}

@@ -18,9 +18,6 @@ private:
 	cTask<> OnReady(uhUser) override;
 	cTask<> OnUserUpdate(uhUser) override;
 
-	cTask<> respond_to_interaction(const cInteraction&, const cMessageParams&);
-	cTask<> edit_interaction_response(const cInteraction&, const cMessageParams&);
-	cTask<> send_interaction_followup_message(const cInteraction& i, const cMessageParams&);
 	cTask<cMessage> create_message(const cSnowflake& channel_id, const cMessageParams&);
 	cTask<cMessage> edit_message(const cSnowflake&, const cSnowflake&, const cMessageParams&);
 	cTask<> modify_guild_member(const cSnowflake&, const cSnowflake&, const cMemberOptions&);
@@ -47,28 +44,24 @@ public:
 	cTask<> RemoveGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake& role_id);
 	cTask<> UpdateGuildMemberRoles(const cSnowflake& guild_id, const cSnowflake& user_id, const std::vector<chSnowflake>& role_ids);
 
+	cTask<> RespondToInteraction(const cInteraction& i, const cMessageParams& p);
 	template<kw::key... Keys>
 	cTask<> RespondToInteraction(const cInteraction& i, kw::arg<Keys>&... kwargs) {
-		co_await respond_to_interaction(i, cMessageParams{ kwargs... });
+		co_await RespondToInteraction(i, cMessageParams{ kwargs... });
 	}
 	template<>
 	cTask<> RespondToInteraction<>(const cInteraction&);
-	//template<typename... Args> requires std::is_constructible_v<cModal, Args&&...>
-	//cTask<> RespondToInteractionWithModal(const cInteraction& i, Args&&... args) {
-	//	co_await RespondToInteractionWithModal(i, { std::forward<Args>(args)... });
-	//}
 	cTask<> RespondToInteractionWithModal(const cInteraction&, const cModal&);
+	cTask<> EditInteractionResponse(const cInteraction&, const cMessageParams&);
 	template<kw::key... Keys>
 	cTask<> EditInteractionResponse(const cInteraction& i, kw::arg<Keys>&... kwargs) {
-		co_await edit_interaction_response(i, cMessageParams{ kwargs... });
+		co_await EditInteractionResponse(i, cMessageParams{ kwargs... });
 	}
 	cTask<> DeleteInteractionResponse(const cInteraction&);
+	cTask<> SendInteractionFollowupMessage(const cInteraction&, const cMessageParams&);
 	template<kw::key... Keys>
 	cTask<> SendInteractionFollowupMessage(const cInteraction& i, kw::arg<Keys>&... kwargs) {
-		co_await send_interaction_followup_message(i, cMessageParams{ kwargs... });
-	}
-	cTask<> SendInteractionFollowupMessage(const cInteraction& i, const cMessageParams& p) {
-		return send_interaction_followup_message(i, p);
+		co_await SendInteractionFollowupMessage(i, cMessageParams{ kwargs... });
 	}
 
 	cTask<int> BeginGuildPrune(const cSnowflake& id, int days, std::string_view reason = {});
