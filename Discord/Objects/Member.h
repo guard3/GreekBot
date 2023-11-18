@@ -4,6 +4,7 @@
 #include "Role.h"
 #include <vector>
 #include <span>
+#include <optional>
 
 KW_DECLARE(nick, std::string_view)
 

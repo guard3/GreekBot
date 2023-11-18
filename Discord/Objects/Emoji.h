@@ -1,7 +1,7 @@
 #ifndef GREEKBOT_EMOJI_H
 #define GREEKBOT_EMOJI_H
 #include "Common.h"
-
+#include <optional>
 //TODO: separate guild emoji and standard emoji types
 class cEmoji final {
 private:
