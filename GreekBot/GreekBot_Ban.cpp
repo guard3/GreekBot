@@ -1,6 +1,5 @@
 #include "GreekBot.h"
 #include "Utils.h"
-#include <fmt/format.h>
 
 // TODO: simplify everything more
 

@@ -1,7 +1,6 @@
 #include "User.h"
 #include "Utils.h"
 #include "json.h"
-#include <fmt/format.h>
 
 cUser::cUser(const json::object& o):
 	id(json::value_to<cSnowflake>(o.at("id"))),

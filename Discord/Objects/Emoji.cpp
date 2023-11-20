@@ -1,6 +1,5 @@
 #include "Emoji.h"
 #include "json.h"
-#include <fmt/format.h>
 
 cEmoji::cEmoji(const json::value& v): m_animated(false) {
 	auto& o = v.as_object();

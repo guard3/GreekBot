@@ -1,7 +1,6 @@
 #include "Common.h"
 #include "Utils.h"
 #include "json.h"
-#include <fmt/format.h>
 
 cSnowflake::cSnowflake(uint64_t i) noexcept:
 	m_int(i) {
@@ -20,8 +19,4 @@ tag_invoke(json::value_to_tag<cSnowflake>, const json::value& v) {
 cColor
 tag_invoke(json::value_to_tag<cColor>, const json::value& v) {
 	return v.to_number<int32_t>();
-}
-
-fmt::format_context::iterator fmt::formatter<cSnowflake>::format(const cSnowflake& snowflake, format_context& ctx) const {
-	return formatter<string_view>::format(snowflake.ToString(), ctx);
 }

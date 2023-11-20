@@ -7,7 +7,7 @@
 #include <memory>
 #include <string>
 #include <string_view>
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 #define STR_(x) #x
 #define STR(x) STR_(x)
@@ -81,38 +81,6 @@ public:
 	template<typename T, typename... Args>
 	static schHandle<T> MakeSharedConstNoEx(Args&&... args) { return MakeSharedNoEx<T>(std::forward<Args>(args)...); }
 };
-/* ========== Discord time point ==================================================================================== */
-class cDiscordClock;
-template<typename Duration>
-using tDiscordTime = std::chrono::time_point<cDiscordClock, Duration>;
-/* ========== Custom clock starting from Discord Epoch (1-1-2015) =================================================== */
-class cDiscordClock final {
-public:
-	/* Necessary attributes to meet requirements for 'Clock' */
-	typedef std::chrono::milliseconds duration;
-	typedef duration::rep rep;
-	typedef duration::period period;
-	typedef std::chrono::time_point<cDiscordClock> time_point;
-	static inline constexpr bool is_steady = false;
-	/* Converting to and from std::chrono::system_clock time_points similar to std::chrono::utc_clock */
-	template<typename Duration>
-	static time_point from_sys(const std::chrono::sys_time<Duration>& p) noexcept {
-		using namespace std::chrono;
-		return time_point(duration_cast<milliseconds>(p.time_since_epoch()) - 1420070400000ms);
-	}
-	template<typename Duration>
-	static auto to_sys(const tDiscordTime<Duration>& p) noexcept {
-		using namespace std::chrono;
-		typedef std::common_type_t<Duration, system_clock::duration> tCommon;
-		return sys_time<tCommon>(duration_cast<tCommon>(p.time_since_epoch() + 1420070400000ms));
-	}
-	/* Get current time starting from Discord Epoch */
-	static time_point now() noexcept { return from_sys(std::chrono::system_clock::now()); }
-};
-/* ========== Discord time point family ============================================================================= */
-using tDiscordDays         = tDiscordTime<std::chrono::days>;
-using tDiscordSeconds      = tDiscordTime<std::chrono::seconds>;
-using tDiscordMilliseconds = tDiscordTime<std::chrono::milliseconds>;
 /* ========== Discord snowflake ===================================================================================== */
 class cSnowflake final {
 private:
@@ -135,23 +103,28 @@ public:
 	uint64_t         ToInt()    const noexcept { return m_int; }
 	
 	/* Snowflake components - https://discord.com/developers/docs/reference#snowflakes */
-	tDiscordMilliseconds GetTimestamp() const noexcept { return tDiscordMilliseconds(std::chrono::milliseconds(m_int >> 22)); }
-	int           GetInternalWorkerID() const noexcept { return (int)((m_int >> 17) & 0x01F); }
-	int          GetInternalProcessID() const noexcept { return (int)((m_int >> 12) & 0x01F); }
-	int                  GetIncrement() const noexcept { return (int) (m_int        & 0xFFF); }
+	auto  GetInternalWorkerId() const noexcept { return static_cast<std::uint8_t >(0x01F & (m_int >> 17)); }
+	auto GetInternalProcessId() const noexcept { return static_cast<std::uint8_t >(0x01F & (m_int >> 12)); }
+	auto         GetIncrement() const noexcept { return static_cast<std::uint16_t>(0xFFF &  m_int       ); }
+	/* Resource timestamp */
+	auto GetTimestamp() const noexcept {
+		using namespace std::chrono;
+		using namespace std::chrono_literals;
+		return sys_days(2015y/1/1) + milliseconds(m_int >> 22);
+	}
 };
-typedef   hHandle<cSnowflake>   hSnowflake; // handle
-typedef  chHandle<cSnowflake>  chSnowflake; // const handle
-typedef  uhHandle<cSnowflake>  uhSnowflake; // unique handle
-typedef uchHandle<cSnowflake> uchSnowflake; // unique const handle
-typedef  shHandle<cSnowflake>  shSnowflake; // shared handle
-typedef schHandle<cSnowflake> schSnowflake; // shared const handle
+typedef   hHandle<cSnowflake>   hSnowflake;
+typedef  chHandle<cSnowflake>  chSnowflake;
+typedef  uhHandle<cSnowflake>  uhSnowflake;
+typedef uchHandle<cSnowflake> uchSnowflake;
 
 cSnowflake tag_invoke(boost::json::value_to_tag<cSnowflake>, const boost::json::value&);
 
 template<>
-struct fmt::formatter<cSnowflake> : formatter<string_view> {
-	format_context::iterator format(const cSnowflake&, format_context&) const;
+struct fmt::formatter<cSnowflake> : fmt::formatter<std::string_view> {
+	auto format(const cSnowflake& sf, auto& ctx) const {
+		return fmt::formatter<std::string_view>::format(sf.ToString(), ctx);
+	}
 };
 
 /* ========== Color ========== */

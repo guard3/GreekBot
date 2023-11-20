@@ -8,7 +8,7 @@
 #include <string>
 #include <string_view>
 #include <vector>
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 /* A helper class with various useful functions */
 class cUtils final {
