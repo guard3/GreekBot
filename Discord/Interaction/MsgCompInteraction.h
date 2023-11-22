@@ -1,6 +1,10 @@
 #ifndef GREEKBOT_MSGCOMPINTERACTION_H
 #define GREEKBOT_MSGCOMPINTERACTION_H
+#include "Component.h"
 #include "InteractionBase.h"
+#include "Message.h"
+#include <span>
+#include <vector>
 
 class cMsgCompInteraction final : public cInteraction {
 private:

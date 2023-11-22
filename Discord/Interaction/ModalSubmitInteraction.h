@@ -1,6 +1,9 @@
 #ifndef GREEKBOT_MODALSUBMITINTERACTION_H
 #define GREEKBOT_MODALSUBMITINTERACTION_H
+#include "Component.h"
 #include "InteractionBase.h"
+#include <span>
+#include <vector>
 
 class cModalSubmitInteraction final : public cInteraction {
 private:
