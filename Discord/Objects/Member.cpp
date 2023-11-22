@@ -23,7 +23,7 @@ cMemberUpdate::cMemberUpdate(const json::value& v):
 cPartialMember::cPartialMember(const json::value& v): cPartialMember(v.as_object()) {}
 cPartialMember::cPartialMember(const json::object& o):
 	m_roles(json::value_to<std::vector<cSnowflake>>(o.at("roles"))),
-	m_joined_at(cUtils::ParseTimestamp<std::chrono::milliseconds>(json::value_to<std::string>(o.at("joined_at")))),
+	m_joined_at(cUtils::ParseISOTimestamp(o.at("joined_at").as_string())),
 	m_flags(json::value_to<eMemberFlag>(o.at("flags"))) {
 	const json::value* p;
 	if ((p = o.if_contains("nick"))) {
@@ -36,11 +36,11 @@ cPartialMember::cPartialMember(const json::object& o):
 	}
 	if ((p = o.if_contains("premium_since"))) {
 		if (!p->is_null())
-			m_premium_since = cUtils::ParseTimestamp<std::chrono::milliseconds>(json::value_to<std::string>(*p));
+			m_premium_since = cUtils::ParseISOTimestamp(p->as_string());
 	}
 	if ((p = o.if_contains("communication_disabled_until"))) {
 		if (!p->is_null())
-			m_communication_disabled_until = cUtils::ParseTimestamp<std::chrono::milliseconds>(json::value_to<std::string>(*p));
+			m_communication_disabled_until = cUtils::ParseISOTimestamp(p->as_string());
 	}
 	m_permissions = (p = o.if_contains("permissions")) ? json::value_to<ePermission>(*p) : PERM_NONE;
 	m_deaf = (p = o.if_contains("deaf")) && p->as_bool();

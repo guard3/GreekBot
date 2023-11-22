@@ -21,12 +21,8 @@ private:
 	using distribution = std::conditional_t<std::is_integral_v<T>,
 	                                        std::uniform_int_distribution<std::conditional_t<(sizeof(T) < sizeof(short)), int, T>>,
 	                                        std::uniform_real_distribution<T>>;
-	/* Private constructor */
-	cUtils() = default;
-	static std::chrono::sys_time<std::chrono::nanoseconds> parse_timestamp(const std::string&);
 public:
-	cUtils(const cUtils&) = delete;
-	cUtils& operator=(const cUtils&) = delete;
+	cUtils() = delete;
 	/* Random functions */
 	template<typename A, typename B> requires(std::is_arithmetic_v<A> && std::is_arithmetic_v<B>)
 	static auto Random(A a, B b) {
@@ -59,10 +55,10 @@ public:
 		T value;
 		const char* begin = str.data();
 		const char* end   = str.data() + str.size();
-		auto result = std::from_chars(begin, end, value);
-		if (result.ec == std::errc{} && result.ptr == end)
+		auto[ptr, err] = std::from_chars(begin, end, value);
+		if (err == std::errc{} && ptr == end)
 			return value;
-		if (result.ec == std::errc::result_out_of_range)
+		if (err == std::errc::result_out_of_range)
 			throw std::out_of_range("Parsed integer is out of range");
 		throw std::invalid_argument("Input string can't be parsed into an integer");
 	}
@@ -73,15 +69,9 @@ public:
 	static std::vector<uint8_t> Base64Decode(std::string_view);
 	/* Percent encoding */
 	static std::string PercentEncode(std::string_view);
-	/* Parse ISO8601 timestamp */
-	template<typename Duration = std::chrono::seconds, typename Str = std::string> requires requires(std::chrono::nanoseconds n) {
-		std::chrono::duration_cast<Duration>(n);
-		std::constructible_from<std::string, Str&&>;
-	}
-	static std::chrono::sys_time<Duration> ParseTimestamp(Str&& str) {
-		return std::chrono::time_point_cast<Duration>(parse_timestamp(static_cast<std::string>(str)));
-	}
+	/* Parse ISO8601 timestamp; basic or extended format */
+	static std::chrono::sys_time<std::chrono::milliseconds> ParseISOTimestamp(std::string_view);
 	/* Resolving the OS we're running on */
-	static const char* GetOS();
+	static std::string_view GetOS();
 };
 #endif //GREEKBOT_UTILS_H

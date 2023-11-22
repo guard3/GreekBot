@@ -1,27 +1,15 @@
 #include "Utils.h"
-#include <date/date.h>
 #include <zlib.h>
-
-/* Random engine stuff */
+/* ========== Random engine stuff =================================================================================== */
 static std::random_device g_rd;
 std::mt19937    cUtils::ms_gen(g_rd());
 std::mt19937_64 cUtils::ms_gen64(g_rd());
-
+/* ================================================================================================================== */
 uint32_t
 cUtils::CRC32(uint32_t hash, std::string_view str) noexcept {
 	return crc32(hash, reinterpret_cast<const Byte*>(str.data()), str.size());
 }
-
-std::chrono::sys_time<std::chrono::nanoseconds>
-cUtils::parse_timestamp(const std::string& str) {
-	std::istringstream ss{ str };
-	std::chrono::sys_time<std::chrono::nanoseconds> result;
-	ss >> date::parse("%FT%T%Ez", result);
-	if (ss.fail())
-		throw std::invalid_argument("Input string is not a valid ISO8601 timestamp");
-	return result;
-}
-
+/* ================================================================================================================== */
 std::string
 cUtils::PercentEncode(std::string_view sv) {
 	/* A lookup table to check if a character is unreserved or not */
@@ -61,8 +49,138 @@ cUtils::PercentEncode(std::string_view sv) {
 	result.shrink_to_fit();
 	return result;
 }
-
-const char*
+/* ========== This is an ugly macro to prevent warnings if this was a proper function =============================== */
+#define THROW_EXCEPTION() do { throw std::invalid_argument("Input string is not a valid ISO 8601 timestamp"); } while(false)
+/* ================================================================================================================== */
+std::chrono::sys_time<std::chrono::milliseconds>
+cUtils::ParseISOTimestamp(std::string_view sv) {
+	using namespace std::chrono;
+	/* Check that input string is at least as long as 'YYYYMMDDThhmmss' */
+	if (sv.size() < 15) THROW_EXCEPTION();
+	/* Variables */
+	uint8_t dgt[9]{};                  // An array of digits converted from string chars
+	uint8_t i = 0;                     // A temporary digit for when we don't want to modify the array
+	const char* str = sv.data();       // The beginning of the input string or substring
+	const char* end = str + sv.size(); // Τhe end of the input string
+	unsigned h = 0, m = 0, s = 0;      // The hours, minutes and seconds as integers
+	size_t len = 0;                    // The length of the remaining string
+	bool bExtendedDate = false;        // Is the date in extended YYYY-MM-DD format?
+	bool bExtendedTime = false;        // Is the time in extended hh:mm:ss format?
+	bool bPlus         = false;        // Is the timezone section + or - ?
+	/* Parse year as digits */
+	if ((dgt[0] = str[0] - '0') > 9 ||
+	    (dgt[1] = str[1] - '0') > 9 ||
+	    (dgt[2] = str[2] - '0') > 9 ||
+	    (dgt[3] = str[3] - '0') > 9  ) THROW_EXCEPTION();
+	/* Parse the rest of the date */
+	if (str[4] == '-') {
+		bExtendedDate = true;
+		if ((dgt[4] = str[5] - '0') > 9 ||
+		    (dgt[5] = str[6] - '0') > 9 || str[7] != '-' ||
+		    (dgt[6] = str[8] - '0') > 9 ||
+		    (dgt[7] = str[9] - '0') > 9  ) THROW_EXCEPTION();
+		str += 10;
+	} else if ((dgt[4] = str[4] - '0') > 9 ||
+	           (dgt[5] = str[5] - '0') > 9 ||
+	           (dgt[6] = str[6] - '0') > 9 ||
+	           (dgt[7] = str[7] - '0') > 9  ) THROW_EXCEPTION();
+	else str += 8;
+	/* Create a date from digits */
+	year_month_day ymd {
+			 year(dgt[3] + 10 * dgt[2] + 100 * dgt[1] + 1000 * dgt[0]),
+			month(dgt[5] + 10 * dgt[4]),
+			  day(dgt[7] + 10 * dgt[6])
+	};
+	/* Check that the date is valid and that the T separator exists */
+	if (!ymd.ok() || *str++ != 'T') THROW_EXCEPTION();
+	/* Parse hour */
+	if ((dgt[0] = str[0] - '0') > 9 ||
+	    (dgt[1] = str[1] - '0') > 9  ) THROW_EXCEPTION();
+	/* Parse the rest of the time */
+	len = end - str;
+	dgt[6] = dgt[7] = 0;
+	if (str[2] == ':' && len >= 8) {
+		bExtendedTime = true;
+		if ((dgt[2] = str[3] - '0') > 9 ||
+		    (dgt[3] = str[4] - '0') > 9 || str[5] != ':' ||
+		    (dgt[4] = str[6] - '0') > 9 ||
+		    (dgt[5] = str[7] - '0') > 9  ) THROW_EXCEPTION();
+		str += 8;
+		/* Check if there are decimal digits and parse milliseconds */
+		if (end - str > 1) {
+			if (str[0] == '.' && (i = str[1] - '0') < 10) {
+				dgt[6] = i;
+				str += 2;
+				if (end - str > 0) {
+					if ((i = *str - '0') < 10) {
+						dgt[7] = i;
+						str++;
+						if (end - str > 0) {
+							if ((i = *str - '0') < 10) {
+								dgt[8] = i;
+								/* Advance str to skip any remaining digits */
+								while (++str < end)
+									if ((i = *str - '0') > 9)
+										break;
+		}	}	}	}	}	}
+	} else if (len >= 6) {
+		if ((dgt[2] = str[2] - '0') > 9 ||
+		    (dgt[3] = str[3] - '0') > 9 ||
+		    (dgt[4] = str[4] - '0') > 9 ||
+		    (dgt[5] = str[5] - '0') > 9  ) THROW_EXCEPTION();
+		str += 6;
+	} else {
+		THROW_EXCEPTION();
+	}
+	/* Make sure that the parsed date and time use the same format */
+	if (bExtendedDate != bExtendedTime) THROW_EXCEPTION();
+	/* Check the range of hours, minutes and seconds */
+	if ((h = 10 * dgt[0] + dgt[1]) > 23 ||
+	    (m = 10 * dgt[2] + dgt[3]) > 59 ||
+	    (s = 10 * dgt[4] + dgt[5]) > 59  ) THROW_EXCEPTION();
+	/* Save the time point so far */
+	auto result = sys_days(ymd) + hours(h) + minutes(m) + seconds(s) + milliseconds(100 * dgt[6] + 10 * dgt[7] + dgt[8]);
+	/* Reset digits for hours and minutes */
+	dgt[0] = dgt[1] = dgt[2] = dgt[3] = 0;
+	/* Parse optional timezone */
+	len = end - str;
+	if (len > 0) {
+		switch (*str) {
+			case 'Z':
+				if (len == 1) break;
+				THROW_EXCEPTION();
+			case '+':
+				bPlus = true;
+			case '-':
+				if (bExtendedTime) {
+					if (len == 6)
+						if ((dgt[0] = str[1] - '0') < 10 &&
+						    (dgt[1] = str[2] - '0') < 10 && str[3] == ':' &&
+						    (dgt[2] = str[4] - '0') < 10 &&
+						    (dgt[3] = str[5] - '0') < 10  ) break;
+				} else {
+					if (len == 5) {
+						if ((dgt[2] = str[3] - '0') > 9 ||
+						    (dgt[3] = str[4] - '0') > 9  ) THROW_EXCEPTION();
+						len = 3;
+					}
+					if (len == 3)
+						if ((dgt[0] = str[1] - '0') < 10 &&
+						    (dgt[1] = str[2] - '0') < 10  ) break;
+				}
+			default:
+				THROW_EXCEPTION();
+		}
+	}
+	/* Save timezone offset */
+	if ((h = 10 * dgt[0] + dgt[1]) > 23 ||
+	    (m = 10 * dgt[2] + dgt[3]) > 59  ) THROW_EXCEPTION();
+	auto tz = hours(h) + minutes(m);
+	/* Return final result */
+	return bPlus ? result - tz : result + tz;
+}
+/* ================================================================================================================== */
+std::string_view
 cUtils::GetOS() {
 #ifdef _WIN32
 	return "Windows";
