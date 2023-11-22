@@ -80,9 +80,6 @@ target_link_libraries(GreekBot ZLIB::ZLIB)
 find_package(fmt 10.0.0 REQUIRED)
 target_link_libraries(GreekBot fmt::fmt)
 
-# Link Howard Hinnant's date.h (since Clang 15 doesn't support chrono extension for calendars and timezones)
-include_directories(SYSTEM ${PROJECT_SOURCE_DIR}/date/include)
-
 # Prepare SQL query defines
 function(define_query VAR_NAME FILE_NAME)
     file(READ ${FILE_NAME} CONTENT)
