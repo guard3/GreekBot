@@ -132,6 +132,9 @@ cGreekBot::process_interaction(cAppCmdInteraction& i) {
 		case 904462004071313448: // holy
 			co_await process_starboard_leaderboard(i);
 			break;
+		case 1177042125205024868: // timestamp
+			co_await process_timestamp(i);
+			break;
 		case 1170787836434317363: // Apps > Ban
 			co_await process_ban_ctx_menu(i, SUBCMD_USER);
 			break;

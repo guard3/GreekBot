@@ -1,0 +1,45 @@
+{
+  "name": "timestamp",
+  "description": "Generate a Discord timestamp",
+  "options": [{
+    "name": "format",
+    "type": 1,
+    "description": "Generate a Discord timestamp",
+    "options": [{
+      "name": "timestamp",
+      "type": 3,
+      "description": "An ISO 8601 timestamp",
+      "required": true
+    },{
+      "name": "style",
+      "type": 3,
+      "description": "The style of the formatted timestamp",
+      "choices": [{
+        "name": "Short Time",
+        "value": "t"
+      }, {
+        "name": "Long Time",
+        "value": "T"
+      }, {
+        "name": "Short Date",
+        "value": "d"
+      }, {
+        "name": "Long Date",
+        "value": "D"
+      }, {
+        "name": "Short Date/Time",
+        "value": "f"
+      }, {
+        "name": "Long Date/Time",
+        "value": "F"
+      }, {
+        "name": "Relative Time",
+        "value": "R"
+      }]
+    }]
+  }, {
+    "name": "help",
+    "type": 1,
+    "description": "Learn how to generate a Discord timestamp"
+  }]
+}
