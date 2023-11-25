@@ -2,6 +2,9 @@
 #include "Utils.h"
 #include "json.h"
 
+// TODO: add this to cCDN
+#define DISCORD_IMAGE_BASE_URL "https://cdn.discordapp.com/"
+
 ePermission
 tag_invoke(json::value_to_tag<ePermission>, const json::value& v) {
 	return static_cast<ePermission>(cUtils::ParseInt<uint64_t>(json::value_to<std::string_view>(v)));

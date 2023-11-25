@@ -16,8 +16,6 @@
 #define DISCORD_API_HOST        "discord.com"
 #define DISCORD_API_ENDPOINT    "/api/v" STR(DISCORD_API_VERSION)
 
-#define DISCORD_IMAGE_BASE_URL "https://cdn.discordapp.com/"
-
 /* Boost Json forward declarations */
 namespace boost::json {
 	class value;

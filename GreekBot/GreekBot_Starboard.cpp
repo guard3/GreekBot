@@ -1,6 +1,7 @@
 #include "GreekBot.h"
 #include "Database.h"
 #include "Utils.h"
+#include "CDN.h"
 
 static const cSnowflake HOLY_EMOJI_ID = 409075809723219969;
 static const cSnowflake HOLY_CHANNEL_ID = 978993330694266920;
@@ -103,7 +104,7 @@ cGreekBot::process_reaction(const cSnowflake& channel_id, const cSnowflake& mess
 	cEmbed& preview = embed_vector.emplace_back(
 		kw::author=cEmbedAuthor{
 			author_user.MoveUsername(),
-			kw::icon_url=author_user.MoveAvatarUrl()
+			kw::icon_url=cCDN::GetUserAvatar(author_user)
 		},
 		kw::color=get_lmg_member_color(author_member),
 		kw::timestamp=msg->GetTimestamp()
@@ -233,7 +234,7 @@ static cEmbed make_embed(const cUser& user, const starboard_entry& e, cColor col
 	return cEmbed{
 		kw::author={
 			user.GetUsername(),
-			kw::icon_url=user.GetAvatarUrl()
+			kw::icon_url=cCDN::GetUserAvatar(user)
 		},
 		kw::title=fmt::format("{} Rank#{}", medal, e.rank),
 		kw::color=color,
@@ -249,10 +250,10 @@ static cEmbed make_no_member_embed(const cUser* pUser, std::string_view guild_na
 	return cEmbed{
 		kw::author=pUser ? cEmbedAuthor{
 				pUser->GetUsername(),
-				kw::icon_url=pUser->GetAvatarUrl()
+				kw::icon_url=cCDN::GetUserAvatar(*pUser)
 			} : cEmbedAuthor{
 				"Deleted User",
-				kw::icon_url=fmt::format("{}embed/avatars/0.png", DISCORD_IMAGE_BASE_URL)
+				kw::icon_url=cCDN::GetDefaultUserAvatar(cSnowflake())
 			},
 		kw::color=0x0096FF,
 		kw::description=fmt::format("User is not a member of **{}**{}.", guild_name, bAnymore ? " anymore" : "")
@@ -309,7 +310,7 @@ cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) {
 				embeds.emplace_back(
 					kw::author = {
 						user->GetUsername(),
-						kw::icon_url = user->GetAvatarUrl()
+						kw::icon_url = cCDN::GetUserAvatar(*user)
 					},
 					kw::color = color,
 					kw::description = fmt::format("User has no <:Holy:409075809723219969>ed messages. {}", msg)

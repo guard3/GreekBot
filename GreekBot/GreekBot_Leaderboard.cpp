@@ -1,13 +1,14 @@
 #include "GreekBot.h"
 #include "Database.h"
 #include "Utils.h"
+#include "CDN.h"
 
 /* Helper functions that create embeds */
 static cEmbed make_no_xp_embed(const cUser& user, cColor c) {
 	return cEmbed{
 		kw::author={
 			user.GetUsername(),
-			kw::icon_url=user.GetAvatarUrl()
+			kw::icon_url=cCDN::GetUserAvatar(user)
 		},
 		kw::description="User has no XP yet.",
 		kw::color=c
@@ -17,10 +18,10 @@ static cEmbed make_no_member_embed(const cUser* pUser, std::string_view guild_na
 	return cEmbed{
 		kw::author=pUser ? cEmbedAuthor{
 			pUser->GetUsername(),
-			kw::icon_url=pUser->GetAvatarUrl()
+			kw::icon_url=cCDN::GetUserAvatar(*pUser)
 		} : cEmbedAuthor{
 			"Deleted user",
-			kw::icon_url=fmt::format("{}embed/avatars/0.png", DISCORD_IMAGE_BASE_URL)
+			kw::icon_url=cCDN::GetDefaultUserAvatar(cSnowflake())
 		},
 		kw::description=fmt::format("User is not a member of **{}**{}.", guild_name, bAnymore ? " anymore" : ""),
 		kw::color=0x0096FF
@@ -46,7 +47,7 @@ static cEmbed make_embed(const cUser& user, cColor c, int64_t rank, int64_t xp, 
 	return cEmbed{
 		kw::author={
 			user.GetUsername(),
-			kw::icon_url = user.GetAvatarUrl()
+			kw::icon_url=cCDN::GetUserAvatar(user)
 		},
 		kw::title=fmt::format("{} Rank **#{}**\tLevel **{}**", medal, rank, level),
 		kw::color=c,
@@ -142,7 +143,7 @@ cGreekBot::process_top(cAppCmdInteraction& i) {
 				continue;
 			}
 			/* Otherwise, make a no-member embed */
-			std::string_view guild_name = m_guilds[m_lmg_id]->GetName();
+			std::string_view guild_name = m_guilds.at(m_lmg_id)->GetName();
 			try {
 				cUser user = co_await GetUser(*d.GetUserId());
 				es.push_back(make_no_member_embed(&user, guild_name, true));

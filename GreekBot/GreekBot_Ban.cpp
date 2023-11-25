@@ -1,5 +1,6 @@
 #include "GreekBot.h"
 #include "Utils.h"
+#include "CDN.h"
 
 // TODO: simplify everything more
 
@@ -101,7 +102,7 @@ cGreekBot::process_ban(cInteraction& i, uint32_t subcmd, cUser& user, std::chron
 	cEmbed& e = embeds.emplace_back(
 		kw::author={
 			fmt::format("{} was banned", user.GetUsername()),
-			kw::icon_url=user.GetAvatarUrl()
+			kw::icon_url=cCDN::GetUserAvatar(user)
 		},
 		kw::color=0xC43135,
 		kw::fields={{ "Reason", reason }}
