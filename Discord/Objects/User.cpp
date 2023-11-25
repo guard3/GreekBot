@@ -24,11 +24,15 @@ cUser::cUser(const json::object& o):
 	p = o.if_contains("system");
 	m_system = p && p->as_bool();
 }
-
+#if 0
 struct crefUser::user_ref {
 	const cSnowflake&  id;
 	std::string_view hash;
 	std::uint16_t   discr;
+
+	~user_ref() {
+		cUtils::PrintLog("Uh oh...");
+	}
 };
 
 crefUser::crefUser(const cUser& user) noexcept : m_value(&user),
@@ -52,3 +56,13 @@ crefUser::crefUser(const user_ref& user) noexcept : m_value(&user),
 		return reinterpret_cast<const user_ref*>(pVoid)->discr;
 	}) {}
 crefUser::crefUser(const cSnowflake &id, std::string_view hash, std::uint16_t discr) noexcept : crefUser(user_ref{ id, hash, discr }) {}
+#else
+crefUser::crefUser(const cUser &user) noexcept :
+	m_id(user.GetId()),
+	m_avatar(user.GetAvatar()),
+	m_discriminator(user.GetDiscriminator()) {}
+crefUser::crefUser(const cSnowflake &id, std::string_view hash, std::uint16_t discr) noexcept :
+	m_id(id),
+	m_avatar(hash),
+	m_discriminator(discr) {}
+#endif

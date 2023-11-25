@@ -59,7 +59,7 @@ cGreekBot::process_ban(cAppCmdInteraction& i) {
 		if (user->GetId() == GetUser()->GetId())
 			co_return co_await EditInteractionResponse(i, kw::content=get_no_ban_msg((eSubcommand)subcmd));
 		/* Ban */
-		cMessageParams msg = co_await process_ban(i, subcmd, *user, delete_messages, reason, goodbye);
+		cMessageParams msg = co_await process_ban(i, subcmd, *user, user->GetUsername(), delete_messages, reason, goodbye);
 		co_return co_await EditInteractionResponse(i, msg);
 	}
 	catch (...) {}
@@ -67,7 +67,7 @@ cGreekBot::process_ban(cAppCmdInteraction& i) {
 }
 
 cTask<cMessageParams>
-cGreekBot::process_ban(cInteraction& i, uint32_t subcmd, cUser& user, std::chrono::seconds delete_messages, std::string_view reason, std::string_view goodbye) {
+cGreekBot::process_ban(cInteraction& i, uint32_t subcmd, crefUser user, std::string_view username, std::chrono::seconds delete_messages, std::string_view reason, std::string_view goodbye) {
 	/* Update reason and goodbye message */
 	switch (subcmd) {
 		case SUBCMD_TURK:
@@ -101,7 +101,7 @@ cGreekBot::process_ban(cInteraction& i, uint32_t subcmd, cUser& user, std::chron
 	std::vector<cEmbed> embeds;
 	cEmbed& e = embeds.emplace_back(
 		kw::author={
-			fmt::format("{} was banned", user.GetUsername()),
+			fmt::format("{} was banned", username),
 			kw::icon_url=cCDN::GetUserAvatar(user)
 		},
 		kw::color=0xC43135,
@@ -192,7 +192,7 @@ cGreekBot::process_ban_ctx_menu(cAppCmdInteraction& i, eSubcommand subcmd) {
 		if (subcmd != SUBCMD_USER) {
 			co_await RespondToInteraction(i);
 			bAck = true;
-			cMessageParams msg = co_await process_ban(i, subcmd, *user, std::chrono::days(7), {}, {});
+			cMessageParams msg = co_await process_ban(i, subcmd, *user, user->GetUsername(), std::chrono::days(7), {}, {});
 			co_return co_await SendInteractionFollowupMessage(i, msg);
 		}
 		/* Otherwise, retrieve the user's display name in the guild... */
@@ -205,7 +205,7 @@ cGreekBot::process_ban_ctx_menu(cAppCmdInteraction& i, eSubcommand subcmd) {
 			display_name = user->GetUsername();
 		/* ...and then send a modal to request optional ban reason and goodbye message */
 		co_return co_await RespondToInteractionWithModal(i, cModal{
-			fmt::format("ban:{}", user->GetId()),
+			fmt::format("ban:{}:{}:{}:{}", user->GetId(), user->GetAvatar(), user->GetDiscriminator(), user->GetUsername()),
 			fmt::format("Ban @{}", display_name),
 			{
 				cActionRow{
@@ -233,6 +233,8 @@ cGreekBot::process_ban_ctx_menu(cAppCmdInteraction& i, eSubcommand subcmd) {
 	cMessageParams msg { kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content="An unexpected error has occurred. Try again later." };
 	co_await (bAck ? SendInteractionFollowupMessage(i, msg) : RespondToInteraction(i, msg));
 }
+
+#define THROW_EXCEPTION() do { throw std::runtime_error("Error parsing modal id"); } while (false)
 cTask<>
 cGreekBot::process_ban_modal(cModalSubmitInteraction& i) {
 	/* Acknowledge the interaction right away */
@@ -255,11 +257,21 @@ cGreekBot::process_ban_modal(cModalSubmitInteraction& i) {
 				}
 			}
 		}
-		/* Retrieve to-be-banned user */
-		cSnowflake user_id = i.GetCustomId().substr(4); // Remove the "ban:" prefix
-		cUser user = co_await GetUser(user_id); // TODO: cache user info in modal custom_ids
+		/* Retrieve user id */
+		size_t f1 = 4, f2 = 0; // Start at 4 chars to skip "ban:"
+		std::string_view custom_id = i.GetCustomId();
+		if (f2 = custom_id.find(':', f1); f2 == std::string_view::npos) THROW_EXCEPTION();
+		cSnowflake user_id = custom_id.substr(f1, f2 - f1);
+		/* Retrieve user avatar */
+		f1 = f2 + 1;
+		if (f2 = custom_id.find(':', f1); f2 == std::string_view::npos) THROW_EXCEPTION();
+		auto user_avatar = custom_id.substr(f1, f2 - f1);
+		/* Retrieve user discriminator */
+		f1 = f2 + 1;
+		if (f2 = custom_id.find(':', f1); f2 == std::string_view::npos) THROW_EXCEPTION();
+		auto user_discr = cUtils::ParseInt<std::uint16_t>(custom_id.substr(f1, f2 - f1));
 		/* Ban user, send appropriate DM and retrieve the confirmation message parameters */
-		cMessageParams msg = co_await process_ban(i, SUBCMD_USER, user, std::chrono::days(7), reason, goodbye);
+		cMessageParams msg = co_await process_ban(i, SUBCMD_USER, { user_id, user_avatar, user_discr }, custom_id.substr(f2 + 1), std::chrono::days(7), reason, goodbye);
 		co_return co_await SendInteractionFollowupMessage(i, msg);
 	} catch (const std::exception& e) {
 		cUtils::PrintErr("process_ban_modal() {}", e.what());
