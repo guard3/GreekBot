@@ -38,14 +38,10 @@ typedef uchHandle<cUser> uchUser;
 class crefUser final {
 private:
 	const cSnowflake& m_id;
-	std::string_view m_avatar;
-	std::uint16_t m_discriminator;
 public:
-	crefUser(const cUser& user) noexcept;
-	crefUser(const cSnowflake& id, std::string_view hash = {}, std::uint16_t discr = 0) noexcept;
+	crefUser(const cUser& user) noexcept : m_id(user.GetId()) {}
+	crefUser(const cSnowflake& id) noexcept : m_id(id) {}
 
-	const cSnowflake&        GetId() const noexcept { return m_id;            }
-	std::string_view     GetAvatar() const noexcept { return m_avatar;        }
-	std::uint16_t GetDiscriminator() const noexcept { return m_discriminator; }
+	const cSnowflake& GetId() const noexcept { return m_id; }
 };
 #endif //GREEKBOT_USER_H

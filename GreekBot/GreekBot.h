@@ -43,7 +43,7 @@ private:
 	cTask<> process_ban(cAppCmdInteraction&);
 	cTask<> process_ban_ctx_menu(cAppCmdInteraction&, eSubcommand);
 	cTask<> process_ban_modal(cModalSubmitInteraction&);
-	cTask<cMessageParams> process_ban(cInteraction&, uint32_t, crefUser, std::string_view, std::chrono::seconds, std::string_view, std::string_view);
+	cTask<cMessageParams> process_ban(cInteraction&, uint32_t, const cSnowflake&, std::string_view, std::uint16_t, std::string_view, std::chrono::seconds, std::string_view, std::string_view);
 	cTask<> process_unban(cMsgCompInteraction&, const cSnowflake& user_id);
 	cTask<> process_dismiss(cMsgCompInteraction&, const cSnowflake& user_id);
 	cTask<> process_nickname_button(cMsgCompInteraction&, const cSnowflake& user_id);
