@@ -11,6 +11,23 @@
 #include "Channel.h"
 #include "Modal.h"
 
+enum class eCallback : unsigned {
+	Default,
+	Loading,
+	SendMessage,
+	EditMessage,
+	Modal
+};
+
+/*
+ * CHANNEL_MESSAGE_WITH_SOURCE	4	respond to an interaction with a message
+ * DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE	5	ACK an interaction and edit a response later, the user sees a loading state
+ * DEFERRED_UPDATE_MESSAGE*	6	for components, ACK an interaction and edit the original message later; the user does not see a loading state
+ * UPDATE_MESSAGE*	7	for components, edit the message the component was attached to
+ * APPLICATION_COMMAND_AUTOCOMPLETE_RESULT	8	respond to an autocomplete interaction with suggested choices
+ * MODAL
+ */
+
 class cBot : public cGateway {
 private:
 	uhUser m_user;
@@ -44,13 +61,16 @@ public:
 	cTask<> RemoveGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake& role_id);
 	cTask<> UpdateGuildMemberRoles(const cSnowflake& guild_id, const cSnowflake& user_id, const std::vector<chSnowflake>& role_ids);
 
+	cTask<> RespondToInteraction(const cAppCmdInteraction&, bool bThinking = false);
+	cTask<> RespondToInteraction(const cMsgCompInteraction&, bool bThinking = false);
+	cTask<> RespondToInteraction(const cModalSubmitInteraction&, bool bThinking = false);
+	cTask<> RespondToInteraction(const cInteraction&, bool bThinking = false);
+
 	cTask<> RespondToInteraction(const cInteraction& i, const cMessageParams& p);
-	template<kw::key... Keys>
+	template<kw::key... Keys> requires (sizeof...(Keys) > 0)
 	cTask<> RespondToInteraction(const cInteraction& i, kw::arg<Keys>&... kwargs) {
 		co_await RespondToInteraction(i, cMessageParams{ kwargs... });
 	}
-	template<>
-	cTask<> RespondToInteraction<>(const cInteraction&);
 	cTask<> RespondToInteractionWithModal(const cInteraction&, const cModal&);
 	cTask<> EditInteractionResponse(const cInteraction&, const cMessageParams&);
 	template<kw::key... Keys>

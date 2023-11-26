@@ -80,8 +80,7 @@ cTask<>
 cBot::RespondToInteraction(const cInteraction& i, const cMessageParams& params) {
 	int callback = i.Visit<int>(visitor{
 		[](const cMsgCompInteraction&) { return INTERACTION_CALLBACK_UPDATE_MESSAGE; },
-		[](const cAppCmdInteraction&) { return INTERACTION_CALLBACK_CHANNEL_MESSAGE_WITH_SOURCE; },
-		[](auto&&) { return 0; }
+		[](auto&&) { return INTERACTION_CALLBACK_CHANNEL_MESSAGE_WITH_SOURCE; }
 	});
 	if (callback == 0)
 		co_return;
@@ -90,18 +89,23 @@ cBot::RespondToInteraction(const cInteraction& i, const cMessageParams& params) 
 	co_await DiscordPost(fmt::format("/interactions/{}/{}/callback", i.GetId(), i.GetToken()), obj);
 }
 
-template<>
 cTask<>
-cBot::RespondToInteraction<>(const cInteraction& i) {
-	int callback = i.Visit(visitor{
-		[](const cAppCmdInteraction&) {
-			return INTERACTION_CALLBACK_DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE;
-		},
-		[](auto&&) {
-			return INTERACTION_CALLBACK_DEFERRED_UPDATE_MESSAGE;
-		}
+cBot::RespondToInteraction(const cAppCmdInteraction& i, bool) {
+	co_await DiscordPost(fmt::format("/interactions/{}/{}/callback", i.GetId(), i.GetToken()), {{ "type", INTERACTION_CALLBACK_DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE }});
+}
+cTask<>
+cBot::RespondToInteraction(const cMsgCompInteraction& i, bool bThinking) {
+	co_await DiscordPost(fmt::format("/interactions/{}/{}/callback", i.GetId(), i.GetToken()), {{ "type", bThinking ? INTERACTION_CALLBACK_DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE : INTERACTION_CALLBACK_DEFERRED_UPDATE_MESSAGE }});
+}
+cTask<>
+cBot::RespondToInteraction(const cModalSubmitInteraction& i, bool bThinking) {
+	co_await DiscordPost(fmt::format("/interactions/{}/{}/callback", i.GetId(), i.GetToken()), {{ "type", bThinking ? INTERACTION_CALLBACK_DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE : INTERACTION_CALLBACK_DEFERRED_UPDATE_MESSAGE }});
+}
+cTask<>
+cBot::RespondToInteraction(const cInteraction& i, bool bThinking) {
+	return i.Visit([this, bThinking](auto& i) {
+		return RespondToInteraction(i, bThinking);
 	});
-	co_await DiscordPost(fmt::format("/interactions/{}/{}/callback", i.GetId(), i.GetToken()), {{ "type", callback }});
 }
 
 cTask<>
