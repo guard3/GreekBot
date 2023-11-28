@@ -52,19 +52,28 @@ cGreekBot::process_ban(cAppCmdInteraction& i) {
 	catch (const std::exception& e) {
 		cUtils::PrintErr("process_ban() {}", e.what());
 	}
-	co_await RespondToInteraction(i, kw::content="An unexpected error has occurred, try again later.");
+	co_await InteractionSendMessage(i, cMessageParams{
+		kw::flags=MESSAGE_FLAG_EPHEMERAL,
+		kw::content="An unexpected error has occurred, try again later."
+	});
 }
 
 cTask<>
 cGreekBot::process_ban(cInteraction& i, uint32_t subcmd, const cSnowflake& user_id, std::string_view hash, std::uint16_t discr, std::string_view username, std::chrono::seconds delete_messages, std::string_view reason, std::string_view goodbye) {
 	/* Check that the invoking user has appropriate permissions, for extra measure */
 	if (!(i.GetMember()->GetPermissions() & PERM_BAN_MEMBERS))
-		co_return co_await RespondToInteraction(i, kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content="You can't do that. You're missing the `BAN_MEMBERS` permission.");
+		co_return co_await InteractionSendMessage(i, cMessageParams{
+			kw::flags=MESSAGE_FLAG_EPHEMERAL,
+			kw::content="You can't do that. You're missing the `BAN_MEMBERS` permission."
+		});
 	/* Make sure we're not banning ourselves */
 	if (user_id == GetUser()->GetId())
-		co_return co_await RespondToInteraction(i, kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content=get_no_ban_msg(subcmd));
+		co_return co_await InteractionSendMessage(i, cMessageParams{
+			kw::flags=MESSAGE_FLAG_EPHEMERAL,
+			kw::content=get_no_ban_msg(subcmd)
+		});
 	/* Acknowledge interaction */
-	co_await RespondToInteraction(i, true);
+	co_await InteractionDefer(i, true);
 	/* Update reason and goodbye message */
 	switch (subcmd) {
 		case SUBCMD_TURK:
@@ -120,46 +129,47 @@ cGreekBot::process_ban(cInteraction& i, uint32_t subcmd, const cSnowflake& user_
 	/* Ban */
 	co_await CreateGuildBan(*i.GetGuildId(), user_id, delete_messages, reason);
 	/* Send confirmation message */
-	co_await EditInteractionResponse(i,
+	co_await InteractionSendMessage(i, cMessageParams{
 		kw::components = {
 			cActionRow{
 				cButton{
 					BUTTON_STYLE_DANGER,
 					fmt::format("BAN#{}", user_id),
-					kw::label="Revoke ban"
+					kw::label = "Revoke ban"
 				},
 				cButton{
 					BUTTON_STYLE_SECONDARY,
 					fmt::format("DLT#{}", i.GetUser().GetId()),
-					kw::label="Dismiss"
+					kw::label = "Dismiss"
 				}
 			}
 		},
-		kw::embeds=std::move(embeds)
-	);
+		kw::embeds = std::move(embeds)
+	});
 }
 
 cTask<>
 cGreekBot::process_unban(cMsgCompInteraction& i, const cSnowflake& user_id) {
 	/* Make sure that the invoking user has the appropriate permissions */
 	if (!(i.GetMember()->GetPermissions() & PERM_BAN_MEMBERS)) {
-		// TODO: rewrite interactions interface to respond with a message right away
-		co_await RespondToInteraction(i);
-		co_return co_await SendInteractionFollowupMessage(i, kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content="You can't do that. You're missing the `BAN_MEMBERS` permission.");
+		co_return co_await InteractionSendMessage(i, cMessageParams{
+			kw::flags=MESSAGE_FLAG_EPHEMERAL,
+			kw::content="You can't do that. You're missing the `BAN_MEMBERS` permission."
+		});
 	}
-	if (chSnowflake pGuildId = i.GetGuildId()) {
-		co_await RespondToInteraction(i);
+	try {
+		co_await InteractionDefer(i);
 		try {
-			co_await RemoveGuildBan(*pGuildId, user_id);
-		}
-		catch (xDiscordError& e) {
+			co_await RemoveGuildBan(*i.GetGuildId(), user_id);
+		} catch (xDiscordError &e) {
 			/* Ban not found, but that's fine */
 		}
-		auto e = i.GetMessage().GetEmbeds().front();
+		auto embeds = i.GetMessage().MoveEmbeds();
+		auto& e = embeds.front();
 		auto name = e.GetAuthor()->GetName();
 		name.remove_suffix(11); // Remove the " was banned" part
 		e.ClearFields().SetColor(0x248046).SetDescription("User was unbanned").GetAuthor()->SetName(name);
-		co_await EditInteractionResponse(i,
+		co_return co_await EditInteractionResponse(i,
 			kw::embeds={ std::move(e) },
 			kw::components={
 				cActionRow{
@@ -171,12 +181,17 @@ cGreekBot::process_unban(cMsgCompInteraction& i, const cSnowflake& user_id) {
 				}
 			}
 		);
+	} catch (const std::exception& e) {
+		cUtils::PrintErr("process_unban() {}", e.what());
 	}
+	co_await InteractionSendMessage(i, cMessageParams{
+		kw::flags=MESSAGE_FLAG_EPHEMERAL,
+		kw::content="An unexpected error has occurred. Try again later."
+	});
 }
 
 cTask<>
 cGreekBot::process_ban_ctx_menu(cAppCmdInteraction& i, eSubcommand subcmd) {
-	bool bAck = false;
 	try {
 		/* Retrieve the user to be banned */
 		auto[user, member] = i.GetOptions().front().GetValue<APP_CMD_OPT_USER>();
@@ -185,10 +200,16 @@ cGreekBot::process_ban_ctx_menu(cAppCmdInteraction& i, eSubcommand subcmd) {
 			co_return co_await process_ban(i, subcmd, user->GetId(), user->GetAvatar(), user->GetDiscriminator(), user->GetUsername(), std::chrono::days(7), {}, {});
 		/* Check that the invoking member has appropriate permissions */
 		if (!(i.GetMember()->GetPermissions() & PERM_BAN_MEMBERS))
-			co_return co_await RespondToInteraction(i, kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content="You can't do that. You're missing the `BAN_MEMBERS` permission");
+			co_return co_await InteractionSendMessage(i, cMessageParams{
+				kw::flags=MESSAGE_FLAG_EPHEMERAL,
+				kw::content="You can't do that. You're missing the `BAN_MEMBERS` permission"
+			});
 		/* Make sure we're not banning ourselves */
 		if (user->GetId() == GetUser()->GetId())
-			co_return co_await RespondToInteraction(i, kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content=get_no_ban_msg(subcmd));
+			co_return co_await InteractionSendMessage(i, cMessageParams{
+				kw::flags=MESSAGE_FLAG_EPHEMERAL,
+				kw::content=get_no_ban_msg(subcmd)
+			});
 		/* Otherwise, retrieve the user's display name in the guild... */
 		std::string_view display_name;
 		if (member && !member->GetNick().empty())
@@ -198,7 +219,7 @@ cGreekBot::process_ban_ctx_menu(cAppCmdInteraction& i, eSubcommand subcmd) {
 		else
 			display_name = user->GetUsername();
 		/* ...and then send a modal to request optional ban reason and goodbye message */
-		co_return co_await RespondToInteractionWithModal(i, cModal{
+		co_return co_await InteractionSendModal(i, cModal{
 			fmt::format("ban:{}:{}:{}:{}", user->GetId(), user->GetAvatar(), user->GetDiscriminator(), user->GetUsername()),
 			fmt::format("Ban @{}", display_name),
 			{
@@ -224,7 +245,10 @@ cGreekBot::process_ban_ctx_menu(cAppCmdInteraction& i, eSubcommand subcmd) {
 		cUtils::PrintErr("process_ban_ctx_menu() {}", e.what());
 	}
 	/* Reply with error message */
-	co_await RespondToInteraction(i, kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content="An unexpected error has occurred. Try again later.");
+	co_await InteractionSendMessage(i, cMessageParams{
+		kw::flags=MESSAGE_FLAG_EPHEMERAL,
+		kw::content="An unexpected error has occurred. Try again later."
+	});
 }
 
 #define THROW_EXCEPTION() do { throw std::runtime_error("Error parsing modal id"); } while (false)
@@ -266,5 +290,8 @@ cGreekBot::process_ban_modal(cModalSubmitInteraction& i) {
 	} catch (const std::exception& e) {
 		cUtils::PrintErr("process_ban_modal() {}", e.what());
 	}
-	co_await RespondToInteraction(i, kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content="An unexpected error has occurred. Try again later.");
+	co_await InteractionSendMessage(i, cMessageParams{
+		kw::flags=MESSAGE_FLAG_EPHEMERAL,
+		kw::content="An unexpected error has occurred. Try again later."
+	});
 }

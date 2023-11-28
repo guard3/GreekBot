@@ -28,9 +28,17 @@ concept iInteractionVisitorR = requires {
 	requires std::convertible_to<std::invoke_result_t<T&&, cMsgCompInteraction&>, R>;
 	requires std::convertible_to<std::invoke_result_t<T&&, cModalSubmitInteraction&>, R>;
 };
+/* ================================================================================================================== */
+class cInteraction;
+namespace detail {
+	void set_interaction_ack(const cInteraction&) noexcept;
+	bool get_interaction_ack(const cInteraction&) noexcept;
+}
 /* ========== The base interaction class ============================================================================ */
 class cInteraction {
 private:
+	mutable bool m_ack;
+
 	cSnowflake                m_id;
 	cSnowflake                m_application_id;
 	std::string               m_token;
@@ -71,6 +79,9 @@ public:
 	R Visit(Visitor&&);
 	template<typename R, iInteractionVisitorR<R> Visitor>
 	R Visit(Visitor&&) const;
+
+	friend void detail::set_interaction_ack(const cInteraction&) noexcept;
+	friend bool detail::get_interaction_ack(const cInteraction&) noexcept;
 };
 typedef   hHandle<cInteraction>   hInteraction;
 typedef  chHandle<cInteraction>  chInteraction;

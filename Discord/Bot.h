@@ -11,22 +11,19 @@
 #include "Channel.h"
 #include "Modal.h"
 
-enum class eCallback : unsigned {
-	Default,
-	Loading,
-	SendMessage,
-	EditMessage,
-	Modal
+// TODO: better error messages
+class xInteractionError : public std::logic_error {
+protected:
+	xInteractionError(const char* msg) : std::logic_error(msg) {}
 };
-
-/*
- * CHANNEL_MESSAGE_WITH_SOURCE	4	respond to an interaction with a message
- * DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE	5	ACK an interaction and edit a response later, the user sees a loading state
- * DEFERRED_UPDATE_MESSAGE*	6	for components, ACK an interaction and edit the original message later; the user does not see a loading state
- * UPDATE_MESSAGE*	7	for components, edit the message the component was attached to
- * APPLICATION_COMMAND_AUTOCOMPLETE_RESULT	8	respond to an autocomplete interaction with suggested choices
- * MODAL
- */
+class xInteractionRespondedError : public xInteractionError {
+public:
+	xInteractionRespondedError() : xInteractionError("Interaction already responded to") {}
+};
+class xInteractionCallbackError : public xInteractionError {
+public:
+	xInteractionCallbackError() : xInteractionError("This callback is not supported") {}
+};
 
 class cBot : public cGateway {
 private:
@@ -60,26 +57,50 @@ public:
 	cTask<> AddGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake& role_id);
 	cTask<> RemoveGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake& role_id);
 	cTask<> UpdateGuildMemberRoles(const cSnowflake& guild_id, const cSnowflake& user_id, const std::vector<chSnowflake>& role_ids);
-
+	/* Interactions - Defer message or update */
+	cTask<> InteractionDefer(const cAppCmdInteraction&, bool thinking = false);
+	cTask<> InteractionDefer(const cMsgCompInteraction&, bool thinking = false);
+	cTask<> InteractionDefer(const cModalSubmitInteraction&, bool thinking = false);
+	cTask<> InteractionDefer(const cInteraction&, bool thinking = false);
+	/* Interactions - Send new message */
+	cTask<> InteractionSendMessage(const cInteraction&, const cMessageParams&);
+	/* Interactions - Send modal */
+	cTask<> InteractionSendModal(const cAppCmdInteraction&, const cModal&);
+	cTask<> InteractionSendModal(const cMsgCompInteraction&, const cModal&);
+	cTask<> InteractionSendModal(const cInteraction&, const cModal&);
+	/* TODO: implement these */
+	cTask<> InteractionEditMessage();
+	cTask<> InteractionGetMessage();
+	cTask<> InteractionDeleteMessage();
+	/* Current interaction functions */
+	[[deprecated("Use InteractionXXX variants")]]
 	cTask<> RespondToInteraction(const cAppCmdInteraction&, bool bThinking = false);
+	[[deprecated("Use InteractionXXX variants")]]
 	cTask<> RespondToInteraction(const cMsgCompInteraction&, bool bThinking = false);
+	[[deprecated("Use InteractionXXX variants")]]
 	cTask<> RespondToInteraction(const cModalSubmitInteraction&, bool bThinking = false);
+	[[deprecated("Use InteractionXXX variants")]]
 	cTask<> RespondToInteraction(const cInteraction&, bool bThinking = false);
-
+	[[deprecated("Use InteractionXXX variants")]]
 	cTask<> RespondToInteraction(const cInteraction& i, const cMessageParams& p);
 	template<kw::key... Keys> requires (sizeof...(Keys) > 0)
+	[[deprecated("Use InteractionXXX variants")]]
 	cTask<> RespondToInteraction(const cInteraction& i, kw::arg<Keys>&... kwargs) {
 		co_await RespondToInteraction(i, cMessageParams{ kwargs... });
 	}
+	[[deprecated("Use InteractionXXX variants")]]
 	cTask<> RespondToInteractionWithModal(const cInteraction&, const cModal&);
+
 	cTask<> EditInteractionResponse(const cInteraction&, const cMessageParams&);
 	template<kw::key... Keys>
 	cTask<> EditInteractionResponse(const cInteraction& i, kw::arg<Keys>&... kwargs) {
 		co_await EditInteractionResponse(i, cMessageParams{ kwargs... });
 	}
 	cTask<> DeleteInteractionResponse(const cInteraction&);
+	[[deprecated("Use InteractionXXX variants")]]
 	cTask<> SendInteractionFollowupMessage(const cInteraction&, const cMessageParams&);
 	template<kw::key... Keys>
+	[[deprecated("Use InteractionXXX variants")]]
 	cTask<> SendInteractionFollowupMessage(const cInteraction& i, kw::arg<Keys>&... kwargs) {
 		co_await SendInteractionFollowupMessage(i, cMessageParams{ kwargs... });
 	}

@@ -9,6 +9,7 @@ tag_invoke(json::value_to_tag<eInteractionType>, const json::value& v) {
 cInteraction::guild_data::guild_data(const json::value& s, const json::value& v): guild_id(s.as_string()), member(v) {}
 /* ================================================================================================================== */
 cInteraction::cInteraction(eInteractionType type, const json::object& o):
+	m_ack(false),
 	m_type(type),
 	m_id(o.at("id").as_string()),
 	m_application_id(o.at("application_id").as_string()),
