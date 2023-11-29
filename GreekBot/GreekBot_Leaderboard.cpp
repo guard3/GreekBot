@@ -73,11 +73,17 @@ cGreekBot::process_rank(cAppCmdInteraction& i) {
 		}
 		/* Don't display data for bot users */
 		if (user->IsBotUser())
-			co_return co_await RespondToInteraction(i, kw::content="Ranking isn't available for bot users.");
+			co_return co_await InteractionSendMessage(i, cMessageParams{
+				kw::flags=MESSAGE_FLAG_EPHEMERAL,
+				kw::content="Ranking isn't available for bot users."
+			});
 		if (user->IsSystemUser())
-			co_return co_await RespondToInteraction(i, kw::content="Ranking isn't available for system users.");
+			co_return co_await InteractionSendMessage(i, cMessageParams{
+				kw::flags=MESSAGE_FLAG_EPHEMERAL,
+				kw::content="Ranking isn't available for system users."
+			});
 		/* Acknowledge interaction while we're looking through the database */
-		co_await RespondToInteraction(i);
+		co_await InteractionDefer(i, true);
 		/* Get user's ranking info from the database */
 		tRankQueryData db_result = co_await cDatabase::GetUserRank(*user);
 		co_await ResumeOnEventThread();
@@ -88,11 +94,13 @@ cGreekBot::process_rank(cAppCmdInteraction& i) {
 		cColor color = get_lmg_member_color(*member);
 		if (db_result.empty()) {
 			/* User not registered in the leaderboard */
-			co_await EditInteractionResponse(i, kw::embeds={make_no_xp_embed(*user, color)});
+			co_await InteractionSendMessage(i, cMessageParams{
+				kw::embeds={make_no_xp_embed(*user, color)}
+			});
 		} else {
 			/* Respond to interaction with a proper embed */
-			auto &res = db_result[0];
-			co_await EditInteractionResponse(i,
+			auto &res = db_result.front();
+			co_await InteractionSendMessage(i, cMessageParams{
 				kw::embeds={ make_embed(*user, color, res.GetRank(), res.GetXp(), res.GetNumMessages()) },
 				kw::components={
 					cActionRow{
@@ -103,26 +111,30 @@ cGreekBot::process_rank(cAppCmdInteraction& i) {
 						}
 					}
 				}
-			);
+			});
 		}
+		co_return;
+	} catch (...) {
+		report_error("process_rank", std::current_exception());
 	}
-	catch (const std::exception& e) {
-		cUtils::PrintErr("OnInteraction_rank: {}", e.what());
-	}
+	co_await InteractionSendMessage(i, cMessageParams{
+		kw::flags=MESSAGE_FLAG_EPHEMERAL,
+		kw::content="An unexpected error occurred. Try again later."
+	});
 }
 
 cTask<>
 cGreekBot::process_top(cAppCmdInteraction& i) {
 	try {
 		/* Acknowledge interaction */
-		co_await RespondToInteraction(i);
+		co_await InteractionDefer(i);
 		/* Get data from the database */
 		tRankQueryData db_result = co_await cDatabase::GetTop10();
 		co_await ResumeOnEventThread();
-		if (db_result.empty()) {
-			co_await EditInteractionResponse(i, kw::content="I don't have any data yet. Start talking!");
-			co_return;
-		}
+		if (db_result.empty())
+			co_return co_await InteractionSendMessage(i, cMessageParams{
+				kw::content="I don't have any data yet. Start talking!"
+			});
 		/* Get members */
 		std::vector<cSnowflake> ids;
 		ids.reserve(db_result.size());
@@ -153,7 +165,7 @@ cGreekBot::process_top(cAppCmdInteraction& i) {
 			}
 		}
 		/* Respond to interaction */
-		co_await EditInteractionResponse(i,
+		co_return co_await InteractionSendMessage(i, cMessageParams{
 			kw::embeds=std::move(es),
 			kw::components={
 				cActionRow{
@@ -164,15 +176,28 @@ cGreekBot::process_top(cAppCmdInteraction& i) {
 					}
 				}
 			}
-		);
+		});
+	} catch (...) {
+		report_error("process_top", std::current_exception());
 	}
-	catch (const std::exception& e) {
-		cUtils::PrintErr("OnInteraction_top: {}", e.what());
-	}
+	co_await InteractionSendMessage(i, cMessageParams{
+		kw::flags=MESSAGE_FLAG_EPHEMERAL,
+		kw::content="An unexpected error occurred. Try again later."
+	});
 }
 
 cTask<>
 cGreekBot::process_leaderboard_help(cMsgCompInteraction& i) {
-	co_await RespondToInteraction(i);
-	co_await SendInteractionFollowupMessage(i, kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content="Every minute that you're messaging, you randomly gain between 15 and 25 **XP**.");
+	try {
+		co_return co_await InteractionSendMessage(i, cMessageParams{
+			kw::flags=MESSAGE_FLAG_EPHEMERAL,
+			kw::content="Every minute that you're messaging, you randomly gain between 15 and 25 **XP**."
+		});
+	} catch (...) {
+		report_error("process_leaderboard_help", std::current_exception());
+	}
+	co_await InteractionSendMessage(i, cMessageParams{
+		kw::flags=MESSAGE_FLAG_EPHEMERAL,
+		kw::content="An unexpected error has occurred. Try again later."
+	});
 }

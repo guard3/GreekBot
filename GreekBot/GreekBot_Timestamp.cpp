@@ -58,13 +58,13 @@ cGreekBot::process_timestamp(cAppCmdInteraction& i) {
 			kw::flags=MESSAGE_FLAG_EPHEMERAL,
 			kw::content=fmt::format("`{:<1}` is not a valid timestamp 💀 Try again!", input)
 		};
-	} catch (const std::exception& e) {
+	} catch (...) {
 		/* Another error occurred */
-		cUtils::PrintErr("process_timestamp() {}", e.what());
+		report_error("process_timestamp", std::current_exception());
 		msg = cMessageParams{
 			kw::flags=MESSAGE_FLAG_EPHEMERAL,
 			kw::content="An unexpected error has occurred. Try again later."
 		};
 	}
-	co_await RespondToInteraction(i, msg);
+	co_await InteractionSendMessage(i, msg);
 }

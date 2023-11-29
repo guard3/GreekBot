@@ -1,18 +1,19 @@
 #include "GreekBot.h"
-#include "Utils.h"
 #include <fmt/chrono.h>
 
 cTask<>
 cGreekBot::process_prune(cAppCmdInteraction& i) {
-	/* Acknowledge interaction first */
-	co_await RespondToInteraction(i);
 	try {
 		/* Make sure that the user has the necessary permissions */
 		if (!(i.GetMember()->GetPermissions() & PERM_KICK_MEMBERS))
-			co_return co_await EditInteractionResponse(i, kw::content="You can't do that. You're missing the `KICK_MEMBERS` permission.");
+			co_return co_await InteractionSendMessage(i, cMessageParams{
+				kw::flags=MESSAGE_FLAG_EPHEMERAL,
+				kw::content="You can't do that. You're missing the `KICK_MEMBERS` permission."
+			});
 		/* How many days of inactivity to consider */
 		int days = i.GetOptions().empty() ? 2 : i.GetOptions().front().GetValue<APP_CMD_OPT_INTEGER>();
 		/* Prune */
+		co_await InteractionDefer(i);
 		std::string str;
 		try {
 			int pruned = co_await BeginGuildPrune(*i.GetGuildId(), days, "Failed to get a rank");
@@ -22,8 +23,7 @@ cGreekBot::process_prune(cAppCmdInteraction& i) {
 			str = fmt::format("Rate limited. Try again after **{}**.", e.retry_after());
 		}
 		/* Send confirmation message */
-		co_return co_await EditInteractionResponse(
-			i,
+		co_return co_await InteractionSendMessage(i, cMessageParams{
 			kw::content=std::move(str),
 			kw::components={
 				cActionRow{
@@ -34,23 +34,30 @@ cGreekBot::process_prune(cAppCmdInteraction& i) {
 					}
 				}
 			}
-		);
+		});
+	} catch (...) {
+		report_error("process_prune", std::current_exception());
 	}
-	catch (...) {}
-	co_await EditInteractionResponse(i, kw::content="An unexpected error has occurred, try again later.");
+	co_await InteractionSendMessage(i, cMessageParams{
+		kw::flags=MESSAGE_FLAG_EPHEMERAL,
+		kw::content="An unexpected error has occurred, try again later."
+	});
 }
 
 cTask<>
 cGreekBot::process_prune_lmg(cAppCmdInteraction& i) {
 	using namespace std::chrono;
 	using namespace std::chrono_literals;
-	/* Check that the invoking member has the appropriate permissions for extra security measure */
-	if (!(i.GetMember()->GetPermissions() & PERM_KICK_MEMBERS))
-		co_return co_await RespondToInteraction(i, kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content="You can't do that. You're missing the `KICK_MEMBERS` permission.");
-	/* Otherwise, carry on normally */
-	co_await RespondToInteraction(i);
-	auto before = system_clock::now();
 	try {
+		/* Check that the invoking member has the appropriate permissions for extra security measure */
+		if (!(i.GetMember()->GetPermissions() & PERM_KICK_MEMBERS))
+			co_return co_await InteractionSendMessage(i, cMessageParams{
+				kw::flags=MESSAGE_FLAG_EPHEMERAL,
+				kw::content="You can't do that. You're missing the `KICK_MEMBERS` permission."
+			});
+		/* Otherwise, carry on normally */
+		co_await InteractionDefer(i);
+		auto before = system_clock::now();
 		/* Collect guild information */
 		const cGuild& guild = *m_guilds[*i.GetGuildId()];
 		cSnowflake guild_id = guild.GetId();
@@ -92,7 +99,7 @@ cGreekBot::process_prune_lmg(cAppCmdInteraction& i) {
 				}
 			}
 		}
-		co_return co_await EditInteractionResponse(i,
+		co_return co_await InteractionSendMessage(i, cMessageParams{
 			kw::content=fmt::format("Pruned **{}** member{}", total, total == 1 ? "" : "s"),
 			kw::components={
 				cActionRow{
@@ -103,11 +110,12 @@ cGreekBot::process_prune_lmg(cAppCmdInteraction& i) {
 					}
 				}
 			}
-		);
+		});
+	} catch (...) {
+		report_error("process_prune_lmg", std::current_exception());
 	}
-	catch (const std::exception& e) {
-		cUtils::PrintErr("{}", e.what());
-	}
-	catch (...) {}
-	co_await EditInteractionResponse(i, kw::content="An unexpected error has occurred, try again later.");
+	co_await InteractionSendMessage(i, cMessageParams{
+		kw::flags=MESSAGE_FLAG_EPHEMERAL,
+		kw::content="An unexpected error has occurred, try again later."
+	});
 }

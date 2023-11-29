@@ -73,37 +73,12 @@ public:
 	cTask<> InteractionGetMessage();
 	cTask<> InteractionDeleteMessage();
 	/* Current interaction functions */
-	[[deprecated("Use InteractionXXX variants")]]
-	cTask<> RespondToInteraction(const cAppCmdInteraction&, bool bThinking = false);
-	[[deprecated("Use InteractionXXX variants")]]
-	cTask<> RespondToInteraction(const cMsgCompInteraction&, bool bThinking = false);
-	[[deprecated("Use InteractionXXX variants")]]
-	cTask<> RespondToInteraction(const cModalSubmitInteraction&, bool bThinking = false);
-	[[deprecated("Use InteractionXXX variants")]]
-	cTask<> RespondToInteraction(const cInteraction&, bool bThinking = false);
-	[[deprecated("Use InteractionXXX variants")]]
-	cTask<> RespondToInteraction(const cInteraction& i, const cMessageParams& p);
-	template<kw::key... Keys> requires (sizeof...(Keys) > 0)
-	[[deprecated("Use InteractionXXX variants")]]
-	cTask<> RespondToInteraction(const cInteraction& i, kw::arg<Keys>&... kwargs) {
-		co_await RespondToInteraction(i, cMessageParams{ kwargs... });
-	}
-	[[deprecated("Use InteractionXXX variants")]]
-	cTask<> RespondToInteractionWithModal(const cInteraction&, const cModal&);
-
 	cTask<> EditInteractionResponse(const cInteraction&, const cMessageParams&);
 	template<kw::key... Keys>
 	cTask<> EditInteractionResponse(const cInteraction& i, kw::arg<Keys>&... kwargs) {
 		co_await EditInteractionResponse(i, cMessageParams{ kwargs... });
 	}
 	cTask<> DeleteInteractionResponse(const cInteraction&);
-	[[deprecated("Use InteractionXXX variants")]]
-	cTask<> SendInteractionFollowupMessage(const cInteraction&, const cMessageParams&);
-	template<kw::key... Keys>
-	[[deprecated("Use InteractionXXX variants")]]
-	cTask<> SendInteractionFollowupMessage(const cInteraction& i, kw::arg<Keys>&... kwargs) {
-		co_await SendInteractionFollowupMessage(i, cMessageParams{ kwargs... });
-	}
 
 	cTask<int> BeginGuildPrune(const cSnowflake& id, int days, std::string_view reason = {});
 

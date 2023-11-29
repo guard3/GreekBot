@@ -262,7 +262,6 @@ static cEmbed make_no_member_embed(const cUser* pUser, std::string_view guild_na
 
 cTask<>
 cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) {
-	bool bAck = false;
 	try {
 		std::vector<cEmbed> embeds;
 		/* Check which subcommand was invoked */
@@ -279,12 +278,17 @@ cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) {
 				}
 				/* Limit the command to regular users */
 				if (user->IsBotUser())
-					co_return co_await RespondToInteraction(i, kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content="Ranking isn't available for bot users.");
+					co_return co_await InteractionSendMessage(i, cMessageParams{
+						kw::flags=MESSAGE_FLAG_EPHEMERAL,
+						kw::content="Ranking isn't available for bot users."
+					});
 				if (user->IsSystemUser())
-					co_return co_await RespondToInteraction(i, kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content="Ranking isn't available for system users.");
+					co_return co_await InteractionSendMessage(i, cMessageParams{
+						kw::flags=MESSAGE_FLAG_EPHEMERAL,
+						kw::content="Ranking isn't available for system users."
+					});
 				/* Acknowledge the interaction since we'll be accessing the database */
-				co_await RespondToInteraction(i);
-				bAck = true;
+				co_await InteractionDefer(i);
 				/* Retrieve user's starboard entry */
 				auto results = co_await cDatabase::SB_GetRank(*user, REACTION_THRESHOLD);
 				co_await ResumeOnEventThread();
@@ -319,13 +323,15 @@ cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) {
 			}
 			case 0x1D400909: { // top10
 				/* Acknowledge the interaction since we'll be accessing the database */
-				co_await RespondToInteraction(i);
+				co_await InteractionDefer(i);
 				/* Retrieve the top 10 entries for starboard */
 				auto results = co_await cDatabase::SB_GetTop10(REACTION_THRESHOLD);
-				if (results.empty())
-					co_return co_await EditInteractionResponse(i, kw::content="I have no <:Holy:409075809723219969> data yet. Y'all boring as fuck!");
-				/* Retrieve members */
 				co_await ResumeOnEventThread();
+				if (results.empty())
+					co_return co_await InteractionSendMessage(i, cMessageParams{
+						kw::content="I have no <:Holy:409075809723219969> data yet. Y'all boring as fuck!"
+					});
+				/* Retrieve members */
 				std::vector<cMember> members;
 				{
 					std::vector<cSnowflake> ids;
@@ -361,10 +367,13 @@ cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) {
 				break;
 			}
 			default:
-				co_return co_await RespondToInteraction(i, kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content="Unknown subcommand");
+				co_return co_await InteractionSendMessage(i, cMessageParams{
+					kw::flags=MESSAGE_FLAG_EPHEMERAL,
+					kw::content="Unknown subcommand"
+				});
 		}
 		/* Send the message with the created embeds */
-		co_return co_await EditInteractionResponse(i,
+		co_return co_await InteractionSendMessage(i, cMessageParams{
 			kw::embeds=std::move(embeds),
 			kw::components={
 				cActionRow{
@@ -375,22 +384,28 @@ cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) {
 					}
 				}
 			}
-		);
-	} catch (const std::exception& e) {
-		cUtils::PrintErr("process_starboard_leaderboard: {}", e.what());
+		});
 	} catch (...) {
-		cUtils::PrintErr("process_starboard_leaderboard: {}", "An exception occurred");
+		report_error("process_starboard_leaderboard", std::current_exception());
 	}
-	/* At this point an error has occurred, sent a message appropriately */
-	constexpr auto err_msg = "An unexpected error has occurred. Try again later.";
-	if (bAck)
-		co_await EditInteractionResponse(i, kw::content=err_msg);
-	else
-		co_await RespondToInteraction(i, kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content=err_msg);
+	co_await InteractionSendMessage(i, cMessageParams{
+		kw::flags=MESSAGE_FLAG_EPHEMERAL,
+		kw::content="An unexpected error has occurred. Try again later."
+	});
 }
 
 cTask<>
 cGreekBot::process_starboard_help(cMsgCompInteraction& i) {
-	co_await RespondToInteraction(i);
-	co_await SendInteractionFollowupMessage(i, kw::flags=MESSAGE_FLAG_EPHEMERAL, kw::content="When a message receives **5 or more** <:Holy:409075809723219969> reactions, it gets to appear in <#978993330694266920>. Reacting to *your own* messages doesn't count!");
+	try {
+		co_return co_await InteractionSendMessage(i, cMessageParams{
+			kw::flags=MESSAGE_FLAG_EPHEMERAL,
+			kw::content="When a message receives **5 or more** <:Holy:409075809723219969> reactions, it gets to appear in <#978993330694266920>. Reacting to *your own* messages doesn't count!"
+		});
+	} catch (...) {
+		report_error("process_starboard_help", std::current_exception());
+	}
+	co_await InteractionSendMessage(i, cMessageParams{
+		kw::flags=MESSAGE_FLAG_EPHEMERAL,
+		kw::content="An unexpected error has occurred. Try again later."
+	});
 }

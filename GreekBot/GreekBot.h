@@ -35,6 +35,8 @@ private:
 	std::vector<uint64_t> m_lmg_voice_channels;
 	std::vector<std::vector<uint64_t>> m_lmg_users_connected_to_voice;
 
+	static void report_error(const char*, std::exception_ptr);
+
 	cTask<> process_avatar(cAppCmdInteraction&);
 	cTask<> process_rank(cAppCmdInteraction&);
 	cTask<> process_top(cAppCmdInteraction&);

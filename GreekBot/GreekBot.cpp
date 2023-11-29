@@ -2,6 +2,19 @@
 #include "Database.h"
 #include "Utils.h"
 
+void
+cGreekBot::report_error(const char* func_name, std::exception_ptr except) {
+	std::string msg = "An exception occurred";
+	if (except) {
+		try {
+			std::rethrow_exception(except);
+		} catch (const std::exception& e) {
+			msg = e.what();
+		} catch (...) {}
+	}
+	cUtils::PrintErr("{}(): {}", func_name, msg);
+}
+
 enum : uint32_t {
 	CMP_ID_LEADERBOARD_HELP = 0x4ECEBDEC,
 	CMP_ID_STARBOARD_HELP   = 0x33330ADE,
