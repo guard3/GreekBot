@@ -164,6 +164,7 @@ cGateway::implementation::on_read(const beast::error_code& ec, size_t bytes_read
 				m_resume_gateway_url.clear();
 			}
 		case OP_RECONNECT:
+			cUtils::PrintErr("RECONNECT");
 			close();
 			break;
 		case OP_HELLO:
@@ -181,13 +182,8 @@ cGateway::implementation::on_read(const beast::error_code& ec, size_t bytes_read
 			m_heartbeat_ack = true;
 			break;
 	}
-} catch (const std::exception& e) {
-	/* In case of an error, print a message and close the stream */
-	cUtils::PrintErr("Error processing incoming event. {}", e.what());
-	close();
 } catch (...) {
-	/* Same thing here... */
-	cUtils::PrintErr("Error processing incoming event.");
+	/* In the case of an error, close the stream */
 	close();
 }
 /* ================================================================================================================== */
