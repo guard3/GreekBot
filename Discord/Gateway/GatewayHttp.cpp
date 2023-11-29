@@ -1,6 +1,5 @@
 #include "GatewayImpl.h"
 #include "json.h"
-#include <tuple>
 /* ================================================================================================================== */
 void
 cGateway::implementation::http_resolve() {

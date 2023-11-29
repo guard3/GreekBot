@@ -15,8 +15,8 @@ public:
 	int m_code;
 
 public:
-	explicit xSystemError(const std::string& what, int code = 0) : std::runtime_error(what), m_code(0) {}
-	explicit xSystemError(const char*        what, int code = 0) : std::runtime_error(what), m_code(0) {}
+	explicit xSystemError(const std::string& what, int code = 0) : std::runtime_error(what), m_code(code) {}
+	explicit xSystemError(const char*        what, int code = 0) : std::runtime_error(what), m_code(code) {}
 
 	int code() const noexcept { return m_code; }
 };

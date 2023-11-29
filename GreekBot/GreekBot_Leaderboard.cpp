@@ -87,7 +87,9 @@ cGreekBot::process_rank(cAppCmdInteraction& i) HANDLER_BEGIN {
 	co_await ResumeOnEventThread();
 	/* Make sure that the selected user is a member of Learning Greek */
 	if (!member)
-		co_return co_await EditInteractionResponse(i, kw::embeds={ make_no_member_embed(user.Get(), m_guilds.at(m_lmg_id)->GetName(), !db_result.empty()) });
+		co_return co_await InteractionSendMessage(i, cMessageParams{
+			kw::embeds={ make_no_member_embed(user.Get(), m_guilds.at(m_lmg_id)->GetName(), !db_result.empty()) }
+		});
 	/* Respond */
 	cColor color = get_lmg_member_color(*member);
 	if (db_result.empty()) {

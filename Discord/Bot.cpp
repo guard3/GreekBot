@@ -58,16 +58,6 @@ cBot::modify_guild_member(const cSnowflake& guild_id, const cSnowflake& user_id,
 	co_await DiscordPatch(fmt::format("/guilds/{}/members/{}", guild_id, user_id), json::value_from(options).get_object());
 }
 
-cTask<>
-cBot::EditInteractionResponse(const cInteraction& i, const cMessageParams& params) {
-	co_await DiscordPatch(fmt::format("/webhooks/{}/{}/messages/@original", i.GetApplicationId(), i.GetToken()), json::value_from(params).get_object());
-}
-
-cTask<>
-cBot::DeleteInteractionResponse(const cInteraction& i) {
-	co_await DiscordDelete(fmt::format("/webhooks/{}/{}/messages/@original", i.GetApplicationId(), i.GetToken()));
-}
-
 cTask<int>
 cBot::BeginGuildPrune(const cSnowflake &id, int days, std::string_view reason) {
 	tHttpFields fields;

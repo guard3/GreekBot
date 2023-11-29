@@ -68,17 +68,10 @@ public:
 	cTask<> InteractionSendModal(const cAppCmdInteraction&, const cModal&);
 	cTask<> InteractionSendModal(const cMsgCompInteraction&, const cModal&);
 	cTask<> InteractionSendModal(const cInteraction&, const cModal&);
-	/* TODO: implement these */
-	cTask<> InteractionEditMessage();
-	cTask<> InteractionGetMessage();
-	cTask<> InteractionDeleteMessage();
-	/* Current interaction functions */
-	cTask<> EditInteractionResponse(const cInteraction&, const cMessageParams&);
-	template<kw::key... Keys>
-	cTask<> EditInteractionResponse(const cInteraction& i, kw::arg<Keys>&... kwargs) {
-		co_await EditInteractionResponse(i, cMessageParams{ kwargs... });
-	}
-	cTask<> DeleteInteractionResponse(const cInteraction&);
+	/* Interactions - Extra functions */
+	cTask<cMessage> InteractionEditMessage(const cInteraction&, const cMessageParams&, crefMessage = cSnowflake());
+	cTask<cMessage> InteractionGetMessage(const cInteraction&, crefMessage = cSnowflake());
+	cTask<>         InteractionDeleteMessage(const cInteraction&, crefMessage = cSnowflake());
 
 	cTask<int> BeginGuildPrune(const cSnowflake& id, int days, std::string_view reason = {});
 

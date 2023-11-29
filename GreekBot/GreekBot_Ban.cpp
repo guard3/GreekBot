@@ -159,7 +159,7 @@ cGreekBot::process_unban(cMsgCompInteraction& i, const cSnowflake& user_id) HAND
 	auto name = e.GetAuthor()->GetName();
 	name.remove_suffix(11); // Remove the " was banned" part
 	e.ClearFields().SetColor(0x248046).SetDescription("User was unbanned").GetAuthor()->SetName(name);
-	co_return co_await EditInteractionResponse(i,
+	co_await InteractionEditMessage(i, cMessageParams{
 		kw::embeds={ std::move(e) },
 		kw::components={
 			cActionRow{
@@ -170,7 +170,7 @@ cGreekBot::process_unban(cMsgCompInteraction& i, const cSnowflake& user_id) HAND
 				}
 			}
 		}
-	);
+	}, i.GetMessage());
 } HANDLER_END
 
 cTask<>

@@ -133,6 +133,14 @@ typedef   hHandle<cMessage>   hMessage;
 typedef  chHandle<cMessage>  chMessage;
 typedef  uhHandle<cMessage>  uhMessage;
 typedef uchHandle<cMessage> uchMessage;
-typedef  shHandle<cMessage>  shMessage;
-typedef schHandle<cMessage> schMessage;
+
+class crefMessage final {
+private:
+	const cSnowflake& m_id;
+public:
+	crefMessage(const cMessage& msg) noexcept : m_id(msg.GetId()) {}
+	crefMessage(const cSnowflake& id) noexcept : m_id(id) {}
+
+	const cSnowflake& GetId() const noexcept { return m_id; }
+};
 #endif /* GREEKBOT_MESSAGE_H */

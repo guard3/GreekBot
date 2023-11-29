@@ -99,3 +99,27 @@ cBot::InteractionSendModal(const cInteraction& i, const cModal& modal) {
 		}
 	});
 }
+
+cTask<cMessage>
+cBot::InteractionEditMessage(const cInteraction& i, const cMessageParams& params, crefMessage msg) {
+	using namespace detail;
+	/* If the interaction hasn't been responded to, throw */
+	if (!get_interaction_ack(i))
+		throw xInteractionRespondedError();
+	/* Otherwise, edit message */
+	auto& msg_id = msg.GetId();
+	json::value result = co_await DiscordPatch(fmt::format("/webhooks/{}/{}/messages/{}", i.GetApplicationId(), i.GetToken(), msg_id.ToInt() ? msg_id.ToString() : "@original"), json::value_from(params).get_object());
+	/* Return received message on success */
+	co_return cMessage{ result };
+}
+cTask<cMessage>
+cBot::InteractionGetMessage(const cInteraction& i, crefMessage msg) {
+	auto& msg_id = msg.GetId();
+	json::value result = co_await DiscordGet(fmt::format("/webhooks/{}/{}/messages/{}", i.GetApplicationId(), i.GetToken(), msg_id.ToInt() ? msg_id.ToString() : "@original"));
+	co_return cMessage{ result };
+}
+cTask<>
+cBot::InteractionDeleteMessage(const cInteraction& i, crefMessage msg) {
+	auto &msg_id = msg.GetId();
+	co_await DiscordDelete(fmt::format("/webhooks/{}/{}/messages/{}", i.GetApplicationId(), i.GetToken(), msg_id.ToInt() ? msg_id.ToString() : "@original"));
+}
