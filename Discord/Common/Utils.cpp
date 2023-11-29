@@ -49,14 +49,17 @@ cUtils::PercentEncode(std::string_view sv) {
 	result.shrink_to_fit();
 	return result;
 }
-/* ========== This is an ugly macro to prevent warnings if this was a proper function =============================== */
-#define THROW_EXCEPTION() do { throw std::invalid_argument("Input string is not a valid ISO 8601 timestamp"); } while(false)
+/* ================================================================================================================== */
+[[noreturn]]
+static void throw_exception() {
+	throw std::invalid_argument("Input string is not a valid ISO 8601 timestamp");
+}
 /* ================================================================================================================== */
 std::chrono::sys_time<std::chrono::milliseconds>
 cUtils::ParseISOTimestamp(std::string_view sv) {
 	using namespace std::chrono;
 	/* Check that input string is at least as long as 'YYYYMMDDThhmmss' */
-	if (sv.size() < 15) THROW_EXCEPTION();
+	if (sv.size() < 15) throw_exception();
 	/* Variables */
 	uint8_t dgt[9]{};                  // An array of digits converted from string chars
 	uint8_t i = 0;                     // A temporary digit for when we don't want to modify the array
@@ -71,19 +74,19 @@ cUtils::ParseISOTimestamp(std::string_view sv) {
 	if ((dgt[0] = str[0] - '0') > 9 ||
 	    (dgt[1] = str[1] - '0') > 9 ||
 	    (dgt[2] = str[2] - '0') > 9 ||
-	    (dgt[3] = str[3] - '0') > 9  ) THROW_EXCEPTION();
+	    (dgt[3] = str[3] - '0') > 9  ) throw_exception();
 	/* Parse the rest of the date */
 	if (str[4] == '-') {
 		bExtendedDate = true;
 		if ((dgt[4] = str[5] - '0') > 9 ||
 		    (dgt[5] = str[6] - '0') > 9 || str[7] != '-' ||
 		    (dgt[6] = str[8] - '0') > 9 ||
-		    (dgt[7] = str[9] - '0') > 9  ) THROW_EXCEPTION();
+		    (dgt[7] = str[9] - '0') > 9  ) throw_exception();
 		str += 10;
 	} else if ((dgt[4] = str[4] - '0') > 9 ||
 	           (dgt[5] = str[5] - '0') > 9 ||
 	           (dgt[6] = str[6] - '0') > 9 ||
-	           (dgt[7] = str[7] - '0') > 9  ) THROW_EXCEPTION();
+	           (dgt[7] = str[7] - '0') > 9  ) throw_exception();
 	else str += 8;
 	/* Create a date from digits */
 	year_month_day ymd {
@@ -92,10 +95,10 @@ cUtils::ParseISOTimestamp(std::string_view sv) {
 			  day(dgt[7] + 10 * dgt[6])
 	};
 	/* Check that the date is valid and that the T separator exists */
-	if (!ymd.ok() || *str++ != 'T') THROW_EXCEPTION();
+	if (!ymd.ok() || *str++ != 'T') throw_exception();
 	/* Parse hour */
 	if ((dgt[0] = str[0] - '0') > 9 ||
-	    (dgt[1] = str[1] - '0') > 9  ) THROW_EXCEPTION();
+	    (dgt[1] = str[1] - '0') > 9  ) throw_exception();
 	/* Parse the rest of the time */
 	len = end - str;
 	dgt[6] = dgt[7] = 0;
@@ -104,7 +107,7 @@ cUtils::ParseISOTimestamp(std::string_view sv) {
 		if ((dgt[2] = str[3] - '0') > 9 ||
 		    (dgt[3] = str[4] - '0') > 9 || str[5] != ':' ||
 		    (dgt[4] = str[6] - '0') > 9 ||
-		    (dgt[5] = str[7] - '0') > 9  ) THROW_EXCEPTION();
+		    (dgt[5] = str[7] - '0') > 9  ) throw_exception();
 		str += 8;
 		/* Check if there are decimal digits and parse milliseconds */
 		if (end - str > 1) {
@@ -127,17 +130,17 @@ cUtils::ParseISOTimestamp(std::string_view sv) {
 		if ((dgt[2] = str[2] - '0') > 9 ||
 		    (dgt[3] = str[3] - '0') > 9 ||
 		    (dgt[4] = str[4] - '0') > 9 ||
-		    (dgt[5] = str[5] - '0') > 9  ) THROW_EXCEPTION();
+		    (dgt[5] = str[5] - '0') > 9  ) throw_exception();
 		str += 6;
 	} else {
-		THROW_EXCEPTION();
+		throw_exception();
 	}
 	/* Make sure that the parsed date and time use the same format */
-	if (bExtendedDate != bExtendedTime) THROW_EXCEPTION();
+	if (bExtendedDate != bExtendedTime) throw_exception();
 	/* Check the range of hours, minutes and seconds */
 	if ((h = 10 * dgt[0] + dgt[1]) > 23 ||
 	    (m = 10 * dgt[2] + dgt[3]) > 59 ||
-	    (s = 10 * dgt[4] + dgt[5]) > 59  ) THROW_EXCEPTION();
+	    (s = 10 * dgt[4] + dgt[5]) > 59  ) throw_exception();
 	/* Save the time point so far */
 	auto result = sys_days(ymd) + hours(h) + minutes(m) + seconds(s) + milliseconds(100 * dgt[6] + 10 * dgt[7] + dgt[8]);
 	/* Reset digits for hours and minutes */
@@ -148,7 +151,7 @@ cUtils::ParseISOTimestamp(std::string_view sv) {
 		switch (*str) {
 			case 'Z':
 				if (len == 1) break;
-				THROW_EXCEPTION();
+				throw_exception();
 			case '+':
 				bPlus = true;
 			case '-':
@@ -161,7 +164,7 @@ cUtils::ParseISOTimestamp(std::string_view sv) {
 				} else {
 					if (len == 5) {
 						if ((dgt[2] = str[3] - '0') > 9 ||
-						    (dgt[3] = str[4] - '0') > 9  ) THROW_EXCEPTION();
+						    (dgt[3] = str[4] - '0') > 9  ) throw_exception();
 						len = 3;
 					}
 					if (len == 3)
@@ -169,19 +172,19 @@ cUtils::ParseISOTimestamp(std::string_view sv) {
 						    (dgt[1] = str[2] - '0') < 10  ) break;
 				}
 			default:
-				THROW_EXCEPTION();
+				throw_exception();
 		}
 	}
 	/* Save timezone offset */
 	if ((h = 10 * dgt[0] + dgt[1]) > 23 ||
-	    (m = 10 * dgt[2] + dgt[3]) > 59  ) THROW_EXCEPTION();
+	    (m = 10 * dgt[2] + dgt[3]) > 59  ) throw_exception();
 	auto tz = hours(h) + minutes(m);
 	/* Return final result */
 	return bPlus ? result - tz : result + tz;
 }
 /* ================================================================================================================== */
 std::string_view
-cUtils::GetOS() {
+cUtils::GetOS() noexcept {
 #ifdef _WIN32
 	return "Windows";
 #elif defined __APPLE__ || defined __MACH__

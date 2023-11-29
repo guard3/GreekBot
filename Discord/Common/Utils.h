@@ -72,6 +72,6 @@ public:
 	/* Parse ISO8601 timestamp; basic or extended format */
 	static std::chrono::sys_time<std::chrono::milliseconds> ParseISOTimestamp(std::string_view);
 	/* Resolving the OS we're running on */
-	static std::string_view GetOS();
+	static std::string_view GetOS() noexcept;
 };
 #endif //GREEKBOT_UTILS_H

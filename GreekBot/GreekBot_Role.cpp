@@ -28,71 +28,62 @@ enum : uint64_t {
 };
 /* ================================================================================================================== */
 cTask<>
-cGreekBot::process_role_button(cMsgCompInteraction& i, uint32_t button_id) {
-	try {
-		auto roles = i.GetMember()->GetRoles();
+cGreekBot::process_role_button(cMsgCompInteraction& i, uint32_t button_id) HANDLER_BEGIN {
+	auto roles = i.GetMember()->GetRoles();
 
-		uint64_t role_id;
-		switch (button_id) {
-			case CMP_ID_HERITAGE_SPEAKER:
-				role_id = 762747975164100608;
-				break;
-			case CMP_ID_IPA_LITERATE:
-				role_id = 481544681520365577;
-				break;
-			case CMP_ID_STUDENT:
-				role_id = 469239964119597056;
-				break;
-			case CMP_ID_WORD_OF_THE_DAY:
-				role_id = 649313942002466826;
-				break;
-			case CMP_ID_EVENTS:
-				role_id = 683443550410506273;
-				break;
-			case CMP_ID_DIALECT:
-				role_id = 637359870009409576;
-				break;
-			case CMP_ID_GAMER:
-				role_id = 357714047698993162;
-				break;
-			case CMP_ID_LINGUISTICS_READING:
-				role_id = 800464173385515058;
-				break;
-			case CMP_ID_POLL:
-				role_id = 650330610358943755;
-				if (std::find(roles.begin(), roles.end(), ROLE_ID_NATIVE) == roles.end())
-					co_return co_await InteractionSendMessage(i, cMessageParams{
-						kw::flags=MESSAGE_FLAG_EPHEMERAL,
-						kw::content=fmt::format("Sorry, <@&{}> is only available for <@{}>s!", role_id, (uint64_t) ROLE_ID_NATIVE)
-					});
-				break;
-			case CMP_ID_VCER:
-				role_id = 886625423167979541;
-				break;
-			case CMP_ID_BOOK_CLUB:
-				role_id = 928364890601685033;
-				break;
-			default:
-				cUtils::PrintLog("COMPONENT ID: 0x{:08X}", button_id);
-				co_return;
-		}
-		co_await InteractionDefer(i);
-		if (std::find(roles.begin(), roles.end(), role_id) == roles.end())
-			co_await AddGuildMemberRole(m_lmg_id, i.GetUser().GetId(), role_id);
-		else
-			co_await RemoveGuildMemberRole(m_lmg_id, i.GetUser().GetId(), role_id);
-		co_return;
-	} catch (...) {
-		report_error("process_role_button", std::current_exception());
+	uint64_t role_id;
+	switch (button_id) {
+		case CMP_ID_HERITAGE_SPEAKER:
+			role_id = 762747975164100608;
+			break;
+		case CMP_ID_IPA_LITERATE:
+			role_id = 481544681520365577;
+			break;
+		case CMP_ID_STUDENT:
+			role_id = 469239964119597056;
+			break;
+		case CMP_ID_WORD_OF_THE_DAY:
+			role_id = 649313942002466826;
+			break;
+		case CMP_ID_EVENTS:
+			role_id = 683443550410506273;
+			break;
+		case CMP_ID_DIALECT:
+			role_id = 637359870009409576;
+			break;
+		case CMP_ID_GAMER:
+			role_id = 357714047698993162;
+			break;
+		case CMP_ID_LINGUISTICS_READING:
+			role_id = 800464173385515058;
+			break;
+		case CMP_ID_POLL:
+			role_id = 650330610358943755;
+			if (std::find(roles.begin(), roles.end(), ROLE_ID_NATIVE) == roles.end())
+				co_return co_await InteractionSendMessage(i, cMessageParams{
+					kw::flags=MESSAGE_FLAG_EPHEMERAL,
+					kw::content=fmt::format("Sorry, <@&{}> is only available for <@{}>s!", role_id, (uint64_t) ROLE_ID_NATIVE)
+				});
+			break;
+		case CMP_ID_VCER:
+			role_id = 886625423167979541;
+			break;
+		case CMP_ID_BOOK_CLUB:
+			role_id = 928364890601685033;
+			break;
+		default:
+			cUtils::PrintLog("COMPONENT ID: 0x{:08X}", button_id);
+			co_return;
 	}
-	co_await InteractionSendMessage(i, cMessageParams{
-		kw::flags=MESSAGE_FLAG_EPHEMERAL,
-		kw::content="An unexpected error occurred. Try again later."
-	});
-}
+	co_await InteractionDefer(i);
+	if (std::find(roles.begin(), roles.end(), role_id) == roles.end())
+		co_await AddGuildMemberRole(m_lmg_id, i.GetUser().GetId(), role_id);
+	else
+		co_await RemoveGuildMemberRole(m_lmg_id, i.GetUser().GetId(), role_id);
+} HANDLER_END
 /* ================================================================================================================== */
 cTask<>
-cGreekBot::process_proficiency_menu(cMsgCompInteraction& i) {
+cGreekBot::process_proficiency_menu(cMsgCompInteraction& i) HANDLER_BEGIN {
 	/* The proficiency roles of Learning Greek */
 	static const cSnowflake pr_roles[] {
 		ROLE_ID_NATIVE,
@@ -104,35 +95,26 @@ cGreekBot::process_proficiency_menu(cMsgCompInteraction& i) {
 		ROLE_ID_FLUENT,
 		ROLE_ID_NON_LEARNER
 	};
-	try {
-		/* Create a role vector */
-		hPartialMember member = i.GetMember();
-		std::vector<chSnowflake> roles;
-		roles.reserve(member->GetRoles().size() + 1);
-		/* Copy every member role except the proficiency ones */
-		for (auto &s: member->GetRoles()) {
-			if (std::find(std::begin(pr_roles), std::end(pr_roles), s) == std::end(pr_roles))
-				roles.push_back(&s);
-		}
-		/* Append the selected role id */
-		cSnowflake id = i.GetValues().front();
-		roles.push_back(&id);
-		/* Acknowledge interaction */
-		co_await InteractionDefer(i);
-		/* Update member */
-		co_await UpdateGuildMemberRoles(m_lmg_id, i.GetUser().GetId(), roles);
-		co_return;
-	} catch (...) {
-		report_error("process_proficiency_menu", std::current_exception());
+	/* Create a role vector */
+	hPartialMember member = i.GetMember();
+	std::vector<chSnowflake> roles;
+	roles.reserve(member->GetRoles().size() + 1);
+	/* Copy every member role except the proficiency ones */
+	for (auto &s: member->GetRoles()) {
+		if (std::find(std::begin(pr_roles), std::end(pr_roles), s) == std::end(pr_roles))
+			roles.push_back(&s);
 	}
-	co_await InteractionSendMessage(i, cMessageParams{
-		kw::flags=MESSAGE_FLAG_EPHEMERAL,
-		kw::content="An unexpected error has occurred. Try again later."
-	});
-}
+	/* Append the selected role id */
+	cSnowflake id = i.GetValues().front();
+	roles.push_back(&id);
+	/* Acknowledge interaction */
+	co_await InteractionDefer(i);
+	/* Update member */
+	co_await UpdateGuildMemberRoles(m_lmg_id, i.GetUser().GetId(), roles);
+} HANDLER_END
 /* ================================================================================================================== */
 cTask<>
-cGreekBot::process_booster_menu(cMsgCompInteraction& i) {
+cGreekBot::process_booster_menu(cMsgCompInteraction& i) HANDLER_BEGIN {
 	using namespace std::chrono_literals;
 	/* All the color roles available in Learning Greek */
 	static const cSnowflake color_roles[] {
@@ -149,38 +131,29 @@ cGreekBot::process_booster_menu(cMsgCompInteraction& i) {
 		925379778251485206,  // @Δογκ
 		1121773567785308181  // @Πέγκω
 	};
-	try {
-		/* Acknowledge interaction */
-		co_await InteractionDefer(i);
-		/* Create a new role vector */
-		hPartialMember member = i.GetMember();
-		std::vector<chSnowflake> roles;
-		roles.reserve(member->GetRoles().size() + 1);
-		/* Fill the vector with all the roles the member has except the color ones */
-		for (auto& id : member->GetRoles()) {
-			if (std::find(std::begin(color_roles), std::end(color_roles), id) == std::end(color_roles))
-				roles.push_back(&id);
-		}
-		/* Retrieve the selected role id */
-		cSnowflake selected_id = i.GetValues().front();
-		/* Include the selected role id if the user is boosting */
-		if (member->PremiumSince().time_since_epoch() > 0s) {
-			if (selected_id != 0) {
-				roles.push_back(&selected_id);
-			}
-			co_return co_await UpdateGuildMemberRoles(m_lmg_id, i.GetUser().GetId(), roles);
-		}
-		if (selected_id != 0)
-			co_await InteractionSendMessage(i, cMessageParams{
-				kw::flags=MESSAGE_FLAG_EPHEMERAL,
-				kw::content="Sorry, custom colors are only available for <@&593038680608735233>s!"
-			});
-		co_return;
-	} catch (...) {
-		report_error("process_booster_menu", std::current_exception());
+	/* Acknowledge interaction */
+	co_await InteractionDefer(i);
+	/* Create a new role vector */
+	hPartialMember member = i.GetMember();
+	std::vector<chSnowflake> roles;
+	roles.reserve(member->GetRoles().size() + 1);
+	/* Fill the vector with all the roles the member has except the color ones */
+	for (auto& id : member->GetRoles()) {
+		if (std::find(std::begin(color_roles), std::end(color_roles), id) == std::end(color_roles))
+			roles.push_back(&id);
 	}
-	co_await InteractionSendMessage(i, cMessageParams{
-		kw::flags=MESSAGE_FLAG_EPHEMERAL,
-		kw::content="An unexpected error has occurred. Try again later."
-	});
-}
+	/* Retrieve the selected role id */
+	cSnowflake selected_id = i.GetValues().front();
+	/* Include the selected role id if the user is boosting */
+	if (member->PremiumSince().time_since_epoch() > 0s) {
+		if (selected_id != 0) {
+			roles.push_back(&selected_id);
+		}
+		co_return co_await UpdateGuildMemberRoles(m_lmg_id, i.GetUser().GetId(), roles);
+	}
+	if (selected_id != 0)
+		co_await InteractionSendMessage(i, cMessageParams{
+			kw::flags=MESSAGE_FLAG_EPHEMERAL,
+			kw::content="Sorry, custom colors are only available for <@&593038680608735233>s!"
+		});
+} HANDLER_END

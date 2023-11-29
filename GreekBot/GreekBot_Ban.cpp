@@ -19,44 +19,35 @@ static std::string get_no_ban_msg(uint32_t e) {
 }
 
 cTask<>
-cGreekBot::process_ban(cAppCmdInteraction& i) {
+cGreekBot::process_ban(cAppCmdInteraction& i) HANDLER_BEGIN {
 	using namespace std::chrono;
-	try {
-		/* Get the subcommand and its options */
-		auto& subcommand = i.GetOptions().front();
-		uint32_t subcmd = cUtils::CRC32(0, subcommand.GetName());
-		/* Collect options */
-		hUser user;
-		seconds delete_messages = days(7);
-		std::string_view reason, goodbye;
-		for (auto& opt: subcommand.GetOptions()) {
-			switch (cUtils::CRC32(0, opt.GetName())) {
-				case 0x8D93D649: // "user"
-					user = std::get<0>(opt.GetValue<APP_CMD_OPT_USER>());
-					break;
-				case 0x3A127C87: // "delete"
-					delete_messages = hours(cUtils::ParseInt(opt.GetValue<APP_CMD_OPT_STRING>()));
-					break;
-				case 0x3BB8880C: // "reason"
-					reason = opt.GetValue<APP_CMD_OPT_STRING>();
-					break;
-				case 0xB6BD307F: // "message"
-					goodbye = opt.GetValue<APP_CMD_OPT_STRING>();
-				default:
-					break;
-			}
+	/* Get the subcommand and its options */
+	auto& subcommand = i.GetOptions().front();
+	uint32_t subcmd = cUtils::CRC32(0, subcommand.GetName());
+	/* Collect options */
+	hUser user;
+	seconds delete_messages = days(7);
+	std::string_view reason, goodbye;
+	for (auto& opt: subcommand.GetOptions()) {
+		switch (cUtils::CRC32(0, opt.GetName())) {
+			case 0x8D93D649: // "user"
+				user = std::get<0>(opt.GetValue<APP_CMD_OPT_USER>());
+				break;
+			case 0x3A127C87: // "delete"
+				delete_messages = hours(cUtils::ParseInt(opt.GetValue<APP_CMD_OPT_STRING>()));
+				break;
+			case 0x3BB8880C: // "reason"
+				reason = opt.GetValue<APP_CMD_OPT_STRING>();
+				break;
+			case 0xB6BD307F: // "message"
+				goodbye = opt.GetValue<APP_CMD_OPT_STRING>();
+			default:
+				break;
 		}
-		/* Ban */
-		co_return co_await process_ban(i, subcmd, user->GetId(), user->GetAvatar(), user->GetDiscriminator(), user->GetUsername(), delete_messages, reason, goodbye);
 	}
-	catch (const std::exception& e) {
-		cUtils::PrintErr("process_ban() {}", e.what());
-	}
-	co_await InteractionSendMessage(i, cMessageParams{
-		kw::flags=MESSAGE_FLAG_EPHEMERAL,
-		kw::content="An unexpected error has occurred, try again later."
-	});
-}
+	/* Ban */
+	co_await process_ban(i, subcmd, user->GetId(), user->GetAvatar(), user->GetDiscriminator(), user->GetUsername(), delete_messages, reason, goodbye);
+} HANDLER_END
 
 cTask<>
 cGreekBot::process_ban(cInteraction& i, uint32_t subcmd, const cSnowflake& user_id, std::string_view hash, std::uint16_t discr, std::string_view username, std::chrono::seconds delete_messages, std::string_view reason, std::string_view goodbye) {
@@ -149,7 +140,7 @@ cGreekBot::process_ban(cInteraction& i, uint32_t subcmd, const cSnowflake& user_
 }
 
 cTask<>
-cGreekBot::process_unban(cMsgCompInteraction& i, const cSnowflake& user_id) {
+cGreekBot::process_unban(cMsgCompInteraction& i, const cSnowflake& user_id) HANDLER_BEGIN {
 	/* Make sure that the invoking user has the appropriate permissions */
 	if (!(i.GetMember()->GetPermissions() & PERM_BAN_MEMBERS)) {
 		co_return co_await InteractionSendMessage(i, cMessageParams{
@@ -157,141 +148,119 @@ cGreekBot::process_unban(cMsgCompInteraction& i, const cSnowflake& user_id) {
 			kw::content="You can't do that. You're missing the `BAN_MEMBERS` permission."
 		});
 	}
+	co_await InteractionDefer(i);
 	try {
-		co_await InteractionDefer(i);
-		try {
-			co_await RemoveGuildBan(*i.GetGuildId(), user_id);
-		} catch (xDiscordError &e) {
-			/* Ban not found, but that's fine */
-		}
-		auto embeds = i.GetMessage().MoveEmbeds();
-		auto& e = embeds.front();
-		auto name = e.GetAuthor()->GetName();
-		name.remove_suffix(11); // Remove the " was banned" part
-		e.ClearFields().SetColor(0x248046).SetDescription("User was unbanned").GetAuthor()->SetName(name);
-		co_return co_await EditInteractionResponse(i,
-			kw::embeds={ std::move(e) },
-			kw::components={
-				cActionRow{
-					cButton{
-						BUTTON_STYLE_SECONDARY,
-						fmt::format("DLT#{}", i.GetUser().GetId()),
-						kw::label="Dismiss"
-					}
+		co_await RemoveGuildBan(*i.GetGuildId(), user_id);
+	} catch (xDiscordError &e) {
+		/* Ban not found, but that's fine */
+	}
+	auto embeds = i.GetMessage().MoveEmbeds();
+	auto& e = embeds.front();
+	auto name = e.GetAuthor()->GetName();
+	name.remove_suffix(11); // Remove the " was banned" part
+	e.ClearFields().SetColor(0x248046).SetDescription("User was unbanned").GetAuthor()->SetName(name);
+	co_return co_await EditInteractionResponse(i,
+		kw::embeds={ std::move(e) },
+		kw::components={
+			cActionRow{
+				cButton{
+					BUTTON_STYLE_SECONDARY,
+					fmt::format("DLT#{}", i.GetUser().GetId()),
+					kw::label="Dismiss"
 				}
 			}
-		);
-	} catch (const std::exception& e) {
-		cUtils::PrintErr("process_unban() {}", e.what());
-	}
-	co_await InteractionSendMessage(i, cMessageParams{
-		kw::flags=MESSAGE_FLAG_EPHEMERAL,
-		kw::content="An unexpected error has occurred. Try again later."
-	});
-}
+		}
+	);
+} HANDLER_END
 
 cTask<>
-cGreekBot::process_ban_ctx_menu(cAppCmdInteraction& i, eSubcommand subcmd) {
-	try {
-		/* Retrieve the user to be banned */
-		auto[user, member] = i.GetOptions().front().GetValue<APP_CMD_OPT_USER>();
-		/* If the subcommand is about banning trolls specifically, ban right away */
-		if (subcmd != SUBCMD_USER)
-			co_return co_await process_ban(i, subcmd, user->GetId(), user->GetAvatar(), user->GetDiscriminator(), user->GetUsername(), std::chrono::days(7), {}, {});
-		/* Check that the invoking member has appropriate permissions */
-		if (!(i.GetMember()->GetPermissions() & PERM_BAN_MEMBERS))
-			co_return co_await InteractionSendMessage(i, cMessageParams{
-				kw::flags=MESSAGE_FLAG_EPHEMERAL,
-				kw::content="You can't do that. You're missing the `BAN_MEMBERS` permission"
-			});
-		/* Make sure we're not banning ourselves */
-		if (user->GetId() == GetUser()->GetId())
-			co_return co_await InteractionSendMessage(i, cMessageParams{
-				kw::flags=MESSAGE_FLAG_EPHEMERAL,
-				kw::content=get_no_ban_msg(subcmd)
-			});
-		/* Otherwise, retrieve the user's display name in the guild... */
-		std::string_view display_name;
-		if (member && !member->GetNick().empty())
-			display_name = member->GetNick();
-		else if (!user->GetGlobalName().empty())
-			display_name = user->GetGlobalName();
-		else
-			display_name = user->GetUsername();
-		/* ...and then send a modal to request optional ban reason and goodbye message */
-		co_return co_await InteractionSendModal(i, cModal{
-			fmt::format("ban:{}:{}:{}:{}", user->GetId(), user->GetAvatar(), user->GetDiscriminator(), user->GetUsername()),
-			fmt::format("Ban @{}", display_name),
-			{
-				cActionRow{
-					cTextInput{
-						TEXT_INPUT_SHORT,
-						"BAN_REASON",
-						"Ban reason (optional)",
-						kw::required=false
-					}
-				},
-				cActionRow{
-					cTextInput{
-						TEXT_INPUT_PARAGRAPH,
-						"BAN_MESSAGE",
-						"Custom goodbye message (optional)",
-						kw::required=false
-					}
-				}
-			}
+cGreekBot::process_ban_ctx_menu(cAppCmdInteraction& i, eSubcommand subcmd) HANDLER_BEGIN {
+	/* Retrieve the user to be banned */
+	auto[user, member] = i.GetOptions().front().GetValue<APP_CMD_OPT_USER>();
+	/* If the subcommand is about banning trolls specifically, ban right away */
+	if (subcmd != SUBCMD_USER)
+		co_return co_await process_ban(i, subcmd, user->GetId(), user->GetAvatar(), user->GetDiscriminator(), user->GetUsername(), std::chrono::days(7), {}, {});
+	/* Check that the invoking member has appropriate permissions */
+	if (!(i.GetMember()->GetPermissions() & PERM_BAN_MEMBERS))
+		co_return co_await InteractionSendMessage(i, cMessageParams{
+			kw::flags=MESSAGE_FLAG_EPHEMERAL,
+			kw::content="You can't do that. You're missing the `BAN_MEMBERS` permission"
 		});
-	} catch (const std::exception& e) {
-		cUtils::PrintErr("process_ban_ctx_menu() {}", e.what());
-	}
-	/* Reply with error message */
-	co_await InteractionSendMessage(i, cMessageParams{
-		kw::flags=MESSAGE_FLAG_EPHEMERAL,
-		kw::content="An unexpected error has occurred. Try again later."
-	});
-}
-
-#define THROW_EXCEPTION() do { throw std::runtime_error("Error parsing modal id"); } while (false)
-cTask<>
-cGreekBot::process_ban_modal(cModalSubmitInteraction& i) {
-	try {
-		/* Retrieve submitted options */
-		std::string_view reason, goodbye;
-		for (auto &action_row: i.GetComponents()) {
-			for (auto &component: action_row.GetComponents()) {
-				auto &text_input = std::get<cTextInput>(component);
-				switch (cUtils::CRC32(0, text_input.GetCustomId())) {
-					case 0x23240F07: // "BAN_REASON"
-						reason = text_input.GetValue();
-						break;
-					case 0x1A1955B8: // "BAN_MESSAGE"
-						goodbye = text_input.GetValue();
-						break;
-					default:
-						throw std::runtime_error(fmt::format("Unexpected text input id: {}", text_input.GetCustomId()));
+	/* Make sure we're not banning ourselves */
+	if (user->GetId() == GetUser()->GetId())
+		co_return co_await InteractionSendMessage(i, cMessageParams{
+			kw::flags=MESSAGE_FLAG_EPHEMERAL,
+			kw::content=get_no_ban_msg(subcmd)
+		});
+	/* Otherwise, retrieve the user's display name in the guild... */
+	std::string_view display_name;
+	if (member && !member->GetNick().empty())
+		display_name = member->GetNick();
+	else if (!user->GetGlobalName().empty())
+		display_name = user->GetGlobalName();
+	else
+		display_name = user->GetUsername();
+	/* ...and then send a modal to request optional ban reason and goodbye message */
+	co_await InteractionSendModal(i, cModal{
+		fmt::format("ban:{}:{}:{}:{}", user->GetId(), user->GetAvatar(), user->GetDiscriminator(), user->GetUsername()),
+		fmt::format("Ban @{}", display_name),
+		{
+			cActionRow{
+				cTextInput{
+					TEXT_INPUT_SHORT,
+					"BAN_REASON",
+					"Ban reason (optional)",
+					kw::required=false
+				}
+			},
+			cActionRow{
+				cTextInput{
+					TEXT_INPUT_PARAGRAPH,
+					"BAN_MESSAGE",
+					"Custom goodbye message (optional)",
+					kw::required=false
 				}
 			}
 		}
-		/* Retrieve user id */
-		size_t f1 = 4, f2 = 0; // Start at 4 chars to skip "ban:"
-		std::string_view custom_id = i.GetCustomId();
-		if (f2 = custom_id.find(':', f1); f2 == std::string_view::npos) THROW_EXCEPTION();
-		cSnowflake user_id = custom_id.substr(f1, f2 - f1);
-		/* Retrieve user avatar */
-		f1 = f2 + 1;
-		if (f2 = custom_id.find(':', f1); f2 == std::string_view::npos) THROW_EXCEPTION();
-		auto user_avatar = custom_id.substr(f1, f2 - f1);
-		/* Retrieve user discriminator */
-		f1 = f2 + 1;
-		if (f2 = custom_id.find(':', f1); f2 == std::string_view::npos) THROW_EXCEPTION();
-		auto user_discr = cUtils::ParseInt<std::uint16_t>(custom_id.substr(f1, f2 - f1));
-		/* Ban */
-		co_return co_await process_ban(i, SUBCMD_USER, user_id, user_avatar, user_discr, custom_id.substr(f2 + 1), std::chrono::days(7), reason, goodbye);
-	} catch (const std::exception& e) {
-		cUtils::PrintErr("process_ban_modal() {}", e.what());
-	}
-	co_await InteractionSendMessage(i, cMessageParams{
-		kw::flags=MESSAGE_FLAG_EPHEMERAL,
-		kw::content="An unexpected error has occurred. Try again later."
 	});
+} HANDLER_END
+
+[[noreturn]]
+static void throw_exception() {
+	throw std::runtime_error("Error parsing modal id");
 }
+cTask<>
+cGreekBot::process_ban_modal(cModalSubmitInteraction& i) HANDLER_BEGIN {
+	/* Retrieve submitted options */
+	std::string_view reason, goodbye;
+	for (auto &action_row: i.GetComponents()) {
+		for (auto &component: action_row.GetComponents()) {
+			auto &text_input = std::get<cTextInput>(component);
+			switch (cUtils::CRC32(0, text_input.GetCustomId())) {
+				case 0x23240F07: // "BAN_REASON"
+					reason = text_input.GetValue();
+					break;
+				case 0x1A1955B8: // "BAN_MESSAGE"
+					goodbye = text_input.GetValue();
+					break;
+				default:
+					throw std::runtime_error(fmt::format("Unexpected text input id: {}", text_input.GetCustomId()));
+			}
+		}
+	}
+	/* Retrieve user id */
+	size_t f1 = 4, f2 = 0; // Start at 4 chars to skip "ban:"
+	std::string_view custom_id = i.GetCustomId();
+	if (f2 = custom_id.find(':', f1); f2 == std::string_view::npos) throw_exception();
+	cSnowflake user_id = custom_id.substr(f1, f2 - f1);
+	/* Retrieve user avatar */
+	f1 = f2 + 1;
+	if (f2 = custom_id.find(':', f1); f2 == std::string_view::npos) throw_exception();
+	auto user_avatar = custom_id.substr(f1, f2 - f1);
+	/* Retrieve user discriminator */
+	f1 = f2 + 1;
+	if (f2 = custom_id.find(':', f1); f2 == std::string_view::npos) throw_exception();
+	auto user_discr = cUtils::ParseInt<std::uint16_t>(custom_id.substr(f1, f2 - f1));
+	/* Ban */
+	co_await process_ban(i, SUBCMD_USER, user_id, user_avatar, user_discr, custom_id.substr(f2 + 1), std::chrono::days(7), reason, goodbye);
+} HANDLER_END

@@ -261,151 +261,132 @@ static cEmbed make_no_member_embed(const cUser* pUser, std::string_view guild_na
 }
 
 cTask<>
-cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) {
-	try {
-		std::vector<cEmbed> embeds;
-		/* Check which subcommand was invoked */
-		switch (auto& subcommand = i.GetOptions().front(); cUtils::CRC32(0, subcommand.GetName())) {
-			case 0x8879E8E5: { // rank
-				/* Retrieve selected member and user */
-				hUser user;
-				hPartialMember member;
-				if (auto options = subcommand.GetOptions(); !options.empty()) {
-					std::tie(user, member) = options.front().GetValue<APP_CMD_OPT_USER>();
-				} else {
-					user = &i.GetUser();
-					member = i.GetMember();
-				}
-				/* Limit the command to regular users */
-				if (user->IsBotUser())
-					co_return co_await InteractionSendMessage(i, cMessageParams{
-						kw::flags=MESSAGE_FLAG_EPHEMERAL,
-						kw::content="Ranking isn't available for bot users."
-					});
-				if (user->IsSystemUser())
-					co_return co_await InteractionSendMessage(i, cMessageParams{
-						kw::flags=MESSAGE_FLAG_EPHEMERAL,
-						kw::content="Ranking isn't available for system users."
-					});
-				/* Acknowledge the interaction since we'll be accessing the database */
-				co_await InteractionDefer(i);
-				/* Retrieve user's starboard entry */
-				auto results = co_await cDatabase::SB_GetRank(*user, REACTION_THRESHOLD);
-				co_await ResumeOnEventThread();
-				/* If the user isn't a member of Learning Greek... */
-				if (!member) {
-					embeds.push_back(make_no_member_embed(user.Get(), m_guilds.at(m_lmg_id)->GetName(), !results.empty()));
-					break;
-				}
-				cColor color = get_lmg_member_color(*member);
-				/* If the user is registered in the leaderboard... */
-				if (!results.empty()) {
-					embeds.push_back(make_embed(*user, results.front(), color));
-					break;
-				}
-				/* Otherwise... */
-				const char *msg;
-				switch (cUtils::Random(0, 3)) {
-					case 0:  msg = "Booooring!"; break;
-					case 1:  msg = "SAD!";       break;
-					case 2:  msg = "Meh...";     break;
-					default: msg = "Laaaaame!";  break;
-				}
-				embeds.emplace_back(
-					kw::author = {
-						user->GetUsername(),
-						kw::icon_url = cCDN::GetUserAvatar(*user)
-					},
-					kw::color = color,
-					kw::description = fmt::format("User has no <:Holy:409075809723219969>ed messages. {}", msg)
-				);
-				break;
+cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) HANDLER_BEGIN {
+	std::vector<cEmbed> embeds;
+	/* Check which subcommand was invoked */
+	switch (auto& subcommand = i.GetOptions().front(); cUtils::CRC32(0, subcommand.GetName())) {
+		default:
+			throw std::runtime_error("Unknown subcommand");
+		case 0x8879E8E5: { // rank
+			/* Retrieve selected member and user */
+			hUser user;
+			hPartialMember member;
+			if (auto options = subcommand.GetOptions(); !options.empty()) {
+				std::tie(user, member) = options.front().GetValue<APP_CMD_OPT_USER>();
+			} else {
+				user = &i.GetUser();
+				member = i.GetMember();
 			}
-			case 0x1D400909: { // top10
-				/* Acknowledge the interaction since we'll be accessing the database */
-				co_await InteractionDefer(i);
-				/* Retrieve the top 10 entries for starboard */
-				auto results = co_await cDatabase::SB_GetTop10(REACTION_THRESHOLD);
-				co_await ResumeOnEventThread();
-				if (results.empty())
-					co_return co_await InteractionSendMessage(i, cMessageParams{
-						kw::content="I have no <:Holy:409075809723219969> data yet. Y'all boring as fuck!"
-					});
-				/* Retrieve members */
-				std::vector<cMember> members;
-				{
-					std::vector<cSnowflake> ids;
-					ids.reserve(10);
-					for (auto &e: results)
-						ids.push_back(e.author_id);
-					auto gen = GetGuildMembers(m_lmg_id, kw::user_ids=std::move(ids));
-					members.reserve(10);
-					while (co_await gen.HasValue())
-						members.push_back(co_await gen.Next());
-				}
-				/* Create embeds */
-				embeds.reserve(10);
-				for (auto& entry : results) {
-					auto it = std::find_if(members.begin(), members.end(), [&entry](const cMember& m) {
-						return m.GetUser()->GetId() == entry.author_id;
-					});
-					if (it == members.end()) {
-						/* If there's no member object for a user, then this user isn't a member of Learning Greek anymore */
-						auto& guild_name = m_guilds.at(m_lmg_id)->GetName();
-						try {
-							cUser user = co_await GetUser(entry.author_id);
-							embeds.push_back(make_no_member_embed(&user, guild_name, true));
-						} catch (const xDiscordError&) {
-							/* User object couldn't be retrieved, likely deleted */
-							embeds.push_back(make_no_member_embed(nullptr, guild_name, true));
-						}
-					} else {
-						/* If the member is found, create an embed */
-						embeds.push_back(make_embed(*it->GetUser(), entry, get_lmg_member_color(*it)));
-					}
-				}
-				break;
-			}
-			default:
+			/* Limit the command to regular users */
+			if (user->IsBotUser())
 				co_return co_await InteractionSendMessage(i, cMessageParams{
 					kw::flags=MESSAGE_FLAG_EPHEMERAL,
-					kw::content="Unknown subcommand"
+					kw::content="Ranking isn't available for bot users."
 				});
+			if (user->IsSystemUser())
+				co_return co_await InteractionSendMessage(i, cMessageParams{
+					kw::flags=MESSAGE_FLAG_EPHEMERAL,
+					kw::content="Ranking isn't available for system users."
+				});
+			/* Acknowledge the interaction since we'll be accessing the database */
+			co_await InteractionDefer(i);
+			/* Retrieve user's starboard entry */
+			auto results = co_await cDatabase::SB_GetRank(*user, REACTION_THRESHOLD);
+			co_await ResumeOnEventThread();
+			/* If the user isn't a member of Learning Greek... */
+			if (!member) {
+				embeds.push_back(make_no_member_embed(user.Get(), m_guilds.at(m_lmg_id)->GetName(), !results.empty()));
+				break;
+			}
+			cColor color = get_lmg_member_color(*member);
+			/* If the user is registered in the leaderboard... */
+			if (!results.empty()) {
+				embeds.push_back(make_embed(*user, results.front(), color));
+				break;
+			}
+			/* Otherwise... */
+			const char *msg;
+			switch (cUtils::Random(0, 3)) {
+				case 0:  msg = "Booooring!"; break;
+				case 1:  msg = "SAD!";       break;
+				case 2:  msg = "Meh...";     break;
+				default: msg = "Laaaaame!";  break;
+			}
+			embeds.emplace_back(
+				kw::author = {
+					user->GetUsername(),
+					kw::icon_url = cCDN::GetUserAvatar(*user)
+				},
+				kw::color = color,
+				kw::description = fmt::format("User has no <:Holy:409075809723219969>ed messages. {}", msg)
+			);
+			break;
 		}
-		/* Send the message with the created embeds */
-		co_return co_await InteractionSendMessage(i, cMessageParams{
-			kw::embeds=std::move(embeds),
-			kw::components={
-				cActionRow{
-					cButton{
-						BUTTON_STYLE_SECONDARY,
-						"STARBOARD_HELP",
-						kw::label="How does this work?"
+		case 0x1D400909: { // top10
+			/* Acknowledge the interaction since we'll be accessing the database */
+			co_await InteractionDefer(i);
+			/* Retrieve the top 10 entries for starboard */
+			auto results = co_await cDatabase::SB_GetTop10(REACTION_THRESHOLD);
+			co_await ResumeOnEventThread();
+			if (results.empty())
+				co_return co_await InteractionSendMessage(i, cMessageParams{
+					kw::content="I have no <:Holy:409075809723219969> data yet. Y'all boring as fuck!"
+				});
+			/* Retrieve members */
+			std::vector<cMember> members;
+			{
+				std::vector<cSnowflake> ids;
+				ids.reserve(10);
+				for (auto &e: results)
+					ids.push_back(e.author_id);
+				auto gen = GetGuildMembers(m_lmg_id, kw::user_ids=std::move(ids));
+				members.reserve(10);
+				while (co_await gen.HasValue())
+					members.push_back(co_await gen.Next());
+			}
+			/* Create embeds */
+			embeds.reserve(10);
+			for (auto& entry : results) {
+				auto it = std::find_if(members.begin(), members.end(), [&entry](const cMember& m) {
+					return m.GetUser()->GetId() == entry.author_id;
+				});
+				if (it == members.end()) {
+					/* If there's no member object for a user, then this user isn't a member of Learning Greek anymore */
+					auto& guild_name = m_guilds.at(m_lmg_id)->GetName();
+					try {
+						cUser user = co_await GetUser(entry.author_id);
+						embeds.push_back(make_no_member_embed(&user, guild_name, true));
+					} catch (const xDiscordError&) {
+						/* User object couldn't be retrieved, likely deleted */
+						embeds.push_back(make_no_member_embed(nullptr, guild_name, true));
 					}
+				} else {
+					/* If the member is found, create an embed */
+					embeds.push_back(make_embed(*it->GetUser(), entry, get_lmg_member_color(*it)));
 				}
 			}
-		});
-	} catch (...) {
-		report_error("process_starboard_leaderboard", std::current_exception());
+			break;
+		}
 	}
+	/* Send the message with the created embeds */
 	co_await InteractionSendMessage(i, cMessageParams{
-		kw::flags=MESSAGE_FLAG_EPHEMERAL,
-		kw::content="An unexpected error has occurred. Try again later."
+		kw::embeds=std::move(embeds),
+		kw::components={
+			cActionRow{
+				cButton{
+					BUTTON_STYLE_SECONDARY,
+					"STARBOARD_HELP",
+					kw::label="How does this work?"
+				}
+			}
+		}
 	});
-}
+} HANDLER_END
 
 cTask<>
-cGreekBot::process_starboard_help(cMsgCompInteraction& i) {
-	try {
-		co_return co_await InteractionSendMessage(i, cMessageParams{
-			kw::flags=MESSAGE_FLAG_EPHEMERAL,
-			kw::content="When a message receives **5 or more** <:Holy:409075809723219969> reactions, it gets to appear in <#978993330694266920>. Reacting to *your own* messages doesn't count!"
-		});
-	} catch (...) {
-		report_error("process_starboard_help", std::current_exception());
-	}
+cGreekBot::process_starboard_help(cMsgCompInteraction& i) HANDLER_BEGIN {
 	co_await InteractionSendMessage(i, cMessageParams{
 		kw::flags=MESSAGE_FLAG_EPHEMERAL,
-		kw::content="An unexpected error has occurred. Try again later."
+		kw::content="When a message receives **5 or more** <:Holy:409075809723219969> reactions, it gets to appear in <#978993330694266920>. Reacting to *your own* messages doesn't count!"
 	});
-}
+} HANDLER_END

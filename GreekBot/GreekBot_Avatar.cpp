@@ -2,7 +2,7 @@
 #include "CDN.h"
 
 cTask<>
-cGreekBot::process_avatar(cAppCmdInteraction& i) {
+cGreekBot::process_avatar(cAppCmdInteraction& i) HANDLER_BEGIN {
 	/* Resolve user option */
 	hUser user;
 	if (auto options = i.GetOptions(); !options.empty())
@@ -13,4 +13,4 @@ cGreekBot::process_avatar(cAppCmdInteraction& i) {
 	co_await InteractionSendMessage(i, cMessageParams{
 		kw::content=cCDN::GetUserAvatar(*user)
 	});
-}
+} HANDLER_END

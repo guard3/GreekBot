@@ -2,17 +2,9 @@
 #include "Database.h"
 #include "Utils.h"
 
-void
-cGreekBot::report_error(const char* func_name, std::exception_ptr except) {
-	std::string msg = "An exception occurred";
-	if (except) {
-		try {
-			std::rethrow_exception(except);
-		} catch (const std::exception& e) {
-			msg = e.what();
-		} catch (...) {}
-	}
-	cUtils::PrintErr("{}(): {}", func_name, msg);
+[[noreturn]]
+void unhandled_exception(const char* name) {
+	throw unhandled_exception_t{ name, std::current_exception() };
 }
 
 enum : uint32_t {
@@ -116,8 +108,23 @@ cGreekBot::OnMessageCreate(cMessage& msg, hSnowflake guild_id, hPartialMember me
 
 cTask<>
 cGreekBot::OnInteractionCreate(cInteraction& i) {
-	return i.Visit([this](auto&& i) mutable {
-		return process_interaction(i);
+	try {
+		/* Delegate interaction to the appropriate handler */
+		co_return co_await i.Visit([this](auto& i) { return process_interaction(i); });
+	} catch (const unhandled_exception_t& u) {
+		/* If an exception escaped the handler, report... */
+		try {
+			std::rethrow_exception(u.except);
+		} catch (const std::exception& e) {
+			cUtils::PrintErr("{}: {}", u.name, e.what());
+		} catch (...) {
+			cUtils::PrintErr("{}: {}", u.name, "An exception occurred");
+		}
+	}
+	/* ...and send error message to the user */
+	co_await InteractionSendMessage(i, cMessageParams{
+		kw::flags=MESSAGE_FLAG_EPHEMERAL,
+		kw::content="An unexpected error has occurred. Try again later."
 	});
 }
 
@@ -125,39 +132,32 @@ cTask<>
 cGreekBot::process_interaction(cAppCmdInteraction& i) {
 	switch (i.GetCommandId().ToInt()) {
 		case 878391425568473098: // avatar
-			co_await process_avatar(i);
-			break;
+			return process_avatar(i);
 		case 938199801420456066: // rank
-			co_await process_rank(i);
-			break;
+			return process_rank(i);
 		case 938863857466757131: // top
-			co_await process_top(i);
-			break;
+			return process_top(i);
 		case 1020026874119864381: // prune - TODO: combine lmg prune and regular prune into one command only
-			co_await process_prune(i);
-			break;
+			return process_prune(i);
 		case 1031907652541890621: // ban
-			co_await process_ban(i);
-			break;
+			return process_ban(i);
 		case 1072131488478404621: // prune (Learning Greek)
-			co_await process_prune_lmg(i);
-			break;
+			return process_prune_lmg(i);
 		case 904462004071313448: // holy
-			co_await process_starboard_leaderboard(i);
-			break;
+			return process_starboard_leaderboard(i);
 		case 1177042125205024868: // timestamp
-			co_await process_timestamp(i);
-			break;
+			return process_timestamp(i);
 		case 1170787836434317363: // Apps > Ban
-			co_await process_ban_ctx_menu(i, SUBCMD_USER);
-			break;
+			return process_ban_ctx_menu(i, SUBCMD_USER);
 		case 1174826008474570892: // Apps > Ban Turk
-			co_await process_ban_ctx_menu(i, SUBCMD_TURK);
-			break;
+			return process_ban_ctx_menu(i, SUBCMD_TURK);
 		case 1174836455714078740: // Apps > Ban Greek
-			co_await process_ban_ctx_menu(i, SUBCMD_GREEK);
+			return process_ban_ctx_menu(i, SUBCMD_GREEK);
 		default:
-			break;
+			return [](const cAppCmdInteraction& i) -> cTask<> {
+				cUtils::PrintErr("Unhandled command: {} {}", i.GetCommandName(), i.GetCommandId());
+				co_return;
+			}(i);
 	}
 }
 
@@ -199,7 +199,7 @@ cGreekBot::process_interaction(cModalSubmitInteraction& i) {
 		return process_modal(i);
 
 	return [](std::string_view id) -> cTask<> {
-		cUtils::PrintLog("Unknown modal id: {} 0x{:08X}", id, cUtils::CRC32(0, id));
+		cUtils::PrintErr("Unknown modal id: {} 0x{:08X}", id, cUtils::CRC32(0, id));
 		co_return;
 	} (custom_id);
 }

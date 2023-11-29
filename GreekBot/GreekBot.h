@@ -19,6 +19,17 @@ enum eSubcommand : uint32_t {
 	SUBCMD_GREEK = 0xA0F01AAE  // "greek"
 };
 
+/* Handling exceptions when they escape the current interaction process function */
+struct unhandled_exception_t {
+	const char* name;
+	std::exception_ptr except;
+};
+[[noreturn]]
+void unhandled_exception(const char*);
+/* Helper macros */
+#define HANDLER_BEGIN try
+#define HANDLER_END catch (...) { unhandled_exception(__func__); }
+
 class cGreekBot final : public cBot {
 private:
 	const cSnowflake m_lmg_id = 350234668680871946; // Learning Greek
@@ -34,8 +45,6 @@ private:
 	/* Voice */
 	std::vector<uint64_t> m_lmg_voice_channels;
 	std::vector<std::vector<uint64_t>> m_lmg_users_connected_to_voice;
-
-	static void report_error(const char*, std::exception_ptr);
 
 	cTask<> process_avatar(cAppCmdInteraction&);
 	cTask<> process_rank(cAppCmdInteraction&);
