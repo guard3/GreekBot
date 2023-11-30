@@ -164,7 +164,6 @@ cGateway::implementation::on_read(const beast::error_code& ec, size_t bytes_read
 				m_resume_gateway_url.clear();
 			}
 		case OP_RECONNECT:
-			cUtils::PrintErr("RECONNECT");
 			close();
 			break;
 		case OP_HELLO:
