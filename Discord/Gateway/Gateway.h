@@ -1,6 +1,5 @@
 #ifndef GREEKBOT_GATEWAY_H
 #define GREEKBOT_GATEWAY_H
-#include "Common.h"
 #include "Coroutines.h"
 #include "User.h"
 #include "Guild.h"

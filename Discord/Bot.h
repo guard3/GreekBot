@@ -1,5 +1,6 @@
 #ifndef GREEKBOT_BOT_H
 #define GREEKBOT_BOT_H
+#include "Exception.h"
 #include "Interaction.h"
 #include "Gateway.h"
 #include "Message.h"
@@ -10,20 +11,6 @@
 #include "Guild.h"
 #include "Channel.h"
 #include "Modal.h"
-
-// TODO: better error messages
-class xInteractionError : public std::logic_error {
-protected:
-	xInteractionError(const char* msg) : std::logic_error(msg) {}
-};
-class xInteractionRespondedError : public xInteractionError {
-public:
-	xInteractionRespondedError() : xInteractionError("Interaction already responded to") {}
-};
-class xInteractionCallbackError : public xInteractionError {
-public:
-	xInteractionCallbackError() : xInteractionError("This callback is not supported") {}
-};
 
 class cBot : public cGateway {
 private:

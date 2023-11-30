@@ -1,9 +1,10 @@
 #ifndef GREEKBOT_COMMON_H
 #define GREEKBOT_COMMON_H
-#include "Exception.h"
 #include "kwarg.h"
 #include "Ptr.h"
 #include <chrono>
+#include <compare>
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <string_view>

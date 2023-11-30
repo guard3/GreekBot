@@ -28,21 +28,21 @@ bool detail::get_interaction_ack(const cInteraction& i) noexcept {
 cTask<>
 cBot::InteractionDefer(const cAppCmdInteraction& i, bool) {
 	using namespace detail;
-	if (get_interaction_ack(i)) throw xInteractionRespondedError();
+	if (get_interaction_ack(i)) throw xInteractionAcknowledgedError();
 	co_await DiscordPost(fmt::format("/interactions/{}/{}/callback", i.GetId(), i.GetToken()), {{ "type", DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE }});
 	set_interaction_ack(i);
 }
 cTask<>
 cBot::InteractionDefer(const cMsgCompInteraction& i, bool bThinking) {
 	using namespace detail;
-	if (get_interaction_ack(i)) throw xInteractionRespondedError();
+	if (get_interaction_ack(i)) throw xInteractionAcknowledgedError();
 	co_await DiscordPost(fmt::format("/interactions/{}/{}/callback", i.GetId(), i.GetToken()), {{ "type", bThinking ? DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE : DEFERRED_UPDATE_MESSAGE }});
 	set_interaction_ack(i);
 }
 cTask<>
 cBot::InteractionDefer(const cModalSubmitInteraction& i, bool bThinking) {
 	using namespace detail;
-	if (get_interaction_ack(i)) throw xInteractionRespondedError();
+	if (get_interaction_ack(i)) throw xInteractionAcknowledgedError();
 	co_await DiscordPost(fmt::format("/interactions/{}/{}/callback", i.GetId(), i.GetToken()), {{ "type", bThinking ? DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE : DEFERRED_UPDATE_MESSAGE }});
 	set_interaction_ack(i);
 }
@@ -72,7 +72,7 @@ cBot::InteractionSendMessage(const cInteraction& i, const cMessageParams& msg) {
 cTask<>
 cBot::InteractionSendModal(const cAppCmdInteraction& i, const cModal& modal) {
 	using namespace detail;
-	if (get_interaction_ack(i)) throw xInteractionRespondedError();
+	if (get_interaction_ack(i)) throw xInteractionAcknowledgedError();
 	json::object obj{{ "type", MODAL }};
 	json::value_from(modal, obj["data"]);
 	co_await DiscordPost(fmt::format("/interactions/{}/{}/callback", i.GetId(), i.GetToken()), obj);
@@ -81,7 +81,7 @@ cBot::InteractionSendModal(const cAppCmdInteraction& i, const cModal& modal) {
 cTask<>
 cBot::InteractionSendModal(const cMsgCompInteraction& i, const cModal& modal) {
 	using namespace detail;
-	if (get_interaction_ack(i)) throw xInteractionRespondedError();
+	if (get_interaction_ack(i)) throw xInteractionAcknowledgedError();
 	json::object obj{{ "type", MODAL }};
 	json::value_from(modal, obj["data"]);
 	co_await DiscordPost(fmt::format("/interactions/{}/{}/callback", i.GetId(), i.GetToken()), obj);
@@ -91,7 +91,7 @@ cTask<>
 cBot::InteractionSendModal(const cInteraction& i, const cModal& modal) {
 	return i.Visit(visitor{
 		[](const cModalSubmitInteraction&) -> cTask<> {
-			throw xInteractionCallbackError();
+			throw xInvalidFormBodyError();
 			co_return;
 		},
 		[this, &modal](auto& i) {
@@ -102,14 +102,8 @@ cBot::InteractionSendModal(const cInteraction& i, const cModal& modal) {
 
 cTask<cMessage>
 cBot::InteractionEditMessage(const cInteraction& i, const cMessageParams& params, crefMessage msg) {
-	using namespace detail;
-	/* If the interaction hasn't been responded to, throw */
-	if (!get_interaction_ack(i))
-		throw xInteractionRespondedError();
-	/* Otherwise, edit message */
 	auto& msg_id = msg.GetId();
 	json::value result = co_await DiscordPatch(fmt::format("/webhooks/{}/{}/messages/{}", i.GetApplicationId(), i.GetToken(), msg_id.ToInt() ? msg_id.ToString() : "@original"), json::value_from(params).get_object());
-	/* Return received message on success */
 	co_return cMessage{ result };
 }
 cTask<cMessage>

@@ -1,3 +1,4 @@
+#include "Exception.h"
 #include "GatewayImpl.h"
 #include "json.h"
 /* ================================================================================================================== */
@@ -172,9 +173,7 @@ cGateway::implementation::DiscordRequestNoRetry(beast::http::verb method, std::s
 	if (beast::http::to_status_class(status) == beast::http::status_class::successful)
 		co_return result;
 	/* Otherwise, throw an appropriate exception */
-	if (status == beast::http::status::too_many_requests)
-		throw xRateLimitError(result);
-	throw xDiscordError(result);
+	detail::throw_discord_exception(m_response.result_int(), result);
 }
 /* ================================================================================================================== */
 cTask<json::value>
