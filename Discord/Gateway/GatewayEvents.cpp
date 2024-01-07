@@ -1,4 +1,5 @@
 #include "GatewayImpl.h"
+#include "Interaction.h"
 #include "Utils.h"
 /* ========== Event type enum ======================================================================================= */
 enum : uint32_t {
@@ -96,6 +97,7 @@ cGateway::implementation::process_event(const json::value& v) try {
 			break;
 		}
 		case INTERACTION_CREATE: {
+			using namespace detail; // Expose the interaction type enum
 			switch (d.at("type").to_number<int>()) {
 				case INTERACTION_APPLICATION_COMMAND: {
 					cAppCmdInteraction i(d);

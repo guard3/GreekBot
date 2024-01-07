@@ -1,5 +1,5 @@
-#ifndef GREEKBOT_APPCMDINTERACTION_H
-#define GREEKBOT_APPCMDINTERACTION_H
+#ifndef DISCORD_APPCMDINTERACTION_H
+#define DISCORD_APPCMDINTERACTION_H
 #include "InteractionBase.h"
 #include <span>
 #include <variant>
@@ -123,8 +123,4 @@ public:
 	decltype(auto) MoveCommandName() noexcept { return std::move(m_name);    }
 	decltype(auto)     MoveOptions() noexcept { return std::move(m_options); }
 };
-typedef   hHandle<cAppCmdInteraction>   hAppCmdInteraction;
-typedef  chHandle<cAppCmdInteraction>  chAppCmdInteraction;
-typedef  uhHandle<cAppCmdInteraction>  uhAppCmdInteraction;
-typedef uchHandle<cAppCmdInteraction> uchAppCmdInteraction;
-#endif /* GREEKBOT_APPCMDINTERACTION_H */
+#endif /* DISCORD_APPCMDINTERACTION_H */

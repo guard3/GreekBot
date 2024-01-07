@@ -1,5 +1,5 @@
-#ifndef GREEKBOT_MODALSUBMITINTERACTION_H
-#define GREEKBOT_MODALSUBMITINTERACTION_H
+#ifndef DISCORD_MODALSUBMITINTERACTION_H
+#define DISCORD_MODALSUBMITINTERACTION_H
 #include "Component.h"
 #include "InteractionBase.h"
 #include <span>
@@ -25,8 +25,4 @@ public:
 	decltype(auto)   MoveCustomId() noexcept { return std::move(m_custom_id);  }
 	decltype(auto) MoveComponents() noexcept { return std::move(m_components); }
 };
-typedef   hHandle<cModalSubmitInteraction>   hModalSubmitInteraction;
-typedef  chHandle<cModalSubmitInteraction>  chModalSubmitInteraction;
-typedef  uhHandle<cModalSubmitInteraction>  uhModalSubmitInteraction;
-typedef uchHandle<cModalSubmitInteraction> uchModalSubmitInteraction;
-#endif /* GREEKBOT_MODALSUBMITINTERACTION_H */
+#endif /* DISCORD_MODALSUBMITINTERACTION_H */

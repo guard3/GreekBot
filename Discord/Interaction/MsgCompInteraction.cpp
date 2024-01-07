@@ -1,6 +1,6 @@
 #include "MsgCompInteraction.h"
 #include "json.h"
-
+using namespace detail;
 cMsgCompInteraction::cMsgCompInteraction(const json::value& v) : cMsgCompInteraction(v.as_object()) {}
 cMsgCompInteraction::cMsgCompInteraction(const json::object& o) : cMsgCompInteraction(o, o.at("data").as_object()) {}
 cMsgCompInteraction::cMsgCompInteraction(const json::object& obj, const json::object& data) :

@@ -176,6 +176,7 @@ cAppCmdOption::move_value_user() {
 	throw xAppCmdOptionTypeError(APP_CMD_OPT_USER);
 }
 /* ================================================================================================================== */
+using namespace detail; // Expose interaction types
 cAppCmdInteraction::cAppCmdInteraction(const json::value& v): cAppCmdInteraction(v.as_object()) {}
 cAppCmdInteraction::cAppCmdInteraction(const json::object& o): cAppCmdInteraction(o, o.at("data").as_object()) {}
 cAppCmdInteraction::cAppCmdInteraction(const json::object& o, const json::object& d):

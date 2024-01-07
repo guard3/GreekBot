@@ -1,21 +1,22 @@
-#ifndef GREEKBOT_INTERACTIONBASE_H
-#define GREEKBOT_INTERACTIONBASE_H
+#ifndef DISCORD_INTERACTIONBASE_H
+#define DISCORD_INTERACTIONBASE_H
+#include "InteractionFwd.h"
 #include "Member.h"
 #include "User.h"
 #include <optional>
 /* ================================================================================================================== */
-enum eInteractionType {
-	INTERACTION_PING = 1,
-	INTERACTION_APPLICATION_COMMAND,
-	INTERACTION_MESSAGE_COMPONENT,
-	INTERACTION_APPLICATION_COMMAND_AUTOCOMPLETE,
-	INTERACTION_MODAL_SUBMIT
-};
-eInteractionType tag_invoke(boost::json::value_to_tag<eInteractionType>, const boost::json::value&);
-/* ========== Forward declarations of interaction types ============================================================= */
-class cAppCmdInteraction;
-class cMsgCompInteraction;
-class cModalSubmitInteraction;
+namespace detail {
+	enum {
+		INTERACTION_PING = 1,
+		INTERACTION_APPLICATION_COMMAND,
+		INTERACTION_MESSAGE_COMPONENT,
+		INTERACTION_APPLICATION_COMMAND_AUTOCOMPLETE,
+		INTERACTION_MODAL_SUBMIT
+	};
+
+	void set_interaction_ack(const cInteraction&) noexcept;
+	bool get_interaction_ack(const cInteraction&) noexcept;
+}
 /* ========== Concepts for valid interaction visitor types ========================================================== */
 template<typename T>
 concept iInteractionVisitor = requires {
@@ -28,25 +29,20 @@ concept iInteractionVisitorR = requires {
 	requires std::convertible_to<std::invoke_result_t<T&&, cMsgCompInteraction&>, R>;
 	requires std::convertible_to<std::invoke_result_t<T&&, cModalSubmitInteraction&>, R>;
 };
-/* ================================================================================================================== */
-class cInteraction;
-namespace detail {
-	void set_interaction_ack(const cInteraction&) noexcept;
-	bool get_interaction_ack(const cInteraction&) noexcept;
-}
 /* ========== The base interaction class ============================================================================ */
 class cInteraction {
 private:
-	mutable bool m_ack;
-
-	cSnowflake                m_id;
-	cSnowflake                m_application_id;
-	std::string               m_token;
-	eInteractionType          m_type;
-	ePermission               m_app_permissions;
-	cUser                     m_user;
-	std::optional<cSnowflake> m_channel_id;
-
+	/* Control members */
+	mutable bool m_ack;  // Has the interaction been acknowledged?
+	std::uint8_t m_type; // The interaction type; used for the interaction visitor
+	/* Main members */
+	cSnowflake  m_id;
+	cSnowflake  m_application_id;
+	cSnowflake  m_channel_id;
+	std::string m_token;
+	ePermission m_app_permissions;
+	cUser       m_user;
+	/* Data that's present when the interaction is sent from a guild */
 	struct guild_data {
 		cSnowflake   guild_id;
 		cPartialMember member;
@@ -55,12 +51,13 @@ private:
 	std::optional<guild_data> m_guild_data;
 
 protected:
-	cInteraction(eInteractionType, const json::object&);
+	cInteraction(std::uint8_t, const json::object&);
 	cInteraction(const cInteraction&) = default;
 
 public:
 	const cSnowflake&            GetId() const noexcept { return m_id;              }
 	const cSnowflake& GetApplicationId() const noexcept { return m_application_id;  }
+	const cSnowflake&     GetChannelId() const noexcept { return m_channel_id;      }
 	std::string_view          GetToken() const noexcept { return m_token;           }
 	ePermission      GetAppPermissions() const noexcept { return m_app_permissions; }
 	const cUser&               GetUser() const noexcept { return m_user;            }
@@ -83,8 +80,4 @@ public:
 	friend void detail::set_interaction_ack(const cInteraction&) noexcept;
 	friend bool detail::get_interaction_ack(const cInteraction&) noexcept;
 };
-typedef   hHandle<cInteraction>   hInteraction;
-typedef  chHandle<cInteraction>  chInteraction;
-typedef  uhHandle<cInteraction>  uhInteraction;
-typedef uchHandle<cInteraction> uchInteraction;
-#endif /* GREEKBOT_INTERACTIONBASE_H */
+#endif /* DISCORD_INTERACTIONBASE_H */

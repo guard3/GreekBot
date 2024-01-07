@@ -1,5 +1,5 @@
-#ifndef GREEKBOT_MSGCOMPINTERACTION_H
-#define GREEKBOT_MSGCOMPINTERACTION_H
+#ifndef DISCORD_MSGCOMPINTERACTION_H
+#define DISCORD_MSGCOMPINTERACTION_H
 #include "Component.h"
 #include "InteractionBase.h"
 #include "Message.h"
@@ -32,8 +32,4 @@ public:
 	decltype(auto) MoveCustomId() noexcept { return std::move(m_custom_id); }
 	decltype(auto)   MoveValues() noexcept { return std::move(m_values);    }
 };
-typedef   hHandle<cMsgCompInteraction>   hMsgCompInteraction;
-typedef  chHandle<cMsgCompInteraction>  chMsgCompInteraction;
-typedef  uhHandle<cMsgCompInteraction>  uhMsgCompInteraction;
-typedef uchHandle<cMsgCompInteraction> uchMsgCompInteraction;
-#endif /* GREEKBOT_MSGCOMPINTERACTION_H */
+#endif /* DISCORD_MSGCOMPINTERACTION_H */
