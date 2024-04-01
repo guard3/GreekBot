@@ -59,49 +59,80 @@ cGateway::implementation::send(std::string msg) {
 /* ================================================================================================================== */
 void
 cGateway::implementation::close() {
+	/* TODO: check if m_Ws is null??? */
 	/* Stop heartbeating to prevent writing further data to the stream */
 	m_heartbeat_timer.cancel();
-	/* Close the stream */
-	auto ws = m_ws.get();
-	ws->async_close(beast::websocket::close_code::none, [this, ws = std::move(m_ws)](const beast::error_code& ec) {
-		/* Check websocket close code */
-		switch (ws->reason().code) {
-			case 4004: // Authentication failed
-			case 4010: // Invalid shard
-			case 4011: // Sharding required
-			case 4012: // Invalid API version
-			case 4013: // Invalid intent(s)
-			case 4014: // Disallowed intent(s)
-				/* Display error message */
-				cUtils::PrintErr("Fatal gateway error: {}", ws->reason().reason.c_str());
-				/* Cancel the http timer to stop giving work to the io context */
-				asio::defer(m_http_strand, [this] { m_http_timer.cancel(); });
-				return;
-			case 4007: // Invalid seq
-				/* Reset session */
-				m_last_sequence = 0;
-				m_session_id.clear();
-				m_resume_gateway_url.clear();
-			default:
-				break;
-		}
+	/* Continue closing */
+	close_1(std::move(m_ws));
+}
+void
+cGateway::implementation::close_1(uhHandle<beast::websocket::stream<beast::ssl_stream<beast::tcp_stream>>> ws) {
+	/* Wait for the queue to become empty to make sure no other messages are being sent; that's a requirement for async_close() */
+	if (!m_queue.empty()) {
+		asio::defer(m_ws_strand, [this, ws = std::move(ws)]() mutable { close_1(std::move(ws)); });
+		return;
+	}
+	/* When no messages are being sent, close the WebSocket stream */
+	auto p = ws.get();
+	p->async_close(beast::websocket::close_code::none, [this, ws = std::move(ws)](const beast::error_code&) mutable {
+		/* Destroy the stream object to make sure that any outstanding reading operations (if any) are cancelled */
+		ws = nullptr;
+		/* Reset resources used for reading from the WebSocket stream */
+		m_buffer.clear();
+		inflateReset(&m_inflate_stream);
 		/* Create a new session to keep the program loop going */
 		run_session();
 	});
-	/* Reset resources used by the WebSocket session */
-	m_queue.clear();
-	m_buffer.clear();
-	inflateReset(&m_inflate_stream);
 }
-
+void
+cGateway::implementation::close_2(uhHandle<beast::websocket::stream<beast::ssl_stream<beast::tcp_stream>>> ws) {
+	m_queue.empty() ? run_session() : asio::defer(m_ws_strand, [this, ws = std::move(ws)]() mutable { close_2(std::move(ws)); });
+}
+/* ================================================================================================================== */
 void
 cGateway::implementation::on_read(const beast::error_code& ec, size_t bytes_read) try {
-	/* If reading was cancelled, simply return */
-	if (ec == asio::error::operation_aborted || !m_ws) return;
-	/* If the server closed the connection gracefully, close the stream */
-	if (ec == beast::websocket::error::closed) return close();
-	/* If any other error occurs, throw */
-	if (ec) throw std::system_error(ec);
+	/* If the websocket stream is closed, simply return */
+	if (!m_ws)
+		return;
+	if (ec) {
+		/* If the reading operation was cancelled, simply return */
+		if (ec == asio::error::operation_aborted)
+			return;
+		/* If the server closed the connection gracefully... */
+		if (ec == beast::websocket::error::closed) {
+			/* Stop heartbeating to prevent writing further data to the stream */
+			m_heartbeat_timer.cancel();
+			/* Reset resources used for reading from the WebSocket stream */
+			m_buffer.clear();
+			inflateReset(&m_inflate_stream);
+			/* Continue according to the close code */
+			switch (auto &rsn = m_ws->reason(); rsn.code) {
+				case 4004: // Authentication failed
+				case 4010: // Invalid shard
+				case 4011: // Sharding required
+				case 4012: // Invalid API version
+				case 4013: // Invalid intent(s)
+				case 4014: // Disallowed intent(s)
+					/* Cancel the http timer to stop giving work to the io context */
+					asio::defer(m_http_strand, [this] { m_http_timer.cancel(); });
+					/* Report the close reason as the error message */
+					cUtils::PrintErr("Fatal gateway error: {}", rsn.reason.c_str());
+					/* Destroy the stream; this will trigger any queued messages to be deleted eventually too */
+					m_ws = nullptr;
+					return;
+				case 4007: // Invalid seq
+					/* Reset session */
+					m_last_sequence = 0;
+					m_session_id.clear();
+					m_resume_gateway_url.clear();
+				default:
+					/* Create a new session to keep the program loop going */
+					return close_2(std::move(m_ws));
+			}
+		}
+		/* If any other error occurs, throw */
+		throw std::system_error(ec);
+	}
 	/* Reset the parser prior to parsing a new JSON */
 	m_parser.reset();
 	/* Check for Z_SYNC_FLUSH suffix and decompress if necessary */
@@ -152,19 +183,20 @@ cGateway::implementation::on_read(const beast::error_code& ec, size_t bytes_read
 				heartbeat();
 				/* Resume heartbeating */
 				m_heartbeat_timer.expires_after(m_heartbeat_interval);
-				m_heartbeat_timer.async_wait([this](beast::error_code ec){ on_expire(ec); });
+				m_heartbeat_timer.async_wait([this](beast::error_code ec) { on_expire(ec); });
 			}
 			/* If cancel() returns 0, then a heartbeat is already queued to be sent, so we don't need to do anything */
 			break;
 		case OP_INVALID_SESSION:
-			/* If the current session can't be resumed, reset it */
+			/* If the current session can't be resumed, reset it... */
 			if (!v.at("d").as_bool()) {
 				m_last_sequence = 0;
 				m_session_id.clear();
 				m_resume_gateway_url.clear();
 			}
-		case OP_RECONNECT:
 			close();
+		case OP_RECONNECT:
+			/* ...and do nothing and wait for the server to close the WebSocket session */
 			break;
 		case OP_HELLO:
 			/* Update heartbeat interval */
@@ -181,20 +213,26 @@ cGateway::implementation::on_read(const beast::error_code& ec, size_t bytes_read
 			m_heartbeat_ack = true;
 			break;
 	}
+} catch (const std::exception& e) {
+	cUtils::PrintErr("An error occurred while reading from the gateway: {}", e.what());
+	close();
 } catch (...) {
-	/* In the case of an error, close the stream */
+	cUtils::PrintErr("An error occurred while reading from the gateway.");
 	close();
 }
 /* ================================================================================================================== */
 void
 cGateway::implementation::on_write(const beast::error_code& ec) {
-	/* If the operation was canceled, simply return */
-	if (ec == asio::error::operation_aborted || !m_ws) return;
-	/* If an error occurred, close the stream */
-	if (ec) return close();
-	/* Pop the message that was just sent */
+	if (!m_ws || ec == asio::error::operation_aborted)
+		return m_queue.clear();
+	/* If an error occurs, flush any pending messages and close the stream if necessary */
+	if (ec) {
+		m_queue.clear();
+		return close();
+	}
+	/* If all is good, pop the message that was just sent... */
 	m_queue.pop_front();
-	/* If the queue isn't empty, send the next message */
+	/* ...and if the queue isn't empty, send the next message */
 	if (!m_queue.empty())
 		m_ws->async_write(asio::buffer(m_queue.front()), [this](const beast::error_code& ec, size_t) { on_write(ec); });
 }

@@ -21,6 +21,10 @@ private:
 	using distribution = std::conditional_t<std::is_integral_v<T>,
 	                                        std::uniform_int_distribution<std::conditional_t<(sizeof(T) < sizeof(short)), int, T>>,
 	                                        std::uniform_real_distribution<T>>;
+	/* Print helpers */
+	static void print_err(std::string, char);
+	static void print_log(std::string, char);
+	static void print_msg(std::string, char);
 public:
 	cUtils() = delete;
 	/* Random functions */
@@ -39,15 +43,15 @@ public:
 	/* Logger functions */
 	template<char nl = '\n', typename... Args>
 	static void PrintErr(fmt::format_string<Args...> format, Args&&... args) {
-		fmt::print(stderr, "[ERR] {}{}", fmt::format(format, std::forward<Args>(args)...), nl);
+		print_err(fmt::format(format, std::forward<Args>(args)...), nl);
 	}
 	template<char nl = '\n', typename... Args>
 	static void PrintLog(fmt::format_string<Args...> format, Args&&... args) {
-		fmt::print(stdout, "[LOG] {}{}", fmt::format(format, std::forward<Args>(args)...), nl);
+		print_log(fmt::format(format, std::forward<Args>(args)...), nl);
 	}
 	template<char nl = '\n', typename... Args>
 	static void PrintMsg(fmt::format_string<Args...> format, Args&&... args) {
-		fmt::print(stdout, "[MSG] {}{}", fmt::format(format, std::forward<Args>(args)...), nl);
+		print_log(fmt::format(format, std::forward<Args>(args)...), nl);
 	}
 	/* Converting a string to int */
 	template<std::integral T = int>

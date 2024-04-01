@@ -96,6 +96,8 @@ private:
 	void on_write(const beast::error_code&);
 	void on_expire(const beast::error_code&);
 	void close();
+	void close_1(uhHandle<beast::websocket::stream<beast::ssl_stream<beast::tcp_stream>>>);
+	void close_2(uhHandle<beast::websocket::stream<beast::ssl_stream<beast::tcp_stream>>>);
 	void retry(int, std::string);
 	/* A method that initiates the gateway connection */
 	void run_session();
@@ -128,6 +130,7 @@ private:
 				}
 				break;
 			case AWAIT_GUILD_MEMBERS:
+				/* TODO: If the websocket stream is null, throw */
 				/* Save the coroutine handle to resume after all members have been received */
 				m_rgm_map[m_rgm_nonce++].Fill(h);
 				/* Send the payload */

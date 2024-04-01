@@ -1,5 +1,7 @@
+#include <iostream>
 #include "Utils.h"
 #include <zlib.h>
+#include <fmt/ostream.h>
 /* ========== Random engine stuff =================================================================================== */
 static std::random_device g_rd;
 std::mt19937    cUtils::ms_gen(g_rd());
@@ -10,6 +12,28 @@ cUtils::CRC32(uint32_t hash, std::string_view str) noexcept {
 	return crc32(hash, reinterpret_cast<const Byte*>(str.data()), str.size());
 }
 /* ================================================================================================================== */
+static const char months[12][4] { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+
+static void
+print_tag(std::ostream& strm, const char* tag, std::string_view str, char nl) {
+	auto t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+	auto p = std::localtime(&t);
+	fmt::print(strm, "{:02}/{}/{} {:02}:{:02}:{:02} [{}] {}{}", p->tm_mday, months[p->tm_mon], p->tm_year + 1900, p->tm_hour, p->tm_min, p->tm_sec, tag, str, nl);
+}
+
+void
+cUtils::print_err(std::string str, char nl) {
+	print_tag(std::cerr, "ERR", str, nl);
+}
+void
+cUtils::print_log(std::string str, char nl) {
+	print_tag(std::cout, "LOG", str, nl);
+}
+void
+cUtils::print_msg(std::string str, char nl) {
+	print_tag(std::cout, "MSG", str, nl);
+}
+
 std::string
 cUtils::PercentEncode(std::string_view sv) {
 	/* A lookup table to check if a character is unreserved or not */
@@ -90,9 +114,9 @@ cUtils::ParseISOTimestamp(std::string_view sv) {
 	else str += 8;
 	/* Create a date from digits */
 	year_month_day ymd {
-			 year(dgt[3] + 10 * dgt[2] + 100 * dgt[1] + 1000 * dgt[0]),
-			month(dgt[5] + 10 * dgt[4]),
-			  day(dgt[7] + 10 * dgt[6])
+		 year(dgt[3] + 10 * dgt[2] + 100 * dgt[1] + 1000 * dgt[0]),
+		month(dgt[5] + 10 * dgt[4]),
+		  day(dgt[7] + 10 * dgt[6])
 	};
 	/* Check that the date is valid and that the T separator exists */
 	if (!ymd.ok() || *str++ != 'T') throw_exception();
