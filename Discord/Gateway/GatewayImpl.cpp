@@ -100,6 +100,8 @@ cGateway::implementation::on_read(const beast::error_code& ec, size_t bytes_read
 			return;
 		/* If the server closed the connection gracefully... */
 		if (ec == beast::websocket::error::closed) {
+			/* DEBUG */
+			cUtils::PrintLog("Connection closed by the server.");
 			/* Stop heartbeating to prevent writing further data to the stream */
 			m_heartbeat_timer.cancel();
 			/* Reset resources used for reading from the WebSocket stream */
@@ -126,8 +128,23 @@ cGateway::implementation::on_read(const beast::error_code& ec, size_t bytes_read
 					m_session_id.clear();
 					m_resume_gateway_url.clear();
 				default:
-					/* Create a new session to keep the program loop going */
+					/* Wait for any writes to finish before creating a new session to keep the program loop going */
 					return close_2(std::move(m_ws));
+			}
+		}
+		/* DEBUG: On Linux there are a couple of EOF errors, so let's investigate... */
+		if (ec == asio::error::eof) {
+			cUtils::PrintLog("EOF with {} bytes read", bytes_read);
+			if (bytes_read) {
+				std::string data;
+				data.reserve(4096);
+				for (auto c: std::span{(const std::uint8_t *) m_buffer.data().data(), bytes_read}) {
+					static const char hex[] = "01234567890ABCDEF";
+					data += hex[c >> 4];
+					data += hex[c & 15];
+					data += ' ';
+				}
+				cUtils::PrintLog("{}", data);
 			}
 		}
 		/* If any other error occurs, throw */
@@ -227,6 +244,7 @@ cGateway::implementation::on_write(const beast::error_code& ec) {
 		return m_queue.clear();
 	/* If an error occurs, flush any pending messages and close the stream if necessary */
 	if (ec) {
+		cUtils::PrintLog("An error occurred while writing to the gateway: {}", ec.message());
 		m_queue.clear();
 		return close();
 	}
