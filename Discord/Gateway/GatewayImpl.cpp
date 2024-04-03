@@ -91,65 +91,52 @@ cGateway::implementation::close_2(uhHandle<beast::websocket::stream<beast::ssl_s
 /* ================================================================================================================== */
 void
 cGateway::implementation::on_read(const beast::error_code& ec, size_t bytes_read) try {
-	/* If the websocket stream is closed, simply return */
-	if (!m_ws)
+	/* If the operation was cancelled, simply return */
+	if (!m_ws || ec == asio::error::operation_aborted)
 		return;
-	if (ec) {
-		/* If the reading operation was cancelled, simply return */
-		if (ec == asio::error::operation_aborted)
-			return;
-		/* If the server closed the connection gracefully... */
-		if (ec == beast::websocket::error::closed) {
-			/* DEBUG */
-			cUtils::PrintLog("Connection closed by the server.");
-			/* Stop heartbeating to prevent writing further data to the stream */
-			m_heartbeat_timer.cancel();
-			/* Reset resources used for reading from the WebSocket stream */
-			m_buffer.clear();
-			inflateReset(&m_inflate_stream);
-			/* Continue according to the close code */
-			switch (auto &rsn = m_ws->reason(); rsn.code) {
-				case 4004: // Authentication failed
-				case 4010: // Invalid shard
-				case 4011: // Sharding required
-				case 4012: // Invalid API version
-				case 4013: // Invalid intent(s)
-				case 4014: // Disallowed intent(s)
-					/* Cancel the http timer to stop giving work to the io context */
-					asio::defer(m_http_strand, [this] { m_http_timer.cancel(); });
-					/* Report the close reason as the error message */
-					cUtils::PrintErr("Fatal gateway error: {}", rsn.reason.c_str());
-					/* Destroy the stream; this will trigger any queued messages to be deleted eventually too */
-					m_ws = nullptr;
-					return;
-				case 4007: // Invalid seq
-					/* Reset session */
-					m_last_sequence = 0;
-					m_session_id.clear();
-					m_resume_gateway_url.clear();
-				default:
-					/* Wait for any writes to finish before creating a new session to keep the program loop going */
-					return close_2(std::move(m_ws));
-			}
-		}
-		/* DEBUG: On Linux there are a couple of EOF errors, so let's investigate... */
-		if (ec == asio::error::eof) {
-			cUtils::PrintLog("EOF with {} bytes read", bytes_read);
-			if (bytes_read) {
-				std::string data;
-				data.reserve(4096);
-				for (auto c: std::span{(const std::uint8_t *) m_buffer.data().data(), bytes_read}) {
-					static const char hex[] = "01234567890ABCDEF";
-					data += hex[c >> 4];
-					data += hex[c & 15];
-					data += ' ';
-				}
-				cUtils::PrintLog("{}", data);
-			}
-		}
-		/* If any other error occurs, throw */
-		throw std::system_error(ec);
+	/* If the connection was unexpectedly closed... */
+	if (ec == asio::error::eof) {
+		/* Stop heartbeating to prevent writing further data to the stream */
+		m_heartbeat_timer.cancel();
+		/* Reset resources used for reading from the WebSocket stream */
+		m_buffer.clear();
+		inflateReset(&m_inflate_stream);
+		/* Wait for any writes to finish before creating a new session to keep the program loop going */
+		return close_2(std::move(m_ws));
 	}
+	if (ec == beast::websocket::error::closed) {
+		/* Stop heartbeating to prevent writing further data to the stream */
+		m_heartbeat_timer.cancel();
+		/* Reset resources used for reading from the WebSocket stream */
+		m_buffer.clear();
+		inflateReset(&m_inflate_stream);
+		/* Continue according to the close code */
+		switch (auto &rsn = m_ws->reason(); rsn.code) {
+			case 4004: // Authentication failed
+			case 4010: // Invalid shard
+			case 4011: // Sharding required
+			case 4012: // Invalid API version
+			case 4013: // Invalid intent(s)
+			case 4014: // Disallowed intent(s)
+				/* Cancel the http timer to stop giving work to the io context */
+				asio::defer(m_http_strand, [this] { m_http_timer.cancel(); });
+				/* Report the close reason as the error message */
+				cUtils::PrintErr("Fatal gateway error{}{}", rsn.reason.empty() ? "." : ": ", rsn.reason.c_str());
+				/* Destroy the stream; this will trigger any queued messages to be deleted eventually too */
+				m_ws = nullptr;
+				return;
+			case 4007: // Invalid seq
+				/* Reset session */
+				m_last_sequence = 0;
+				m_session_id.clear();
+				m_resume_gateway_url.clear();
+			default:
+				/* Wait for any writes to finish before creating a new session to keep the program loop going */
+				return close_2(std::move(m_ws));
+		}
+	}
+	/* If any other error occurs, throw */
+	if (ec) throw std::system_error(ec);
 	/* Reset the parser prior to parsing a new JSON */
 	m_parser.reset();
 	/* Check for Z_SYNC_FLUSH suffix and decompress if necessary */
@@ -221,7 +208,7 @@ cGateway::implementation::on_read(const beast::error_code& ec, size_t bytes_read
 			m_heartbeat_interval = chrono::milliseconds(v.at("d").at("heartbeat_interval").as_int64());
 			/* Set the heartbeating to begin */
 			m_heartbeat_timer.expires_after(chrono::milliseconds(cUtils::Random(0, m_heartbeat_interval.count())));
-			m_heartbeat_timer.async_wait([this](beast::error_code ec) { on_expire(ec); });
+			m_heartbeat_timer.async_wait([this](const beast::error_code& ec) { on_expire(ec); });
 			/* If there is an active session, try to resume, otherwise identify */
 			m_session_id.empty() ? identify() : resume();
 			break;
@@ -240,12 +227,14 @@ cGateway::implementation::on_read(const beast::error_code& ec, size_t bytes_read
 /* ================================================================================================================== */
 void
 cGateway::implementation::on_write(const beast::error_code& ec) {
+	/* If the operation was canceled, flush any pending messages and return */
 	if (!m_ws || ec == asio::error::operation_aborted)
 		return m_queue.clear();
-	/* If an error occurs, flush any pending messages and close the stream if necessary */
+	/* If an error occurs, flush any pending messages and close the stream */
 	if (ec) {
-		cUtils::PrintLog("An error occurred while writing to the gateway: {}", ec.message());
 		m_queue.clear();
+		std::string msg = ec.message();
+		cUtils::PrintErr("An error occurred while writing to the gateway{}{}", msg.empty() ? "." : ": ", msg);
 		return close();
 	}
 	/* If all is good, pop the message that was just sent... */
@@ -258,9 +247,9 @@ cGateway::implementation::on_write(const beast::error_code& ec) {
 void
 cGateway::implementation::on_expire(const beast::error_code& ec) {
 	/* If the operation was canceled, simply return */
-	if (ec == asio::error::operation_aborted || !m_ws) return;
-	/* If an error occurred or the last heartbeat wasn't acknowledged, close the stream */
-	if (ec || !m_heartbeat_ack) return close();
+	if (!m_ws || ec) return;
+	/* If the last heartbeat wasn't acknowledged, close the stream */
+	if (!m_heartbeat_ack) return close();
 	/* Send a heartbeat */
 	heartbeat();
 	/* Reset the timer */
@@ -353,10 +342,7 @@ cGateway::implementation::retry(int count, std::string msg) {
 	} else {
 		cUtils::PrintErr<'\r'>("{} Retrying in {}s", msg, count);
 		m_heartbeat_timer.expires_after(1s);
-		m_heartbeat_timer.async_wait([this, c = count - 1, msg = std::move(msg)](const beast::error_code& ec) {
-			if (ec) throw std::system_error(ec);
-			retry(c, std::move(msg));
-		});
+		m_heartbeat_timer.async_wait([this, c = count - 1, msg = std::move(msg)](const beast::error_code&) mutable { retry(c, std::move(msg)); });
 	}
 }
 
