@@ -96,9 +96,8 @@ private:
 	void on_write(const beast::error_code&);
 	void on_expire(const beast::error_code&);
 	void close();
-	void close_1(uhHandle<beast::websocket::stream<beast::ssl_stream<beast::tcp_stream>>>);
-	void close_2(uhHandle<beast::websocket::stream<beast::ssl_stream<beast::tcp_stream>>>);
-	void retry(int, std::string);
+	void on_close();
+	void retry(std::string);
 	/* A method that initiates the gateway connection */
 	void run_session();
 	void run_context();

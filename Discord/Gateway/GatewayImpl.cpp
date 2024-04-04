@@ -59,34 +59,38 @@ cGateway::implementation::send(std::string msg) {
 /* ================================================================================================================== */
 void
 cGateway::implementation::close() {
-	/* TODO: check if m_Ws is null??? */
 	/* Stop heartbeating to prevent writing further data to the stream */
 	m_heartbeat_timer.cancel();
-	/* Continue closing */
-	close_1(std::move(m_ws));
+	/* Close the stream */
+	struct {
+		implementation* self; std::unique_ptr<beast::websocket::stream<beast::ssl_stream<beast::tcp_stream>>> ws;
+		void operator()() {
+			/* Wait for the queue to become empty to make sure no other messages are being sent; that's a requirement for async_close() */
+			if (!self->m_queue.empty())
+				return asio::defer(self->m_ws_strand, std::move(*this));
+			/* When no messages are being sent, close the WebSocket stream */
+			auto p = ws.get();
+			p->async_close(beast::websocket::close_code::none, std::move(*this));
+		}
+		void operator()(const beast::error_code&) {
+			/* Destroy the stream object to make sure that any outstanding reading operations (if any) are cancelled */
+			ws = nullptr;
+			/* Reset resources used for reading from the WebSocket stream */
+			self->m_buffer.clear();
+			inflateReset(&self->m_inflate_stream);
+			/* Create a new session to keep the program loop going */
+			self->run_session();
+		}
+	} _{ this, std::move(m_ws) }; _();
 }
 void
-cGateway::implementation::close_1(uhHandle<beast::websocket::stream<beast::ssl_stream<beast::tcp_stream>>> ws) {
-	/* Wait for the queue to become empty to make sure no other messages are being sent; that's a requirement for async_close() */
-	if (!m_queue.empty()) {
-		asio::defer(m_ws_strand, [this, ws = std::move(ws)]() mutable { close_1(std::move(ws)); });
-		return;
-	}
-	/* When no messages are being sent, close the WebSocket stream */
-	auto p = ws.get();
-	p->async_close(beast::websocket::close_code::none, [this, ws = std::move(ws)](const beast::error_code&) mutable {
-		/* Destroy the stream object to make sure that any outstanding reading operations (if any) are cancelled */
-		ws = nullptr;
-		/* Reset resources used for reading from the WebSocket stream */
-		m_buffer.clear();
-		inflateReset(&m_inflate_stream);
-		/* Create a new session to keep the program loop going */
-		run_session();
-	});
-}
-void
-cGateway::implementation::close_2(uhHandle<beast::websocket::stream<beast::ssl_stream<beast::tcp_stream>>> ws) {
-	m_queue.empty() ? run_session() : asio::defer(m_ws_strand, [this, ws = std::move(ws)]() mutable { close_2(std::move(ws)); });
+cGateway::implementation::on_close() {
+	struct {
+		implementation* self; std::unique_ptr<beast::websocket::stream<beast::ssl_stream<beast::tcp_stream>>> ws;
+		void operator()() {
+			self->m_queue.empty() ? self->run_session() : asio::defer(self->m_ws_strand, std::move(*this));
+		}
+	} _{ this, std::move(m_ws) }; _();
 }
 /* ================================================================================================================== */
 void
@@ -102,7 +106,7 @@ cGateway::implementation::on_read(const beast::error_code& ec, size_t bytes_read
 		m_buffer.clear();
 		inflateReset(&m_inflate_stream);
 		/* Wait for any writes to finish before creating a new session to keep the program loop going */
-		return close_2(std::move(m_ws));
+		return on_close();
 	}
 	if (ec == beast::websocket::error::closed) {
 		/* Stop heartbeating to prevent writing further data to the stream */
@@ -132,7 +136,7 @@ cGateway::implementation::on_read(const beast::error_code& ec, size_t bytes_read
 				m_resume_gateway_url.clear();
 			default:
 				/* Wait for any writes to finish before creating a new session to keep the program loop going */
-				return close_2(std::move(m_ws));
+				return on_close();
 		}
 	}
 	/* If any other error occurs, throw */
@@ -307,43 +311,45 @@ cGateway::implementation::run_session() try {
 									/* Start the asynchronous read operation */
 									m_ws->async_read(m_buffer, [this](beast::error_code ec, size_t size) { on_read(ec, size); });
 								} catch (...) {
-									m_ws = nullptr;
-									retry(5, "Connection error.");
+									retry("Connection error.");
 								}
 							});
 						} catch (...) {
-							m_ws = nullptr;
-							retry(5, "Connection error.");
+							retry("Connection error.");
 						}
 					});
 				} catch (...) {
-					m_ws = nullptr;
-					retry(5, "Connection error.");
+					retry("Connection error.");
 				}
 			});
 		} catch (...) {
-			m_ws = nullptr;
-			retry(5, "Connection error.");
+			retry("Connection error.");
 		}
 	}));
 } catch (...) {
-	asio::dispatch(m_ws_strand, [this] {
-		m_ws = nullptr;
-		retry(5, "Connection error.");
-	});
+	asio::dispatch(m_ws_strand, [this] { retry("Connection error."); });
 }
 
 void
-cGateway::implementation::retry(int count, std::string msg) {
-	using namespace std::chrono_literals;
-	if (count == 0) {
-		cUtils::PrintErr<'\n'>("{} Retrying...    ", msg);
-		run_session();
-	} else {
-		cUtils::PrintErr<'\r'>("{} Retrying in {}s", msg, count);
-		m_heartbeat_timer.expires_after(1s);
-		m_heartbeat_timer.async_wait([this, c = count - 1, msg = std::move(msg)](const beast::error_code&) mutable { retry(c, std::move(msg)); });
-	}
+cGateway::implementation::retry(std::string msg) {
+	m_ws = nullptr;
+	struct {
+		implementation *self; std::string msg; int count;
+		void operator()() {
+			if (count > 0) {
+				cUtils::PrintErr<'\r'>("{} Retrying in {}s ", msg, count);
+				self->m_heartbeat_timer.expires_after(std::chrono::seconds(1));
+				self->m_heartbeat_timer.async_wait(std::move(*this));
+			} else {
+				cUtils::PrintErr<'\n'>("{} Retrying...     ", msg);
+				self->run_session();
+			}
+		}
+		void operator()(const beast::error_code&) {
+			count--;
+			(*this)();
+		}
+	} _{ this, std::move(msg), 10 }; _();
 }
 
 void
@@ -364,7 +370,6 @@ cGateway::implementation::run_context() {
 	}
 	cUtils::PrintLog("exiting run_context()...");
 }
-
 /* ================================================================================================================== */
 void
 cGateway::implementation::Run() {
