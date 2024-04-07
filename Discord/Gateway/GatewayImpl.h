@@ -51,7 +51,7 @@ private:
 	asio::strand<asio::io_context::executor_type> m_http_strand; // A strand for HTTP operations
 	/* Resolvers */
 	asio::ip::tcp::resolver m_resolver;
-
+	int                     m_async_status;
 	beast::flat_buffer      m_buffer;      // A buffer for reading from the websocket
 	beast::flat_buffer      m_http_buffer; // A buffer for storing http responses
 	std::deque<std::string> m_queue;       // A queue with all pending messages to be sent
@@ -95,8 +95,8 @@ private:
 	void on_read(const beast::error_code&, size_t);
 	void on_write(const beast::error_code&);
 	void on_expire(const beast::error_code&);
+	void on_close(bool = true);
 	void close();
-	void on_close();
 	void retry(std::string);
 	/* A method that initiates the gateway connection */
 	void run_session();
