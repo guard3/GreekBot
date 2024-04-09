@@ -14,13 +14,6 @@ enum eGatewayOpcode {
 	OP_HELLO                 = 10, // Sent immediately after connecting, contains the heartbeat_interval to use.
 	OP_HEARTBEAT_ACK         = 11, // Sent in response to receiving a heartbeat to acknowledge that it has been received.
 };
-/* ========== An enum to keep track of the status of async operations of the WebSocket stream ======================= */
-enum {
-	ASYNC_NONE  = 0,
-	ASYNC_READ  = 1 << 0,
-	ASYNC_WRITE = 1 << 1,
-	ASYNC_CLOSE = 1 << 2
-};
 /* ================================================================================================================== */
 cGateway::implementation::implementation(cGateway* p, std::string_view t, eIntent i) :
 	m_parent(p),
@@ -66,29 +59,19 @@ cGateway::implementation::send(std::string msg) {
 /* ================================================================================================================== */
 void
 cGateway::implementation::close() {
-	m_async_status |= ASYNC_CLOSE;
 	/* Stop heartbeating to prevent writing further data to the stream */
 	m_heartbeat_timer.cancel();
 	/* Close the stream */
-	struct {
-		implementation& self;
-		void operator()() {
-			/* Wait for any ongoing writes to finish; that's a requirement for async_close() */
-			if (self.m_async_status & ASYNC_WRITE)
-				return asio::defer(self.m_ws_strand, *this);
-			/* When no messages are being sent, close the WebSocket stream */
-			self.m_ws->async_close(beast::websocket::close_code::none, *this);
-			self.m_async_status |= ASYNC_WRITE;
-		}
-		void operator()(const beast::error_code&) {
-			self.m_async_status &= ~ASYNC_WRITE;
-			self.on_close();
-		}
-	} _{ *this }; _();
+	m_ws->async_close(beast::websocket::close_code::none, [this](auto&&) { on_close(); });
+	m_async_status |= ASYNC_CLOSE;
 }
 void
 cGateway::implementation::on_close(bool bRestart) {
-	m_async_status |= ASYNC_CLOSE;
+	/* Stop heartbeating to prevent writing further data to the stream */
+	if (!(m_async_status & ASYNC_CLOSE)) {
+		m_heartbeat_timer.cancel();
+		m_async_status |= ASYNC_CLOSE;
+	}
 	struct {
 		implementation& self; bool bRestart;
 		void operator()() {
@@ -114,17 +97,11 @@ cGateway::implementation::on_read(const beast::error_code& ec, size_t bytes_read
 	if (m_async_status & ASYNC_CLOSE || ec == asio::error::operation_aborted)
 		return;
 	/* If the connection was unexpectedly closed... */
-	if (ec == asio::error::eof) {
-		/* Stop heartbeating to prevent writing further data to the stream */
-		m_heartbeat_timer.cancel();
-		/* Wait for any async operations to finish before creating a new session */
+	if (ec == asio::error::eof)
 		return on_close();
-	}
+	/* If the session was closed gracefully by the server... */
 	if (ec == beast::websocket::error::closed) {
-		/* Stop heartbeating to prevent writing further data to the stream */
-		m_heartbeat_timer.cancel();
-		/* Continue according to the close code */
-		switch (auto &rsn = m_ws->reason(); rsn.code) {
+		switch (auto& rsn = m_ws->reason(); rsn.code) {
 			case 4004: // Authentication failed
 			case 4010: // Invalid shard
 			case 4011: // Sharding required
@@ -147,8 +124,12 @@ cGateway::implementation::on_read(const beast::error_code& ec, size_t bytes_read
 				return on_close();
 		}
 	}
-	/* If any other error occurs, throw */
-	if (ec) throw std::system_error(ec);
+	/* If any other error occurs, report it and close the connection */
+	if (ec) {
+		const char* err = ec.message(m_err_msg, std::size(m_err_msg));
+		cUtils::PrintErr("An error occurred while reading from the gateway{}{}", *err == 0 ? "." : ": ", err);
+		return close();
+	}
 	/* Reset the parser prior to parsing a new JSON */
 	m_parser.reset();
 	/* Check for Z_SYNC_FLUSH suffix and decompress if necessary */
@@ -246,9 +227,8 @@ cGateway::implementation::on_write(const beast::error_code& ec) {
 		return;
 	/* If an error occurs, close the stream */
 	if (ec) {
-		char temp[256];
-		const char* msg = ec.message(temp, 256);
-		cUtils::PrintErr("An error occurred while writing to the gateway{}{}", *msg == '\0' ? "." : ": ", msg);
+		const char* err = ec.message(m_err_msg, std::size(m_err_msg));
+		cUtils::PrintErr("An error occurred while writing to the gateway{}{}", *err == 0 ? "." : ": ", err);
 		return close();
 	}
 	/* If all is good, pop the message that was just sent... */

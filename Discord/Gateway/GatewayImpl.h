@@ -84,6 +84,8 @@ private:
 	std::unordered_map<uint64_t, cGuildMembersResult> m_rgm_map; // A map to hold and manage all responses
 	/* Partial application object */
 	std::optional<cApplication> m_application;
+	/* A buffer to hold exception messages for when allocations are unfavorable */
+	char m_err_msg[256];
 
 	/* Gateway commands */
 	void resume();
@@ -109,6 +111,14 @@ private:
 	void http_shutdown_ssl();
 	void http_shutdown();
 
+	/* An enum to keep track of the status of async operations of the WebSocket stream */
+	enum {
+		ASYNC_NONE  = 0,
+		ASYNC_READ  = 1 << 0,
+		ASYNC_WRITE = 1 << 1,
+		ASYNC_CLOSE = 1 << 2
+	};
+
 	eAwaitCommand m_await_command;
 	bool await_ready() { return false; }
 	void await_suspend(std::coroutine_handle<> h) {
@@ -129,7 +139,9 @@ private:
 				}
 				break;
 			case AWAIT_GUILD_MEMBERS:
-				/* TODO: If the websocket stream is null, throw */
+				/* If the WebSocket stream is unavailable, throw */
+				if (m_async_status & ASYNC_CLOSE)
+					throw std::runtime_error("Gateway unavailable");
 				/* Save the coroutine handle to resume after all members have been received */
 				m_rgm_map[m_rgm_nonce++].Fill(h);
 				/* Send the payload */
