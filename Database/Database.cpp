@@ -2,7 +2,8 @@
 #include "Queries.h"
 #include "Utils.h"
 #include <filesystem>
-#include <boost/asio/ts/executor.hpp>
+#include <boost/asio/strand.hpp>
+#include <boost/asio/system_executor.hpp>
 #include <sqlite3.h>
 #if   defined _WIN32
 #  define WIN32_LEAN_AND_MEAN
@@ -35,7 +36,7 @@ static std::u8string get_db_filename() {
 				throw std::runtime_error(lpszMsg);
 			} catch (...) {
 				LocalFree(lpszMsg);
-				std::rethrow_exception(std::current_exception());
+				throw;
 			}
 		}
 		/* If the length is smaller than the total vector size, then the full path has been retrieved */
@@ -64,7 +65,7 @@ static std::u8string get_db_filename() {
 	return result.replace_filename("database.db").u8string();
 }
 /* ========== The database instance constructor which initializes the global sqlite connection ====================== */
-cDatabase::cDatabase() {
+void cDatabase::Initialize() {
 	sqlite3* db = nullptr; // The database connection handle
 	std::string err_msg;   // The error message string
 	try {
@@ -109,8 +110,7 @@ cDatabase::~cDatabase() {
 namespace net = boost::asio;
 class resume_on_db_strand {
 private:
-	static inline net::system_executor ms_executor;
-	static inline auto ms_strand = net::make_strand(ms_executor);
+	static inline net::strand<net::system_executor> ms_strand;
 public:
 	bool await_ready() {
 		return ms_strand.running_in_this_thread();

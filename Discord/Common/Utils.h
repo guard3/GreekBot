@@ -22,9 +22,9 @@ private:
 	                                        std::uniform_int_distribution<std::conditional_t<(sizeof(T) < sizeof(short)), int, T>>,
 	                                        std::uniform_real_distribution<T>>;
 	/* Print helpers */
-	static void print_err(std::string, char);
-	static void print_log(std::string, char);
-	static void print_msg(std::string, char);
+	static void print_err(std::string, char) noexcept;
+	static void print_log(std::string, char) noexcept;
+	static void print_msg(std::string, char) noexcept;
 public:
 	cUtils() = delete;
 	/* Random functions */
@@ -42,16 +42,22 @@ public:
 	}
 	/* Logger functions */
 	template<char nl = '\n', typename... Args>
-	static void PrintErr(fmt::format_string<Args...> format, Args&&... args) {
+	static void PrintErr(fmt::format_string<Args...> format, Args&&... args) noexcept try {
 		print_err(fmt::format(format, std::forward<Args>(args)...), nl);
+	} catch (...) {
+		print_err(std::string(), nl);
 	}
 	template<char nl = '\n', typename... Args>
-	static void PrintLog(fmt::format_string<Args...> format, Args&&... args) {
+	static void PrintLog(fmt::format_string<Args...> format, Args&&... args) noexcept try {
 		print_log(fmt::format(format, std::forward<Args>(args)...), nl);
+	} catch (...) {
+		print_log(std::string(), nl);
 	}
 	template<char nl = '\n', typename... Args>
-	static void PrintMsg(fmt::format_string<Args...> format, Args&&... args) {
-		print_log(fmt::format(format, std::forward<Args>(args)...), nl);
+	static void PrintMsg(fmt::format_string<Args...> format, Args&&... args) noexcept try {
+		print_msg(fmt::format(format, std::forward<Args>(args)...), nl);
+	} catch (...) {
+		print_msg(std::string(), nl);
 	}
 	/* Converting a string to int */
 	template<std::integral T = int>
@@ -67,7 +73,7 @@ public:
 		throw std::invalid_argument("Input string can't be parsed into an integer");
 	}
 	/* Calculate crc32 checksums of strings */
-	static uint32_t CRC32(uint32_t, std::string_view) noexcept;
+	static std::uint32_t CRC32(std::uint32_t, std::string_view) noexcept;
 	/* Base64 encode/decode */
 	static std::string Base64Encode(const void* data, size_t size);
 	static std::vector<uint8_t> Base64Decode(std::string_view);

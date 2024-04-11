@@ -27,12 +27,12 @@ cGateway::implementation::implementation(cGateway* p, std::string_view t, eInten
 	m_last_sequence(0),
 	m_heartbeat_timer(m_ws_strand),
 	m_heartbeat_ack(false),
-	m_async_status(ASYNC_CLOSE) {
+	m_async_status(ASYNC_CLOSE),
+	m_inflate_stream{} {
 	/* Set SSL context to verify peers */
 	m_ctx.set_default_verify_paths();
 	m_ctx.set_verify_mode(asio::ssl::verify_peer);
 	/* Initialize zlib inflate stream */
-	memset(&m_inflate_stream, 0, sizeof(m_inflate_stream));
 	switch (inflateInit(&m_inflate_stream)) {
 		case Z_OK:
 			break;

@@ -1,39 +1,60 @@
-#include <iostream>
 #include "Utils.h"
+#include <cstdio>
+#include <boost/asio/strand.hpp>
+#include <boost/asio/system_executor.hpp>
 #include <zlib.h>
-#include <fmt/ostream.h>
+/* ================================================================================================================== */
+namespace net = boost::asio;
+static net::strand<net::system_executor> system_strand;
 /* ========== Random engine stuff =================================================================================== */
 static std::random_device g_rd;
 std::mt19937    cUtils::ms_gen(g_rd());
 std::mt19937_64 cUtils::ms_gen64(g_rd());
 /* ================================================================================================================== */
-uint32_t
-cUtils::CRC32(uint32_t hash, std::string_view str) noexcept {
+std::uint32_t
+cUtils::CRC32(std::uint32_t hash, std::string_view str) noexcept {
 	return crc32(hash, reinterpret_cast<const Byte*>(str.data()), str.size());
 }
 /* ================================================================================================================== */
-static const char months[12][4] { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
-
-static void
-print_tag(std::ostream& strm, const char* tag, std::string_view str, char nl) {
-	auto t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-	auto p = std::localtime(&t);
-	fmt::print(strm, "{:02}/{}/{} {:02}:{:02}:{:02} [{}] {}{}", p->tm_mday, months[p->tm_mon], p->tm_year + 1900, p->tm_hour, p->tm_min, p->tm_sec, tag, str, nl);
-}
-
+struct printer {
+	std::FILE  *m_strm;
+	const char *m_tag;
+	std::string m_str;
+	char        m_nl;
+	void operator()() const noexcept try {
+		/* Short month names */
+		static const char months[12][4] { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+		/* Retrieve the current local time; This should ideally use C++20 extensions for chrono but THAT'S STILL NOT AVAILABLE, LIKE HOLY SHIT BRUH */
+		const std::time_t t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+		const std::tm* p = std::localtime(&t);
+		if (!p) {
+			static const std::tm default_tm{ .tm_year = 70 };
+			p = &default_tm;
+		}
+		/* Print */
+		fmt::print(m_strm, "{:02}/{}/{} {:02}:{:02}:{:02} [{}] {}{}", p->tm_mday, months[p->tm_mon], p->tm_year + 1900, p->tm_hour, p->tm_min, p->tm_sec, m_tag, m_str, m_nl);
+	} catch (...) {
+		/* If any exception occurs from fmt::print, try again with an empty message */
+		std::fputs("                     [", m_strm);
+		std::fputs(m_tag, m_strm);
+		std::fputs("] Output stream error.", m_strm);
+		std::fputc(m_nl, m_strm);
+	}
+};
+/* ================================================================================================================== */
 void
-cUtils::print_err(std::string str, char nl) {
-	print_tag(std::cerr, "ERR", str, nl);
-}
+cUtils::print_err(std::string str, char nl) noexcept try {
+	net::post(system_strand, printer{ stderr, "ERR", std::move(str), nl });
+} catch (...) {}
 void
-cUtils::print_log(std::string str, char nl) {
-	print_tag(std::cout, "LOG", str, nl);
-}
+cUtils::print_log(std::string str, char nl) noexcept try {
+	net::post(system_strand, printer{ stdout, "LOG", std::move(str), nl });
+} catch (...) {}
 void
-cUtils::print_msg(std::string str, char nl) {
-	print_tag(std::cout, "MSG", str, nl);
-}
-
+cUtils::print_msg(std::string str, char nl) noexcept try {
+	net::post(system_strand, printer{ stdout, "MSG", std::move(str), nl });
+} catch (...) {}
+/* ================================================================================================================== */
 std::string
 cUtils::PercentEncode(std::string_view sv) {
 	/* A lookup table to check if a character is unreserved or not */

@@ -44,12 +44,14 @@ struct starboard_entry {
 class cDatabase final {
 private:
 	static cDatabase ms_instance;
-	cDatabase();
+	cDatabase() = default;
 public:
 	cDatabase(const cDatabase&) = delete;
 	~cDatabase();
 
 	cDatabase& operator=(const cDatabase&) = delete;
+
+	static void Initialize();
 
 	static cTask<> UpdateLeaderboard(const cMessage&);
 	static cTask<tRankQueryData> GetUserRank(const cUser&);

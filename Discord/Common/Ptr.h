@@ -3,9 +3,9 @@
 #include <compare>
 #include <stdexcept>
 
-class xNullPtrError : public std::runtime_error {
+class xNullPtrError : public std::exception {
 public:
-	xNullPtrError() : std::runtime_error("Null pointer dereference") {}
+	const char* what() const noexcept override { return "Null pointer dereference"; }
 };
 
 template<typename T>
