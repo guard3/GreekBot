@@ -91,7 +91,7 @@ cGateway::implementation::on_close(bool bRestart) {
 }
 /* ================================================================================================================== */
 void
-cGateway::implementation::on_read(const beast::error_code& ec, size_t bytes_read) try {
+cGateway::implementation::on_read(const beast::error_code& ec, std::size_t bytes_read) try {
 	m_async_status &= ~ASYNC_READ;
 	/* If the operation was cancelled, simply return */
 	if (m_async_status & ASYNC_CLOSE || ec == asio::error::operation_aborted)
@@ -127,7 +127,7 @@ cGateway::implementation::on_read(const beast::error_code& ec, size_t bytes_read
 	/* If any other error occurs, report it and close the connection */
 	if (ec) {
 		const char* err = ec.message(m_err_msg, std::size(m_err_msg));
-		cUtils::PrintErr("An error occurred while reading from the gateway{}{}", *err == 0 ? "." : ": ", err);
+		cUtils::PrintErr("An error occurred while reading from the gateway{}{}", *err ? ": " : ".", err);
 		return close();
 	}
 	/* Reset the parser prior to parsing a new JSON */
@@ -139,12 +139,12 @@ cGateway::implementation::on_read(const beast::error_code& ec, size_t bytes_read
 			m_inflate_stream.avail_in = bytes_read;
 			m_inflate_stream.next_in  = (Byte*)in;
 			do {
-				m_inflate_stream.avail_out = INFLATE_BUFFER_SIZE;
+				m_inflate_stream.avail_out = std::size(m_inflate_buffer);
 				m_inflate_stream.next_out  = m_inflate_buffer;
 				switch (inflate(&m_inflate_stream, Z_NO_FLUSH)) {
 					case Z_OK:
 					case Z_STREAM_END:
-						m_parser.write((char*)m_inflate_buffer, INFLATE_BUFFER_SIZE - m_inflate_stream.avail_out);
+						m_parser.write((char*)m_inflate_buffer, std::size(m_inflate_buffer) - m_inflate_stream.avail_out);
 						break;
 					case Z_MEM_ERROR:
 						throw std::bad_alloc();
@@ -163,7 +163,7 @@ LABEL_PARSED:
 	/* Release the parsed json value */
 	const json::value v = m_parser.release();
 	/* Start the next asynchronous read operation to keep listening for more events */
-	m_ws->async_read(m_buffer, [this](beast::error_code ec, size_t size) { on_read(ec, size); });
+	m_ws->async_read(m_buffer, [this](const beast::error_code& ec, std::size_t size) { on_read(ec, size); });
 	m_async_status |= ASYNC_READ;
 #ifdef GW_LOG_LVL_2
 	cUtils::PrintLog("{}", json::serialize(v));
@@ -228,14 +228,14 @@ cGateway::implementation::on_write(const beast::error_code& ec) {
 	/* If an error occurs, close the stream */
 	if (ec) {
 		const char* err = ec.message(m_err_msg, std::size(m_err_msg));
-		cUtils::PrintErr("An error occurred while writing to the gateway{}{}", *err == 0 ? "." : ": ", err);
+		cUtils::PrintErr("An error occurred while writing to the gateway{}{}", *err ? ": " : ".", err);
 		return close();
 	}
 	/* If all is good, pop the message that was just sent... */
 	m_queue.pop_front();
 	/* ...and if the queue isn't empty, send the next message */
 	if (!m_queue.empty()) {
-		m_ws->async_write(asio::buffer(m_queue.front()), [this](const beast::error_code &ec, size_t) { on_write(ec); });
+		m_ws->async_write(asio::buffer(m_queue.front()), [this](const beast::error_code& ec, std::size_t) { on_write(ec); });
 		m_async_status |= ASYNC_WRITE;
 	}
 }
@@ -270,70 +270,67 @@ cGateway::implementation::run_session() try {
 	std::string_view host = url;
 	if (auto f = host.find("://"); f != std::string_view::npos)
 		host.remove_prefix(f + 3);
+	/* Helper macros to wrap handler bodies in a try-catch */
+#define HANDLER_BEGIN(ec) { if (ec) return retry(ec.message(m_err_msg, std::size(m_err_msg))); try
+#define HANDLER_END catch (const std::exception& ex) { retry(ex.what()); } catch (...) { retry(); }}
 	/* Resolve host */
-	m_resolver.async_resolve(host, "https", asio::bind_executor(m_ws_strand, [this, host = std::string{ host.data(), host.size() }](const beast::error_code& ec, const asio::ip::tcp::resolver::results_type& results) mutable {
-		try {
-			/* On error, throw */
-			if (ec) throw std::system_error(ec);
-			/* Create a WebSocket stream and connect to the resolved host */
-			m_ws = std::make_unique<beast::websocket::stream<beast::ssl_stream<beast::tcp_stream>>>(m_ws_strand, m_ctx);
-			beast::get_lowest_layer(*m_ws).expires_after(30s);
-			beast::get_lowest_layer(*m_ws).async_connect(results, [this, host = std::move(host)](const beast::error_code& ec, const asio::ip::tcp::endpoint& ep) {
-				try {
-					/* On error, throw */
-					if (ec) throw std::system_error(ec);
-					/* Perform the SSL handshake */
-					m_ws->next_layer().async_handshake(asio::ssl::stream_base::client, [this, host = fmt::format("{}:{}", host, ep.port())](const beast::error_code& ec) {
-						try {
-							/* On error, throw */
-							if (ec) throw std::system_error(ec);
-							/* Use the recommended timout period for the websocket stream */
-							beast::get_lowest_layer(*m_ws).expires_never();
-							m_ws->set_option(beast::websocket::stream_base::timeout::suggested(beast::role_type::client));
-							/* Set HTTP header fields for the handshake */
-							m_ws->set_option(beast::websocket::stream_base::decorator([&](beast::websocket::request_type& r) {
-								r.set(beast::http::field::host, host);
-								r.set(beast::http::field::user_agent, "GreekBot");
-							}));
-							/* Perform the WebSocket handshake */
-							m_ws->async_handshake(host, fmt::format("/?v={}&encoding=json&compress=zlib-stream", DISCORD_API_VERSION), [this](const beast::error_code& ec) {
-								try {
-									/* On error, throw */
-									if (ec) throw std::system_error(ec);
-									/* Start the asynchronous read operation */
-									m_ws->async_read(m_buffer, [this](beast::error_code ec, size_t size) { on_read(ec, size); });
-									m_async_status = ASYNC_READ;
-								} catch (...) {
-									retry("Connection error.");
-								}
-							});
-						} catch (...) {
-							retry("Connection error.");
-						}
-					});
-				} catch (...) {
-					retry("Connection error.");
-				}
-			});
-		} catch (...) {
-			retry("Connection error.");
-		}
-	}));
+	m_resolver.async_resolve(host, "https", asio::bind_executor(m_ws_strand, [this, host = (std::string)host](const beast::error_code& ec, asio::ip::tcp::resolver::results_type results) mutable HANDLER_BEGIN(ec) {
+		/* Create a WebSocket stream and connect to the resolved host */
+		m_ws = std::make_unique<beast::websocket::stream<beast::ssl_stream<beast::tcp_stream>>>(m_ws_strand, m_ctx);
+		beast::get_lowest_layer(*m_ws).expires_after(30s);
+		beast::get_lowest_layer(*m_ws).async_connect(results, [this, host = std::move(host)](const beast::error_code& ec, const asio::ip::tcp::endpoint& ep) HANDLER_BEGIN(ec) {
+			/* Perform the SSL handshake */
+			m_ws->next_layer().async_handshake(asio::ssl::stream_base::client, [this, host = fmt::format("{}:{}", host, ep.port())](const beast::error_code& ec) HANDLER_BEGIN(ec) {
+				/* Use the recommended timout period for the websocket stream */
+				beast::get_lowest_layer(*m_ws).expires_never();
+				m_ws->set_option(beast::websocket::stream_base::timeout::suggested(beast::role_type::client));
+				/* Set HTTP header fields for the handshake */
+				m_ws->set_option(beast::websocket::stream_base::decorator([&host](beast::websocket::request_type& r) {
+					r.set(beast::http::field::host, host);
+					r.set(beast::http::field::user_agent, "GreekBot");
+				}));
+				/* Perform the WebSocket handshake */
+				m_ws->async_handshake(host, "/?v=" STR(DISCORD_API_VERSION) "&encoding=json&compress=zlib-stream", [this](const beast::error_code& ec) HANDLER_BEGIN(ec) {
+					/* Start the asynchronous read operation */
+					m_ws->async_read(m_buffer, [this](const beast::error_code& ec, std::size_t size) { on_read(ec, size); });
+					m_async_status = ASYNC_READ;
+				} HANDLER_END);
+			} HANDLER_END);
+		} HANDLER_END);
+	} HANDLER_END));
 } catch (...) {
-	asio::dispatch(m_ws_strand, [this] { retry("Connection error."); });
+	asio::defer(m_ws_strand, [this, ex = std::current_exception()] {
+		try {
+			std::rethrow_exception(ex);
+		} catch (const std::exception& e) {
+			retry(e.what());
+		} catch (...) {
+			retry();
+		}
+	});
 }
-
+/* ================================================================================================================== */
 void
-cGateway::implementation::retry(std::string msg) {
+cGateway::implementation::retry(const char* err) {
+	using namespace std::chrono_literals;
+	/* Destroy the stream */
+	m_ws.reset();
+	/* Copy the message string */
+	if (!err) {
+		std::strcpy(m_err_msg, "Connection error.");
+	} else if (err != m_err_msg) {
+		std::strncpy(m_err_msg, err, std::size(m_err_msg));
+		m_err_msg[std::size(m_err_msg) - 1] = 0;
+	}
 	struct {
-		implementation& self; std::string msg; int count;
+		implementation& self; int count;
 		void operator()() {
 			if (count > 0) {
-				cUtils::PrintErr<'\r'>("{} Retrying in {}s ", msg, count);
-				self.m_heartbeat_timer.expires_after(std::chrono::seconds(1));
-				self.m_heartbeat_timer.async_wait(std::move(*this));
+				cUtils::PrintErr<'\r'>("{} Retrying in {}s ", self.m_err_msg, count);
+				self.m_heartbeat_timer.expires_after(1s);
+				self.m_heartbeat_timer.async_wait(*this);
 			} else {
-				cUtils::PrintErr<'\n'>("{} Retrying...     ", msg);
+				cUtils::PrintErr<'\n'>("{} Retrying...     ", self.m_err_msg);
 				self.run_session();
 			}
 		}
@@ -341,9 +338,9 @@ cGateway::implementation::retry(std::string msg) {
 			count--;
 			(*this)();
 		}
-	} _{ *this, std::move(msg), 10 }; _();
+	} _{ *this, 10 }; _();
 }
-
+/* ================================================================================================================== */
 void
 cGateway::implementation::run_context() {
 	/* In an exception somehow escapes the async loop, report and retry */

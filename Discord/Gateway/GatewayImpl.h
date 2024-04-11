@@ -11,7 +11,6 @@
 
 namespace chrono = std::chrono;
 
-#define INFLATE_BUFFER_SIZE 4096
 /* ========== Make void a valid coroutine return type =============================================================== */
 template<typename... Args>
 struct std::coroutine_traits<void, cGateway::implementation&, Args...> {
@@ -77,7 +76,7 @@ private:
 	json::stream_parser m_parser; // The json parser
 	/* Zlib stuff for decompressing websocket messages */
 	z_stream m_inflate_stream;
-	Byte     m_inflate_buffer[INFLATE_BUFFER_SIZE];
+	Byte     m_inflate_buffer[4096];
 	/* Request Guild Members stuff */
 	std::string m_rgm_payload;   // The gateway payload to be sent
 	uint64_t    m_rgm_nonce = 0; // The nonce of the payload
@@ -94,12 +93,12 @@ private:
 	/* Websocket message queuing */
 	void send(std::string);
 	/* Beast/Asio async functions */
-	void on_read(const beast::error_code&, size_t);
+	void on_read(const beast::error_code&, std::size_t);
 	void on_write(const beast::error_code&);
 	void on_expire(const beast::error_code&);
 	void on_close(bool = true);
 	void close();
-	void retry(std::string);
+	void retry(const char* = nullptr);
 	/* A method that initiates the gateway connection */
 	void run_session();
 	void run_context();
