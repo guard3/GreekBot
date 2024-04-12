@@ -84,6 +84,7 @@ cGateway::implementation::on_close(bool bRestart) {
 			inflateReset(&self.m_inflate_stream);
 			self.m_queue.clear();
 			self.m_buffer.clear();
+			self.m_ws.reset();
 			/* Start a new session */
 			self.run_session();
 		}
@@ -256,24 +257,28 @@ cGateway::implementation::on_expire(const beast::error_code& ec) {
 void
 cGateway::implementation::run_session() try {
 	using namespace std::chrono_literals;
-	/* Switch to the WebSocket strand to safely access the cached resume url */
+	/* Switch to the WebSocket strand to safely access the cached urls */
 	co_await ResumeOnWebSocketStrand();
 	std::string url;
-	if (m_resume_gateway_url.empty()) {
+	if (!m_resume_gateway_url.empty()) {
+		url = m_resume_gateway_url;
+	} else if (!m_cached_gateway_url.empty()) {
+		url = m_cached_gateway_url;
+	} else {
 		const json::value v = co_await DiscordGet("/gateway/bot");
 		url = json::value_to<std::string>(v.at("url"));
-	} else {
-		url = m_resume_gateway_url;
-		co_await ResumeOnEventThread();
+		co_await ResumeOnWebSocketStrand();
+		m_cached_gateway_url = url;
 	}
-	/* At this point we are on the HTTP strand, so we can safely use the resolver */
+	/* Retrieve the host from the url */
 	std::string_view host = url;
 	if (auto f = host.find("://"); f != std::string_view::npos)
 		host.remove_prefix(f + 3);
 	/* Helper macros to wrap handler bodies in a try-catch */
 #define HANDLER_BEGIN(ec) { if (ec) return retry(ec.message(m_err_msg, std::size(m_err_msg))); try
 #define HANDLER_END catch (const std::exception& ex) { retry(ex.what()); } catch (...) { retry(); }}
-	/* Resolve host */
+	/* Switch to the HTTP strand and resolve host */
+	co_await ResumeOnEventThread();
 	m_resolver.async_resolve(host, "https", asio::bind_executor(m_ws_strand, [this, host = (std::string)host](const beast::error_code& ec, asio::ip::tcp::resolver::results_type results) mutable HANDLER_BEGIN(ec) {
 		/* Create a WebSocket stream and connect to the resolved host */
 		m_ws = std::make_unique<beast::websocket::stream<beast::ssl_stream<beast::tcp_stream>>>(m_ws_strand, m_ctx);
@@ -313,8 +318,9 @@ cGateway::implementation::run_session() try {
 void
 cGateway::implementation::retry(const char* err) {
 	using namespace std::chrono_literals;
-	/* Destroy the stream */
+	/* Reset the stream and the cached gateway url */
 	m_ws.reset();
+	m_cached_gateway_url.clear();
 	/* Copy the message string */
 	if (!err) {
 		std::strcpy(m_err_msg, "Connection error.");
