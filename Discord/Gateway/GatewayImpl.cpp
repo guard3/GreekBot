@@ -28,7 +28,6 @@ cGateway::implementation::implementation(cGateway* p, std::string_view t, eInten
 	m_heartbeat_timer(m_ws_strand),
 	m_heartbeat_ack(false),
 	m_async_status(ASYNC_CLOSE),
-	m_mem_rc(m_mem_rc_buff),
 	m_inflate_stream{} {
 	/* Set SSL context to verify peers */
 	m_ctx.set_default_verify_paths();
@@ -134,8 +133,6 @@ cGateway::implementation::on_read(const beast::error_code& ec, std::size_t bytes
 	}
 	/* Clear memory and reset the parser prior to parsing a new JSON */
 	m_parser.reset();
-	m_mem_rc.release();
-	m_parser.reset(&m_mem_rc);
 	/* Check for Z_SYNC_FLUSH suffix and decompress if necessary */
 	char* in = (char*)m_buffer.data().data();
 	if (bytes_read >= 4 ) {
