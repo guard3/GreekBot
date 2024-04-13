@@ -74,7 +74,8 @@ private:
 	chrono::milliseconds m_heartbeat_interval; // The interval between heartbeats
 	bool                 m_heartbeat_ack;      // Is the heartbeat acknowledged?
 	/* Json parsing for gateway events */
-	json::stream_parser m_parser; // The json parser
+	json::stream_parser      m_parser; // The json parser
+	json::monotonic_resource m_mem_rc; // A monotonic memory resource for efficient parsing
 	/* Zlib stuff for decompressing websocket messages */
 	z_stream m_inflate_stream;
 	Byte     m_inflate_buffer[4096];
@@ -86,6 +87,7 @@ private:
 	std::optional<cApplication> m_application;
 	/* A buffer to hold exception messages for when allocations are unfavorable */
 	char m_err_msg[256];
+	std::byte m_mem_rc_buff[4096];
 
 	/* Gateway commands */
 	void resume();
