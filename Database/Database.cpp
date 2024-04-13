@@ -465,3 +465,79 @@ cDatabase::GetTop10() {
 		co_return res;
 	throw xDatabaseError();
 }
+cTask<>
+cDatabase::RegisterMessage(const cMessage& msg) {
+	co_await resume_on_db_strand();
+	sqlite3_stmt* stmt = nullptr;
+	if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_REGISTER_MESSAGE, sizeof QUERY_REGISTER_MESSAGE, &stmt, nullptr)) {
+		if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, msg.GetId().ToInt())) {
+			if (SQLITE_OK == sqlite3_bind_int64(stmt, 2, msg.GetChannelId().ToInt())) {
+				if (SQLITE_OK == sqlite3_bind_int64(stmt, 3, msg.GetAuthor().GetId().ToInt())) {
+					auto content = msg.GetContent();
+					if (SQLITE_OK == (content.empty() ? sqlite3_bind_null(stmt, 4) : sqlite3_bind_text64(stmt, 4, content.data(), content.size(), SQLITE_STATIC, SQLITE_UTF8))) {
+						if (SQLITE_DONE == sqlite3_step(stmt)) {
+							sqlite3_finalize(stmt);
+							co_return;
+						}
+					}
+				}
+			}
+		}
+	}
+	sqlite3_finalize(stmt);
+	throw xDatabaseError();
+}
+cTask<message_entry>
+cDatabase::GetMessage(const cSnowflake& id) {
+	co_await resume_on_db_strand();
+	sqlite3_stmt* stmt = nullptr;
+	std::unique_ptr<sqlite3_stmt, int(*)(sqlite3_stmt*)> unique_stmt(stmt, sqlite3_finalize);
+	if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_GET_MESSAGE, sizeof QUERY_GET_MESSAGE, &stmt, nullptr)) {
+		unique_stmt.reset(stmt);
+		if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, id.ToInt())) {
+			if (SQLITE_ROW == sqlite3_step(stmt)) {
+				message_entry msg {
+					id,
+					sqlite3_column_int64(stmt, 0),
+					sqlite3_column_int64(stmt, 1)
+				};
+				if (auto text = sqlite3_column_text(stmt, 2))
+					msg.content = (const char*)text;
+				co_return msg;
+			}
+		}
+	}
+	throw xDatabaseError();
+}
+cTask<>
+cDatabase::DeleteMessage(const cSnowflake& id) {
+	co_await resume_on_db_strand();
+	sqlite3_stmt* stmt = nullptr;
+	if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_DELETE_MESSAGE, sizeof QUERY_DELETE_MESSAGE, &stmt, nullptr)) {
+		if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, id.ToInt())) {
+			if (SQLITE_DONE == sqlite3_step(stmt)) {
+				sqlite3_finalize(stmt);
+				co_return;
+			}
+		}
+	}
+	sqlite3_finalize(stmt);
+	throw xDatabaseError();
+}
+cTask<>
+cDatabase::CleanupMessages() {
+	using namespace std::chrono;
+	using namespace std::chrono_literals;
+	co_await resume_on_db_strand();
+	sqlite3_stmt* stmt = nullptr;
+	if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_CLEANUP_MESSAGES, sizeof QUERY_CLEANUP_MESSAGES, &stmt, nullptr)) {
+		if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, duration_cast<milliseconds>(system_clock::now() - sys_days(2015y/1/1) - 15 * 24h).count())) {
+			if (SQLITE_DONE == sqlite3_step(stmt)) {
+				sqlite3_finalize(stmt);
+				co_return;
+			}
+		}
+	}
+	sqlite3_finalize(stmt);
+	throw xDatabaseError();
+}

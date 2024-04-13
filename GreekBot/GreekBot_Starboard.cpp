@@ -207,6 +207,11 @@ cGreekBot::OnMessageDelete(cSnowflake& message_id, cSnowflake& channel_id, hSnow
 	if (!guild_id) co_return;
 	if (*guild_id != m_lmg_id) co_return;
 	/* Delete the starboard message from the channel and the database (if found) */
+	auto db_msg = co_await cDatabase::GetMessage(message_id);
+	co_await cDatabase::DeleteMessage(message_id);
+
+	co_await CreateMessage(539521989061378048, kw::content=fmt::format("Deleted message from <@{}> in <#{}>:```{}```", db_msg.author_id, db_msg.channel_id, db_msg.content));
+
 	if (int64_t sb_msg_id = co_await cDatabase::SB_RemoveAll(message_id))
 		co_await DeleteMessage(HOLY_CHANNEL_ID, sb_msg_id);
 }

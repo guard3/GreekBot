@@ -40,6 +40,13 @@ struct starboard_entry {
 
 	starboard_entry(int64_t a, int64_t b, int64_t c, int64_t d, int64_t e): author_id(a), num_msg(b), react_total(c), max_react_per_msg(d), rank(e) {}
 };
+
+struct message_entry {
+	cSnowflake id;
+	cSnowflake channel_id;
+	cSnowflake author_id;
+	std::string content;
+};
 /* ================================================================================================================== */
 class cDatabase final {
 private:
@@ -71,5 +78,10 @@ public:
 	static cTask<int64_t> SB_RemoveAll(const cSnowflake&);
 	static cTask<std::vector<starboard_entry>> SB_GetTop10(int);
 	static cTask<std::vector<starboard_entry>> SB_GetRank(const cUser&, int);
+
+	static cTask<> RegisterMessage(const cMessage&);
+	static cTask<message_entry> GetMessage(const cSnowflake&);
+	static cTask<> DeleteMessage(const cSnowflake&);
+	static cTask<> CleanupMessages();
 };
 #endif /* GREEKBOT_DATABASE_H */

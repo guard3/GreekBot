@@ -16,3 +16,9 @@ CREATE TABLE IF NOT EXISTS starboard(
     sb_msg_id INTEGER UNIQUE,
     num INTEGER NOT NULL CHECK(num > 0)
 );
+CREATE TABLE IF NOT EXISTS messages(
+    id INTEGER PRIMARY KEY,
+    channel_id INTEGER NOT NULL,
+    author_id INTEGER NOT NULL,
+    content VARCHAR
+);

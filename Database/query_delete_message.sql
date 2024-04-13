@@ -1,0 +1,1 @@
+DELETE FROM messages WHERE id IS ?1;

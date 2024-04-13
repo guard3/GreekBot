@@ -42,6 +42,8 @@ private:
 
 	cColor get_lmg_member_color(const cPartialMember&);
 
+	std::chrono::steady_clock::time_point m_before;
+
 	/* Voice */
 	std::vector<uint64_t> m_lmg_voice_channels;
 	std::vector<std::vector<uint64_t>> m_lmg_users_connected_to_voice;
@@ -89,6 +91,6 @@ private:
 	cTask<> OnMessageReactionRemoveEmoji(cSnowflake&, cSnowflake&, hSnowflake, cEmoji&) override;
 
 public:
-	explicit cGreekBot(std::string_view token) : cBot(token, INTENT_GUILD_INTEGRATIONS | INTENT_GUILD_MESSAGES | INTENT_GUILDS | INTENT_GUILD_MEMBERS | INTENT_GUILD_MESSAGE_REACTIONS) {}
+	explicit cGreekBot(std::string_view token) : cBot(token, INTENT_GUILD_INTEGRATIONS | INTENT_GUILD_MESSAGES | INTENT_GUILDS | INTENT_GUILD_MEMBERS | INTENT_GUILD_MESSAGE_REACTIONS | INTENT_MESSAGE_CONTENT) {}
 };
 #endif /* GREEKBOT_GREEKBOT_H */
