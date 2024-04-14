@@ -3,9 +3,6 @@
 #include "Utils.h"
 #include "CDN.h"
 
-static const cSnowflake HOLY_EMOJI_ID = 409075809723219969;
-static const cSnowflake HOLY_CHANNEL_ID = 978993330694266920;
-
 static constexpr int REACTION_THRESHOLD = 5;
 
 /* This array must be sorted for binary search to work */
@@ -200,31 +197,6 @@ cGreekBot::OnMessageReactionRemoveEmoji(cSnowflake& channel_id, cSnowflake& mess
 	/* Delete the message from the channel and the database (if found) */
 	if (int64_t sb_msg_id = co_await cDatabase::SB_RemoveAll(message_id))
 		co_await DeleteMessage(HOLY_CHANNEL_ID, sb_msg_id);
-}
-cTask<>
-cGreekBot::OnMessageDelete(cSnowflake& message_id, cSnowflake& channel_id, hSnowflake guild_id) {
-	/* Make sure we're in Learning Greek */
-	if (!guild_id) co_return;
-	if (*guild_id != m_lmg_id) co_return;
-	/* Delete the starboard message from the channel and the database (if found) */
-	auto db_msg = co_await cDatabase::GetMessage(message_id);
-	co_await cDatabase::DeleteMessage(message_id);
-
-	co_await CreateMessage(539521989061378048, kw::content=fmt::format("Deleted message from <@{}> in <#{}>:```{}```", db_msg.author_id, db_msg.channel_id, db_msg.content));
-
-	if (int64_t sb_msg_id = co_await cDatabase::SB_RemoveAll(message_id))
-		co_await DeleteMessage(HOLY_CHANNEL_ID, sb_msg_id);
-}
-cTask<>
-cGreekBot::OnMessageDeleteBulk(std::span<cSnowflake> ids, cSnowflake& channel_id, hSnowflake guild_id) {
-	/* Make sure we're in Learning Greek */
-	if (!guild_id) co_return;
-	if (*guild_id != m_lmg_id) co_return;
-	/* Delete the starboard message from the channel and the database (if found) */
-	for (cSnowflake& id : ids) {
-		if (int64_t sb_msg_id = co_await cDatabase::SB_RemoveAll(id))
-			co_await DeleteMessage(HOLY_CHANNEL_ID, sb_msg_id);
-	}
 }
 
 static cEmbed make_embed(const cUser& user, const starboard_entry& e, cColor color) {

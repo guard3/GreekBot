@@ -4,6 +4,10 @@
 #include <unordered_map>
 #include <span>
 
+inline const cSnowflake LMG_GUILD_ID = 350234668680871946;
+inline const cSnowflake HOLY_EMOJI_ID = 409075809723219969;
+inline const cSnowflake HOLY_CHANNEL_ID = 978993330694266920;
+
 /* Specialize std::hash for cSnowflake to use in unordered maps */
 template<>
 class std::hash<cSnowflake> : std::hash<uint64_t> {

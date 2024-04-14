@@ -81,7 +81,8 @@ public:
 
 	static cTask<> RegisterMessage(const cMessage&);
 	static cTask<message_entry> GetMessage(const cSnowflake&);
-	static cTask<> DeleteMessage(const cSnowflake&);
+	static cTask<std::optional<message_entry>> DeleteMessage(const cSnowflake&);
+	static cTask<std::vector<message_entry>> DeleteMessages(std::span<const cSnowflake>);
 	static cTask<> CleanupMessages();
 };
 #endif /* GREEKBOT_DATABASE_H */

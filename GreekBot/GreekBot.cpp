@@ -95,27 +95,6 @@ cGreekBot::OnGuildRoleDelete(cSnowflake& guild_id, cSnowflake& role_id) {
 }
 
 cTask<>
-cGreekBot::OnMessageCreate(cMessage& msg, hSnowflake guild_id, hPartialMember member) {
-	/* Update leaderboard for Learning Greek */
-	if (guild_id && *guild_id == m_lmg_id) {
-		/* Ignore messages of bots and system users */
-		if (msg.GetAuthor().IsBotUser() || msg.GetAuthor().IsSystemUser())
-			co_return;
-		/* Save message for logging purposes */
-		co_await cDatabase::RegisterMessage(msg);
-		/* Update leaderboard */
-		co_await cDatabase::UpdateLeaderboard(msg);
-		/* Cleanup old logged messages in 1 hour intervals */
-		using namespace std::chrono;
-		using namespace std::chrono_literals;
-		if (auto now = steady_clock::now(); now - m_before > 1h) {
-			m_before = now;
-			co_await cDatabase::CleanupMessages();
-		}
-	}
-}
-
-cTask<>
 cGreekBot::OnInteractionCreate(cInteraction& i) {
 	try {
 		/* Delegate interaction to the appropriate handler */

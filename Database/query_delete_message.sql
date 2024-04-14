@@ -1,1 +1,1 @@
-DELETE FROM messages WHERE id IS ?1;
+DELETE FROM messages WHERE id IS ?1 RETURNING channel_id, author_id, content;

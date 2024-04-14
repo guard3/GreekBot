@@ -509,20 +509,73 @@ cDatabase::GetMessage(const cSnowflake& id) {
 	}
 	throw xDatabaseError();
 }
-cTask<>
+cTask<std::optional<message_entry>>
 cDatabase::DeleteMessage(const cSnowflake& id) {
 	co_await resume_on_db_strand();
 	sqlite3_stmt* stmt = nullptr;
+	std::unique_ptr<sqlite3_stmt, int(*)(sqlite3_stmt*)> unique_stmt(nullptr, sqlite3_finalize);
 	if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_DELETE_MESSAGE, sizeof QUERY_DELETE_MESSAGE, &stmt, nullptr)) {
+		unique_stmt.reset(stmt);
 		if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, id.ToInt())) {
-			if (SQLITE_DONE == sqlite3_step(stmt)) {
-				sqlite3_finalize(stmt);
-				co_return;
+			std::optional<message_entry> result;
+			switch (sqlite3_step(stmt)) {
+				case SQLITE_ROW:
+					result.emplace(
+						id,
+						sqlite3_column_int64(stmt, 0),
+						sqlite3_column_int64(stmt, 1)
+					);
+					if (auto text = sqlite3_column_text(stmt, 2))
+						result->content = (const char*)text;
+				case SQLITE_DONE:
+					co_return result;
 			}
 		}
 	}
-	sqlite3_finalize(stmt);
 	throw xDatabaseError();
+}
+cTask<std::vector<message_entry>>
+cDatabase::DeleteMessages(std::span<const cSnowflake> ids) {
+	co_await resume_on_db_strand();
+	if (ids.empty())
+		co_return {};
+
+	/* Make query */
+	std::string query = "DELETE FROM messages WHERE id IN (";
+	for (int i = 0; i < ids.size(); ++i)
+		query += "?,";
+	query.back() = ')';
+	query += " RETURNING *;";
+	/* Prepare statement */
+	sqlite3_stmt* stmt = nullptr;
+	if (SQLITE_OK != sqlite3_prepare_v2(g_db, query.c_str(), query.size(), &stmt, nullptr))
+		throw xDatabaseError();
+	std::unique_ptr<sqlite3_stmt, int(*)(sqlite3_stmt*)> unique_stmt(stmt, sqlite3_finalize);
+	/* Bind ids to the statement */
+	for (int i = 1; i <= ids.size(); ++i) {
+		if (SQLITE_OK != sqlite3_bind_int64(stmt, i, ids[i].ToInt()))
+			throw xDatabaseError();
+	}
+	std::vector<message_entry> result;
+	result.reserve(ids.size());
+	for (;;) {
+		switch (sqlite3_step(stmt)) {
+			case SQLITE_DONE:
+				co_return result;
+			case SQLITE_ROW: {
+				auto& entry = result.emplace_back(
+					sqlite3_column_int64(stmt, 0),
+					sqlite3_column_int64(stmt, 1),
+					sqlite3_column_int64(stmt, 2)
+				);
+				if (auto text = sqlite3_column_text(stmt, 3))
+					entry.content = (const char*)text;
+				break;
+			}
+			default:
+				throw xDatabaseError();
+		}
+	}
 }
 cTask<>
 cDatabase::CleanupMessages() {

@@ -32,7 +32,8 @@ add_executable(GreekBot main.cpp boost/json.h Discord/Bot.cpp Discord/Bot.h Disc
         Discord/CDN.h
         Discord/CDN.cpp
         Discord/Bot_Interaction.cpp
-        Discord/InteractionFwd.h)
+        Discord/InteractionFwd.h
+        GreekBot/GreekBot_MessageEvents.cpp)
 
 target_include_directories(
     GreekBot PRIVATE
