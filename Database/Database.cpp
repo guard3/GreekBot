@@ -552,8 +552,8 @@ cDatabase::DeleteMessages(std::span<const cSnowflake> ids) {
 		throw xDatabaseError();
 	std::unique_ptr<sqlite3_stmt, int(*)(sqlite3_stmt*)> unique_stmt(stmt, sqlite3_finalize);
 	/* Bind ids to the statement */
-	for (int i = 1; i <= ids.size(); ++i) {
-		if (SQLITE_OK != sqlite3_bind_int64(stmt, i, ids[i].ToInt()))
+	for (int i = 0; i < ids.size(); ++i) {
+		if (SQLITE_OK != sqlite3_bind_int64(stmt, i + 1, ids[i].ToInt()))
 			throw xDatabaseError();
 	}
 	std::vector<message_entry> result;
