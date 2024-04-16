@@ -1,6 +1,9 @@
 #include "Database.h"
 #include "GreekBot.h"
 #include "Utils.h"
+#include "CDN.h"
+
+static const cSnowflake MESSAGE_LOG_CHANNEL_ID = 539521989061378048;
 
 cTask<>
 cGreekBot::OnMessageCreate(cMessage& msg, hSnowflake guild_id, hPartialMember member) {
@@ -25,7 +28,27 @@ cGreekBot::OnMessageDelete(cSnowflake& message_id, cSnowflake& channel_id, hSnow
 	if (guild_id && *guild_id == m_lmg_id) {
 		/* Delete message from the database and report to the log channel */
 		if (auto db_msg = co_await cDatabase::DeleteMessage(message_id)) try {
-			co_await CreateMessage(539521989061378048, kw::content=fmt::format("Deleted message from <@{}> in <#{}>:```{}```", db_msg->author_id, db_msg->channel_id, db_msg->content));
+			co_await ResumeOnEventThread();
+			std::optional<cUser> author;
+			try {
+				author.emplace(co_await GetUser(db_msg->author_id));
+			} catch (...) {}
+
+			std::vector<cEmbed> embeds;
+			cEmbed& embed = embeds.emplace_back();
+			if (author) {
+				embed.SetAuthor(
+					author->GetDiscriminator() ? fmt::format("{}#{:04}", author->GetUsername(), author->GetDiscriminator()) : (std::string)author->GetUsername(),
+					kw::icon_url=cCDN::GetUserAvatar(*author)
+				);
+			} else {
+				embed.SetAuthor("Deleted user", kw::icon_url=cCDN::GetDefaultUserAvatar(db_msg->author_id));
+			}
+			embed.SetDescription(fmt::format("❌ A message was **deleted** in <#{}>", db_msg->channel_id));
+			embed.AddField(db_msg->content.empty() ? "No content" : "Content", db_msg->content);
+			embed.SetColor(0xC43135);
+
+			co_await CreateMessage(MESSAGE_LOG_CHANNEL_ID, kw::embeds=std::move(embeds));
 		} catch (...) {}
 		/* Delete the starboard message from the channel and the database (if found) */
 		if (int64_t sb_msg_id = co_await cDatabase::SB_RemoveAll(message_id))
@@ -38,7 +61,27 @@ cGreekBot::OnMessageDeleteBulk(std::span<cSnowflake> ids, cSnowflake& channel_id
 	if (guild_id && *guild_id == m_lmg_id) {
 		/* Delete messages from the database and report to the log channel */
 		for (auto& db_msg : co_await cDatabase::DeleteMessages(ids)) try {
-			co_await CreateMessage(539521989061378048, kw::content=fmt::format("Deleted message from <@{}> in <#{}>:```{}```", db_msg.author_id, db_msg.channel_id, db_msg.content));
+			co_await ResumeOnEventThread();
+			std::optional<cUser> author;
+			try {
+				author.emplace(co_await GetUser(db_msg.author_id));
+			} catch (...) {}
+
+			std::vector<cEmbed> embeds;
+			cEmbed& embed = embeds.emplace_back();
+			if (author) {
+				embed.SetAuthor(
+						author->GetDiscriminator() ? fmt::format("{}#{:04}", author->GetUsername(), author->GetDiscriminator()) : (std::string)author->GetUsername(),
+						kw::icon_url=cCDN::GetUserAvatar(*author)
+				);
+			} else {
+				embed.SetAuthor("Deleted user", kw::icon_url=cCDN::GetDefaultUserAvatar(db_msg.author_id));
+			}
+			embed.SetDescription(fmt::format("❌ A message was **deleted** in <#{}>", db_msg.channel_id));
+			embed.AddField(db_msg.content.empty() ? "No content" : "Content", db_msg.content);
+			embed.SetColor(0xC43135);
+
+			co_await CreateMessage(MESSAGE_LOG_CHANNEL_ID, kw::embeds=std::move(embeds));
 		} catch (...) {}
 		/* Delete the starboard messages from the channel and the database (if found) */
 		for (cSnowflake& id : ids) {
