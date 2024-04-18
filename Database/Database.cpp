@@ -17,6 +17,21 @@ static sqlite3* g_db = nullptr;
 cDatabase cDatabase::ms_instance;
 /* ========== The database exception which uses the global sqlite connection's error message and error code ========= */
 xDatabaseError::xDatabaseError() : std::runtime_error(sqlite3_errmsg(g_db)), m_code(sqlite3_extended_errcode(g_db)) {}
+/* ========== A non owning view to an sqlite3 query string ========================================================== */
+struct sqlite3_query_str {
+	const char* str;
+	int size;
+	template<std::size_t N>
+	consteval sqlite3_query_str(const char(&s)[N]) noexcept : str(s), size{} {
+		std::size_t str_size = N + 1;
+		size = str_size > std::numeric_limits<int>::max() ? - 1 : (int)str_size;
+	}
+	constexpr sqlite3_query_str(const char* s, std::size_t n) noexcept : str(s), size(n > std::numeric_limits<int>::max() ? -1 : (int)n) {}
+	constexpr sqlite3_query_str(const std::string& s) noexcept : str(s.data()), size{} {
+		std::size_t str_size = s.size() + 1;
+		size = str_size > std::numeric_limits<int>::max() ? -1 : (int)str_size;
+	}
+};
 /* ========== A smart owning pointer to a prepared sqlite3 statement, implicitly convertible to sqlite3_stmt* ======= */
 class sqlite3_stmt_ptr final {
 private:
@@ -49,15 +64,10 @@ public:
 /* ========== Custom function that returns a smart pointer to a prepared statement ================================== */
 [[nodiscard]]
 static sqlite3_stmt_ptr
-sqlite3_prepare(const char* query, int size = -1) noexcept {
+sqlite3_prepare(sqlite3_query_str query) noexcept {
 	sqlite3_stmt* stmt{};
-	sqlite3_prepare_v2(g_db, query, size, &stmt, nullptr);
+	sqlite3_prepare_v2(g_db, query.str, query.size, &stmt, nullptr);
 	return sqlite3_stmt_ptr(stmt);
-}
-[[nodiscard]]
-static sqlite3_stmt_ptr
-sqlite3_prepare(const std::string& query) noexcept {
-	return sqlite3_prepare(query.c_str(), query.size() + 1);
 }
 /* ========== A helper function which returns a fully qualified UTF-8 path for the database file ==================== */
 static std::u8string get_db_filename() {
@@ -510,29 +520,22 @@ cDatabase::GetTop10() {
 cTask<>
 cDatabase::RegisterMessage(const cMessage& msg) {
 	co_await resume_on_db_strand();
-	sqlite3_stmt* stmt = nullptr;
-	if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_REGISTER_MESSAGE, sizeof QUERY_REGISTER_MESSAGE, &stmt, nullptr)) {
-		if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, msg.GetId().ToInt())) {
-			if (SQLITE_OK == sqlite3_bind_int64(stmt, 2, msg.GetChannelId().ToInt())) {
-				if (SQLITE_OK == sqlite3_bind_int64(stmt, 3, msg.GetAuthor().GetId().ToInt())) {
-					auto content = msg.GetContent();
-					if (SQLITE_OK == (content.empty() ? sqlite3_bind_null(stmt, 4) : sqlite3_bind_text64(stmt, 4, content.data(), content.size(), SQLITE_STATIC, SQLITE_UTF8))) {
-						if (SQLITE_DONE == sqlite3_step(stmt)) {
-							sqlite3_finalize(stmt);
-							co_return;
-						}
-					}
-				}
-			}
-		}
-	}
-	sqlite3_finalize(stmt);
+	auto stmt = sqlite3_prepare(QUERY_REGISTER_MESSAGE);
+	if (   stmt
+	    && SQLITE_OK == sqlite3_bind_int64(stmt, 1, msg.GetId().ToInt())
+	    && SQLITE_OK == sqlite3_bind_int64(stmt, 2, msg.GetChannelId().ToInt())
+	    && SQLITE_OK == sqlite3_bind_int64(stmt, 3, msg.GetAuthor().GetId().ToInt())) {
+		auto content = msg.GetContent();
+		if (   SQLITE_OK   == (content.empty() ? sqlite3_bind_null(stmt, 4) : sqlite3_bind_text64(stmt, 4, content.data(), content.size(), SQLITE_STATIC, SQLITE_UTF8))
+		    && SQLITE_DONE == sqlite3_step(stmt)) {
+			co_return;
+	}	}
 	throw xDatabaseError();
 }
 cTask<message_entry>
 cDatabase::GetMessage(const cSnowflake& id) {
 	co_await resume_on_db_strand();
-	if (auto stmt = sqlite3_prepare(QUERY_GET_MESSAGE, sizeof QUERY_GET_MESSAGE)) {
+	if (auto stmt = sqlite3_prepare(QUERY_GET_MESSAGE)) {
 		if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, id.ToInt())) {
 			if (SQLITE_ROW == sqlite3_step(stmt)) {
 				message_entry msg {
@@ -551,21 +554,20 @@ cDatabase::GetMessage(const cSnowflake& id) {
 cTask<std::optional<message_entry>>
 cDatabase::DeleteMessage(const cSnowflake& id) {
 	co_await resume_on_db_strand();
-	if (auto stmt = sqlite3_prepare(QUERY_DELETE_MESSAGE, sizeof QUERY_DELETE_MESSAGE)) {
-		if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, id.ToInt())) {
-			std::optional<message_entry> result;
-			switch (sqlite3_step(stmt)) {
-				case SQLITE_ROW:
-					result.emplace(
-						id,
-						sqlite3_column_int64(stmt, 0),
-						sqlite3_column_int64(stmt, 1)
-					);
-					if (auto text = sqlite3_column_text(stmt, 2))
-						result->content = (const char*)text;
-				case SQLITE_DONE:
-					co_return result;
-			}
+	auto stmt = sqlite3_prepare(QUERY_DELETE_MESSAGE);
+	if (stmt && SQLITE_OK == sqlite3_bind_int64(stmt, 1, id.ToInt())) {
+		std::optional<message_entry> result;
+		switch (sqlite3_step(stmt)) {
+			case SQLITE_ROW:
+				result.emplace(
+					id,
+					sqlite3_column_int64(stmt, 0),
+					sqlite3_column_int64(stmt, 1)
+				);
+				if (auto text = sqlite3_column_text(stmt, 2))
+					result->content = (const char*)text;
+			case SQLITE_DONE:
+				co_return result;
 		}
 	}
 	throw xDatabaseError();
@@ -616,11 +618,11 @@ cDatabase::CleanupMessages() {
 	using namespace std::chrono;
 	using namespace std::chrono_literals;
 	co_await resume_on_db_strand();
-	if (auto stmt = sqlite3_prepare(QUERY_CLEANUP_MESSAGES, sizeof QUERY_CLEANUP_MESSAGES)) {
-		if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, duration_cast<milliseconds>(system_clock::now() - sys_days(2015y/1/1) - 15 * 24h).count())) {
-			if (SQLITE_DONE == sqlite3_step(stmt))
-				co_return;
-		}
+	auto stmt = sqlite3_prepare(QUERY_CLEANUP_MESSAGES);
+	if (   stmt
+	    && SQLITE_OK   == sqlite3_bind_int64(stmt, 1, duration_cast<milliseconds>(system_clock::now() - sys_days(2015y/1/1) - 15 * 24h).count())
+	    && SQLITE_DONE == sqlite3_step(stmt)) {
+		co_return;
 	}
 	throw xDatabaseError();
 }
