@@ -69,6 +69,12 @@ public:
 	hEmbedFooter  GetFooter()       noexcept { return m_footer ? &*m_footer : nullptr; }
 	chEmbedAuthor GetAuthor() const noexcept { return m_author ? &*m_author : nullptr; }
 	hEmbedAuthor  GetAuthor()       noexcept { return m_author ? &*m_author : nullptr; }
+
+	template<typename... Args> requires std::constructible_from<cEmbedAuthor, Args&&...>
+	cEmbedAuthor& EmplaceAuthor(Args&&... args) {
+		return m_author.emplace(std::forward<Args>(args)...);
+	}
+
 	/* Setters */
 	cEmbed& SetColor(cColor c) {
 		m_color = c;

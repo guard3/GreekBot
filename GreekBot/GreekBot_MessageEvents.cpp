@@ -28,21 +28,18 @@ cGreekBot::OnMessageDelete(cSnowflake& message_id, cSnowflake& channel_id, hSnow
 	if (guild_id && *guild_id == m_lmg_id) {
 		/* Delete message from the database and report to the log channel */
 		if (auto db_msg = co_await cDatabase::DeleteMessage(message_id)) try {
-			co_await ResumeOnEventThread();
-			std::optional<cUser> author;
+			std::optional<cUser> user;
 			try {
-				author.emplace(co_await GetUser(db_msg->author_id));
+				user.emplace(co_await GetUser(db_msg->author_id));
 			} catch (...) {}
 
 			std::vector<cEmbed> embeds;
 			cEmbed& embed = embeds.emplace_back();
-			if (author) {
-				embed.SetAuthor(
-					author->GetDiscriminator() ? fmt::format("{}#{:04}", author->GetUsername(), author->GetDiscriminator()) : (std::string)author->GetUsername(),
-					kw::icon_url=cCDN::GetUserAvatar(*author)
-				);
+			if (user) {
+				auto disc = user->GetDiscriminator();
+				embed.EmplaceAuthor(disc ? fmt::format("{}#{:04}", user->GetUsername(), disc) : user->MoveUsername()).SetIconUrl(cCDN::GetUserAvatar(*user));
 			} else {
-				embed.SetAuthor("Deleted user", kw::icon_url=cCDN::GetDefaultUserAvatar(db_msg->author_id));
+				embed.EmplaceAuthor("Deleted user").SetIconUrl(cCDN::GetDefaultUserAvatar(db_msg->author_id));
 			}
 			embed.SetDescription(fmt::format("❌ A message was **deleted** in <#{}>", db_msg->channel_id));
 			embed.AddField(db_msg->content.empty() ? "No content" : "Content", db_msg->content);
@@ -61,21 +58,18 @@ cGreekBot::OnMessageDeleteBulk(std::span<cSnowflake> ids, cSnowflake& channel_id
 	if (guild_id && *guild_id == m_lmg_id) {
 		/* Delete messages from the database and report to the log channel */
 		for (auto& db_msg : co_await cDatabase::DeleteMessages(ids)) try {
-			co_await ResumeOnEventThread();
-			std::optional<cUser> author;
+			std::optional<cUser> user;
 			try {
-				author.emplace(co_await GetUser(db_msg.author_id));
+				user.emplace(co_await GetUser(db_msg.author_id));
 			} catch (...) {}
 
 			std::vector<cEmbed> embeds;
 			cEmbed& embed = embeds.emplace_back();
-			if (author) {
-				embed.SetAuthor(
-						author->GetDiscriminator() ? fmt::format("{}#{:04}", author->GetUsername(), author->GetDiscriminator()) : (std::string)author->GetUsername(),
-						kw::icon_url=cCDN::GetUserAvatar(*author)
-				);
+			if (user) {
+				auto disc = user->GetDiscriminator();
+				embed.EmplaceAuthor(disc ? fmt::format("{}#{:04}", user->GetUsername(), disc) : user->MoveUsername()).SetIconUrl(cCDN::GetUserAvatar(*user));
 			} else {
-				embed.SetAuthor("Deleted user", kw::icon_url=cCDN::GetDefaultUserAvatar(db_msg.author_id));
+				embed.EmplaceAuthor("Deleted user").SetIconUrl(cCDN::GetDefaultUserAvatar(db_msg.author_id));
 			}
 			embed.SetDescription(fmt::format("❌ A message was **deleted** in <#{}>", db_msg.channel_id));
 			embed.AddField(db_msg.content.empty() ? "No content" : "Content", db_msg.content);
