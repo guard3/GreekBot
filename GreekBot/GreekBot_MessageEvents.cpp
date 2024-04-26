@@ -72,8 +72,9 @@ cGreekBot::OnMessageDeleteBulk(std::span<cSnowflake> ids, cSnowflake& channel_id
 				author_ids.reserve(ids.size());
 				for (auto& db_msg : db_msgs)
 					author_ids.push_back(db_msg.author_id);
-				for (auto gen = GetGuildMembers(LMG_GUILD_ID, kw::user_ids=std::move(author_ids)); co_await gen;)
-					members.push_back(co_await gen());
+				auto gen = GetGuildMembers(LMG_GUILD_ID, kw::user_ids=std::move(author_ids));
+				for (auto it = co_await gen.begin(); it != gen.end(); co_await ++it)
+					members.push_back(std::move(*it));
 			}
 			/* Prepare the embed vector for the log messages */
 			std::vector<cEmbed> embeds;

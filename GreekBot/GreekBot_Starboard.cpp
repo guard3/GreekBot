@@ -318,8 +318,8 @@ cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) HANDLER_BEGIN {
 					ids.push_back(e.author_id);
 				auto gen = GetGuildMembers(m_lmg_id, kw::user_ids=std::move(ids));
 				members.reserve(10);
-				while (co_await gen.HasValue())
-					members.push_back(co_await gen.Next());
+				for (auto it = co_await gen.begin(); it != gen.end(); co_await ++it)
+					members.push_back(std::move(*it));
 			}
 			/* Create embeds */
 			embeds.reserve(10);

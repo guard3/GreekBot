@@ -133,8 +133,9 @@ cGreekBot::process_top(cAppCmdInteraction& i) HANDLER_BEGIN {
 		ids.emplace_back(*r.GetUserId());
 	std::vector<cMember> members;
 	members.reserve(db_result.size());
-	for (auto gen = GetGuildMembers(*i.GetGuildId(), kw::user_ids=ids); co_await gen.HasValue();)
-		members.emplace_back(co_await gen());
+	auto gen = GetGuildMembers(*i.GetGuildId(), kw::user_ids=ids);
+	for (auto it = co_await gen.begin(); it != gen.end(); co_await ++it)
+		members.push_back(std::move(*it));
 	/* Prepare embeds */
 	std::vector<cEmbed> es;
 	es.reserve(db_result.size());
