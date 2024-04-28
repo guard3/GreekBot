@@ -86,6 +86,20 @@ public:
 
 void tag_invoke(const json::value_from_tag&, json::value& v, const cMessageParams&);
 
+class cMessageUpdate final {
+private:
+	cSnowflake m_id;
+	cSnowflake m_channel_id;
+	std::optional<std::string> m_content;
+public:
+	explicit cMessageUpdate(const json::object&);
+	explicit cMessageUpdate(const json::value&);
+
+	const cSnowflake& GetId() const noexcept { return m_id; }
+	const cSnowflake& GetChannelId() const noexcept { return m_channel_id; }
+	cPtr<const std::string> GetContent() const noexcept { return m_content ? m_content.operator->() : nullptr; }
+};
+
 class cMessage final {
 private:
 	cSnowflake  id;

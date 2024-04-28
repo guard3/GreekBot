@@ -80,7 +80,8 @@ public:
 	static cTask<std::vector<starboard_entry>> SB_GetRank(const cUser&, int);
 
 	static cTask<> RegisterMessage(const cMessage&);
-	static cTask<message_entry> GetMessage(const cSnowflake&);
+	static cTask<std::optional<message_entry>> GetMessage(const cSnowflake&);
+	static cTask<std::optional<message_entry>> UpdateMessage(const cSnowflake&, std::string_view);
 	static cTask<std::optional<message_entry>> DeleteMessage(const cSnowflake&);
 	static cTask<std::vector<message_entry>> DeleteMessages(std::span<const cSnowflake>);
 	static cTask<> CleanupMessages();

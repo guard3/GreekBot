@@ -138,6 +138,21 @@ cGateway::implementation::process_event(const json::value& v) try {
 			co_await m_parent->OnMessageCreate(m, guild_id, member);
 			break;
 		}
+		case MESSAGE_UPDATE: {
+			auto& o = d.as_object();
+			std::optional<cSnowflake> opt1;
+			std::optional<cPartialMember> opt2;
+			cMessageUpdate m{ o };
+			hSnowflake guild_id;
+			hPartialMember member;
+			if (auto p = o.if_contains("guild_id"))
+				guild_id = &opt1.emplace(json::value_to<std::string_view>(*p));
+			if (auto p = o.if_contains("member"))
+				member = &opt2.emplace(*p);
+			co_await ResumeOnEventThread();
+			co_await m_parent->OnMessageUpdate(m, guild_id, member);
+			break;
+		}
 		case MESSAGE_DELETE: {
 			auto id = json::value_to<cSnowflake>(d.at("id"));
 			auto channel_id = json::value_to<cSnowflake>(d.at("channel_id"));

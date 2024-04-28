@@ -24,6 +24,33 @@ cGreekBot::OnMessageCreate(cMessage& msg, hSnowflake guild_id, hPartialMember me
 	}
 }
 cTask<>
+cGreekBot::OnMessageUpdate(cMessageUpdate& msg, hSnowflake guild_id, hPartialMember member) {
+	if (auto pContent = msg.GetContent(); guild_id && *guild_id == LMG_GUILD_ID && pContent) {
+		if (auto db_msg = co_await cDatabase::UpdateMessage(msg.GetId(), *pContent)) {
+			std::optional<cUser> user;
+			try {
+				user.emplace(co_await GetUser(db_msg->author_id));
+			} catch (...) {}
+
+			std::vector<cEmbed> embeds;
+			cEmbed& embed = embeds.emplace_back();
+			if (user) {
+				auto disc = user->GetDiscriminator();
+				embed.EmplaceAuthor(disc ? fmt::format("{}#{:04}", user->GetUsername(), disc) : user->MoveUsername()).SetIconUrl(cCDN::GetUserAvatar(*user));
+			} else {
+				embed.EmplaceAuthor("Deleted user").SetIconUrl(cCDN::GetDefaultUserAvatar(db_msg->author_id));
+			}
+			embed.SetDescription(fmt::format("📝 A message was **edited** in <#{}>", db_msg->channel_id));
+			if (!db_msg->content.empty())
+				embed.AddField("Old content", db_msg->content);
+			embed.AddField(pContent->empty() ? "No new content" : "New content", *pContent);
+			embed.SetColor(0x2ECD72);
+
+			co_await CreateMessage(MESSAGE_LOG_CHANNEL_ID, kw::embeds=std::move(embeds));
+		}
+	}
+}
+cTask<>
 cGreekBot::OnMessageDelete(cSnowflake& message_id, cSnowflake& channel_id, hSnowflake guild_id) {
 	/* Make sure we're in Learning Greek */
 	if (guild_id && *guild_id == m_lmg_id) {

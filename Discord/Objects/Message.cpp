@@ -31,6 +31,14 @@ tag_invoke(const json::value_from_tag&, json::value& v, const cMessageParams& m)
 		json::value_from(*m.m_embeds, obj["embeds"]);
 }
 
+cMessageUpdate::cMessageUpdate(const json::object& o) :
+	m_id(json::value_to<std::string_view>(o.at("id"))),
+	m_channel_id(json::value_to<cSnowflake>(o.at("channel_id"))) {
+	if (auto p = o.if_contains("content"))
+		m_content.emplace(json::value_to<std::string>(*p));
+}
+cMessageUpdate::cMessageUpdate(const json::value& v) : cMessageUpdate(v.as_object()) {}
+
 cMessage::cMessage(const json::object &o):
 	id(json::value_to<cSnowflake>(o.at("id"))),
 	channel_id(json::value_to<cSnowflake>(o.at("channel_id"))),

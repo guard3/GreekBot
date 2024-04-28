@@ -532,22 +532,39 @@ cDatabase::RegisterMessage(const cMessage& msg) {
 	}	}
 	throw xDatabaseError();
 }
-cTask<message_entry>
+cTask<std::optional<message_entry>>
 cDatabase::GetMessage(const cSnowflake& id) {
 	co_await resume_on_db_strand();
-	if (auto stmt = sqlite3_prepare(QUERY_GET_MESSAGE)) {
-		if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, id.ToInt())) {
-			if (SQLITE_ROW == sqlite3_step(stmt)) {
-				message_entry msg {
+	auto stmt = sqlite3_prepare(QUERY_GET_MESSAGE);
+	if (stmt && SQLITE_OK == sqlite3_bind_int64(stmt, 1, id.ToInt())) {
+		std::optional<message_entry> result;
+		switch (sqlite3_step(stmt)) {
+			case SQLITE_ROW: {
+				auto &msg = result.emplace(
 					id,
 					sqlite3_column_int64(stmt, 0),
 					sqlite3_column_int64(stmt, 1)
-				};
+				);
 				if (auto text = sqlite3_column_text(stmt, 2))
-					msg.content = (const char*)text;
-				co_return msg;
+					msg.content = (const char *) text;
 			}
+			case SQLITE_DONE:
+				co_return result;
 		}
+	}
+	throw xDatabaseError();
+}
+cTask<std::optional<message_entry>>
+cDatabase::UpdateMessage(const cSnowflake& id, std::string_view content) {
+	auto result = co_await GetMessage(id);
+	if (!result)
+		co_return result;
+	sqlite3_stmt_ptr stmt = sqlite3_prepare("UPDATE messages SET content=? WHERE id IS ?;");
+	if (   stmt
+	    && SQLITE_OK == (content.empty() ? sqlite3_bind_null(stmt, 1) : sqlite3_bind_text64(stmt, 1, content.data(), content.size(), SQLITE_STATIC, SQLITE_UTF8))
+		&& SQLITE_OK == sqlite3_bind_int64(stmt, 2, id.ToInt())
+		&& SQLITE_DONE == sqlite3_step(stmt)) {
+		co_return result;
 	}
 	throw xDatabaseError();
 }
