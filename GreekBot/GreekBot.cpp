@@ -125,12 +125,10 @@ cGreekBot::process_interaction(cAppCmdInteraction& i) {
 			return process_rank(i);
 		case 938863857466757131: // top
 			return process_top(i);
-		case 1020026874119864381: // prune - TODO: combine lmg prune and regular prune into one command only
-			return process_prune(i);
+		case 1020026874119864381: // prune
+			return *i.GetGuildId() == LMG_GUILD_ID ? process_prune_lmg(i) : process_prune(i);
 		case 1031907652541890621: // ban
 			return process_ban(i);
-		case 1072131488478404621: // prune (Learning Greek)
-			return process_prune_lmg(i);
 		case 904462004071313448: // holy
 			return process_starboard_leaderboard(i);
 		case 1177042125205024868: // timestamp

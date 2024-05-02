@@ -1,6 +1,0 @@
-{
-	"name": "prune",
-	"description": "Kick members that haven't got a rank",
-	"default_member_permissions": "2",
-	"dm_permission": false
-}
