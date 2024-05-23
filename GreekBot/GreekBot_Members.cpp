@@ -45,9 +45,9 @@ cGreekBot::OnGuildMemberUpdate(cSnowflake& guild_id, cMemberUpdate& member) {
 			/* If the message is unedited and the member has a nickname, edit the message
 			 * If editing fails, in cases like where the original message is deleted, that's fine */
 			try {
-				co_await EditMessage(NEW_MEMBERS_CHANNEL_ID, msg_id,
-					kw::content = fmt::format("<@{}> Just got a nickname!", member.GetUser().GetId()),
-					kw::components={
+				co_await EditMessage(NEW_MEMBERS_CHANNEL_ID, msg_id, cMessageUpdate()
+					.SetContent(fmt::format("<@{}> Just got a nickname!", member.GetUser().GetId()))
+					.SetComponents({
 						cActionRow{
 							cButton{
 								BUTTON_STYLE_SECONDARY,
@@ -55,7 +55,7 @@ cGreekBot::OnGuildMemberUpdate(cSnowflake& guild_id, cMemberUpdate& member) {
 								kw::label="Dismiss"
 							}
 						}
-					}
+					})
 				);
 			}
 			catch (const xDiscordError&) {}

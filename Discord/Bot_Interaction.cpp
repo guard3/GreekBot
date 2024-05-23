@@ -101,7 +101,7 @@ cBot::InteractionSendModal(const cInteraction& i, const cModal& modal) {
 }
 
 cTask<cMessage>
-cBot::InteractionEditMessage(const cInteraction& i, const cMessageParams& params, crefMessage msg) {
+cBot::InteractionEditMessage(const cInteraction& i, const cMessageUpdate& params, crefMessage msg) {
 	auto& msg_id = msg.GetId();
 	json::value result = co_await DiscordPatch(fmt::format("/webhooks/{}/{}/messages/{}", i.GetApplicationId(), i.GetToken(), msg_id.ToInt() ? msg_id.ToString() : "@original"), json::value_from(params).get_object());
 	co_return cMessage{ result };

@@ -87,7 +87,7 @@ cGreekBot::process_reaction(const cSnowflake& channel_id, const cSnowflake& mess
 	auto content = fmt::format("{} **{}** https://discord.com/channels/{}/{}/{}", reaction, num_reactions, m_lmg_id, channel_id, message_id);
 	/* If there is a message id registered in the database, edit the message with the new number of reactions */
 	if (sb_msg_id) {
-		co_await EditMessage(HOLY_CHANNEL_ID, sb_msg_id, kw::content=std::move(content));
+		co_await EditMessage(HOLY_CHANNEL_ID, sb_msg_id, cMessageUpdate().SetContent(std::move(content)));
 		co_return;
 	}
 	/* Make sure that we have the message object available */

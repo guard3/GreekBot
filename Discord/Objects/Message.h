@@ -81,6 +81,55 @@ public:
 	template<kw::key... Keys>
 	explicit cMessageParams(kw::arg<Keys>&... kwargs) : cMessageParams(kw::pack{ kwargs... }) {}
 
+	void ResetFlags() noexcept {
+		m_flags = MESSAGE_FLAG_NONE;
+	}
+	void ResetContent() noexcept {
+		m_content.reset();
+	}
+	void ResetComponents() noexcept {
+		m_components.reset();
+	}
+	void ResetEmbeds() noexcept {
+		m_embeds.reset();
+	}
+
+	cMessageParams& SetFlags(eMessageFlag flags) noexcept {
+		m_flags = flags;
+		return *this;
+	}
+	template<typename T = std::string> requires std::constructible_from<std::string, T&&>
+	cMessageParams& SetContent(T&& arg) {
+		m_content.emplace(std::forward<T>(arg));
+		return *this;
+	}
+	template<typename T = std::vector<cActionRow>> requires std::constructible_from<std::vector<cActionRow>, T&&>
+	cMessageParams& SetComponents(T&& arg) {
+		m_components.emplace(std::forward<T>(arg));
+		return *this;
+	}
+	template<typename T = std::vector<cEmbed>> requires std::constructible_from<std::vector<cEmbed>, T&&>
+	cMessageParams& SetEmbeds(T&& arg) {
+		m_embeds.emplace(std::forward<T>(arg));
+		return *this;
+	}
+
+	eMessageFlag& EmplaceFlags(eMessageFlag flags) noexcept {
+		return m_flags = flags;
+	}
+	template<typename... Args> requires std::constructible_from<std::string, Args&&...>
+	std::string& EmplaceContent(Args&&... args) {
+		return m_content.emplace(std::forward<Args>(args)...);
+	}
+	template<typename... Args> requires std::constructible_from<std::vector<cActionRow>, Args&&...>
+	std::vector<cActionRow>& EmplaceComponents(Args&&... args) {
+		return m_components.emplace(std::forward<Args>(args)...);
+	}
+	template<typename... Args> requires std::constructible_from<std::vector<cEmbed>, Args&&...>
+	std::vector<cEmbed>& EmplaceEmbeds(Args&&... args) {
+		return m_embeds.emplace(std::forward<Args>(args)...);
+	}
+
 	friend void tag_invoke(const json::value_from_tag&, json::value& v, const cMessageParams&);
 };
 
@@ -91,14 +140,67 @@ private:
 	cSnowflake m_id;
 	cSnowflake m_channel_id;
 	std::optional<std::string> m_content;
+	std::optional<std::vector<cActionRow>> m_components;
+	std::optional<std::vector<cEmbed>> m_embeds;
 public:
+	cMessageUpdate() = default;
 	explicit cMessageUpdate(const json::object&);
 	explicit cMessageUpdate(const json::value&);
 
 	const cSnowflake& GetId() const noexcept { return m_id; }
 	const cSnowflake& GetChannelId() const noexcept { return m_channel_id; }
-	cPtr<const std::string> GetContent() const noexcept { return m_content ? m_content.operator->() : nullptr; }
+	cPtr<const std::string> GetContent() const noexcept {
+		return m_content ? m_content.operator->() : nullptr;
+	}
+	cPtr<const std::vector<cActionRow>> GetComponents() const noexcept {
+		return m_components ? m_components.operator->() : nullptr;
+	}
+	cPtr<const std::vector<cEmbed>> GetEmbeds() const noexcept {
+		return m_embeds ? m_embeds.operator->() : nullptr;
+	}
+	/* Resetters */
+	void ResetContent() noexcept {
+		m_content.reset();
+	}
+	void ResetComponents() noexcept {
+		m_components.reset();
+	}
+	void ResetEmbeds() noexcept {
+		m_embeds.reset();
+	}
+	/* Setters */
+	template<typename T = decltype(m_content)::value_type, typename Arg = T> requires std::constructible_from<T, Arg&&>
+	cMessageUpdate& SetContent(Arg&& arg) {
+		m_content.emplace(std::forward<Arg>(arg));
+		return *this;
+	}
+	template<typename T = decltype(m_components)::value_type, typename Arg = T> requires std::constructible_from<T, Arg&&>
+	cMessageUpdate& SetComponents(Arg&& arg) {
+		m_components.emplace(std::forward<Arg>(arg));
+		return *this;
+	}
+	template<typename T = decltype(m_embeds)::value_type, typename Arg = T> requires std::constructible_from<T, Arg&&>
+	cMessageUpdate& SetEmbeds(Arg&& arg) {
+		m_embeds.emplace(std::forward<Arg>(arg));
+		return *this;
+	}
+	/* Emplacers */
+	template<typename T = decltype(m_embeds)::value_type, typename... Args> requires std::constructible_from<T, Args&&...>
+	T& EmplaceContent(Args&&... args) {
+		return m_content.emplace(std::forward<Args>(args)...);
+	}
+	template<typename T = decltype(m_components)::value_type, typename... Args> requires std::constructible_from<T, Args&&...>
+	T& EmplaceComponents(Args&&... args) {
+		return m_components.emplace(std::forward<Args>(args)...);
+	}
+	template<typename T = decltype(m_embeds)::value_type, typename... Args> requires std::constructible_from<T, Args&&...>
+	T& EmplaceEmbeds(Args&&... args) {
+		return m_embeds.emplace(std::forward<Args>(args)...);
+	}
 };
+
+void
+tag_invoke(json::value_from_tag, json::value&, const cMessageUpdate&);
 
 class cMessage final {
 private:

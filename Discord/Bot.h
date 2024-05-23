@@ -20,7 +20,6 @@ private:
 	cTask<> OnUserUpdate(uhUser) override;
 
 	cTask<cMessage> create_message(const cSnowflake& channel_id, const cMessageParams&);
-	cTask<cMessage> edit_message(const cSnowflake&, const cSnowflake&, const cMessageParams&);
 	cTask<> modify_guild_member(const cSnowflake&, const cSnowflake&, const cMemberOptions&);
 
 protected:
@@ -56,7 +55,7 @@ public:
 	cTask<> InteractionSendModal(const cMsgCompInteraction&, const cModal&);
 	cTask<> InteractionSendModal(const cInteraction&, const cModal&);
 	/* Interactions - Extra functions */
-	cTask<cMessage> InteractionEditMessage(const cInteraction&, const cMessageParams&, crefMessage = cSnowflake());
+	cTask<cMessage> InteractionEditMessage(const cInteraction&, const cMessageUpdate&, crefMessage = cSnowflake());
 	cTask<cMessage> InteractionGetMessage(const cInteraction&, crefMessage = cSnowflake());
 	cTask<>         InteractionDeleteMessage(const cInteraction&, crefMessage = cSnowflake());
 
@@ -71,10 +70,7 @@ public:
 	cTask<cMessage> CreateDMMessage(const cSnowflake& recipient_id, kw::arg<Keys>&... kwargs) {
 		co_return co_await CreateMessage((co_await CreateDM(recipient_id)).GetId(), kwargs...);
 	}
-	template<kw::key... Keys>
-	cTask<cMessage> EditMessage(const cSnowflake& channel_id, const cSnowflake& msg_id, kw::arg<Keys>&... kwargs) {
-		co_return co_await edit_message(channel_id, msg_id, cMessageParams{ kwargs... });
-	}
+	cTask<cMessage> EditMessage(const cSnowflake& channel_id, const cSnowflake& target_msg, const cMessageUpdate& msg);
 	cTask<> DeleteMessage(const cSnowflake& channel_id, const cSnowflake& msg_id, std::string_view reason = {});
 	cTask<cMessage> GetChannelMessage(const cSnowflake& channel_id, const cSnowflake& message_id);
 

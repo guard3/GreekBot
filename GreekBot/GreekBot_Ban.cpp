@@ -154,23 +154,21 @@ cGreekBot::process_unban(cMsgCompInteraction& i, const cSnowflake& user_id) HAND
 	} catch (xDiscordError &e) {
 		/* Ban not found, but that's fine */
 	}
-	auto embeds = i.GetMessage().MoveEmbeds();
+	cMessageUpdate msg;
+	auto& embeds = msg.EmplaceEmbeds(i.GetMessage().MoveEmbeds());
 	auto& e = embeds.front();
 	auto name = e.GetAuthor()->GetName();
-	name.remove_suffix(11); // Remove the " was banned" part
+	name.remove_suffix(11);
 	e.ClearFields().SetColor(0x248046).SetDescription("User was unbanned").GetAuthor()->SetName(name);
-	co_await InteractionEditMessage(i, cMessageParams{
-		kw::embeds={ std::move(e) },
-		kw::components={
-			cActionRow{
-				cButton{
-					BUTTON_STYLE_SECONDARY,
-					fmt::format("DLT#{}", i.GetUser().GetId()),
-					kw::label="Dismiss"
-				}
+	co_await InteractionEditMessage(i, msg.SetComponents({
+		cActionRow{
+			cButton{
+				BUTTON_STYLE_SECONDARY,
+				fmt::format("DLT#{}", i.GetUser().GetId()),
+				kw::label="Dismiss"
 			}
 		}
-	}, i.GetMessage());
+	}), i.GetMessage());
 } HANDLER_END
 
 cTask<>

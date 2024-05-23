@@ -82,9 +82,9 @@ cBot::create_message(const cSnowflake& channel_id, const cMessageParams& params)
 }
 
 cTask<cMessage>
-cBot::edit_message(const cSnowflake& channel_id, const cSnowflake& msg_id, const cMessageParams& params) {
-	co_return cMessage {
-		co_await DiscordPatch(fmt::format("/channels/{}/messages/{}", channel_id, msg_id), json::value_from(params).get_object())
+cBot::EditMessage(const cSnowflake& channel_id, const cSnowflake& target_msg, const cMessageUpdate& msg) {
+	co_return cMessage{
+		co_await DiscordPatch(fmt::format("/channels/{}/messages/{}", channel_id, target_msg), json::value_from(msg).get_object())
 	};
 }
 
