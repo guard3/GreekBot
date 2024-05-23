@@ -1,5 +1,5 @@
-#ifndef _GREEKBOT_CHANNEL_H_
-#define _GREEKBOT_CHANNEL_H_
+#ifndef GREEKBOT_CHANNEL_H
+#define GREEKBOT_CHANNEL_H
 #include "Common.h"
 
 enum eChannelType {
@@ -34,6 +34,13 @@ typedef   hHandle<cChannel>   hChannel;
 typedef  chHandle<cChannel>  chChannel;
 typedef  uhHandle<cChannel>  uhChannel;
 typedef uchHandle<cChannel> uchChannel;
-typedef  shHandle<cChannel>  shChannel;
-typedef schHandle<cChannel> schChannel;
-#endif /* _GREEKBOT_CHANNEL_H_ */
+
+class crefChannel final {
+	const cSnowflake& m_id;
+public:
+	crefChannel(const cSnowflake& id) noexcept : m_id(id) {}
+	crefChannel(const cChannel& channel) noexcept : m_id(channel.GetId()) {}
+
+	const cSnowflake& GetId() const noexcept { return m_id; }
+};
+#endif /* GREEKBOT_CHANNEL_H */

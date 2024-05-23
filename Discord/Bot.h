@@ -61,7 +61,7 @@ public:
 	cTask<int> BeginGuildPrune(const cSnowflake& id, int days, std::string_view reason = {});
 
 	cTask<cChannel> CreateDM(const cSnowflake& recipient_id);
-	cTask<cMessage> CreateMessage(const cSnowflake& channel_id, const cMessageParams& msg);
+	cTask<cMessage> CreateMessage(crefChannel channel, const cMessageParams& msg);
 	cTask<cMessage> CreateDMMessage(const cSnowflake& recipient_id, const cMessageParams& msg);
 	cTask<cMessage> EditMessage(const cSnowflake& channel_id, const cSnowflake& target_msg, const cMessageUpdate& msg);
 	cTask<> DeleteMessage(const cSnowflake& channel_id, const cSnowflake& msg_id, std::string_view reason = {});
