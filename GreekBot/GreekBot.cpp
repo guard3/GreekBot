@@ -110,10 +110,10 @@ cGreekBot::OnInteractionCreate(cInteraction& i) {
 		}
 	}
 	/* ...and send error message to the user */
-	co_await InteractionSendMessage(i, cMessageParams{
-		kw::flags=MESSAGE_FLAG_EPHEMERAL,
-		kw::content="An unexpected error has occurred. Try again later."
-	});
+	co_await InteractionSendMessage(i, cMessageParams()
+		.SetFlags(MESSAGE_FLAG_EPHEMERAL)
+		.SetContent("An unexpected error has occurred. Try again later.")
+	);
 }
 
 cTask<>

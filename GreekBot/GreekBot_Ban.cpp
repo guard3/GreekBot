@@ -53,16 +53,16 @@ cTask<>
 cGreekBot::process_ban(cInteraction& i, uint32_t subcmd, const cSnowflake& user_id, std::string_view hash, std::uint16_t discr, std::string_view username, std::chrono::seconds delete_messages, std::string_view reason, std::string_view goodbye) {
 	/* Check that the invoking user has appropriate permissions, for extra measure */
 	if (!(i.GetMember()->GetPermissions() & PERM_BAN_MEMBERS))
-		co_return co_await InteractionSendMessage(i, cMessageParams{
-			kw::flags=MESSAGE_FLAG_EPHEMERAL,
-			kw::content="You can't do that. You're missing the `BAN_MEMBERS` permission."
-		});
+		co_return co_await InteractionSendMessage(i, cMessageParams()
+			.SetFlags(MESSAGE_FLAG_EPHEMERAL)
+			.SetContent("You can't do that. You're missing the `BAN_MEMBERS` permission.")
+		);
 	/* Make sure we're not banning ourselves */
 	if (user_id == GetUser()->GetId())
-		co_return co_await InteractionSendMessage(i, cMessageParams{
-			kw::flags=MESSAGE_FLAG_EPHEMERAL,
-			kw::content=get_no_ban_msg(subcmd)
-		});
+		co_return co_await InteractionSendMessage(i, cMessageParams()
+			.SetFlags(MESSAGE_FLAG_EPHEMERAL)
+			.SetContent(get_no_ban_msg(subcmd))
+		);
 	/* Acknowledge interaction */
 	co_await InteractionDefer(i, true);
 	/* Update reason and goodbye message */
@@ -95,8 +95,8 @@ cGreekBot::process_ban(cInteraction& i, uint32_t subcmd, const cSnowflake& user_
 			break;
 	}
 	/* Create the embed of the confirmation message */
-	std::vector<cEmbed> embeds;
-	cEmbed& e = embeds.emplace_back(
+	cMessageParams msg;
+	cEmbed& e = msg.EmplaceEmbeds().emplace_back(
 		kw::author={
 			fmt::format("{} was banned", username),
 			kw::icon_url=cCDN::GetUserAvatar(user_id, hash, discr)
@@ -106,9 +106,8 @@ cGreekBot::process_ban(cInteraction& i, uint32_t subcmd, const cSnowflake& user_
 	);
 	/* DM the goodbye message */
 	try {
-		co_await CreateDMMessage(
-			user_id,
-			kw::content=fmt::format("You've been banned from **{}** with reason:\n```{}```", m_guilds.at(*i.GetGuildId())->GetName(), goodbye)
+		co_await CreateDMMessage(user_id, cMessageParams()
+			.SetContent(fmt::format("You've been banned from **{}** with reason:\n```{}```", m_guilds.at(*i.GetGuildId())->GetName(), goodbye))
 		);
 		/* Add the goodbye message field only after the DM was sent successfully */
 		if (reason != goodbye)
@@ -120,33 +119,30 @@ cGreekBot::process_ban(cInteraction& i, uint32_t subcmd, const cSnowflake& user_
 	/* Ban */
 	co_await CreateGuildBan(*i.GetGuildId(), user_id, delete_messages, reason);
 	/* Send confirmation message */
-	co_await InteractionSendMessage(i, cMessageParams{
-		kw::components = {
-			cActionRow{
-				cButton{
-					BUTTON_STYLE_DANGER,
-					fmt::format("BAN#{}", user_id),
-					kw::label = "Revoke ban"
-				},
-				cButton{
-					BUTTON_STYLE_SECONDARY,
-					fmt::format("DLT#{}", i.GetUser().GetId()),
-					kw::label = "Dismiss"
-				}
+	co_await InteractionSendMessage(i, msg.SetComponents({
+		cActionRow{
+			cButton{
+				BUTTON_STYLE_DANGER,
+				fmt::format("BAN#{}", user_id),
+				kw::label="Revoke ban"
+			},
+			cButton{
+				BUTTON_STYLE_SECONDARY,
+				fmt::format("DLT#{}", i.GetUser().GetId()),
+				kw::label="Dismiss"
 			}
-		},
-		kw::embeds = std::move(embeds)
-	});
+		}
+	}));
 }
 
 cTask<>
 cGreekBot::process_unban(cMsgCompInteraction& i, const cSnowflake& user_id) HANDLER_BEGIN {
 	/* Make sure that the invoking user has the appropriate permissions */
 	if (!(i.GetMember()->GetPermissions() & PERM_BAN_MEMBERS)) {
-		co_return co_await InteractionSendMessage(i, cMessageParams{
-			kw::flags=MESSAGE_FLAG_EPHEMERAL,
-			kw::content="You can't do that. You're missing the `BAN_MEMBERS` permission."
-		});
+		co_return co_await InteractionSendMessage(i, cMessageParams()
+			.SetFlags(MESSAGE_FLAG_EPHEMERAL)
+			.SetContent("You can't do that. You're missing the `BAN_MEMBERS` permission.")
+		);
 	}
 	co_await InteractionDefer(i);
 	try {
@@ -180,16 +176,16 @@ cGreekBot::process_ban_ctx_menu(cAppCmdInteraction& i, eSubcommand subcmd) HANDL
 		co_return co_await process_ban(i, subcmd, user->GetId(), user->GetAvatar(), user->GetDiscriminator(), user->GetUsername(), std::chrono::days(7), {}, {});
 	/* Check that the invoking member has appropriate permissions */
 	if (!(i.GetMember()->GetPermissions() & PERM_BAN_MEMBERS))
-		co_return co_await InteractionSendMessage(i, cMessageParams{
-			kw::flags=MESSAGE_FLAG_EPHEMERAL,
-			kw::content="You can't do that. You're missing the `BAN_MEMBERS` permission"
-		});
+		co_return co_await InteractionSendMessage(i, cMessageParams()
+			.SetFlags(MESSAGE_FLAG_EPHEMERAL)
+			.SetContent("You can't do that. You're missing the `BAN_MEMBERS` permission")
+		);
 	/* Make sure we're not banning ourselves */
 	if (user->GetId() == GetUser()->GetId())
-		co_return co_await InteractionSendMessage(i, cMessageParams{
-			kw::flags=MESSAGE_FLAG_EPHEMERAL,
-			kw::content=get_no_ban_msg(subcmd)
-		});
+		co_return co_await InteractionSendMessage(i, cMessageParams()
+			.SetFlags(MESSAGE_FLAG_EPHEMERAL)
+			.SetContent(get_no_ban_msg(subcmd))
+		);
 	/* Otherwise, retrieve the user's display name in the guild... */
 	std::string_view display_name;
 	if (member && !member->GetNick().empty())

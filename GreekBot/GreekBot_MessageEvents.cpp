@@ -32,8 +32,8 @@ cGreekBot::OnMessageUpdate(cMessageUpdate& msg, hSnowflake guild_id, hPartialMem
 				user.emplace(co_await GetUser(db_msg->author_id));
 			} catch (...) {}
 
-			std::vector<cEmbed> embeds;
-			cEmbed& embed = embeds.emplace_back();
+			cMessageParams response;
+			cEmbed& embed = response.EmplaceEmbeds().emplace_back();
 			if (user) {
 				auto disc = user->GetDiscriminator();
 				embed.EmplaceAuthor(disc ? fmt::format("{}#{:04}", user->GetUsername(), disc) : user->MoveUsername()).SetIconUrl(cCDN::GetUserAvatar(*user));
@@ -46,7 +46,7 @@ cGreekBot::OnMessageUpdate(cMessageUpdate& msg, hSnowflake guild_id, hPartialMem
 			embed.AddField(pContent->empty() ? "No new content" : "New content", *pContent);
 			embed.SetColor(0x2ECD72);
 
-			co_await CreateMessage(MESSAGE_LOG_CHANNEL_ID, kw::embeds=std::move(embeds));
+			co_await CreateMessage(MESSAGE_LOG_CHANNEL_ID, response);
 		}
 	}
 }
@@ -61,8 +61,8 @@ cGreekBot::OnMessageDelete(cSnowflake& message_id, cSnowflake& channel_id, hSnow
 				user.emplace(co_await GetUser(db_msg->author_id));
 			} catch (...) {}
 
-			std::vector<cEmbed> embeds;
-			cEmbed& embed = embeds.emplace_back();
+			cMessageParams response;
+			cEmbed& embed = response.EmplaceEmbeds().emplace_back();
 			if (user) {
 				auto disc = user->GetDiscriminator();
 				embed.EmplaceAuthor(disc ? fmt::format("{}#{:04}", user->GetUsername(), disc) : user->MoveUsername()).SetIconUrl(cCDN::GetUserAvatar(*user));
@@ -73,7 +73,7 @@ cGreekBot::OnMessageDelete(cSnowflake& message_id, cSnowflake& channel_id, hSnow
 			embed.AddField(db_msg->content.empty() ? "No content" : "Content", db_msg->content);
 			embed.SetColor(0xC43135);
 
-			co_await CreateMessage(MESSAGE_LOG_CHANNEL_ID, kw::embeds=std::move(embeds));
+			co_await CreateMessage(MESSAGE_LOG_CHANNEL_ID, response);
 		} catch (...) {}
 		/* Delete the starboard message from the channel and the database (if found) */
 		if (int64_t sb_msg_id = co_await cDatabase::SB_RemoveAll(message_id))
@@ -104,7 +104,8 @@ cGreekBot::OnMessageDeleteBulk(std::span<cSnowflake> ids, cSnowflake& channel_id
 					members.push_back(std::move(*it));
 			}
 			/* Prepare the embed vector for the log messages */
-			std::vector<cEmbed> embeds;
+			cMessageParams response;
+			auto& embeds = response.EmplaceEmbeds();
 			embeds.reserve(10);
 			for (auto& db_msg : db_msgs) {
 				/* Retrieve the user object of the message author */
@@ -135,14 +136,13 @@ cGreekBot::OnMessageDeleteBulk(std::span<cSnowflake> ids, cSnowflake& channel_id
 				embed.SetColor(0xC43135);
 				/* If we reach the maximum amount of embeds supported per message, send them */
 				if (embeds.size() == 10) {
-					co_await CreateMessage(MESSAGE_LOG_CHANNEL_ID, kw::embeds=std::move(embeds));
+					co_await CreateMessage(MESSAGE_LOG_CHANNEL_ID, response);
 					embeds.clear();
-					embeds.reserve(10);
 				}
 			}
 			/* Send any remaining embeds */
 			if (!embeds.empty())
-				co_await CreateMessage(MESSAGE_LOG_CHANNEL_ID, kw::embeds=std::move(embeds));
+				co_await CreateMessage(MESSAGE_LOG_CHANNEL_ID, response);
 		} catch (...) {}
 		/* Delete the starboard messages from the channel and the database (if found) */
 		for (cSnowflake& id : ids) {

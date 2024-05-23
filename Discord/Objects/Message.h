@@ -78,7 +78,9 @@ private:
 	}
 
 public:
+	cMessageParams() noexcept : m_flags{ MESSAGE_FLAG_NONE } {}
 	template<kw::key... Keys>
+	[[deprecated]]
 	explicit cMessageParams(kw::arg<Keys>&... kwargs) : cMessageParams(kw::pack{ kwargs... }) {}
 
 	void ResetFlags() noexcept {

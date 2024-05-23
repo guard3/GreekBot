@@ -21,10 +21,9 @@ cGreekBot::OnGuildMemberUpdate(cSnowflake& guild_id, cMemberUpdate& member) {
 		/* Check if there's a message registered in the database for this member */
 		const int64_t msg_id = co_await cDatabase::WC_GetMessage(member);
 		if (msg_id == 0 && member.GetNickname().empty()) {
-			cMessage msg = co_await CreateMessage(
-				NEW_MEMBERS_CHANNEL_ID,
-				kw::content=fmt::format("<@{}> Just got a rank!", member.GetUser().GetId()),
-				kw::components={
+			cMessage msg = co_await CreateMessage(NEW_MEMBERS_CHANNEL_ID, cMessageParams()
+				.SetContent(fmt::format("<@{}> Just got a rank!", member.GetUser().GetId()))
+				.SetComponents({
 					cActionRow{
 						cButton{
 							BUTTON_STYLE_PRIMARY,
@@ -37,7 +36,7 @@ cGreekBot::OnGuildMemberUpdate(cSnowflake& guild_id, cMemberUpdate& member) {
 							kw::label="Dismiss"
 						}
 					}
-				}
+				})
 			);
 			co_await cDatabase::WC_UpdateMessage(member.GetUser(), msg);
 		}

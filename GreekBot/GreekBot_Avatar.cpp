@@ -10,7 +10,5 @@ cGreekBot::process_avatar(cAppCmdInteraction& i) HANDLER_BEGIN {
 	else
 		user = &i.GetUser();
 	/* Respond */
-	co_await InteractionSendMessage(i, cMessageParams{
-		kw::content=cCDN::GetUserAvatar(*user)
-	});
+	co_await InteractionSendMessage(i, cMessageParams().SetContent(cCDN::GetUserAvatar(*user)));
 } HANDLER_END

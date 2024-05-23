@@ -76,18 +76,15 @@ cGreekBot::process_prune_lmg(cAppCmdInteraction& i) HANDLER_BEGIN {
 			/* Attempt to send a DM explaining the reason of the kick */
 			try {
 				auto member_for_days = floor<days>(member_for).count();
-				co_await CreateDMMessage(
-					user->GetId(),
-					kw::content=fmt::format(
-						"You have been kicked from **{}** because **{}** day{} have passed since you joined and you didn't get a proficiency rank.\n"
-						"\n"
-						"But don't fret! You are free to rejoin, just make sure to:\n"
-						"- Verify your phone number\n"
-						"- Get a proficiency rank as mentioned in `#welcoming`\n"
-						"https://discord.gg/greek",
-						guild_name, member_for_days, member_for_days == 1 ? "" : "s"
-					)
-				);
+				co_await CreateDMMessage(user->GetId(), cMessageParams().SetContent(fmt::format(
+					"You have been kicked from **{}** because **{}** day{} have passed since you joined and you didn't get a proficiency rank.\n"
+					"\n"
+					"But don't fret! You are free to rejoin, just make sure to:\n"
+					"- Verify your phone number\n"
+					"- Get a proficiency rank as mentioned in `#welcoming`\n"
+					"https://discord.gg/greek",
+					guild_name, member_for_days, member_for_days == 1 ? "" : "s"
+				)));
 			} catch (...) {}
 			/* Then kick */
 			try {

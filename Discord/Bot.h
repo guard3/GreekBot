@@ -19,7 +19,6 @@ private:
 	cTask<> OnReady(uhUser) override;
 	cTask<> OnUserUpdate(uhUser) override;
 
-	cTask<cMessage> create_message(const cSnowflake& channel_id, const cMessageParams&);
 	cTask<> modify_guild_member(const cSnowflake&, const cSnowflake&, const cMemberOptions&);
 
 protected:
@@ -62,14 +61,8 @@ public:
 	cTask<int> BeginGuildPrune(const cSnowflake& id, int days, std::string_view reason = {});
 
 	cTask<cChannel> CreateDM(const cSnowflake& recipient_id);
-	template<kw::key... Keys>
-	cTask<cMessage> CreateMessage(const cSnowflake& channel_id, kw::arg<Keys>&... kwargs) {
-		co_return co_await create_message(channel_id, cMessageParams{ kwargs... });
-	}
-	template<kw::key... Keys>
-	cTask<cMessage> CreateDMMessage(const cSnowflake& recipient_id, kw::arg<Keys>&... kwargs) {
-		co_return co_await CreateMessage((co_await CreateDM(recipient_id)).GetId(), kwargs...);
-	}
+	cTask<cMessage> CreateMessage(const cSnowflake& channel_id, const cMessageParams& msg);
+	cTask<cMessage> CreateDMMessage(const cSnowflake& recipient_id, const cMessageParams& msg);
 	cTask<cMessage> EditMessage(const cSnowflake& channel_id, const cSnowflake& target_msg, const cMessageUpdate& msg);
 	cTask<> DeleteMessage(const cSnowflake& channel_id, const cSnowflake& msg_id, std::string_view reason = {});
 	cTask<cMessage> GetChannelMessage(const cSnowflake& channel_id, const cSnowflake& message_id);

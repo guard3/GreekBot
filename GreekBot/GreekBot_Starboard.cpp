@@ -96,9 +96,9 @@ cGreekBot::process_reaction(const cSnowflake& channel_id, const cSnowflake& mess
 		msg = &opt.emplace(co_await GetChannelMessage(channel_id, message_id));
 	cMember author_member = co_await GetGuildMember(m_lmg_id, msg->GetAuthor().GetId());
 	cUser&  author_user = *author_member.GetUser();
-	/* Prepare the message preview embed */
-	std::vector<cEmbed> embed_vector;
-	cEmbed& preview = embed_vector.emplace_back(
+	/* Prepare the message response with a preview embed */
+	cMessageParams response;
+	cEmbed& preview = response.EmplaceEmbeds().emplace_back(
 		kw::author=cEmbedAuthor{
 			author_user.MoveUsername(),
 			kw::icon_url=cCDN::GetUserAvatar(author_user)
@@ -173,10 +173,7 @@ cGreekBot::process_reaction(const cSnowflake& channel_id, const cSnowflake& mess
 	if (!bProcessed)
 		preview.SetDescription(msg->MoveContent());
 	/* Send the starboard message and save it in the database */
-	cMessage sb_msg = co_await CreateMessage(HOLY_CHANNEL_ID,
-		kw::content=std::move(content),
-		kw::embeds=std::move(embed_vector)
-	);
+	cMessage sb_msg = co_await CreateMessage(HOLY_CHANNEL_ID, response.SetContent(std::move(content)));
 	co_await cDatabase::SB_RegisterMessage(message_id, sb_msg.GetId());
 }
 /* ========== Delete messages when all reactions are removed or when the original message is deleted ================ */
