@@ -69,17 +69,15 @@ cGreekBot::process_rank(cAppCmdInteraction& i) HANDLER_BEGIN {
 		user = &i.GetUser();
 		member = i.GetMember();
 	}
+	/* Prepare the response */
+	cMessageParams response;
+	response.SetFlags(MESSAGE_FLAG_EPHEMERAL);
 	/* Don't display data for bot users */
 	if (user->IsBotUser())
-		co_return co_await InteractionSendMessage(i, cMessageParams{
-			kw::flags=MESSAGE_FLAG_EPHEMERAL,
-			kw::content="Ranking isn't available for bot users."
-		});
+		co_return co_await InteractionSendMessage(i, response.SetContent("Ranking isn't available for bot users."));
 	if (user->IsSystemUser())
-		co_return co_await InteractionSendMessage(i, cMessageParams{
-			kw::flags=MESSAGE_FLAG_EPHEMERAL,
-			kw::content="Ranking isn't available for system users."
-		});
+		co_return co_await InteractionSendMessage(i, response.SetContent("Ranking isn't available for system users."));
+	response.ResetFlags();
 	/* Acknowledge interaction while we're looking through the database */
 	co_await InteractionDefer(i, true);
 	/* Get user's ranking info from the database */
@@ -87,22 +85,24 @@ cGreekBot::process_rank(cAppCmdInteraction& i) HANDLER_BEGIN {
 	co_await ResumeOnEventThread();
 	/* Make sure that the selected user is a member of Learning Greek */
 	if (!member)
-		co_return co_await InteractionSendMessage(i, cMessageParams{
-			kw::embeds={ make_no_member_embed(user.Get(), m_guilds.at(m_lmg_id)->GetName(), !db_result.empty()) }
-		});
+		co_return co_await InteractionSendMessage(i, response.SetEmbeds({
+			make_no_member_embed(user.Get(), m_guilds.at(m_lmg_id)->GetName(), !db_result.empty())
+		}));
 	/* Respond */
 	cColor color = get_lmg_member_color(*member);
 	if (db_result.empty()) {
 		/* User not registered in the leaderboard */
-		co_await InteractionSendMessage(i, cMessageParams{
-			kw::embeds={make_no_xp_embed(*user, color)}
-		});
+		co_await InteractionSendMessage(i, response.SetEmbeds({
+			make_no_xp_embed(*user, color)
+		}));
 	} else {
 		/* Respond to interaction with a proper embed */
-		auto &res = db_result.front();
-		co_await InteractionSendMessage(i, cMessageParams{
-			kw::embeds={ make_embed(*user, color, res.GetRank(), res.GetXp(), res.GetNumMessages()) },
-			kw::components={
+		auto& res = db_result.front();
+		co_await InteractionSendMessage(i, response
+			.SetEmbeds({
+				make_embed(*user, color, res.GetRank(), res.GetXp(), res.GetNumMessages())
+			})
+			.SetComponents({
 				cActionRow{
 					cButton{
 						BUTTON_STYLE_SECONDARY,
@@ -110,22 +110,22 @@ cGreekBot::process_rank(cAppCmdInteraction& i) HANDLER_BEGIN {
 						kw::label="How does this work?"
 					}
 				}
-			}
-		});
+			})
+		);
 	}
 } HANDLER_END
 
 cTask<>
 cGreekBot::process_top(cAppCmdInteraction& i) HANDLER_BEGIN {
+	/* Prepare the response */
+	cMessageParams response;
 	/* Acknowledge interaction */
 	co_await InteractionDefer(i);
 	/* Get data from the database */
 	tRankQueryData db_result = co_await cDatabase::GetTop10();
 	co_await ResumeOnEventThread();
 	if (db_result.empty())
-		co_return co_await InteractionSendMessage(i, cMessageParams{
-			kw::content="I don't have any data yet. Start talking!"
-		});
+		co_return co_await InteractionSendMessage(i, response.SetContent("I don't have any data yet. Start talking!"));
 	/* Get members */
 	std::vector<cSnowflake> ids;
 	ids.reserve(db_result.size());
@@ -137,44 +137,41 @@ cGreekBot::process_top(cAppCmdInteraction& i) HANDLER_BEGIN {
 	for (auto it = co_await gen.begin(); it != gen.end(); co_await ++it)
 		members.push_back(std::move(*it));
 	/* Prepare embeds */
-	std::vector<cEmbed> es;
-	es.reserve(db_result.size());
+	auto& embeds = response.EmplaceEmbeds();
+	embeds.reserve(db_result.size());
 	for (auto &d: db_result) {
 		/* If the user is still a member of Learning Greek, make a regular embed */
 		auto m = std::find_if(members.begin(), members.end(), [&](const cMember& k) { return k.GetUser()->GetId() == *d.GetUserId(); });
 		if (m != members.end()) {
-			es.push_back(make_embed(*m->GetUser(), get_lmg_member_color(*m), d.GetRank(), d.GetXp(), d.GetNumMessages()));
+			embeds.push_back(make_embed(*m->GetUser(), get_lmg_member_color(*m), d.GetRank(), d.GetXp(), d.GetNumMessages()));
 			continue;
 		}
 		/* Otherwise, make a no-member embed */
-		std::string_view guild_name = m_guilds.at(m_lmg_id)->GetName();
+		std::optional<cUser> opt;
+		cUser* pUser = nullptr;
 		try {
-			cUser user = co_await GetUser(*d.GetUserId());
-			es.push_back(make_no_member_embed(&user, guild_name, true));
-		} catch (const xDiscordError& e) {
+			pUser = &opt.emplace(co_await GetUser(*d.GetUserId()));
+		} catch (const xDiscordError&) {
 			/* User object couldn't be retrieved, likely deleted */
-			es.push_back(make_no_member_embed(nullptr, guild_name, true));
 		}
+		embeds.push_back(make_no_member_embed(pUser, m_guilds.at(LMG_GUILD_ID)->GetName(), true));
 	}
 	/* Respond to interaction */
-	co_await InteractionSendMessage(i, cMessageParams{
-		kw::embeds=std::move(es),
-		kw::components={
-			cActionRow{
-				cButton{
-					BUTTON_STYLE_SECONDARY,
-					"LEADERBOARD_HELP",
-					kw::label="How does this work?"
-				}
+	co_await InteractionSendMessage(i, response.SetComponents({
+		cActionRow{
+			cButton{
+				BUTTON_STYLE_SECONDARY,
+				"LEADERBOARD_HELP",
+				kw::label="How does this work?"
 			}
 		}
-	});
+	}));
 } HANDLER_END
 
 cTask<>
 cGreekBot::process_leaderboard_help(cMsgCompInteraction& i) HANDLER_BEGIN {
-	co_await InteractionSendMessage(i, cMessageParams{
-		kw::flags=MESSAGE_FLAG_EPHEMERAL,
-		kw::content="Every minute that you're messaging, you randomly gain between 15 and 25 **XP**."
-	});
+	co_await InteractionSendMessage(i, cMessageParams()
+		.SetFlags(MESSAGE_FLAG_EPHEMERAL)
+		.SetContent("Every minute that you're messaging, you randomly gain between 15 and 25 **XP**.")
+	);
 } HANDLER_END

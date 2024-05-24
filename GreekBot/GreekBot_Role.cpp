@@ -60,10 +60,10 @@ cGreekBot::process_role_button(cMsgCompInteraction& i, uint32_t button_id) HANDL
 		case CMP_ID_POLL:
 			role_id = 650330610358943755;
 			if (std::find(roles.begin(), roles.end(), ROLE_ID_NATIVE) == roles.end())
-				co_return co_await InteractionSendMessage(i, cMessageParams{
-					kw::flags=MESSAGE_FLAG_EPHEMERAL,
-					kw::content=fmt::format("Sorry, <@&{}> is only available for <@{}>s!", role_id, (uint64_t) ROLE_ID_NATIVE)
-				});
+				co_return co_await InteractionSendMessage(i, cMessageParams()
+					.SetFlags(MESSAGE_FLAG_EPHEMERAL)
+					.SetContent(fmt::format("Sorry, <@&{}> is only available for <@{}>s!", role_id, (uint64_t)ROLE_ID_NATIVE))
+				);
 			break;
 		case CMP_ID_VCER:
 			role_id = 886625423167979541;
@@ -100,7 +100,7 @@ cGreekBot::process_proficiency_menu(cMsgCompInteraction& i) HANDLER_BEGIN {
 	std::vector<chSnowflake> roles;
 	roles.reserve(member->GetRoles().size() + 1);
 	/* Copy every member role except the proficiency ones */
-	for (auto &s: member->GetRoles()) {
+	for (auto& s: member->GetRoles()) {
 		if (std::find(std::begin(pr_roles), std::end(pr_roles), s) == std::end(pr_roles))
 			roles.push_back(&s);
 	}
@@ -153,8 +153,8 @@ cGreekBot::process_booster_menu(cMsgCompInteraction& i) HANDLER_BEGIN {
 		co_return co_await UpdateGuildMemberRoles(m_lmg_id, i.GetUser().GetId(), roles);
 	}
 	if (selected_id != 0)
-		co_await InteractionSendMessage(i, cMessageParams{
-			kw::flags=MESSAGE_FLAG_EPHEMERAL,
-			kw::content="Sorry, custom colors are only available for <@&593038680608735233>s!"
-		});
+		co_await InteractionSendMessage(i, cMessageParams()
+			.SetFlags(MESSAGE_FLAG_EPHEMERAL)
+			.SetContent("Sorry, custom colors are only available for <@&593038680608735233>s!")
+		);
 } HANDLER_END
