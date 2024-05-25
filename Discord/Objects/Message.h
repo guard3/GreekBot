@@ -35,18 +35,19 @@ enum eMessageType {
 };
 eMessageType tag_invoke(boost::json::value_to_tag<eMessageType>, const boost::json::value&);
 
-enum eMessageFlag {
+enum eMessageFlag : std::uint32_t {
 	MESSAGE_FLAG_NONE                                   = 0,
-	MESSAGE_FLAG_CROSSPOSTED                            = 1 << 0, // this message has been published to subscribed channels (via Channel Following)
-	MESSAGE_FLAG_IS_CROSSPOST                           = 1 << 1, // this message originated from a message in another channel (via Channel Following)
-	MESSAGE_FLAG_SUPPRESS_EMBEDS                        = 1 << 2, // do not include any embeds when serializing this message
-	MESSAGE_FLAG_SOURCE_MESSAGE_DELETED                 = 1 << 3, // the source message for this crosspost has been deleted (via Channel Following)
-	MESSAGE_FLAG_URGENT                                 = 1 << 4, // this message came from the urgent message system
-	MESSAGE_FLAG_HAS_THREAD                             = 1 << 5, // this message has an associated thread, with the same id as the message
-	MESSAGE_FLAG_EPHEMERAL                              = 1 << 6, // this message is only visible to the user who invoked the Interaction
-	MESSAGE_FLAG_LOADING                                = 1 << 7, // this message is an Interaction Response and the bot is "thinking"
-	MESSAGE_FLAG_FAILED_TO_MENTION_SOME_ROLES_IN_THREAD = 1 << 8, // this message failed to mention some roles and add their members to the thread
-
+	MESSAGE_FLAG_CROSSPOSTED                            = 1 << 0,  // this message has been published to subscribed channels (via Channel Following)
+	MESSAGE_FLAG_IS_CROSSPOST                           = 1 << 1,  // this message originated from a message in another channel (via Channel Following)
+	MESSAGE_FLAG_SUPPRESS_EMBEDS                        = 1 << 2,  // do not include any embeds when serializing this message
+	MESSAGE_FLAG_SOURCE_MESSAGE_DELETED                 = 1 << 3,  // the source message for this crosspost has been deleted (via Channel Following)
+	MESSAGE_FLAG_URGENT                                 = 1 << 4,  // this message came from the urgent message system
+	MESSAGE_FLAG_HAS_THREAD                             = 1 << 5,  // this message has an associated thread, with the same id as the message
+	MESSAGE_FLAG_EPHEMERAL                              = 1 << 6,  // this message is only visible to the user who invoked the Interaction
+	MESSAGE_FLAG_LOADING                                = 1 << 7,  // this message is an Interaction Response and the bot is "thinking"
+	MESSAGE_FLAG_FAILED_TO_MENTION_SOME_ROLES_IN_THREAD = 1 << 8,  // this message failed to mention some roles and add their members to the thread
+	MESSAGE_FLAG_SUPPRESS_NOTIFICATIONS                 = 1 << 12, // this message will not trigger push and desktop notifications
+	MESSAGE_FLAG_IS_VOICE_MESSAGE                       = 1 << 13, // this message is a voice message
 	/* Custom flags */
 	MESSAGE_FLAG_TTS              = 1 << 15, // this is a TTS message
 	MESSAGE_FLAG_MENTION_EVERYONE = 1 << 16  // this message mentions everyone
@@ -54,75 +55,127 @@ enum eMessageFlag {
 inline eMessageFlag operator|(eMessageFlag a, eMessageFlag b) { return (eMessageFlag)((int)a | (int)b); }
 inline eMessageFlag operator&(eMessageFlag a, eMessageFlag b) { return (eMessageFlag)((int)a & (int)b); }
 
-KW_DECLARE(flags, eMessageFlag)
-KW_DECLARE(content, std::string)
-
 /* TODO: make cMessage inherit from here */
-/* TODO: maybe also make a base discord object class? */
-/* Base class of cMessage; used for creating or editing messages */
+/* Base class of cMessage; used for creating messages */
 class cMessageParams {
 private:
-	eMessageFlag m_flags;
-	std::optional<std::string> m_content;
-	std::optional<std::vector<cActionRow>> m_components;
-	std::optional<std::vector<cEmbed>> m_embeds;
+	eMessageFlag            m_flags;
+	std::string             m_content;
+	std::vector<cActionRow> m_components;
+	std::vector<cEmbed>     m_embeds;
 
 public:
 	cMessageParams() noexcept : m_flags{ MESSAGE_FLAG_NONE } {}
-
+	/* Getters */
+	eMessageFlag                     GetFlags() const noexcept { return m_flags;      }
+	std::string_view               GetContent() const noexcept { return m_content;    }
+	std::span<const cActionRow> GetComponents() const noexcept { return m_components; }
+	std::span<const cEmbed>         GetEmbeds() const noexcept { return m_embeds;     }
+	/* Movers */
+	std::string                MoveContent() noexcept { return std::move(m_content);    }
+	std::vector<cActionRow> MoveComponents() noexcept { return std::move(m_components); }
+	std::vector<cEmbed>         MoveEmbeds() noexcept { return std::move(m_embeds);     }
+	/* Resetters */
 	void ResetFlags() noexcept {
 		m_flags = MESSAGE_FLAG_NONE;
 	}
 	void ResetContent() noexcept {
-		m_content.reset();
+		m_content.clear();
 	}
 	void ResetComponents() noexcept {
-		m_components.reset();
+		m_components.clear();
 	}
 	void ResetEmbeds() noexcept {
-		m_embeds.reset();
+		m_embeds.clear();
 	}
-
+	/* Setters */
 	cMessageParams& SetFlags(eMessageFlag flags) noexcept {
 		m_flags = flags;
 		return *this;
 	}
-	template<typename T = std::string> requires std::constructible_from<std::string, T&&>
-	cMessageParams& SetContent(T&& arg) {
-		m_content.emplace(std::forward<T>(arg));
+	template<typename T = decltype(m_content), typename Arg = T> requires std::constructible_from<T, Arg&&>
+	cMessageParams& SetContent(Arg&& arg) {
+		if constexpr (std::assignable_from<T&, Arg&&>) {
+			m_content = std::forward<Arg>(arg);
+		} else {
+			m_content = T(std::forward<Arg>(arg));
+		}
 		return *this;
 	}
-	template<typename T = std::vector<cActionRow>> requires std::constructible_from<std::vector<cActionRow>, T&&>
-	cMessageParams& SetComponents(T&& arg) {
-		m_components.emplace(std::forward<T>(arg));
+	template<typename T = decltype(m_components), typename Arg = T> requires std::constructible_from<T, Arg&&>
+	cMessageParams& SetComponents(Arg&& arg) {
+		if constexpr (std::assignable_from<T&, Arg&&>) {
+			m_components = std::forward<Arg>(arg);
+		} else {
+			m_components = T(std::forward<Arg>(arg));
+		}
 		return *this;
 	}
-	template<typename T = std::vector<cEmbed>> requires std::constructible_from<std::vector<cEmbed>, T&&>
-	cMessageParams& SetEmbeds(T&& arg) {
-		m_embeds.emplace(std::forward<T>(arg));
+	template<typename T = decltype(m_embeds), typename Arg = T> requires std::constructible_from<T, Arg&&>
+	cMessageParams& SetEmbeds(Arg&& arg) {
+		if constexpr (std::assignable_from<T&, Arg&&>) {
+			m_embeds = std::forward<Arg>(arg);
+		} else {
+			m_embeds = T(std::forward<Arg>(arg));
+		}
 		return *this;
 	}
-
-	eMessageFlag& EmplaceFlags(eMessageFlag flags) noexcept {
+	/* Emplacers */
+	eMessageFlag& EmplaceFlags(eMessageFlag flags = MESSAGE_FLAG_NONE) noexcept {
 		return m_flags = flags;
 	}
-	template<typename... Args> requires std::constructible_from<std::string, Args&&...>
-	std::string& EmplaceContent(Args&&... args) {
-		return m_content.emplace(std::forward<Args>(args)...);
+	std::string& EmplaceContent() noexcept {
+		m_content.clear();
+		return m_content;
 	}
-	template<typename... Args> requires std::constructible_from<std::vector<cActionRow>, Args&&...>
-	std::vector<cActionRow>& EmplaceComponents(Args&&... args) {
-		return m_components.emplace(std::forward<Args>(args)...);
+	template<typename T = std::string, typename Arg = T, typename... Args> requires std::constructible_from<T, Arg&&, Args&&...>
+	T& EmplaceContent(Arg&& arg, Args&&... args) {
+		if constexpr (std::assignable_from<T&, Arg&&> && sizeof...(Args) == 0) {
+			return m_content = std::forward<Arg>(arg);
+		} else try {
+			std::destroy_at(&m_content);
+			return *std::construct_at(&m_content, std::forward<Arg>(arg), std::forward<Args>(args)...);
+		} catch (...) {
+			std::construct_at(&m_content);
+			throw;
+		}
 	}
-	template<typename... Args> requires std::constructible_from<std::vector<cEmbed>, Args&&...>
-	std::vector<cEmbed>& EmplaceEmbeds(Args&&... args) {
-		return m_embeds.emplace(std::forward<Args>(args)...);
+	std::vector<cActionRow>& EmplaceComponents() noexcept {
+		m_components.clear();
+		return m_components;
 	}
-
-	friend void tag_invoke(const json::value_from_tag&, json::value& v, const cMessageParams&);
+	template<typename T = decltype(m_components), typename Arg = T, typename... Args> requires std::constructible_from<T, Arg&&, Args&&...>
+	T& EmplaceComponents(Arg&& arg, Args&&... args) {
+		if constexpr (std::assignable_from<T&, Arg&&> && sizeof...(Args) == 0) {
+			return m_components = std::forward<Arg>(arg);
+		} else try {
+			std::destroy_at(&m_components);
+			return *std::construct_at(&m_components, std::forward<Arg>(arg), std::forward<Args>(args)...);
+		} catch (...) {
+			std::construct_at(&m_components);
+			throw;
+		}
+	}
+	std::vector<cEmbed>& EmplaceEmbeds() noexcept {
+		m_embeds.clear();
+		return m_embeds;
+	}
+	template<typename T = decltype(m_embeds), typename Arg = T, typename... Args> requires std::constructible_from<T, Arg&&, Args&&...>
+	T& EmplaceEmbeds(Arg&& arg, Args&&... args) {
+		if constexpr (std::assignable_from<T&, Arg&&> && sizeof...(Args) == 0) {
+			return m_embeds = std::forward<Arg>(arg);
+		} else try {
+			std::destroy_at(&m_embeds);
+			return *std::construct_at(&m_embeds, std::forward<Arg>(arg), std::forward<Args>(args)...);
+		} catch (...) {
+			std::construct_at(&m_embeds);
+			throw;
+		}
+	}
 };
 
-void tag_invoke(const json::value_from_tag&, json::value& v, const cMessageParams&);
+void
+tag_invoke(json::value_from_tag, json::value& v, const cMessageParams&);
 
 class cMessageUpdate final {
 private:
