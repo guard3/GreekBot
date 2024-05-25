@@ -236,7 +236,8 @@ static cEmbed make_no_member_embed(const cUser* pUser, std::string_view guild_na
 
 cTask<>
 cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) HANDLER_BEGIN {
-	std::vector<cEmbed> embeds;
+	cMessageParams response;
+	auto& embeds = response.EmplaceEmbeds();
 	/* Check which subcommand was invoked */
 	switch (auto& subcommand = i.GetOptions().front(); cUtils::CRC32(0, subcommand.GetName())) {
 		default:
@@ -252,16 +253,12 @@ cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) HANDLER_BEGIN {
 				member = i.GetMember();
 			}
 			/* Limit the command to regular users */
+			response.SetFlags(MESSAGE_FLAG_EPHEMERAL);
 			if (user->IsBotUser())
-				co_return co_await InteractionSendMessage(i, cMessageParams{
-					kw::flags=MESSAGE_FLAG_EPHEMERAL,
-					kw::content="Ranking isn't available for bot users."
-				});
+				co_return co_await InteractionSendMessage(i, response.SetContent("Ranking isn't available for bot users."));
 			if (user->IsSystemUser())
-				co_return co_await InteractionSendMessage(i, cMessageParams{
-					kw::flags=MESSAGE_FLAG_EPHEMERAL,
-					kw::content="Ranking isn't available for system users."
-				});
+				co_return co_await InteractionSendMessage(i, response.SetContent("Ranking isn't available for system users."));
+			response.ResetFlags();
 			/* Acknowledge the interaction since we'll be accessing the database */
 			co_await InteractionDefer(i);
 			/* Retrieve user's starboard entry */
@@ -301,11 +298,8 @@ cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) HANDLER_BEGIN {
 			co_await InteractionDefer(i);
 			/* Retrieve the top 10 entries for starboard */
 			auto results = co_await cDatabase::SB_GetTop10(REACTION_THRESHOLD);
-			co_await ResumeOnEventThread();
 			if (results.empty())
-				co_return co_await InteractionSendMessage(i, cMessageParams{
-					kw::content="I have no <:Holy:409075809723219969> data yet. Y'all boring as fuck!"
-				});
+				co_return co_await InteractionSendMessage(i, response.SetContent("I have no <:Holy:409075809723219969> data yet. Y'all boring as fuck!"));
 			/* Retrieve members */
 			std::vector<cMember> members;
 			{
@@ -343,24 +337,21 @@ cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) HANDLER_BEGIN {
 		}
 	}
 	/* Send the message with the created embeds */
-	co_await InteractionSendMessage(i, cMessageParams{
-		kw::embeds=std::move(embeds),
-		kw::components={
-			cActionRow{
-				cButton{
-					BUTTON_STYLE_SECONDARY,
-					"STARBOARD_HELP",
-					kw::label="How does this work?"
-				}
+	co_await InteractionSendMessage(i, response.SetComponents({
+		cActionRow{
+			cButton{
+				BUTTON_STYLE_SECONDARY,
+				"STARBOARD_HELP",
+				kw::label="How does this work?"
 			}
 		}
-	});
+	}));
 } HANDLER_END
 
 cTask<>
 cGreekBot::process_starboard_help(cMsgCompInteraction& i) HANDLER_BEGIN {
-	co_await InteractionSendMessage(i, cMessageParams{
-		kw::flags=MESSAGE_FLAG_EPHEMERAL,
-		kw::content="When a message receives **5 or more** <:Holy:409075809723219969> reactions, it gets to appear in <#978993330694266920>. Reacting to *your own* messages doesn't count!"
-	});
+	co_await InteractionSendMessage(i, cMessageParams()
+		.SetFlags(MESSAGE_FLAG_EPHEMERAL)
+		.SetContent("When a message receives **5 or more** <:Holy:409075809723219969> reactions, it gets to appear in <#978993330694266920>. Reacting to *your own* messages doesn't count!")
+	);
 } HANDLER_END

@@ -67,21 +67,8 @@ private:
 	std::optional<std::vector<cActionRow>> m_components;
 	std::optional<std::vector<cEmbed>> m_embeds;
 
-	template<kw::key... Keys>
-	cMessageParams(kw::pack<Keys...> pack): m_flags(kw::get<"flags">(pack, MESSAGE_FLAG_NONE)) {
-		if (auto p = kw::get_if<"content">(pack); p)
-			m_content.emplace(std::move(*p));
-		if (auto p = kw::get_if<"components">(pack); p)
-			m_components.emplace(std::move(*p));
-		if (auto p = kw::get_if<"embeds">(pack); p)
-			m_embeds.emplace(std::move(*p));
-	}
-
 public:
 	cMessageParams() noexcept : m_flags{ MESSAGE_FLAG_NONE } {}
-	template<kw::key... Keys>
-	[[deprecated]]
-	explicit cMessageParams(kw::arg<Keys>&... kwargs) : cMessageParams(kw::pack{ kwargs... }) {}
 
 	void ResetFlags() noexcept {
 		m_flags = MESSAGE_FLAG_NONE;

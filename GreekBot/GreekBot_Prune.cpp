@@ -3,37 +3,34 @@
 
 cTask<>
 cGreekBot::process_prune(cAppCmdInteraction& i) HANDLER_BEGIN {
+	cMessageParams response;
 	/* Make sure that the user has the necessary permissions */
 	if (!(i.GetMember()->GetPermissions() & PERM_KICK_MEMBERS))
-		co_return co_await InteractionSendMessage(i, cMessageParams{
-			kw::flags=MESSAGE_FLAG_EPHEMERAL,
-			kw::content="You can't do that. You're missing the `KICK_MEMBERS` permission."
-		});
+		co_return co_await InteractionSendMessage(i, response
+			.SetFlags(MESSAGE_FLAG_EPHEMERAL)
+			.SetContent("You can't do that. You're missing the `KICK_MEMBERS` permission.")
+		);
 	/* How many days of inactivity to consider */
 	int days = i.GetOptions().empty() ? 2 : i.GetOptions().front().GetValue<APP_CMD_OPT_INTEGER>();
 	/* Prune */
 	co_await InteractionDefer(i);
-	std::string str;
 	try {
 		int pruned = co_await BeginGuildPrune(*i.GetGuildId(), days, "Failed to get a rank");
-		str = fmt::format("Pruned **{}** member{} for **{}** day{} of inactivity.", pruned, pruned == 1 ? "" : "s", days, days == 1 ? "" : "s");
+		response.SetContent(fmt::format("Pruned **{}** member{} for **{}** day{} of inactivity.", pruned, pruned == 1 ? "" : "s", days, days == 1 ? "" : "s"));
 	}
 	catch (const xRateLimitError& e) {
-		str = fmt::format("Rate limited. Try again after **{}**.", e.retry_after());
+		response.SetContent(fmt::format("Rate limited. Try again after **{}**.", e.retry_after()));
 	}
 	/* Send confirmation message */
-	co_await InteractionSendMessage(i, cMessageParams{
-		kw::content=std::move(str),
-		kw::components={
-			cActionRow{
-				cButton{
-					BUTTON_STYLE_SECONDARY,
-					fmt::format("DLT#{}", i.GetUser().GetId()),
-					kw::label = "Dismiss"
-				}
+	co_await InteractionSendMessage(i, response.SetComponents({
+		cActionRow{
+			cButton{
+				BUTTON_STYLE_SECONDARY,
+				fmt::format("DLT#{}", i.GetUser().GetId()),
+				kw::label = "Dismiss"
 			}
 		}
-	});
+	}));
 } HANDLER_END
 
 cTask<>
@@ -42,10 +39,10 @@ cGreekBot::process_prune_lmg(cAppCmdInteraction& i) HANDLER_BEGIN {
 	using namespace std::chrono_literals;
 	/* Check that the invoking member has the appropriate permissions for extra security measure */
 	if (!(i.GetMember()->GetPermissions() & PERM_KICK_MEMBERS))
-		co_return co_await InteractionSendMessage(i, cMessageParams{
-			kw::flags=MESSAGE_FLAG_EPHEMERAL,
-			kw::content="You can't do that. You're missing the `KICK_MEMBERS` permission."
-		});
+		co_return co_await InteractionSendMessage(i, cMessageParams()
+			.SetFlags(MESSAGE_FLAG_EPHEMERAL)
+			.SetContent("You can't do that. You're missing the `KICK_MEMBERS` permission.")
+		);
 	/* Acknowledge */
 	co_await InteractionDefer(i);
 	/* How many days of inactivity to consider */
@@ -97,9 +94,9 @@ cGreekBot::process_prune_lmg(cAppCmdInteraction& i) HANDLER_BEGIN {
 			}
 		}
 	}
-	co_await InteractionSendMessage(i, cMessageParams{
-		kw::content=fmt::format("Pruned **{}** member{} for **{}** day{} of inactivity.", total, total == 1 ? "" : "s", num_days, num_days == 1 ? "" : "s"),
-		kw::components={
+	co_await InteractionSendMessage(i, cMessageParams()
+		.SetContent(fmt::format("Pruned **{}** member{} for **{}** day{} of inactivity.", total, total == 1 ? "" : "s", num_days, num_days == 1 ? "" : "s"))
+		.SetComponents({
 			cActionRow{
 				cButton{
 					BUTTON_STYLE_SECONDARY,
@@ -107,6 +104,6 @@ cGreekBot::process_prune_lmg(cAppCmdInteraction& i) HANDLER_BEGIN {
 					kw::label="Dismiss"
 				}
 			}
-		}
-	});
+		})
+	);
 } HANDLER_END

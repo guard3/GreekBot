@@ -4,10 +4,10 @@ cTask<>
 cGreekBot::process_nickname_button(cMsgCompInteraction& i, const cSnowflake& user_id) HANDLER_BEGIN {
 	/* Make sure that the invoking member has the appropriate permissions */
 	if (!(i.GetMember()->GetPermissions() & PERM_MANAGE_NICKNAMES)) {
-		co_return co_await InteractionSendMessage(i, cMessageParams{
-			kw::flags=MESSAGE_FLAG_EPHEMERAL,
-			kw::content="You can't do that. You're missing the `MANAGE_NICKNAMES` permission."
-		});
+		co_return co_await InteractionSendMessage(i, cMessageParams()
+			.SetFlags(MESSAGE_FLAG_EPHEMERAL)
+			.SetContent("You can't do that. You're missing the `MANAGE_NICKNAMES` permission.")
+		);
 	}
 	/* Respond with a modal */
 	co_await InteractionSendModal(i, cModal{
@@ -30,10 +30,10 @@ cTask<>
 cGreekBot::process_modal(cModalSubmitInteraction& i) HANDLER_BEGIN {
 	/* Make sure, yet again, that the invoking member has the appropriate permissions */
 	if (!(i.GetMember()->GetPermissions() & PERM_MANAGE_NICKNAMES)) {
-		co_return co_await InteractionSendMessage(i, cMessageParams{
-			kw::flags=MESSAGE_FLAG_EPHEMERAL,
-			kw::content="You can't do that. You're missing the `MANAGE_NICKNAMES` permission."
-		});
+		co_return co_await InteractionSendMessage(i, cMessageParams()
+			.SetFlags(MESSAGE_FLAG_EPHEMERAL)
+			.SetContent("You can't do that. You're missing the `MANAGE_NICKNAMES` permission.")
+		);
 	}
 	/* Acknowledge the interaction immediately */
 	co_await InteractionDefer(i);
