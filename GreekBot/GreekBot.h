@@ -36,6 +36,7 @@ void unhandled_exception(const char*);
 
 class cGreekBot final : public cBot {
 private:
+	[[deprecated]]
 	const cSnowflake m_lmg_id = 350234668680871946; // Learning Greek
 
 	std::vector<cRole> m_lmg_roles;
