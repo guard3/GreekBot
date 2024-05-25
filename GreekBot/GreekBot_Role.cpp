@@ -81,10 +81,10 @@ cGreekBot::process_role_button(cMsgCompInteraction& i, uint32_t button_id) HANDL
 	co_await InteractionDefer(i);
 	cMessageParams response;
 	if (rng::find(roles, role_id) == rng::end(roles)) {
-		co_await AddGuildMemberRole(m_lmg_id, i.GetUser().GetId(), role_id);
+		co_await AddGuildMemberRole(LMG_GUILD_ID, i.GetUser(), role_id);
 		response.SetContent(fmt::format("I gave you the <@&{}> role!", role_id));
 	} else {
-		co_await RemoveGuildMemberRole(m_lmg_id, i.GetUser().GetId(), role_id);
+		co_await RemoveGuildMemberRole(LMG_GUILD_ID, i.GetUser(), role_id);
 		response.SetContent(fmt::format("I took away your <@&{}> role!", role_id));
 	}
 	co_await InteractionSendMessage(i, response.SetFlags(MESSAGE_FLAG_EPHEMERAL));

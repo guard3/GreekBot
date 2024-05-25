@@ -5,7 +5,7 @@ static const cSnowflake NEW_MEMBERS_CHANNEL_ID = 1143888492422770778;
 
 cTask<>
 cGreekBot::OnGuildMemberAdd(cSnowflake& guild_id, cMember& member) {
-	if (guild_id == m_lmg_id) {
+	if (guild_id == LMG_GUILD_ID) {
 		if (const uint64_t old_msg_id = co_await cDatabase::WC_RegisterMember(member); old_msg_id != 0) try {
 			co_await DeleteMessage(NEW_MEMBERS_CHANNEL_ID, old_msg_id);
 		}
@@ -17,7 +17,7 @@ cTask<>
 cGreekBot::OnGuildMemberUpdate(cSnowflake& guild_id, cMemberUpdate& member) {
 	/* If a member has 1 or more roles, it means they *may* be candidates for welcoming */
 	// TODO: Actually check for proficiency roles since MEE6 gives old roles to members that come back, YIKES!
-	if (guild_id == m_lmg_id && !member.GetRoles().empty() && !member.IsPending()) {
+	if (guild_id == LMG_GUILD_ID && !member.GetRoles().empty() && !member.IsPending()) {
 		/* Check if there's a message registered in the database for this member */
 		const int64_t msg_id = co_await cDatabase::WC_GetMessage(member);
 		if (msg_id == 0 && member.GetNickname().empty()) {
@@ -65,7 +65,7 @@ cGreekBot::OnGuildMemberUpdate(cSnowflake& guild_id, cMemberUpdate& member) {
 
 cTask<>
 cGreekBot::OnGuildMemberRemove(cSnowflake& guild_id, cUser& user) {
-	if (guild_id == m_lmg_id) {
+	if (guild_id == LMG_GUILD_ID) {
 		if (uint64_t msg_id = co_await cDatabase::WC_DeleteMember(user); msg_id != 0) try {
 			co_await DeleteMessage(NEW_MEMBERS_CHANNEL_ID, msg_id);
 		}

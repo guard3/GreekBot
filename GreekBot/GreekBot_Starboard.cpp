@@ -24,7 +24,7 @@ cGreekBot::OnMessageReactionAdd(cSnowflake& user_id, cSnowflake& channel_id, cSn
 	/* Make sure that we're in Learning Greek and that the emoji is :Holy: */
 	if (!guild_id || !emoji.GetId())
 		co_return;
-	if (*guild_id != m_lmg_id || *emoji.GetId() != HOLY_EMOJI_ID)
+	if (*guild_id != LMG_GUILD_ID || *emoji.GetId() != HOLY_EMOJI_ID)
 		co_return;
 	/* Also make sure that we're not in an excluded channel */
 	if (std::binary_search(std::begin(excluded_channels), std::end(excluded_channels), channel_id))
@@ -47,7 +47,7 @@ cTask<>
 cGreekBot::OnMessageReactionRemove(cSnowflake& user_id, cSnowflake& channel_id, cSnowflake& message_id, hSnowflake guild_id, cEmoji& emoji) {
 	/* Make sure that we're in Learning Greek and that the emoji is :Holy: */
 	if (!guild_id || !emoji.GetId()) co_return;
-	if (*guild_id != m_lmg_id || *emoji.GetId() != HOLY_EMOJI_ID) co_return;
+	if (*guild_id != LMG_GUILD_ID || *emoji.GetId() != HOLY_EMOJI_ID) co_return;
 	/* Also make sure that we're not in an excluded channel */
 	if (std::binary_search(std::begin(excluded_channels), std::end(excluded_channels), channel_id))
 		co_return;
@@ -84,7 +84,7 @@ cGreekBot::process_reaction(const cSnowflake& channel_id, const cSnowflake& mess
 			reaction = "<a:spin:1167594572050866207>";
 			break;
 	}
-	auto content = fmt::format("{} **{}** https://discord.com/channels/{}/{}/{}", reaction, num_reactions, m_lmg_id, channel_id, message_id);
+	auto content = fmt::format("{} **{}** https://discord.com/channels/{}/{}/{}", reaction, num_reactions, LMG_GUILD_ID, channel_id, message_id);
 	/* If there is a message id registered in the database, edit the message with the new number of reactions */
 	if (sb_msg_id) {
 		co_await EditMessage(HOLY_CHANNEL_ID, sb_msg_id, cMessageUpdate().SetContent(std::move(content)));
@@ -94,7 +94,7 @@ cGreekBot::process_reaction(const cSnowflake& channel_id, const cSnowflake& mess
 	std::optional<cMessage> opt;
 	if (!msg)
 		msg = &opt.emplace(co_await GetChannelMessage(channel_id, message_id));
-	cMember author_member = co_await GetGuildMember(m_lmg_id, msg->GetAuthor().GetId());
+	cMember author_member = co_await GetGuildMember(LMG_GUILD_ID, msg->GetAuthor().GetId());
 	cUser&  author_user = *author_member.GetUser();
 	/* Prepare the message response with a preview embed */
 	cMessageParams response;
@@ -180,8 +180,8 @@ cGreekBot::process_reaction(const cSnowflake& channel_id, const cSnowflake& mess
 cTask<>
 cGreekBot::OnMessageReactionRemoveAll(cSnowflake& channel_id, cSnowflake& message_id, hSnowflake guild_id) {
 	/* Make sure we're in Learning Greek */
-	if (!guild_id) co_return;
-	if (*guild_id != m_lmg_id) co_return;
+	if (!guild_id || *guild_id != LMG_GUILD_ID)
+		co_return;
 	/* Delete the message from the channel and the database (if found) */
 	if (int64_t sb_msg_id = co_await cDatabase::SB_RemoveAll(message_id))
 		co_await DeleteMessage(HOLY_CHANNEL_ID, sb_msg_id);
@@ -189,8 +189,8 @@ cGreekBot::OnMessageReactionRemoveAll(cSnowflake& channel_id, cSnowflake& messag
 cTask<>
 cGreekBot::OnMessageReactionRemoveEmoji(cSnowflake& channel_id, cSnowflake& message_id, hSnowflake guild_id, cEmoji& emoji) {
 	/* Make sure we're in Learning Greek and that the emoji is :Holy: */
-	if (!guild_id || !emoji.GetId()) co_return;
-	if (*guild_id != m_lmg_id || *emoji.GetId() != HOLY_EMOJI_ID) co_return;
+	if (!guild_id || *guild_id != LMG_GUILD_ID || !emoji.GetId() || *emoji.GetId() != HOLY_EMOJI_ID)
+		co_return;
 	/* Delete the message from the channel and the database (if found) */
 	if (int64_t sb_msg_id = co_await cDatabase::SB_RemoveAll(message_id))
 		co_await DeleteMessage(HOLY_CHANNEL_ID, sb_msg_id);
@@ -269,7 +269,7 @@ cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) HANDLER_BEGIN {
 			co_await ResumeOnEventThread();
 			/* If the user isn't a member of Learning Greek... */
 			if (!member) {
-				embeds.push_back(make_no_member_embed(user.Get(), m_guilds.at(m_lmg_id)->GetName(), !results.empty()));
+				embeds.push_back(make_no_member_embed(user.Get(), m_guilds.at(LMG_GUILD_ID)->GetName(), !results.empty()));
 				break;
 			}
 			cColor color = get_lmg_member_color(*member);
@@ -313,7 +313,7 @@ cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) HANDLER_BEGIN {
 				ids.reserve(10);
 				for (auto &e: results)
 					ids.push_back(e.author_id);
-				auto gen = GetGuildMembers(m_lmg_id, kw::user_ids=std::move(ids));
+				auto gen = GetGuildMembers(LMG_GUILD_ID, kw::user_ids=std::move(ids));
 				members.reserve(10);
 				for (auto it = co_await gen.begin(); it != gen.end(); co_await ++it)
 					members.push_back(std::move(*it));
@@ -326,7 +326,7 @@ cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) HANDLER_BEGIN {
 				});
 				if (it == members.end()) {
 					/* If there's no member object for a user, then this user isn't a member of Learning Greek anymore */
-					auto& guild_name = m_guilds.at(m_lmg_id)->GetName();
+					auto& guild_name = m_guilds.at(LMG_GUILD_ID)->GetName();
 					try {
 						cUser user = co_await GetUser(entry.author_id);
 						embeds.push_back(make_no_member_embed(&user, guild_name, true));

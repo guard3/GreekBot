@@ -32,13 +32,13 @@ cBot::GetGuildMember(const cSnowflake &guild_id, const cSnowflake &user_id) {
 }
 
 cTask<>
-cBot::AddGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake &role_id) {
-	co_await DiscordPut(fmt::format("/guilds/{}/members/{}/roles/{}", guild_id, user_id, role_id));
+cBot::AddGuildMemberRole(const cSnowflake& guild_id, crefUser user, const cSnowflake &role_id) {
+	co_await DiscordPut(fmt::format("/guilds/{}/members/{}/roles/{}", guild_id, user.GetId(), role_id));
 }
 
 cTask<>
-cBot::RemoveGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake &role_id) {
-	co_await DiscordDelete(fmt::format("/guilds/{}/members/{}/roles/{}", guild_id, user_id, role_id));
+cBot::RemoveGuildMemberRole(const cSnowflake& guild_id, crefUser user, const cSnowflake &role_id) {
+	co_await DiscordDelete(fmt::format("/guilds/{}/members/{}/roles/{}", guild_id, user.GetId(), role_id));
 }
 
 cTask<>

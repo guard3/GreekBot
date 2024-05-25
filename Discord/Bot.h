@@ -37,8 +37,8 @@ public:
 	cTask<cUser> GetUser(const cSnowflake& user_id);
 	cTask<cMember> GetGuildMember(const cSnowflake& guild_id, const cSnowflake& user_id);
 	cTask<std::vector<cRole>> GetGuildRoles(const cSnowflake& guild_id);
-	cTask<> AddGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake& role_id);
-	cTask<> RemoveGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake& role_id);
+	cTask<> AddGuildMemberRole(const cSnowflake& guild_id, crefUser user, const cSnowflake& role_id);
+	cTask<> RemoveGuildMemberRole(const cSnowflake& guild_id, crefUser user, const cSnowflake& role_id);
 	/* Interactions - Defer message or update */
 	cTask<> InteractionDefer(const cAppCmdInteraction&, bool thinking = false);
 	cTask<> InteractionDefer(const cMsgCompInteraction&, bool thinking = false);

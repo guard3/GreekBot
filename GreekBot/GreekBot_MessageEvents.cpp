@@ -1,6 +1,5 @@
 #include "Database.h"
 #include "GreekBot.h"
-#include "Utils.h"
 #include "CDN.h"
 #include <algorithm>
 
@@ -9,7 +8,7 @@ static const cSnowflake MESSAGE_LOG_CHANNEL_ID = 539521989061378048;
 cTask<>
 cGreekBot::OnMessageCreate(cMessage& msg, hSnowflake guild_id, hPartialMember member) {
 	/* Make sure we're in Learning Greek and that the message author is a real user */
-	if (cUser& author = msg.GetAuthor(); guild_id && *guild_id == m_lmg_id && !author.IsBotUser() && !author.IsSystemUser()) {
+	if (cUser& author = msg.GetAuthor(); guild_id && *guild_id == LMG_GUILD_ID && !author.IsBotUser() && !author.IsSystemUser()) {
 		/* Save message for logging purposes */
 		co_await cDatabase::RegisterMessage(msg);
 		/* Update leaderboard */
@@ -53,7 +52,7 @@ cGreekBot::OnMessageUpdate(cMessageUpdate& msg, hSnowflake guild_id, hPartialMem
 cTask<>
 cGreekBot::OnMessageDelete(cSnowflake& message_id, cSnowflake& channel_id, hSnowflake guild_id) {
 	/* Make sure we're in Learning Greek */
-	if (guild_id && *guild_id == m_lmg_id) {
+	if (guild_id && *guild_id == LMG_GUILD_ID) {
 		/* Delete message from the database and report to the log channel */
 		if (auto db_msg = co_await cDatabase::DeleteMessage(message_id)) try {
 			std::optional<cUser> user;
@@ -83,7 +82,7 @@ cGreekBot::OnMessageDelete(cSnowflake& message_id, cSnowflake& channel_id, hSnow
 cTask<>
 cGreekBot::OnMessageDeleteBulk(std::span<cSnowflake> ids, cSnowflake& channel_id, hSnowflake guild_id) {
 	/* Make sure we're in Learning Greek */
-	if (guild_id && *guild_id == m_lmg_id) {
+	if (guild_id && *guild_id == LMG_GUILD_ID) {
 		try {
 			/* Delete messages from the database */
 			auto db_msgs = co_await cDatabase::DeleteMessages(ids);
