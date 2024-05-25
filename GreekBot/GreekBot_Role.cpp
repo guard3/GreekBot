@@ -1,6 +1,9 @@
 #include "GreekBot.h"
 #include "Utils.h"
 #include <algorithm>
+#include <iterator>
+/* ================================================================================================================== */
+namespace rng = std::ranges;
 /* ================================================================================================================== */
 enum : uint32_t {
 	CMP_ID_HERITAGE_SPEAKER    = 0x6691F68D,
@@ -59,7 +62,7 @@ cGreekBot::process_role_button(cMsgCompInteraction& i, uint32_t button_id) HANDL
 			break;
 		case CMP_ID_POLL:
 			role_id = 650330610358943755;
-			if (std::find(roles.begin(), roles.end(), ROLE_ID_NATIVE) == roles.end())
+			if (rng::find(roles, ROLE_ID_NATIVE) == rng::end(roles))
 				co_return co_await InteractionSendMessage(i, cMessageParams()
 					.SetFlags(MESSAGE_FLAG_EPHEMERAL)
 					.SetContent(fmt::format("Sorry, <@&{}> is only available for <@{}>s!", role_id, (uint64_t)ROLE_ID_NATIVE))
@@ -76,10 +79,15 @@ cGreekBot::process_role_button(cMsgCompInteraction& i, uint32_t button_id) HANDL
 			co_return;
 	}
 	co_await InteractionDefer(i);
-	if (std::find(roles.begin(), roles.end(), role_id) == roles.end())
+	cMessageParams response;
+	if (rng::find(roles, role_id) == rng::end(roles)) {
 		co_await AddGuildMemberRole(m_lmg_id, i.GetUser().GetId(), role_id);
-	else
+		response.SetContent(fmt::format("I gave you the <@&{}> role!", role_id));
+	} else {
 		co_await RemoveGuildMemberRole(m_lmg_id, i.GetUser().GetId(), role_id);
+		response.SetContent(fmt::format("I took away your <@&{}> role!", role_id));
+	}
+	co_await InteractionSendMessage(i, response.SetFlags(MESSAGE_FLAG_EPHEMERAL));
 } HANDLER_END
 /* ================================================================================================================== */
 cTask<>
@@ -95,66 +103,76 @@ cGreekBot::process_proficiency_menu(cMsgCompInteraction& i) HANDLER_BEGIN {
 		ROLE_ID_FLUENT,
 		ROLE_ID_NON_LEARNER
 	};
-	/* Create a role vector */
-	hPartialMember member = i.GetMember();
-	std::vector<chSnowflake> roles;
-	roles.reserve(member->GetRoles().size() + 1);
-	/* Copy every member role except the proficiency ones */
-	for (auto& s: member->GetRoles()) {
-		if (std::find(std::begin(pr_roles), std::end(pr_roles), s) == std::end(pr_roles))
-			roles.push_back(&s);
-	}
-	/* Append the selected role id */
-	cSnowflake id = i.GetValues().front();
-	roles.push_back(&id);
-	/* Acknowledge interaction */
 	co_await InteractionDefer(i);
-	/* Update member */
-	co_await UpdateGuildMemberRoles(m_lmg_id, i.GetUser().GetId(), roles);
+	auto member_roles = i.GetMember()->GetRoles();
+	/* Add roles to member update options */
+	cMemberOptions options;
+	auto& roles = options.EmplaceRoles();
+	roles.reserve(member_roles.size() + 1);
+	/* Copy all member roles, except the proficiency ones */
+	rng::copy_if(member_roles, std::back_inserter(roles), [](cSnowflake& role_id) {
+		return rng::find(pr_roles, role_id) == rng::end(pr_roles);
+	});
+	/* Append the selected role id */
+	auto selected_role_id = i.GetValues().front();
+	roles.emplace_back(selected_role_id);
+	/* Update member and send confirmation message */
+	co_await ModifyGuildMember(*i.GetGuildId(), i.GetUser().GetId(), options);
+	co_await InteractionSendMessage(i, cMessageParams()
+		.SetFlags(MESSAGE_FLAG_EPHEMERAL)
+		.SetContent(fmt::format("I gave you the <@&{}> role!", selected_role_id))
+	);
 } HANDLER_END
 /* ================================================================================================================== */
 cTask<>
 cGreekBot::process_booster_menu(cMsgCompInteraction& i) HANDLER_BEGIN {
-	using namespace std::chrono_literals;
-	/* All the color roles available in Learning Greek */
+	using namespace std::chrono;
+	/* All the color roles available in Learning Greek; sorted for binary search to work */
 	static const cSnowflake color_roles[] {
-		777323857018617877,  // @Μπεκρής
-		657145859439329280,  // @Κακούλης
-		677183404743327764,  // @Πορτοκαλί
-		735954079355895889,  // @Μέλας
-		1209641598967750656, // @Ροζουλής
+		 657145859439329280, // @Κακούλης
+		 677183404743327764, // @Πορτοκαλί
+		 735954079355895889, // @Μέλας
+		 755763454266179595, // @Λεμόνι
+		 777323857018617877, // @Μπεκρής
+		 793570278084968488, // @Γύπας
+		 925379778251485206, // @Δογκ
+		 941041008169336913, // @Πολωνός
 		1109212629882392586, // @Τούρκος
-		941041008169336913,  // @Πολωνός
-		755763454266179595,  // @Λεμόνι
-		1156980445058170991, // @Πίκατσου
-		793570278084968488,  // @Γύπας
-		925379778251485206,  // @Δογκ
 		1121773567785308181, // @Πέγκω
-		1163945469567832215  // @Κόκκινο Πάντα
+		1156980445058170991, // @Πίκατσου
+		1163945469567832215, // @Κόκκινο Πάντα
+		1209641598967750656  // @Ροζουλής
 	};
 	/* Acknowledge interaction */
 	co_await InteractionDefer(i);
+	/* Prepare confirmation message */
+	cMessageParams response;
+	response.SetFlags(MESSAGE_FLAG_EPHEMERAL);
 	/* Create a new role vector */
-	hPartialMember member = i.GetMember();
-	std::vector<chSnowflake> roles;
-	roles.reserve(member->GetRoles().size() + 1);
-	/* Fill the vector with all the roles the member has except the color ones */
-	for (auto& id : member->GetRoles()) {
-		if (std::find(std::begin(color_roles), std::end(color_roles), id) == std::end(color_roles))
-			roles.push_back(&id);
-	}
+	auto member = i.GetMember();
+	auto member_roles = member->GetRoles();
+	cMemberOptions options;
+	auto& roles = options.EmplaceRoles();
+	roles.reserve(member_roles.size() + 1);
+	/* Copy all roles, except the color ones */
+	rng::copy_if(member_roles, std::back_inserter(roles), [](cSnowflake& role_id) {
+		return !rng::binary_search(color_roles, role_id);
+	});
 	/* Retrieve the selected role id */
 	cSnowflake selected_id = i.GetValues().front();
 	/* Include the selected role id if the user is boosting */
-	if (member->PremiumSince().time_since_epoch() > 0s) {
-		if (selected_id != 0) {
-			roles.push_back(&selected_id);
-		}
-		co_return co_await UpdateGuildMemberRoles(m_lmg_id, i.GetUser().GetId(), roles);
+	if (member->PremiumSince() > sys_seconds{}) {
+		if (selected_id != 0)
+			roles.push_back(selected_id);
+		/* Update member and send confirmation message */
+		co_await ModifyGuildMember(LMG_GUILD_ID, i.GetUser().GetId(), options);
+		if (selected_id != 0)
+			response.SetContent(fmt::format("I gave you the <@&{}> role!", selected_id));
+		else if (roles.size() < member_roles.size())
+			response.SetContent("I took away your color role!");
+		else co_return;
+		co_return co_await InteractionSendMessage(i, response);
 	}
 	if (selected_id != 0)
-		co_await InteractionSendMessage(i, cMessageParams()
-			.SetFlags(MESSAGE_FLAG_EPHEMERAL)
-			.SetContent("Sorry, custom colors are only available for <@&593038680608735233>s!")
-		);
+		co_await InteractionSendMessage(i, response.SetContent("Sorry, custom colors are only available for <@&593038680608735233>s!"));
 } HANDLER_END

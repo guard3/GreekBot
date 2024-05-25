@@ -59,12 +59,10 @@ tag_invoke(json::value_to_tag<cMember>, const json::value& v) {
 	return cMember{ v };
 }
 void
-tag_invoke(const json::value_from_tag&, json::value& v, const cMemberOptions& m) {
+tag_invoke(json::value_from_tag, json::value& v, const cMemberOptions& m) {
 	json::object& obj = v.emplace_object();
-	if (m.m_nick) {
-		if (m.m_nick->empty())
-			obj.emplace("nick", nullptr);
-		else
-			obj.emplace("nick", *m.m_nick);
-	}
+	if (m.m_nick)
+		obj.emplace("nick", *m.m_nick);
+	if (m.m_roles)
+		json::value_from(*m.m_roles, obj["roles"]);
 }

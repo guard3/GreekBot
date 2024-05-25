@@ -6,26 +6,31 @@
 #include <span>
 #include <optional>
 
-KW_DECLARE(nick, std::string_view)
-
 /* TODO: Maybe make cMemberOptions and cMemberUpdate be the same class? */
 class cMemberOptions {
-private:
 	std::optional<std::string> m_nick;
+	std::optional<std::vector<cSnowflake>> m_roles;
 
-	template<kw::key... Keys>
-	cMemberOptions(kw::pack<Keys...> pack) {
-		if (auto p = kw::get_if<"nick">(pack))
-			m_nick.emplace(p->begin(), p->end());
-	}
 public:
-	template<kw::key... Keys>
-	cMemberOptions(kw::arg<Keys>&... kwargs): cMemberOptions(kw::pack{ kwargs... }) {}
+	template<typename T = decltype(m_nick)::value_type, typename Arg = T> requires std::constructible_from<T, Arg&&>
+	cMemberOptions& SetNick(Arg&& arg) {
+		m_nick.emplace(std::forward<Arg>(arg));
+		return *this;
+	}
+	template<typename T = decltype(m_roles)::value_type, typename Arg = T> requires std::constructible_from<T, Arg&&>
+	cMemberOptions& SetRoles(Arg&& arg) {
+		m_roles.emplace(std::forward<Arg>(arg));
+		return *this;
+	}
+	template<typename T = decltype(m_roles)::value_type, typename... Args> requires std::constructible_from<T, Args&&...>
+	T& EmplaceRoles(Args&&... args) {
+		return m_roles.emplace(std::forward<Args>(args)...);
+	}
 
-	friend void tag_invoke(const json::value_from_tag&, json::value&, const cMemberOptions&);
+	friend void tag_invoke(json::value_from_tag, json::value&, const cMemberOptions&);
 };
-
-void tag_invoke(const json::value_from_tag&, json::value&, const cMemberOptions&);
+void
+tag_invoke(json::value_from_tag, json::value&, const cMemberOptions&);
 
 class cMemberUpdate final {
 private:
@@ -52,7 +57,7 @@ enum eMemberFlag {
 };
 inline eMemberFlag operator|(eMemberFlag a, eMemberFlag b) noexcept { return (eMemberFlag)((int)a | (int)b); }
 inline eMemberFlag operator&(eMemberFlag a, eMemberFlag b) noexcept { return (eMemberFlag)((int)a & (int)b); }
-eMemberFlag tsg_invoke(json::value_to_tag<eMemberFlag>, const json::value&);
+eMemberFlag tag_invoke(json::value_to_tag<eMemberFlag>, const json::value&);
 
 class cPartialMember {
 public:

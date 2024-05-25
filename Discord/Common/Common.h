@@ -117,7 +117,10 @@ typedef  chHandle<cSnowflake>  chSnowflake;
 typedef  uhHandle<cSnowflake>  uhSnowflake;
 typedef uchHandle<cSnowflake> uchSnowflake;
 
-cSnowflake tag_invoke(boost::json::value_to_tag<cSnowflake>, const boost::json::value&);
+cSnowflake
+tag_invoke(boost::json::value_to_tag<cSnowflake>, const boost::json::value&);
+void
+tag_invoke(boost::json::value_from_tag, boost::json::value&, const cSnowflake&);
 
 template<>
 struct fmt::formatter<cSnowflake> : fmt::formatter<std::string_view> {

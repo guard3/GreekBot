@@ -19,8 +19,6 @@ private:
 	cTask<> OnReady(uhUser) override;
 	cTask<> OnUserUpdate(uhUser) override;
 
-	cTask<> modify_guild_member(const cSnowflake&, const cSnowflake&, const cMemberOptions&);
-
 protected:
 	using cGateway::OnInteractionCreate;
 	using cGateway::OnGuildCreate;
@@ -41,7 +39,6 @@ public:
 	cTask<std::vector<cRole>> GetGuildRoles(const cSnowflake& guild_id);
 	cTask<> AddGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake& role_id);
 	cTask<> RemoveGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_id, const cSnowflake& role_id);
-	cTask<> UpdateGuildMemberRoles(const cSnowflake& guild_id, const cSnowflake& user_id, const std::vector<chSnowflake>& role_ids);
 	/* Interactions - Defer message or update */
 	cTask<> InteractionDefer(const cAppCmdInteraction&, bool thinking = false);
 	cTask<> InteractionDefer(const cMsgCompInteraction&, bool thinking = false);
@@ -67,10 +64,7 @@ public:
 	cTask<> DeleteMessage(const cSnowflake& channel_id, const cSnowflake& msg_id, std::string_view reason = {});
 	cTask<cMessage> GetChannelMessage(const cSnowflake& channel_id, const cSnowflake& message_id);
 
-	template<kw::key... Keys>
-	cTask<> ModifyGuildMember(const cSnowflake& guild_id, const cSnowflake& user_id, kw::arg<Keys>&... kwargs) {
-		co_await modify_guild_member(guild_id, user_id, { kwargs... });
-	}
+	cTask<> ModifyGuildMember(const cSnowflake& guild_id, const cSnowflake& user_id, const cMemberOptions&);
 	cTask<> RemoveGuildMember(const cSnowflake& guild_id, const cSnowflake& user_id, std::string_view reason = {});
 	cTask<> CreateGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, std::chrono::seconds delete_message_seconds = std::chrono::seconds(0), std::string_view reason = {});
 	cTask<> RemoveGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, std::string_view reason = {});

@@ -42,19 +42,7 @@ cBot::RemoveGuildMemberRole(const cSnowflake& guild_id, const cSnowflake& user_i
 }
 
 cTask<>
-cBot::UpdateGuildMemberRoles(const cSnowflake& guild_id, const cSnowflake& user_id, const std::vector<chSnowflake>& role_ids) {
-	/* Prepare json response */
-	json::object obj;
-	json::array& a = obj["roles"].emplace_array();
-	a.reserve(role_ids.size());
-	for (chSnowflake s: role_ids)
-		a.emplace_back(s->ToString());
-	/* Resolve api path */
-	co_await DiscordPatch(fmt::format("/guilds/{}/members/{}", guild_id, user_id), obj);
-}
-
-cTask<>
-cBot::modify_guild_member(const cSnowflake& guild_id, const cSnowflake& user_id, const cMemberOptions& options) {
+cBot::ModifyGuildMember(const cSnowflake& guild_id, const cSnowflake& user_id, const cMemberOptions& options) {
 	co_await DiscordPatch(fmt::format("/guilds/{}/members/{}", guild_id, user_id), json::value_from(options).get_object());
 }
 

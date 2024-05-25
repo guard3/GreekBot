@@ -16,6 +16,10 @@ cSnowflake
 tag_invoke(json::value_to_tag<cSnowflake>, const json::value& v) {
 	return json::value_to<std::string_view>(v);
 }
+void
+tag_invoke(json::value_from_tag, json::value& v, const cSnowflake& sf) {
+	v = sf.ToString();
+}
 cColor
 tag_invoke(json::value_to_tag<cColor>, const json::value& v) {
 	return v.to_number<int32_t>();
