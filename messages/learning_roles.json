@@ -5,32 +5,43 @@
     "components": [{
       "type": 2,
       "style": 1,
-      "label": "🧑‍🎓",
-      "custom_id": "STUDENT"
+      "custom_id": "STUDENT",
+      "emoji": {
+        "id": null,
+        "name": "🧑‍🎓"
+      }
     }, {
       "type": 2,
       "style": 1,
+      "custom_id": "WORD_OF_THE_DAY",
       "emoji": {
         "id": "486886779941683211",
-        "name": "omega",
-        "animated": false
-      },
-      "custom_id": "WORD_OF_THE_DAY"
+        "name": "omega"
+      }
     }, {
       "type": 2,
       "style": 1,
-      "label": "🤗",
-      "custom_id": "EVENTS"
+      "custom_id": "EVENTS",
+      "emoji": {
+        "id": null,
+        "name": "🤗"
+      }
     }, {
       "type": 2,
       "style": 1,
-      "label": "🗺️",
-      "custom_id": "DIALECTS"
+      "custom_id": "DIALECTS",
+      "emoji": {
+        "id": null,
+        "name": "🗺️"
+      }
     }, {
       "type": 2,
       "style": 1,
-      "label": "📑",
-      "custom_id": "LINGUISTICS_READING"
+      "custom_id": "LINGUISTICS_READING",
+      "emoji": {
+        "id": null,
+        "name": "📑"
+      }
     }]
   }]
 }

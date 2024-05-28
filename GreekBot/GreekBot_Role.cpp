@@ -6,8 +6,8 @@
 namespace rng = std::ranges;
 /* ================================================================================================================== */
 enum : uint32_t {
-	CMP_ID_HERITAGE_SPEAKER    = 0x6691F68D,
-	CMP_ID_IPA_LITERATE        = 0x59A60FDC,
+	CMP_ID_HERITAGE_SPEAKER    = 0x21A595C7,
+	CMP_ID_IPA_LITERATE        = 0x12A20352,
 	CMP_ID_STUDENT             = 0x88665129,
 	CMP_ID_WORD_OF_THE_DAY     = 0x91067435,
 	CMP_ID_EVENTS              = 0xA37F90CC,

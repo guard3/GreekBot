@@ -5,13 +5,19 @@
     "components": [{
       "type": 2,
       "style": 1,
-      "label": "🇬🇷",
-      "custom_id": "HERITAGE_SPEAKER"
+      "custom_id": "HERITAGE_SPEAKER",
+      "emoji": {
+        "id": null,
+        "name": "🇬🇷"
+      }
     }, {
       "type": 2,
       "style": 1,
-      "label": "👅",
-      "custom_id": "IPA_LITERATE"
+      "custom_id": "IPA_LITERATE",
+      "emoji": {
+        "id": null,
+        "name": "👅"
+      }
     }]
   }]
 }

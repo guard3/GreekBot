@@ -5,23 +5,35 @@
     "components": [{
       "type": 2,
       "style": 1,
-      "label": "☎️",
-      "custom_id": "POLL"
+      "custom_id": "POLL",
+      "emoji": {
+        "id": null,
+        "name": "☎️"
+      }
     }, {
       "type": 2,
       "style": 1,
-      "label": "🎮",
-      "custom_id": "GAMER"
+      "custom_id": "GAMER",
+      "emoji": {
+        "id": null,
+        "name": "🎮"
+      }
     }, {
       "type": 2,
       "style": 1,
-      "label": "🗣️",
-      "custom_id": "VCER"
+      "custom_id": "VCER",
+      "emoji": {
+        "id": null,
+        "name": "🗣️"
+      }
     }, {
       "type": 2,
       "style": 1,
-      "label": "📚",
-      "custom_id": "BOOK_CLUB"
+      "custom_id": "BOOK_CLUB",
+      "emoji": {
+        "id": null,
+        "name": "📚"
+      }
     }]
   }]
 }
