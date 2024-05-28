@@ -1,11 +1,11 @@
 #include "Message.h"
 #include "json.h"
-
+/* ================================================================================================================== */
 eMessageType
 tag_invoke(json::value_to_tag<eMessageType>, const json::value& v) {
 	return static_cast<eMessageType>(v.to_number<int>());
 }
-
+/* ================================================================================================================== */
 void
 tag_invoke(json::value_from_tag, json::value& v, const cMessageParams& m) {
 	json::object& obj = v.emplace_object();
@@ -24,7 +24,22 @@ tag_invoke(json::value_from_tag, json::value& v, const cMessageParams& m) {
 	if (auto e = m.GetEmbeds(); !e.empty())
 		json::value_from(e, obj["embeds"]);
 }
-
+/* ================================================================================================================== */
+cMessageUpdate::cMessageUpdate(const json::value& v) : cMessageUpdate(v.as_object()) {}
+cMessageUpdate::cMessageUpdate(const json::object& o) :
+	m_id(json::value_to<std::string_view>(o.at("id"))),
+	m_channel_id(json::value_to<cSnowflake>(o.at("channel_id"))) {
+	if (auto p = o.if_contains("content"))
+		m_content.emplace(json::value_to<std::string>(*p));
+	if (auto p = o.if_contains("components"))
+		m_components.emplace(json::value_to<std::vector<cActionRow>>(*p));
+	// TODO: parse embeds
+}
+/* ================================================================================================================== */
+cMessageUpdate
+tag_invoke(json::value_to_tag<cMessageUpdate>, const json::value& v) {
+	return cMessageUpdate{ v };
+}
 void
 tag_invoke(json::value_from_tag, json::value& v, const cMessageUpdate& m) {
 	json::object& obj = v.emplace_object();
@@ -35,16 +50,8 @@ tag_invoke(json::value_from_tag, json::value& v, const cMessageUpdate& m) {
 	if (auto p = m.GetEmbeds().Get())
 		json::value_from(*p, obj["embeds"]);
 }
-
-cMessageUpdate::cMessageUpdate(const json::object& o) :
-	m_id(json::value_to<std::string_view>(o.at("id"))),
-	m_channel_id(json::value_to<cSnowflake>(o.at("channel_id"))) {
-	if (auto p = o.if_contains("content"))
-		m_content.emplace(json::value_to<std::string>(*p));
-	// TODO: parse components and embeds
-}
-cMessageUpdate::cMessageUpdate(const json::value& v) : cMessageUpdate(v.as_object()) {}
-
+/* ================================================================================================================== */
+cMessage::cMessage(const json::value &v) : cMessage(v.as_object()) {}
 cMessage::cMessage(const json::object &o):
 	id(json::value_to<cSnowflake>(o.at("id"))),
 	channel_id(json::value_to<cSnowflake>(o.at("channel_id"))),
@@ -62,5 +69,3 @@ cMessage::cMessage(const json::object &o):
 	flags = f ? (eMessageFlag)f->to_number<int>() : MESSAGE_FLAG_NONE;
 	flags = flags | (eMessageFlag)((o.at("tts").as_bool() << 15) | (o.at("mention_everyone").as_bool() << 16));
 }
-
-cMessage::cMessage(const json::value &v) : cMessage(v.as_object()) {}

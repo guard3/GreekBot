@@ -1,9 +1,10 @@
-#ifndef GREEKBOT_BUTTON_H
-#define GREEKBOT_BUTTON_H
+#ifndef DISCORD_BUTTON_H
+#define DISCORD_BUTTON_H
 #include "Common.h"
 #include "Emoji.h"
 #include <optional>
 
+// TODO: Use only one button class
 enum eButtonStyle {
 	BUTTON_STYLE_PRIMARY = 1,
 	BUTTON_STYLE_SECONDARY,
@@ -36,6 +37,9 @@ private:
 	}
 
 public:
+	explicit cButton(const json::value&);
+	explicit cButton(const json::object&);
+
 	template<kw::key... Keys, typename Str = std::string> requires std::constructible_from<std::string, Str&&>
 	cButton(eButtonStyle style, Str&& custom_id, kw::arg<Keys>&... kwargs) : cButton(style, std::forward<Str>(custom_id), kw::pack{ kwargs... }) {}
 
@@ -46,17 +50,24 @@ public:
 	hEmoji           GetEmoji()          noexcept { return m_emoji ? &*m_emoji : nullptr; }
 	bool             IsDisabled()  const noexcept { return m_disabled;                    }
 };
+cButton
+tag_invoke(json::value_to_tag<cButton>, const json::value&);
+void
+tag_invoke(json::value_from_tag, json::value&, const cButton&);
 
 class cLinkButton : public cButton {
 private:
 	using cButton::GetStyle;
 	using cButton::GetCustomId;
 public:
+	explicit cLinkButton(const json::value&);
+	explicit cLinkButton(const json::object&);
+
 	template<kw::key... Keys, typename Str = std::string> requires std::constructible_from<std::string, Str&&>
 	cLinkButton(Str&& url, kw::arg<Keys>&... kwargs) : cButton((eButtonStyle)5, std::forward<Str>(url), kwargs...) {}
 
 	std::string_view GetUrl() const noexcept { return GetCustomId(); }
 };
-
-void tag_invoke(const json::value_from_tag&, json::value&, const cButton&);
-#endif //GREEKBOT_BUTTON_H
+cLinkButton
+tag_invoke(json::value_to_tag<cLinkButton>, const json::value&);
+#endif /* DISCORD_BUTTON_H */

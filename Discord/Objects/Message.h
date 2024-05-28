@@ -240,7 +240,12 @@ public:
 		return m_embeds.emplace(std::forward<Args>(args)...);
 	}
 };
-
+using   hMessageUpdate =   hHandle<cMessageUpdate>;
+using  chMessageUpdate =  chHandle<cMessageUpdate>;
+using  uhMessageUpdate =  uhHandle<cMessageUpdate>;
+using uchMessageUpdate = uchHandle<cMessageUpdate>;
+cMessageUpdate
+tag_invoke(json::value_to_tag<cMessageUpdate>, const json::value&);
 void
 tag_invoke(json::value_from_tag, json::value&, const cMessageUpdate&);
 

@@ -1,5 +1,5 @@
-#ifndef GREEKBOT_TEXTINPUT_H
-#define GREEKBOT_TEXTINPUT_H
+#ifndef DISCORD_TEXTINPUT_H
+#define DISCORD_TEXTINPUT_H
 #include "Common.h"
 
 KW_DECLARE(min_length, int)
@@ -47,11 +47,12 @@ public:
 
 	bool IsRequired() const noexcept { return m_required; }
 
-	decltype(auto) MoveCustomId() noexcept { return std::move(m_custom_id); }
-	decltype(auto)    MoveLabel() noexcept { return std::move(m_label);     }
-	decltype(auto)    MoveValue() noexcept { return std::move(m_value);     }
+	std::string MoveCustomId() noexcept { return std::move(m_custom_id); }
+	std::string    MoveLabel() noexcept { return std::move(m_label);     }
+	std::string    MoveValue() noexcept { return std::move(m_value);     }
 };
-
-cTextInput tag_invoke(json::value_to_tag<cTextInput>, const json::value&);
-void tag_invoke(const json::value_from_tag&, json::value&, const cTextInput&);
-#endif /* GREEKBOT_TEXTINPUT_H */
+cTextInput
+tag_invoke(json::value_to_tag<cTextInput>, const json::value&);
+void
+tag_invoke(json::value_from_tag, json::value&, const cTextInput&);
+#endif /* DISCORD_TEXTINPUT_H */
