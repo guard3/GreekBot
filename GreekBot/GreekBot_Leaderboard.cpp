@@ -107,7 +107,7 @@ cGreekBot::process_rank(cAppCmdInteraction& i) HANDLER_BEGIN {
 					cButton{
 						BUTTON_STYLE_SECONDARY,
 						"LEADERBOARD_HELP",
-						kw::label="How does this work?"
+						"How does this work?"
 					}
 				}
 			})
@@ -162,7 +162,7 @@ cGreekBot::process_top(cAppCmdInteraction& i) HANDLER_BEGIN {
 			cButton{
 				BUTTON_STYLE_SECONDARY,
 				"LEADERBOARD_HELP",
-				kw::label="How does this work?"
+				"How does this work?"
 			}
 		}
 	}));

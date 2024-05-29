@@ -1,32 +1,39 @@
 #include "Emoji.h"
 #include "json.h"
 
-cEmoji::cEmoji(const json::value& v): m_animated(false) {
-	auto& o = v.as_object();
-	auto name = json::try_value_to<std::string>(o.at("name"));
-	if (name.has_value())
-		m_name = std::move(name.value());
-	auto id = json::try_value_to<std::string_view>(o.at("id"));
-	if (id.has_value())
-		m_id.emplace(id.value());
-	if (auto p = o.if_contains("animated"))
-		m_animated = p && p->as_bool();
-}
+cEmoji::cEmoji(const json::value& v) : cEmoji(v.as_object()) {}
+cEmoji::cEmoji(const json::object& o) :
+	m_id([&o] {
+		auto& v = o.at("id");
+		return v.is_null() ? cSnowflake{} : json::value_to<cSnowflake>(v);
+	}()),
+	m_name([&o] {
+		auto& v = o.at("name");
+		return v.is_null() ? std::string() : json::value_to<std::string>(v);
+	}()),
+	m_animated([&o] {
+		auto p = o.if_contains("animated");
+		return p && p->as_bool();
+	}()) {}
 
 std::string
 cEmoji::ToString() const {
-	if (m_id.has_value())
-		return fmt::format("<{}:{}:{}>", m_animated ? "a" : "", m_name, *m_id);
+	if (m_id.ToInt())
+		return fmt::format("<{}:{}:{}>", m_animated ? "a" : "", m_name, m_id);
 	return m_name;
 }
+cEmoji
+tag_invoke(json::value_to_tag<cEmoji>, const json::value& v) {
+	return cEmoji{ v };
+}
 void
-tag_invoke(const json::value_from_tag&, json::value& v, const cEmoji& e) {
-	auto& o = v.emplace_object();
-	if (!e.GetName().empty())
-		o.emplace("name", e.GetName());
-	if (e.GetId())
-		o.emplace("id", e.GetId()->ToString());
+tag_invoke(json::value_from_tag, json::value& v, const cEmoji& e) {
+	auto& obj = v.emplace_object();
+	obj.emplace("name", e.GetName());
+	if (auto pId = e.GetId().Get())
+		json::value_from(*pId, obj["id"]);
 	else
-		o.emplace("id", nullptr);
-	o.emplace("animated", e.IsAnimated());
+		obj.emplace("id", nullptr);
+	if (e.IsAnimated())
+		obj.emplace("animated", true);
 }

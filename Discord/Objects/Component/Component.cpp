@@ -8,8 +8,6 @@ cComponent
 tag_invoke(json::value_to_tag<cComponent>, const json::value& v) {
 	switch (v.at("type").to_number<int>()) {
 		case COMPONENT_BUTTON:
-			if (v.at("style").to_number<int>() == 5)
-				return cComponent(std::in_place_type<cLinkButton>, v);
 			return cComponent(std::in_place_type<cButton>, v);
 		case COMPONENT_SELECT_MENU:
 			return cComponent(std::in_place_type<cSelectMenu>, v);
@@ -39,14 +37,19 @@ void
 tag_invoke(json::value_from_tag, json::value& v, const cButton& b) {
 	json::object& obj = v.emplace_object();
 	obj = {
-		{ "type",     COMPONENT_BUTTON },
-		{ "style",    b.GetStyle()     },
-		{ "label",    b.GetLabel()     },
-		{ "disabled", b.IsDisabled()   },
-		{ b.GetStyle() == 5 ? "url" : "custom_id", b.GetCustomId() }
+		{ "type",  COMPONENT_BUTTON },
+		{ "style", b.GetStyle()     }
 	};
-	if (auto e = b.GetEmoji(); e)
-		json::value_from(*e, obj["emoji"]);
+	if (auto label = b.GetLabel(); !label.empty())
+		obj.emplace("label", label);
+	if (b.IsDisabled())
+		obj.emplace("disabled", true);
+	if (b.GetStyle() == BUTTON_STYLE_LINK)
+		obj.emplace("url", b.GetUrl());
+	else
+		obj.emplace("custom_id", b.GetCustomId());
+	if (auto pEmoji = b.GetEmoji().Get())
+		json::value_from(*pEmoji, obj["emoji"]);
 }
 void
 tag_invoke(json::value_from_tag, json::value& v, const cSelectMenu& sm) {

@@ -14,7 +14,7 @@ enum eComponentType {
 	COMPONENT_TEXT_INPUT      // A Text input object
 };
 /* Define component as a variant of all types that may appear in an action row */
-using cComponent = std::variant<cButton, cLinkButton, cSelectMenu, cTextInput, cUnsupportedComponent>;
+using cComponent = std::variant<cButton, cSelectMenu, cTextInput, cUnsupportedComponent>;
 using   hComponent =   hHandle<cComponent>;
 using  chComponent =  chHandle<cComponent>;
 using  uhComponent =  uhHandle<cComponent>;

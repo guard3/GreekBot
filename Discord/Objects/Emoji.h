@@ -1,16 +1,20 @@
 #ifndef GREEKBOT_EMOJI_H
 #define GREEKBOT_EMOJI_H
 #include "Common.h"
-#include <optional>
 
 class cEmoji final {
 private:
-	std::string               m_name;
-	std::optional<cSnowflake> m_id;
-	bool                      m_animated;
+	cSnowflake  m_id;
+	std::string m_name;
+	bool        m_animated;
 
 public:
 	explicit cEmoji(const json::value&);
+	explicit cEmoji(const json::object&);
+
+	template<typename Str = std::string> requires std::constructible_from<std::string, Str&&>
+	explicit cEmoji(Str&& unicode_emoji) : m_name(std::forward<Str>(unicode_emoji)), m_animated(false) {}
+
 	template<typename Str = std::string> requires std::constructible_from<std::string, Str&&>
 	cEmoji(Str&& name, const cSnowflake& id, bool animated = false):
 		m_name(std::forward<Str>(name)),
@@ -18,8 +22,10 @@ public:
 		m_animated(animated) {}
 
 	std::string_view GetName() const noexcept { return m_name; }
-	chSnowflake        GetId() const noexcept { return m_id.has_value() ? &*m_id : nullptr; }
+	chSnowflake        GetId() const noexcept { return m_id.ToInt() ? &m_id : nullptr; }
 	bool          IsAnimated() const noexcept { return m_animated; }
+
+	hSnowflake GetId() noexcept { return m_id.ToInt() ? &m_id : nullptr; }
 
 	std::string ToString() const;
 };
@@ -27,8 +33,8 @@ typedef   hHandle<cEmoji>   hEmoji;
 typedef  chHandle<cEmoji>  chEmoji;
 typedef  uhHandle<cEmoji>  uhEmoji;
 typedef uchHandle<cEmoji> uchEmoji;
-typedef  shHandle<cEmoji>  shEmoji;
-typedef schHandle<cEmoji> schEmoji;
-
-void tag_invoke(const json::value_from_tag&, json::value&, const cEmoji&);
+cEmoji
+tag_invoke(json::value_to_tag<cEmoji>, const json::value& v);
+void
+tag_invoke(json::value_from_tag, json::value&, const cEmoji&);
 #endif //GREEKBOT_EMOJI_H

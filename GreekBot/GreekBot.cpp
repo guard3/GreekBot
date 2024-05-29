@@ -134,9 +134,17 @@ cGreekBot::process_interaction(cAppCmdInteraction& i) {
 		case 1174836455714078740: // Apps > Ban Greek
 			return process_ban_ctx_menu(i, SUBCMD_GREEK);
 		default:
-			return [](const cAppCmdInteraction& i) -> cTask<> {
-				cUtils::PrintErr("Unhandled command: {} {}", i.GetCommandName(), i.GetCommandId());
-				co_return;
+			return [this](const cAppCmdInteraction& i) -> cTask<> {
+				cUtils::PrintMsg("Unhandled command: {} {}", i.GetCommandName(), i.GetCommandId());
+				co_await InteractionSendMessage(i, cMessageParams().SetContent("test").SetComponents({
+					cActionRow{
+						cButton{
+							BUTTON_STYLE_LINK,
+							"https://wikipedia.org/",
+							"meow"
+						}.SetEmoji("🇬🇷")
+					}
+				}));
 			}(i);
 	}
 }
