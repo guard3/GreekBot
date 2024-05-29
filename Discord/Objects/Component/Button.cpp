@@ -4,16 +4,19 @@
 cButton::cButton(const json::value& v) : cButton(v.as_object()) {}
 cButton::cButton(const json::object& o):
 	m_style(json::value_to<eButtonStyle>(o.at("style"))),
+	m_disabled([&o] {
+		auto p = o.if_contains("disabled");
+		return p && p->as_bool();
+	} ()),
 	m_custom_id_or_url(json::value_to<std::string>(o.at(m_style == BUTTON_STYLE_LINK ? "url" : "custom_id"))),
 	m_label([&o] {
 		auto p = o.if_contains("label");
 		return p ? json::value_to<std::string>(*p) : std::string();
-	}()) {
-	auto p = o.if_contains("disabled");
-	m_disabled = p && p->as_bool();
-	if ((p = o.if_contains("emoji")))
-		m_emoji.emplace(*p);
-}
+	} ()),
+	m_emoji([&o] {
+		auto p = o.if_contains("emoji");
+		return p ? std::optional<cEmoji>(std::in_place, *p) : std::optional<cEmoji>();
+	} ()) {}
 
 eButtonStyle
 tag_invoke(json::value_to_tag<eButtonStyle>, const json::value& v) {

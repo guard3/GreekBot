@@ -3,7 +3,7 @@
 #include "Emoji.h"
 #include <optional>
 
-enum eButtonStyle {
+enum eButtonStyle : std::uint8_t {
 	BUTTON_STYLE_PRIMARY = 1,
 	BUTTON_STYLE_SECONDARY,
 	BUTTON_STYLE_SUCCESS,
@@ -15,34 +15,16 @@ tag_invoke(json::value_to_tag<eButtonStyle>, const json::value&);
 void
 tag_invoke(json::value_from_tag, json::value&, eButtonStyle);
 
-KW_DECLARE(label, std::string)
-KW_DECLARE(emoji, cEmoji)
-KW_DECLARE(disabled, bool)
-
 class cButton final {
 	eButtonStyle          m_style;
+	bool                  m_disabled;
 	std::string           m_custom_id_or_url;
 	std::string           m_label;
-	bool                  m_disabled;
 	std::optional<cEmoji> m_emoji;
-
-	template<kw::key... Keys, typename T>
-	cButton(eButtonStyle style, T&& value, kw::pack<Keys...> pack):
-		m_style(style),
-		m_custom_id_or_url(std::forward<T>(value)),
-		m_label(std::move(kw::get<"label">(pack))),
-		m_disabled(kw::get<"disabled">(pack, false)) {
-		if (auto p = kw::get_if<"emoji">(pack, kw::nullarg); p)
-			m_emoji.emplace(std::move(*p));
-	}
 
 public:
 	explicit cButton(const json::value&);
 	explicit cButton(const json::object&);
-
-	template<kw::key... Keys, typename Str = std::string> requires std::constructible_from<std::string, Str&&>
-	[[deprecated]]
-	cButton(eButtonStyle style, Str&& custom_id_or_url, kw::arg<Keys>&... kwargs) : cButton(style, std::forward<Str>(custom_id_or_url), kw::pack{ kwargs... }) {}
 
 	template<typename Str1 = std::string, typename Str2 = std::string> requires requires {
 		requires std::constructible_from<std::string, Str1&&>;

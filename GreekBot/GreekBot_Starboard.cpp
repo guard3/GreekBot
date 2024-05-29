@@ -342,7 +342,7 @@ cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) HANDLER_BEGIN {
 			cButton{
 				BUTTON_STYLE_SECONDARY,
 				"STARBOARD_HELP",
-				kw::label="How does this work?"
+				"How does this work?"
 			}
 		}
 	}));

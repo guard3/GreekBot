@@ -124,12 +124,12 @@ cGreekBot::process_ban(cInteraction& i, uint32_t subcmd, const cSnowflake& user_
 			cButton{
 				BUTTON_STYLE_DANGER,
 				fmt::format("BAN#{}", user_id),
-				kw::label="Revoke ban"
+				"Revoke ban"
 			},
 			cButton{
 				BUTTON_STYLE_SECONDARY,
 				fmt::format("DLT#{}", i.GetUser().GetId()),
-				kw::label="Dismiss"
+				"Dismiss"
 			}
 		}
 	}));
@@ -161,7 +161,7 @@ cGreekBot::process_unban(cMsgCompInteraction& i, const cSnowflake& user_id) HAND
 			cButton{
 				BUTTON_STYLE_SECONDARY,
 				fmt::format("DLT#{}", i.GetUser().GetId()),
-				kw::label="Dismiss"
+				"Dismiss"
 			}
 		}
 	}), i.GetMessage());

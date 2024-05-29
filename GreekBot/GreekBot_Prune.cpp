@@ -27,7 +27,7 @@ cGreekBot::process_prune(cAppCmdInteraction& i) HANDLER_BEGIN {
 			cButton{
 				BUTTON_STYLE_SECONDARY,
 				fmt::format("DLT#{}", i.GetUser().GetId()),
-				kw::label = "Dismiss"
+				"Dismiss"
 			}
 		}
 	}));
@@ -101,7 +101,7 @@ cGreekBot::process_prune_lmg(cAppCmdInteraction& i) HANDLER_BEGIN {
 				cButton{
 					BUTTON_STYLE_SECONDARY,
 					fmt::format("DLT#{}", i.GetUser().GetId()),
-					kw::label="Dismiss"
+					"Dismiss"
 				}
 			}
 		})
