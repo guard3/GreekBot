@@ -19,13 +19,13 @@ using   hComponent =   hHandle<cComponent>;
 using  chComponent =  chHandle<cComponent>;
 using  uhComponent =  uhHandle<cComponent>;
 using uchComponent = uchHandle<cComponent>;
-/* Force Boost/JSON to treat cComponent as a custom type instead of a variant... */
+/* Provide custom JSON conversions for cComponent */
 namespace boost::json {
-	template<typename> struct is_variant_like;
+	template<typename>
+	struct is_variant_like;
+	template<>
+	struct is_variant_like<::cComponent> : std::false_type {};
 }
-template<>
-struct boost::json::is_variant_like<cComponent> : std::false_type {};
-/* ... and provide custom value conversion overloads */
 cComponent
 tag_invoke(json::value_to_tag<cComponent>, const json::value&);
 void
