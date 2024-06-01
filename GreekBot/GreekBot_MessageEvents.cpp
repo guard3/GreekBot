@@ -49,6 +49,26 @@ cGreekBot::OnMessageUpdate(cMessageUpdate& msg, hSnowflake guild_id, hPartialMem
 		}
 	}
 }
+
+static void
+add_message_delete_embed(std::vector<cEmbed>& embeds, const message_entry& db_msg, const cUser* pMsgAuthor) {
+	cEmbed& embed = embeds.emplace_back();
+	embed.SetColor(0xC43135);
+	embed.SetDescription(fmt::format("❌ A message was **deleted** in <#{}>", db_msg.channel_id));
+	embed.SetTimestamp(db_msg.id.GetTimestamp());
+	embed.SetFields({
+		{ "Message ID", fmt::format("`{}`", db_msg.id.ToString()), true },
+		{ "User ID", fmt::format("`{}`", db_msg.author_id), true },
+		{ db_msg.content.empty() ? "No content" : "Content", db_msg.content }
+	});
+	if (pMsgAuthor) {
+		auto disc = pMsgAuthor->GetDiscriminator();
+		embed.EmplaceAuthor(disc ? fmt::format("{}#{:04}", pMsgAuthor->GetUsername(), disc) : (std::string)pMsgAuthor->GetUsername()).SetIconUrl(cCDN::GetUserAvatar(*pMsgAuthor));
+	} else {
+		embed.EmplaceAuthor("Deleted user").SetIconUrl(cCDN::GetDefaultUserAvatar(db_msg.author_id));
+	}
+}
+
 cTask<>
 cGreekBot::OnMessageDelete(cSnowflake& message_id, cSnowflake& channel_id, hSnowflake guild_id) {
 	/* Make sure we're in Learning Greek */
@@ -56,22 +76,13 @@ cGreekBot::OnMessageDelete(cSnowflake& message_id, cSnowflake& channel_id, hSnow
 		/* Delete message from the database and report to the log channel */
 		if (auto db_msg = co_await cDatabase::DeleteMessage(message_id)) try {
 			std::optional<cUser> user;
+			const cUser* pUser{};
 			try {
-				user.emplace(co_await GetUser(db_msg->author_id));
+				pUser = &user.emplace(co_await GetUser(db_msg->author_id));
 			} catch (...) {}
 
 			cMessageParams response;
-			cEmbed& embed = response.EmplaceEmbeds().emplace_back();
-			if (user) {
-				auto disc = user->GetDiscriminator();
-				embed.EmplaceAuthor(disc ? fmt::format("{}#{:04}", user->GetUsername(), disc) : user->MoveUsername()).SetIconUrl(cCDN::GetUserAvatar(*user));
-			} else {
-				embed.EmplaceAuthor("Deleted user").SetIconUrl(cCDN::GetDefaultUserAvatar(db_msg->author_id));
-			}
-			embed.SetDescription(fmt::format("❌ A message was **deleted** in <#{}>", db_msg->channel_id));
-			embed.AddField(db_msg->content.empty() ? "No content" : "Content", db_msg->content);
-			embed.SetColor(0xC43135);
-
+			add_message_delete_embed(response.EmplaceEmbeds(), *db_msg, pUser);
 			co_await CreateMessage(MESSAGE_LOG_CHANNEL_ID, response);
 		} catch (...) {}
 		/* Delete the starboard message from the channel and the database (if found) */
@@ -108,11 +119,11 @@ cGreekBot::OnMessageDeleteBulk(std::span<cSnowflake> ids, cSnowflake& channel_id
 			embeds.reserve(10);
 			for (auto& db_msg : db_msgs) {
 				/* Retrieve the user object of the message author */
-				hUser pUser{};
+				const cUser* pUser{};
 				if (auto it = std::ranges::find_if(members, [id = db_msg.author_id](const cMember& member) {
 					return member.GetUser()->GetId() == id;
 				}); it != std::ranges::end(members)) {
-					pUser = it->GetUser();
+					pUser = it->GetUser().Get();
 				} else if (auto it = std::ranges::find_if(non_members, [id = db_msg.author_id](const cUser& user) {
 					return user.GetId() == id;
 				}); it != std::ranges::end(non_members)) {
@@ -123,16 +134,7 @@ cGreekBot::OnMessageDeleteBulk(std::span<cSnowflake> ids, cSnowflake& channel_id
 					non_users.push_back(db_msg.author_id);
 				}
 				/* Create the embed */
-				cEmbed& embed = embeds.emplace_back();
-				if (pUser) {
-					auto disc = pUser->GetDiscriminator();
-					embed.EmplaceAuthor(disc ? fmt::format("{}#{:04}", pUser->GetUsername(), disc) : (std::string)pUser->GetUsername()).SetIconUrl(cCDN::GetUserAvatar(*pUser));
-				} else {
-					embed.EmplaceAuthor("Deleted user").SetIconUrl(cCDN::GetDefaultUserAvatar(db_msg.author_id));
-				}
-				embed.SetDescription(fmt::format("❌ A message was **deleted** in <#{}>", db_msg.channel_id));
-				embed.AddField(db_msg.content.empty() ? "No content" : "Content", db_msg.content);
-				embed.SetColor(0xC43135);
+				add_message_delete_embed(embeds, db_msg, pUser);
 				/* If we reach the maximum amount of embeds supported per message, send them */
 				if (embeds.size() == 10) {
 					co_await CreateMessage(MESSAGE_LOG_CHANNEL_ID, response);

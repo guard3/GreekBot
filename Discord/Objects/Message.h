@@ -255,8 +255,8 @@ private:
 	cSnowflake  channel_id;
 	cUser       author;
 	std::string content;
-	std::string timestamp;
-	std::string edited_timestamp;
+	std::chrono::sys_time<std::chrono::milliseconds> timestamp;
+	std::chrono::sys_time<std::chrono::milliseconds> edited_timestamp;
 	// ...
 	eMessageType type;
 	// ...
@@ -273,12 +273,18 @@ public:
 	const cSnowflake& GetChannelId() const noexcept { return channel_id; }
 	const cUser& GetAuthor() const noexcept { return author; }
 	std::string_view GetContent() const noexcept { return content; }
-	std::string_view GetTimestamp() const noexcept { return timestamp; }
-	std::string_view GetEditedTimestamp() const noexcept { return edited_timestamp; }
 	eMessageType GetType() const noexcept { return type; }
 	eMessageFlag GetFlags() const noexcept { return flags; }
 	std::span<const cEmbed> GetEmbeds() const noexcept { return embeds; }
 	std::span<const cAttachment> GetAttachments() const noexcept { return attachments; }
+	template<typename Duration = std::chrono::milliseconds>
+	std::chrono::sys_time<Duration> GetTimestamp() const noexcept {
+		return std::chrono::floor<Duration>(timestamp);
+	}
+	template<typename Duration = std::chrono::milliseconds>
+	std::chrono::sys_time<Duration> GetEditedTimestamp() const noexcept {
+		return std::chrono::floor<Duration>(edited_timestamp);
+	}
 
 	cSnowflake& GetId() noexcept { return id; }
 	cSnowflake& GetChannelId() noexcept { return channel_id; }
@@ -287,8 +293,6 @@ public:
 	std::span<cAttachment> GetAttachments() noexcept { return attachments; }
 
 	std::string MoveContent() noexcept { return std::move(content); }
-	std::string MoveTimestamp() noexcept { return std::move(timestamp); }
-	std::string MoveEditedTimestamp() noexcept { return std::move(edited_timestamp); }
 	std::vector<cEmbed> MoveEmbeds() noexcept { return std::move(embeds); }
 	std::vector<cAttachment> MoveAttachments() noexcept { return std::move(attachments); }
 };
@@ -296,6 +300,15 @@ typedef   hHandle<cMessage>   hMessage;
 typedef  chHandle<cMessage>  chMessage;
 typedef  uhHandle<cMessage>  uhMessage;
 typedef uchHandle<cMessage> uchMessage;
+
+template<>
+inline std::chrono::sys_time<std::chrono::milliseconds> cMessage::GetTimestamp() const noexcept {
+	return timestamp;
+}
+template<>
+inline std::chrono::sys_time<std::chrono::milliseconds> cMessage::GetEditedTimestamp() const noexcept {
+	return edited_timestamp;
+}
 
 class crefMessage final {
 private:

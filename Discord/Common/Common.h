@@ -156,5 +156,5 @@ KW_DECLARE(title, std::string)
 KW_DECLARE(description, std::string)
 KW_DECLARE(url, std::string)
 KW_DECLARE(icon_url, std::string)
-KW_DECLARE(timestamp, std::string)
+KW_DECLARE(timestamp, std::chrono::sys_time<std::chrono::milliseconds>)
 #endif // GREEKBOT_COMMON_H

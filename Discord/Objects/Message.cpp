@@ -1,4 +1,5 @@
 #include "Message.h"
+#include "Utils.h"
 #include "json.h"
 /* ================================================================================================================== */
 eMessageType
@@ -33,7 +34,8 @@ cMessageUpdate::cMessageUpdate(const json::object& o) :
 		m_content.emplace(json::value_to<std::string>(*p));
 	if (auto p = o.if_contains("components"))
 		m_components.emplace(json::value_to<std::vector<cActionRow>>(*p));
-	// TODO: parse embeds
+	if (auto p = o.if_contains("embeds"))
+		m_embeds.emplace(json::value_to<std::vector<cEmbed>>(*p));
 }
 /* ================================================================================================================== */
 cMessageUpdate
@@ -57,13 +59,13 @@ cMessage::cMessage(const json::object &o):
 	channel_id(json::value_to<cSnowflake>(o.at("channel_id"))),
 	author(o.at("author")),
 	content(json::value_to<std::string>(o.at("content"))),
-	timestamp(json::value_to<std::string>(o.at("timestamp"))),
+	timestamp(cUtils::ParseISOTimestamp(o.at("timestamp").as_string())),
 	type(json::value_to<eMessageType>(o.at("type"))),
 	embeds(json::value_to<std::vector<cEmbed>>(o.at("embeds"))),
 	attachments(json::value_to<std::vector<cAttachment>>(o.at("attachments"))) {
 	/* Parse edited_timestamp */
-	if (auto res = json::try_value_to<std::string>(o.at("edited_timestamp")); res.has_value())
-		edited_timestamp = std::move(*res);
+	if (auto& v = o.at("edited_timestamp"); !v.is_null())
+		edited_timestamp = cUtils::ParseISOTimestamp(v.as_string());
 	/* Parse flags */
 	const json::value* f = o.if_contains("flags");
 	flags = f ? (eMessageFlag)f->to_number<int>() : MESSAGE_FLAG_NONE;

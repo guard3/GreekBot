@@ -21,7 +21,7 @@ private:
 	std::string                 m_title;
 	std::string                 m_description;
 	std::string                 m_url;
-	std::string                 m_timestamp;
+	std::chrono::sys_time<std::chrono::milliseconds> m_timestamp;
 	std::vector<cEmbedField>    m_fields;
 	std::optional<cEmbedMedia>  m_thumbnail;
 	std::optional<cEmbedMedia>  m_image;
@@ -56,7 +56,10 @@ public:
 	std::string_view GetTitle()       const noexcept { return m_title;           }
 	std::string_view GetDescription() const noexcept { return m_description;     }
 	std::string_view GetUrl()         const noexcept { return m_url;             }
-	std::string_view GetTimestamp()   const noexcept { return m_timestamp;       }
+	template<typename Duration = std::chrono::milliseconds>
+	std::chrono::sys_time<Duration> GetTimestamp() const noexcept {
+		return std::chrono::floor<Duration>(m_timestamp);
+	}
 	std::span<const cEmbedField> GetFields() const noexcept { return m_fields; }
 	std::span<      cEmbedField> GetFields()       noexcept { return m_fields; }
 	chEmbedMedia  GetThumbnail() const noexcept { return m_thumbnail ? &*m_thumbnail : nullptr; }
@@ -95,9 +98,8 @@ public:
 		m_url = std::forward<Str>(arg);
 		return *this;
 	}
-	template<typename Str = std::string> requires std::assignable_from<std::string&, Str&&>
-	cEmbed& SetTimestamp(Str&& arg) {
-		m_timestamp = std::forward<Str>(arg);
+	cEmbed& SetTimestamp(std::chrono::sys_time<std::chrono::milliseconds> arg) {
+		m_timestamp = arg;
 		return *this;
 	}
 	template<typename Arg = cEmbedMedia, typename... Args> requires std::constructible_from<cEmbedMedia, Arg&&, Args&&...>
@@ -144,7 +146,7 @@ public:
 		return *this;
 	}
 	cEmbed& ClearTimestamp() noexcept {
-		m_timestamp.clear();
+		m_timestamp = {};
 		return *this;
 	}
 	cEmbed& ClearThumbnail() noexcept {
@@ -173,10 +175,13 @@ typedef  chHandle<cEmbed>  chEmbed;
 typedef  uhHandle<cEmbed>  uhEmbed;
 typedef uchHandle<cEmbed> uchEmbed;
 
+template<>
+inline std::chrono::sys_time<std::chrono::milliseconds> cEmbed::GetTimestamp() const noexcept {
+	return m_timestamp;
+}
+
 cEmbedField tag_invoke(json::value_to_tag<cEmbedField>, const json::value&);
 cEmbed tag_invoke(boost::json::value_to_tag<cEmbed>, const boost::json::value&);
 void tag_invoke(const json::value_from_tag&, json::value&, const cEmbedField&);
 void tag_invoke(const json::value_from_tag&, json::value&, const cEmbed&);
-
-KW_DECLARE(embeds, std::vector<cEmbed>)
 #endif // GREEKBOT_EMBED_H

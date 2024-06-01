@@ -1,8 +1,9 @@
 #include "Embed.h"
 #include "json.h"
+#include "Utils.h"
 /* ================================================================================================================== */
 cEmbedAuthor::cEmbedAuthor(const json::value& v):
-		m_name(json::value_to<std::string>(v.at("name"))) {
+	m_name(json::value_to<std::string>(v.at("name"))) {
 	const json::object& o = v.as_object();
 	if (auto p = o.if_contains("url"))
 		m_url = json::value_to<std::string>(*p);
@@ -51,7 +52,7 @@ cEmbed::cEmbed(const json::value& v) {
 	if (auto p = o.if_contains("url"))
 		m_url = json::value_to<std::string>(*p);
 	if (auto p = o.if_contains("timestamp"))
-		m_timestamp = json::value_to<std::string>(*p);
+		m_timestamp = cUtils::ParseISOTimestamp(p->as_string());
 	if (auto p = o.if_contains("thumbnail"))
 		m_thumbnail.emplace(*p);
 	if (auto p = o.if_contains("image"))
@@ -69,24 +70,24 @@ cEmbed::cEmbed(const json::value& v) {
 void
 tag_invoke(const json::value_from_tag&, json::value& v, const cEmbedAuthor& e) {
 	v = {
-			{ "name",     e.GetName()    },
-			{ "url",      e.GetUrl()     },
-			{ "icon_url", e.GetIconUrl() }
+		{ "name",     e.GetName()    },
+		{ "url",      e.GetUrl()     },
+		{ "icon_url", e.GetIconUrl() }
 	};
 }
 void
 tag_invoke(const json::value_from_tag&, json::value& v, const cEmbedField& e) {
 	v = {
-			{ "name",   e.GetName()  },
-			{ "value",  e.GetValue() },
-			{ "inline", e.IsInline() }
+		{ "name",   e.GetName()  },
+		{ "value",  e.GetValue() },
+		{ "inline", e.IsInline() }
 	};
 }
 void
 tag_invoke(const json::value_from_tag&, json::value& v, const cEmbedFooter& e) {
 	v = {
-			{ "text",     e.GetText()    },
-			{ "icon_url", e.GetIconUrl() }
+		{ "text",     e.GetText()    },
+		{ "icon_url", e.GetIconUrl() }
 	};
 }
 void
@@ -100,9 +101,10 @@ tag_invoke(const json::value_from_tag&, json::value& v, const cEmbed& e) {
 		{ "color",       e.GetColor().ToInt() },
 		{ "title",       e.GetTitle()         },
 		{ "description", e.GetDescription()   },
-		{ "url",         e.GetUrl()           },
-		{ "timestamp",   e.GetTimestamp()     }
+		{ "url",         e.GetUrl()           }
 	};
+	if (auto ts = e.GetTimestamp(); ts != std::chrono::sys_seconds{})
+		obj.emplace("timestamp", cUtils::FormatISOTimestamp(ts));
 
 	json::value_from(e.GetFields(), obj["fields"]);
 

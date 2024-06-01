@@ -81,6 +81,18 @@ public:
 	static std::string PercentEncode(std::string_view);
 	/* Parse ISO8601 timestamp; basic or extended format */
 	static std::chrono::sys_time<std::chrono::milliseconds> ParseISOTimestamp(std::string_view);
+	template<typename Duration>
+	static std::string FormatISOTimestamp(std::chrono::sys_time<Duration> timepoint) {
+		using namespace std::chrono;
+		const auto tp_days = floor<days>(timepoint);
+		const year_month_day ymd{ tp_days };
+		const hh_mm_ss hms{ timepoint - tp_days };
+		if constexpr (std::floating_point<typename Duration::rep> || decltype(hms)::fractional_width > 6) {
+			return fmt::format("{:04}-{:02}-{:02}T{:02}:{:02}:{:02}.{:09}Z", (int)ymd.year(), (unsigned)ymd.month(), (unsigned)ymd.day(), hms.hours().count(), hms.minutes().count(), hms.seconds().count(), floor<nanoseconds>(hms.subseconds()).count());
+		} else {
+			return fmt::format("{:04}-{:02}-{:02}T{:02}:{:02}:{:02}.{:06}Z", (int)ymd.year(), (unsigned)ymd.month(), (unsigned)ymd.day(), hms.hours().count(), hms.minutes().count(), hms.seconds().count(), floor<microseconds>(hms.subseconds()).count());
+		}
+	}
 	/* Resolving the OS we're running on */
 	static std::string_view GetOS() noexcept;
 };
