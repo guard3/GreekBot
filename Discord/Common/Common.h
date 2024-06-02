@@ -44,52 +44,22 @@ using schHandle = std::shared_ptr<const T>;
 
 /* ========== Handle creation functions ========== */
 class cHandle final {
-private:
 	cHandle() = default;
 
 public:
 	template<typename T, typename... Args>
+	[[deprecated("Use std::make_unique instead")]]
 	static uhHandle<T> MakeUnique(Args&&... args) { return std::make_unique<T>(std::forward<Args>(args)...); }
-	template<typename T, typename... Args>
-	static shHandle<T> MakeShared(Args&&... args) { return std::make_shared<T>(std::forward<Args>(args)...); }
-	template<typename T, typename... Args>
-	static uchHandle<T> MakeUniqueConst(Args&&... args) { return MakeUnique<T>(std::forward<Args>(args)...); }
-	template<typename T, typename... Args>
-	static schHandle<T> MakeSharedConst(Args&&... args) { return MakeShared<T>(std::forward<Args>(args)...); }
-
-	template<typename T, typename... Args>
-	static uhHandle<T> MakeUniqueNoEx(Args&&... args) {
-		try {
-			return MakeUnique<T>(std::forward<Args>(args)...);
-		}
-		catch (...) {
-			return {};
-		}
-	}
-	template<typename T, typename... Args>
-	static shHandle<T> MakeSharedNoEx(Args&&... args) {
-		try {
-			return MakeShared<T>(std::forward<Args>(args)...);
-		}
-		catch (...) {
-			return {};
-		}
-	}
-	template<typename T, typename... Args>
-	static uchHandle<T> MakeUniqueConstNoEx(Args&&... args) { return MakeUniqueNoEx<T>(std::forward<Args>(args)...); }
-	template<typename T, typename... Args>
-	static schHandle<T> MakeSharedConstNoEx(Args&&... args) { return MakeSharedNoEx<T>(std::forward<Args>(args)...); }
 };
 /* ========== Discord snowflake ===================================================================================== */
 class cSnowflake final {
-private:
-	char     m_str[20]; // The snowflake as a string
-	uint32_t m_len;     // The length of the string
-	uint64_t m_int;     // The snowflake as a 64-bit integer
+	char          m_str[20]; // The snowflake as a string
+	std::uint32_t m_len;     // The length of the string
+	std::uint64_t m_int;     // The snowflake as a 64-bit integer
 	
 public:
 	cSnowflake() noexcept : m_int(0), m_len(1), m_str("0") {}
-	cSnowflake(uint64_t i) noexcept;
+	cSnowflake(std::uint64_t i) noexcept;
 	cSnowflake(std::string_view s);
 	template<typename T> requires std::constructible_from<std::string_view, T&&>
 	cSnowflake(T&& t) : cSnowflake(std::string_view{ std::forward<T>(t) }) {}
@@ -99,7 +69,7 @@ public:
 
 	/* Attributes */
 	std::string_view ToString() const noexcept { return { m_str, m_len }; }
-	uint64_t         ToInt()    const noexcept { return m_int; }
+	std::uint64_t       ToInt() const noexcept { return m_int;            }
 	
 	/* Snowflake components - https://discord.com/developers/docs/reference#snowflakes */
 	auto  GetInternalWorkerId() const noexcept { return static_cast<std::uint8_t >(0x01F & (m_int >> 17)); }
@@ -116,7 +86,6 @@ typedef   hHandle<cSnowflake>   hSnowflake;
 typedef  chHandle<cSnowflake>  chSnowflake;
 typedef  uhHandle<cSnowflake>  uhSnowflake;
 typedef uchHandle<cSnowflake> uchSnowflake;
-
 cSnowflake
 tag_invoke(boost::json::value_to_tag<cSnowflake>, const boost::json::value&);
 void
@@ -131,30 +100,27 @@ struct fmt::formatter<cSnowflake> : fmt::formatter<std::string_view> {
 
 /* ========== Color ========== */
 class cColor final {
-private:
-	int32_t m_value;
+	std::int32_t m_value;
 
 public:
-	static inline constexpr int32_t NO_COLOR = 0;
-	cColor() noexcept : m_value(NO_COLOR) {}
-	cColor(int32_t v) noexcept : m_value(v) {}
+	constexpr cColor() noexcept : m_value(0) {}
+	constexpr cColor(std::int32_t v) noexcept : m_value(v) {}
 
-	uint8_t GetRed()   const noexcept { return (m_value >> 16) & 0xFF; }
-	uint8_t GetGreen() const noexcept { return (m_value >>  8) & 0xFF; }
-	uint8_t GetBlue()  const noexcept { return  m_value        & 0xFF; }
+	std::uint8_t GetRed()   const noexcept { return (m_value >> 16) & 0xFF; }
+	std::uint8_t GetGreen() const noexcept { return (m_value >>  8) & 0xFF; }
+	std::uint8_t GetBlue()  const noexcept { return  m_value        & 0xFF; }
 
-	int ToInt() const noexcept { return m_value; }
+	std::int32_t ToInt() const noexcept { return m_value; }
 	operator int() const noexcept { return m_value; }
-	operator bool() const noexcept { return m_value != NO_COLOR; }
-	bool operator!() const noexcept { return m_value == NO_COLOR; }
+	operator bool() const noexcept { return m_value; }
+	bool operator!() const noexcept { return !m_value; }
 };
-
-cColor tag_invoke(boost::json::value_to_tag<cColor>, const boost::json::value&);
-
-KW_DECLARE(color, cColor)
-KW_DECLARE(title, std::string)
-KW_DECLARE(description, std::string)
-KW_DECLARE(url, std::string)
-KW_DECLARE(icon_url, std::string)
-KW_DECLARE(timestamp, std::chrono::sys_time<std::chrono::milliseconds>)
+using   hColor =   hHandle<cColor>;
+using  chColor =  chHandle<cColor>;
+using  uhColor =  uhHandle<cColor>;
+using uchColor = uchHandle<cColor>;
+cColor
+tag_invoke(boost::json::value_to_tag<cColor>, const boost::json::value&);
+void
+tag_invoke(boost::json::value_from_tag, boost::json::value&, cColor);
 #endif // GREEKBOT_COMMON_H

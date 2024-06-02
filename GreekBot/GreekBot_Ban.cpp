@@ -95,15 +95,11 @@ cGreekBot::process_ban(cInteraction& i, uint32_t subcmd, const cSnowflake& user_
 			break;
 	}
 	/* Create the embed of the confirmation message */
-	cMessageParams msg;
-	cEmbed& e = msg.EmplaceEmbeds().emplace_back(
-		kw::author={
-			fmt::format("{} was banned", username),
-			kw::icon_url=cCDN::GetUserAvatar(user_id, hash, discr)
-		},
-		kw::color=0xC43135
-	);
-	auto& fields = e.EmplaceFields();
+	cMessageParams response;
+	cEmbed& embed = response.EmplaceEmbeds().emplace_back();
+	embed.EmplaceAuthor(fmt::format("{} was banned", username)).SetIconUrl(cCDN::GetUserAvatar(user_id, hash, discr));
+	embed.SetColor(0xC43135);
+	auto& fields = embed.EmplaceFields();
 	fields.reserve(2);
 	fields.emplace_back("Reason", reason);
 	/* DM the goodbye message */
@@ -120,7 +116,7 @@ cGreekBot::process_ban(cInteraction& i, uint32_t subcmd, const cSnowflake& user_
 	/* Ban */
 	co_await CreateGuildBan(*i.GetGuildId(), user_id, delete_messages, reason);
 	/* Send confirmation message */
-	co_await InteractionSendMessage(i, msg.SetComponents({
+	co_await InteractionSendMessage(i, response.SetComponents({
 		cActionRow{
 			cButton{
 				BUTTON_STYLE_DANGER,

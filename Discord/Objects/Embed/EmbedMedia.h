@@ -1,9 +1,8 @@
-#ifndef GREEKBOT_EMBEDMEDIA_H
-#define GREEKBOT_EMBEDMEDIA_H
+#ifndef DISCORD_EMBEDMEDIA_H
+#define DISCORD_EMBEDMEDIA_H
 #include "Common.h"
 
 class cEmbedMedia final {
-private:
 	std::string m_url;         // The source url of the image or video
 	std::string m_proxy_url;   // A proxied url of the image or video
 	int         m_width  = -1; // Width
@@ -11,23 +10,40 @@ private:
 
 public:
 	explicit cEmbedMedia(const json::value&);
+	explicit cEmbedMedia(const json::object&);
+	/* Constructor */
 	template<typename Str = std::string> requires std::constructible_from<std::string, Str&&>
-	cEmbedMedia(Str&& url): m_url(std::forward<Str>(url)) {}
+	explicit cEmbedMedia(Str&& url) : m_url(std::forward<Str>(url)) {}
 	/* Getters */
-	std::string_view GetUrl()      const noexcept { return m_url;       }
+	std::string_view      GetUrl() const noexcept { return m_url;       }
 	std::string_view GetProxyUrl() const noexcept { return m_proxy_url; }
-	int              GetWidth()    const noexcept { return m_width;     }
-	int              GetHeight()   const noexcept { return m_height;    }
+	int                 GetWidth() const noexcept { return m_width;     }
+	int                GetHeight() const noexcept { return m_height;    }
 	/* Movers */
-	std::string MoveUrl()      noexcept { return std::move(m_url);       }
+	std::string      MoveUrl() noexcept { return std::move(m_url);       }
 	std::string MoveProxyUrl() noexcept { return std::move(m_proxy_url); }
 	/* Setters */
-	template<typename Str = std::string> requires std::assignable_from<std::string&, Str&&>
-	cEmbedMedia& SetUrl(Str&& url) {
-		m_url = std::forward<Str>(url);
-		m_proxy_url.clear();
-		m_height = m_width = -1;
+	template<typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
+	cEmbedMedia& SetUrl(Arg&& arg) & {
+		if constexpr (std::assignable_from<std::string&, Arg&&>)
+			m_url = std::forward<Arg>(arg);
+		else
+			m_url = std::string(std::forward<Arg>(arg));
 		return *this;
+	}
+	template<typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
+	cEmbedMedia&& SetUrl(Arg&& arg) && { return std::move(SetUrl(std::forward<Arg>(arg))); }
+	/* Emplacers */
+	std::string& EmplaceUrl() noexcept {
+		m_url.clear();
+		return m_url;
+	}
+	template<typename Arg = std::string, typename... Args> requires std::constructible_from<std::string, Arg&&>
+	std::string& EmplaceUrl(Arg&& arg, Args&&... args) {
+		if constexpr (std::assignable_from<std::string&, Arg&&> && sizeof...(args) == 0)
+			return m_url = std::forward<Arg>(arg);
+		else
+			return m_url = std::string(std::forward<Arg>(arg), std::forward<Args>(args)...);
 	}
 };
 typedef   hHandle<cEmbedMedia>   hEmbedMedia;
@@ -35,5 +51,8 @@ typedef  chHandle<cEmbedMedia>  chEmbedMedia;
 typedef  uhHandle<cEmbedMedia>  uhEmbedMedia;
 typedef uchHandle<cEmbedMedia> uchEmbedMedia;
 
-void tag_invoke(const json::value_from_tag&, json::value&, const cEmbedMedia&);
-#endif //GREEKBOT_EMBEDMEDIA_H
+cEmbedMedia
+tag_invoke(boost::json::value_to_tag<cEmbedMedia>, const boost::json::value&);
+void
+tag_invoke(boost::json::value_from_tag, boost::json::value&, const cEmbedMedia&);
+#endif /* DISCORD_EMBEDMEDIA_H */

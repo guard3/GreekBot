@@ -30,9 +30,10 @@ cGreekBot::OnMessageReactionAdd(cSnowflake& user_id, cSnowflake& channel_id, cSn
 	if (std::binary_search(std::begin(excluded_channels), std::end(excluded_channels), channel_id))
 		co_return;
 	/* Also make sure that the message author id is provided */
-	uhMessage pMsg;
+	std::optional<cMessage> msg;
+	cMessage* pMsg;
 	if (!message_author_id) {
-		pMsg = cHandle::MakeUnique<cMessage>(co_await GetChannelMessage(channel_id, message_id));
+		pMsg = &msg.emplace(co_await GetChannelMessage(channel_id, message_id));
 		message_author_id = &pMsg->GetAuthor().GetId();
 	}
 	/* Check that reactions from the author don't count */
@@ -40,7 +41,7 @@ cGreekBot::OnMessageReactionAdd(cSnowflake& user_id, cSnowflake& channel_id, cSn
 	/* Register received reaction in the database */
 	auto[sb_msg_id, num_reactions] = co_await cDatabase::SB_RegisterReaction(message_id, *message_author_id);
 	/* Process */
-	co_await process_reaction(channel_id, message_id, sb_msg_id, num_reactions, pMsg.get());
+	co_await process_reaction(channel_id, message_id, sb_msg_id, num_reactions, pMsg);
 }
 
 cTask<>
@@ -98,14 +99,10 @@ cGreekBot::process_reaction(const cSnowflake& channel_id, const cSnowflake& mess
 	cUser&  author_user = *author_member.GetUser();
 	/* Prepare the message response with a preview embed */
 	cMessageParams response;
-	cEmbed& preview = response.EmplaceEmbeds().emplace_back(
-		kw::author=cEmbedAuthor{
-			author_user.MoveUsername(),
-			kw::icon_url=cCDN::GetUserAvatar(author_user)
-		},
-		kw::color=get_lmg_member_color(author_member),
-		kw::timestamp=msg->GetTimestamp()
-	);
+	cEmbed& preview = response.EmplaceEmbeds().emplace_back();
+	preview.EmplaceAuthor(author_user.MoveUsername()).SetIconUrl(cCDN::GetUserAvatar(author_user));
+	preview.SetColor(get_lmg_member_color(author_member));
+	preview.SetTimestamp(msg->GetTimestamp());
 	/* First, check if the original message has any media attachments that need to be previewed */
 	bool bProcessed = false;
 	if (auto attachments = msg->GetAttachments(); !attachments.empty()) {
@@ -205,33 +202,27 @@ static cEmbed make_embed(const cUser& user, const starboard_entry& e, cColor col
 		default: medal = "🏅"; break;
 	}
 
-	return cEmbed{
-		kw::author={
-			user.GetUsername(),
-			kw::icon_url=cCDN::GetUserAvatar(user)
-		},
-		kw::title=fmt::format("{} Rank#{}", medal, e.rank),
-		kw::color=color,
-		kw::fields={
-			{ "Total <:Holy:409075809723219969>", std::to_string(e.react_total), true },
-			{ "Messages", std::to_string(e.num_msg), true },
-			{ "Most in a single message", std::to_string(e.max_react_per_msg) }
-		}
-	};
+	cEmbed embed;
+	embed.EmplaceAuthor(user.GetUsername()).SetIconUrl(cCDN::GetUserAvatar(user));
+	embed.SetTitle(fmt::format("{} Rank **#{}**", medal, e.rank));
+	embed.SetColor(color);
+	embed.SetFields({
+		{ "Total <:Holy:409075809723219969>", std::to_string(e.react_total), true },
+		{ "Messages", std::to_string(e.num_msg), true },
+		{ "Most in a single message", std::to_string(e.max_react_per_msg) }
+	});
+	return embed;
 }
 
 static cEmbed make_no_member_embed(const cUser* pUser, std::string_view guild_name, bool bAnymore) {
-	return cEmbed{
-		kw::author=pUser ? cEmbedAuthor{
-				pUser->GetUsername(),
-				kw::icon_url=cCDN::GetUserAvatar(*pUser)
-			} : cEmbedAuthor{
-				"Deleted User",
-				kw::icon_url=cCDN::GetDefaultUserAvatar(cSnowflake())
-			},
-		kw::color=0x0096FF,
-		kw::description=fmt::format("User is not a member of **{}**{}.", guild_name, bAnymore ? " anymore" : "")
-	};
+	cEmbed embed;
+	embed.SetColor(0x0096FF);
+	embed.SetDescription(fmt::format("User is not a member of **{}**{}.", guild_name, bAnymore ? " anymore" : ""));
+	if (pUser)
+		embed.EmplaceAuthor(pUser->GetUsername()).SetIconUrl(cCDN::GetUserAvatar(*pUser));
+	else
+		embed.EmplaceAuthor("Deleted User").SetIconUrl(cCDN::GetDefaultUserAvatar(cSnowflake{}));
+	return embed;
 }
 
 cTask<>
@@ -283,14 +274,10 @@ cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) HANDLER_BEGIN {
 				case 2:  msg = "Meh...";     break;
 				default: msg = "Laaaaame!";  break;
 			}
-			embeds.emplace_back(
-				kw::author = {
-					user->GetUsername(),
-					kw::icon_url = cCDN::GetUserAvatar(*user)
-				},
-				kw::color = color,
-				kw::description = fmt::format("User has no <:Holy:409075809723219969>ed messages. {}", msg)
-			);
+			auto& embed = embeds.emplace_back();
+			embed.EmplaceAuthor(user->GetUsername()).SetIconUrl(cCDN::GetUserAvatar(*user));
+			embed.SetColor(color);
+			embed.SetDescription(fmt::format("User has no <:Holy:409075809723219969>ed messages. {}", msg));
 			break;
 		}
 		case 0x1D400909: { // top10

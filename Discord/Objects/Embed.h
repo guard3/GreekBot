@@ -1,5 +1,5 @@
-#ifndef GREEKBOT_EMBED_H
-#define GREEKBOT_EMBED_H
+#ifndef DISCORD_EMBED_H
+#define DISCORD_EMBED_H
 #include "Embed/EmbedAuthor.h"
 #include "Embed/EmbedField.h"
 #include "Embed/EmbedFooter.h"
@@ -7,13 +7,6 @@
 #include <optional>
 #include <span>
 #include <vector>
-
-KW_DECLARE(thumbnail, cEmbedMedia)
-KW_DECLARE(image, cEmbedMedia)
-KW_DECLARE(footer, cEmbedFooter)
-KW_DECLARE(author, cEmbedAuthor)
-KW_DECLARE(fields, std::vector<cEmbedField>)
-
 /* ================================================================================================= */
 class cEmbed final {
 private:
@@ -28,24 +21,6 @@ private:
 	std::optional<cEmbedMedia>  m_video;
 	std::optional<cEmbedFooter> m_footer;
 	std::optional<cEmbedAuthor> m_author;
-
-	template<kw::key... Keys>
-	cEmbed(kw::pack<Keys...> pack):
-		m_color(kw::get<"color">(pack)),
-		m_title(std::move(kw::get<"title">(pack))),
-		m_description(std::move(kw::get<"description">(pack))),
-		m_url(std::move(kw::get<"url">(pack))),
-		m_timestamp(std::move(kw::get<"timestamp">(pack))),
-		m_fields(std::move(kw::get<"fields">(pack))) {
-		if (auto p = kw::get_if<"thumbnail">(pack, kw::nullarg); p)
-			m_thumbnail.emplace(std::move(*p));
-		if (auto p = kw::get_if<"image">(pack, kw::nullarg); p)
-			m_image.emplace(std::move(*p));
-		if (auto p = kw::get_if<"footer">(pack, kw::nullarg); p)
-			m_footer.emplace(std::move(*p));
-		if (auto p = kw::get_if<"author">(pack, kw::nullarg); p)
-			m_author.emplace(std::move(*p));
-	}
 	// TODO: are these helpers really necessary??
 	template<typename Var, typename Arg>
 	static void set_var(Var& var, Arg&& arg) {
@@ -99,9 +74,8 @@ private:
 
 public:
 	explicit cEmbed(const json::value&);
-	template<kw::key... Keys>
-	[[deprecated("Use setters or emplacers instead of kwargs")]]
-	explicit cEmbed(kw::arg<Keys>&... kwargs) : cEmbed(kw::pack{ kwargs...}) {}
+	explicit cEmbed(const json::object&);
+	cEmbed() = default;
 	/* Getters */
 	cColor                 GetColor() const noexcept { return m_color;       }
 	std::string_view       GetTitle() const noexcept { return m_title;       }
@@ -260,4 +234,4 @@ cEmbedField tag_invoke(json::value_to_tag<cEmbedField>, const json::value&);
 cEmbed tag_invoke(boost::json::value_to_tag<cEmbed>, const boost::json::value&);
 void tag_invoke(const json::value_from_tag&, json::value&, const cEmbedField&);
 void tag_invoke(const json::value_from_tag&, json::value&, const cEmbed&);
-#endif // GREEKBOT_EMBED_H
+#endif /* DISCORD_EMBED_H */

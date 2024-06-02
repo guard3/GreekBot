@@ -4,27 +4,21 @@
 
 /* Helper functions that create embeds */
 static cEmbed make_no_xp_embed(const cUser& user, cColor c) {
-	return cEmbed{
-		kw::author={
-			user.GetUsername(),
-			kw::icon_url=cCDN::GetUserAvatar(user)
-		},
-		kw::description="User has no XP yet.",
-		kw::color=c
-	};
+	cEmbed embed;
+	embed.EmplaceAuthor(user.GetUsername()).SetIconUrl(cCDN::GetUserAvatar(user));
+	embed.SetDescription("User has no XP yet.");
+	embed.SetColor(c);
+	return embed;
 }
 static cEmbed make_no_member_embed(const cUser* pUser, std::string_view guild_name, bool bAnymore) {
-	return cEmbed{
-		kw::author=pUser ? cEmbedAuthor{
-			pUser->GetUsername(),
-			kw::icon_url=cCDN::GetUserAvatar(*pUser)
-		} : cEmbedAuthor{
-			"Deleted user",
-			kw::icon_url=cCDN::GetDefaultUserAvatar(cSnowflake())
-		},
-		kw::description=fmt::format("User is not a member of **{}**{}.", guild_name, bAnymore ? " anymore" : ""),
-		kw::color=0x0096FF
-	};
+	cEmbed embed;
+	embed.SetDescription(fmt::format("User is not a member of **{}**{}.", guild_name, bAnymore ? " anymore": ""));
+	embed.SetColor(0x0096FF);
+	if (pUser)
+		embed.EmplaceAuthor(pUser->GetUsername()).SetIconUrl(cCDN::GetUserAvatar(*pUser));
+	else
+		embed.EmplaceAuthor("Deleted user").SetIconUrl(cCDN::GetDefaultUserAvatar(cSnowflake{}));
+	return embed;
 }
 static cEmbed make_embed(const cUser& user, cColor c, int64_t rank, int64_t xp, int64_t num_msg) {
 	/* Choose a medal emoji depending on the user's rank */
@@ -43,19 +37,16 @@ static cEmbed make_embed(const cUser& user, cColor c, int64_t rank, int64_t xp, 
 		next_xp += 5 * level * level + 50 * level + 100;
 	}
 	/* Create embed */
-	return cEmbed{
-		kw::author={
-			user.GetUsername(),
-			kw::icon_url=cCDN::GetUserAvatar(user)
-		},
-		kw::title=fmt::format("{} Rank **#{}**\tLevel **{}**", medal, rank, level),
-		kw::color=c,
-		kw::fields={
-			{ "XP Progress", fmt::format("{}/{}", xp - base_xp, next_xp - base_xp), true},
-			{ "Total XP", std::to_string(xp), true },
-			{ "Messages", std::to_string(num_msg), true }
-		}
-	};
+	cEmbed embed;
+	embed.EmplaceAuthor(user.GetUsername()).SetIconUrl(cCDN::GetUserAvatar(user));
+	embed.SetTitle(fmt::format("{} Rank **#{}**\tLevel **{}**", medal, rank, level));
+	embed.SetColor(c);
+	embed.SetFields({
+		{ "XP Progress", fmt::format("{}/{}", xp - base_xp, next_xp - base_xp), true},
+		{ "Total XP", std::to_string(xp), true },
+		{ "Messages", std::to_string(num_msg), true }
+	});
+	return embed;
 }
 
 cTask<>

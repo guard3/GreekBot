@@ -1,64 +1,102 @@
-#ifndef GREEKBOT_EMBEDAUTHOR_H
-#define GREEKBOT_EMBEDAUTHOR_H
+#ifndef DISCORD_EMBEDAUTHOR_H
+#define DISCORD_EMBEDAUTHOR_H
 #include "Common.h"
 
 class cEmbedAuthor final {
-private:
 	std::string m_name, m_url, m_icon_url, m_proxy_icon_url;
-
-	template<kw::key... Keys, typename T>
-	cEmbedAuthor(T&& name, kw::pack<Keys...> pack):
-		m_name(std::forward<T>(name)),
-		m_url(std::move(kw::get<"url">(pack))),
-		m_icon_url(std::move(kw::get<"icon_url">(pack))) {}
 
 public:
 	explicit cEmbedAuthor(const json::value&);
-	template<kw::key... Keys, typename Str = std::string>
-	requires std::constructible_from<std::string, Str&&>
-	cEmbedAuthor(Str&& name, kw::arg<Keys>&... kwargs) : cEmbedAuthor(std::forward<Str>(name), kw::pack{ kwargs... }) {}
+	explicit cEmbedAuthor(const json::object&);
+	/* Constructor */
+	template<typename Str = std::string> requires std::constructible_from<std::string, Str&&>
+	explicit cEmbedAuthor(Str&& name) : m_name(std::forward<Str>(name)) {}
 	/* Getters */
-	std::string_view GetName()         const noexcept { return m_name;           }
-	std::string_view GetUrl()          const noexcept { return m_url;            }
-	std::string_view GetIconUrl()      const noexcept { return m_icon_url;       }
+	std::string_view         GetName() const noexcept { return m_name;           }
+	std::string_view          GetUrl() const noexcept { return m_url;            }
+	std::string_view      GetIconUrl() const noexcept { return m_icon_url;       }
 	std::string_view GetProxyIconUrl() const noexcept { return m_proxy_icon_url; }
 	/* Movers */
-	std::string MoveName()         noexcept { return std::move(m_name);           }
-	std::string MoveUrl()          noexcept { return std::move(m_url);            }
-	std::string MoveIconUrl()      noexcept { return std::move(m_icon_url);       }
+	std::string         MoveName() noexcept { return std::move(m_name);           }
+	std::string          MoveUrl() noexcept { return std::move(m_url);            }
+	std::string      MoveIconUrl() noexcept { return std::move(m_icon_url);       }
 	std::string MoveProxyIconUrl() noexcept { return std::move(m_proxy_icon_url); }
+	/* Resetters */
+	void     ResetUrl() noexcept { m_url.clear();      }
+	void ResetIconUrl() noexcept { m_icon_url.clear(); }
 	/* Setters */
-	template<typename Str = std::string> requires std::assignable_from<std::string&, Str&&>
-	cEmbedAuthor& SetName(Str&& arg) {
-		m_name = std::forward<Str>(arg);
+	template<typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
+	cEmbedAuthor& SetName(Arg&& arg) & {
+		if constexpr (std::assignable_from<std::string&, Arg&&>)
+			m_name = std::forward<Arg>(arg);
+		else
+			m_name = std::string(std::forward<Arg>(arg));
 		return *this;
 	}
-	template<typename Str = std::string> requires std::assignable_from<std::string&, Str&&>
-	cEmbedAuthor& SetUrl(Str&& arg) {
-		m_url = std::forward<Str>(arg);
+	template<typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
+	cEmbedAuthor& SetUrl(Arg&& arg) & {
+		if constexpr (std::assignable_from<std::string&, Arg&&>)
+			m_url = std::forward<Arg>(arg);
+		else
+			m_url = std::string(std::forward<Arg>(arg));
 		return *this;
 	}
-	template<typename Str = std::string> requires std::assignable_from<std::string&, Str&&>
-	cEmbedAuthor& SetIconUrl(Str&& arg) {
-		m_icon_url = std::forward<Str>(arg);
-		m_proxy_icon_url.clear();
+	template<typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
+	cEmbedAuthor& SetIconUrl(Arg&& arg) & {
+		if constexpr (std::assignable_from<std::string&, Arg&&>)
+			m_icon_url = std::forward<Arg>(arg);
+		else
+			m_icon_url = std::string(std::forward<Arg>(arg));
 		return *this;
 	}
-	/* Deleters */
-	cEmbedAuthor& ClearUrl() noexcept {
+	template<typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
+	cEmbedAuthor&& SetName(Arg&& arg) && { return std::move(SetName(std::forward<Arg>(arg))); }
+	template<typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
+	cEmbedAuthor&& SetUrl(Arg&& arg) && { return std::move(SetUrl(std::forward<Arg>(arg))); }
+	template<typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
+	cEmbedAuthor&& SetIconUrl(Arg&& arg) && { return std::move(SetIconUrl(std::forward<Arg>(arg))); }
+	/* Emplacers */
+	std::string& EmplaceName() noexcept {
+		m_name.clear();
+		return m_name;
+	}
+	std::string& EmplaceUrl() noexcept {
 		m_url.clear();
-		return *this;
+		return m_url;
 	}
-	cEmbedAuthor& ClearIconUrl() noexcept {
+	std::string& EmplaceIconUrl() noexcept {
 		m_icon_url.clear();
-		m_proxy_icon_url.clear();
-		return *this;
+		return m_icon_url;
+	}
+	template<typename Arg = std::string, typename... Args> requires std::constructible_from<std::string, Arg&&, Args&&...>
+	std::string& EmplaceName(Arg&& arg, Args&&... args) {
+		if constexpr (std::assignable_from<std::string&, Arg&&> && sizeof...(args) == 0)
+			return m_name = std::forward<Arg>(arg);
+		else
+			return m_name = std::string(std::forward<Arg>(arg), std::forward<Args>(args)...);
+	}
+	template<typename Arg = std::string, typename... Args> requires std::constructible_from<std::string, Arg&&, Args&&...>
+	std::string& EmplaceUrl(Arg&& arg, Args&&... args) {
+		if constexpr (std::assignable_from<std::string&, Arg&&> && sizeof...(args) == 0)
+			return m_url = std::forward<Arg>;
+		else
+			return m_url = std::string(std::forward<Arg>(arg), std::forward<Args>(args)...);
+	}
+	template<typename Arg = std::string, typename... Args> requires std::constructible_from<std::string, Arg&&, Args&&...>
+	std::string& EmplaceIconUrl(Arg&& arg, Args&&... args) {
+		if constexpr (std::assignable_from<std::string&, Arg&&> && sizeof...(args) == 0)
+			return m_icon_url = std::forward<Arg>(arg);
+		else
+			return m_icon_url = std::string(std::forward<Arg>(arg), std::forward<Args>(args)...);
 	}
 };
-typedef   hHandle<cEmbedAuthor>   hEmbedAuthor;
-typedef  chHandle<cEmbedAuthor>  chEmbedAuthor;
-typedef  uhHandle<cEmbedAuthor>  uhEmbedAuthor;
-typedef uchHandle<cEmbedAuthor> uchEmbedAuthor;
+using   hEmbedAuthor =   hHandle<cEmbedAuthor>;
+using  chEmbedAuthor =  chHandle<cEmbedAuthor>;
+using  uhEmbedAuthor =  uhHandle<cEmbedAuthor>;
+using uchEmbedAuthor = uchHandle<cEmbedAuthor>;
 
-void tag_invoke(const json::value_from_tag&, json::value&, const cEmbedAuthor&);
-#endif
+cEmbedAuthor
+tag_invoke(boost::json::value_to_tag<cEmbedAuthor>, const boost::json::value&);
+void
+tag_invoke(boost::json::value_from_tag, boost::json::value&, const cEmbedAuthor&);
+#endif /* DISCORD_EMBEDAUTHOR_H */
