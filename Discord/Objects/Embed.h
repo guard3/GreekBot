@@ -46,128 +46,204 @@ private:
 		if (auto p = kw::get_if<"author">(pack, kw::nullarg); p)
 			m_author.emplace(std::move(*p));
 	}
+	// TODO: are these helpers really necessary??
+	template<typename Var, typename Arg>
+	static void set_var(Var& var, Arg&& arg) {
+		if constexpr (std::assignable_from<Var&, Arg&&>) {
+			var = std::forward<Arg>(arg);
+		} else if constexpr (std::is_nothrow_default_constructible_v<Var>) try {
+			std::destroy_at(std::addressof(var));
+			std::construct_at(std::addressof(var), std::forward<Arg>(arg));
+		} catch (...) {
+			std::construct_at(std::addressof(var));
+			throw;
+		} else {
+			var = Var(arg);
+		}
+	}
+	template<typename Var, typename Arg>
+	static void set_var(std::optional<Var>& var, Arg&& arg) {
+		if constexpr (std::assignable_from<Var&, Arg&&>) {
+			var = std::forward<Arg>(arg);
+		} else {
+			var.emplace(std::forward<Arg>(arg));
+		}
+	}
+
+	template<typename Var, typename Arg, typename... Args>
+	static Var& emplace_var(Var& var, Arg&& arg, Args&&... args) {
+		if constexpr (sizeof...(args) == 0) {
+			set_var(var, std::forward<Arg>);
+			return var;
+		} else if constexpr (std::is_nothrow_default_constructible_v<Var>) try {
+			std::destroy_at(std::addressof(var));
+			return *std::construct_at(std::addressof(var), std::forward<Arg>(arg), std::forward<Args>(args)...);
+		} catch (...) {
+			std::construct_at(std::addressof(var));
+			throw;
+		} else {
+			return var = Var(std::forward<Arg>(arg), std::forward<Args>(args)...);
+		}
+	}
+
+	template<typename Var, typename Arg, typename... Args>
+	static Var& emplace_var(std::optional<Var>& opt, Arg&& arg, Args&&... args) {
+		if constexpr (sizeof...(args) == 0) {
+			set_var(opt, std::forward<Arg>(arg));
+			return *opt;
+		} else {
+			return opt.emplace(std::forward<Arg>, std::forward<Args>(args)...);
+		}
+	}
+
 
 public:
 	explicit cEmbed(const json::value&);
 	template<kw::key... Keys>
+	[[deprecated("Use setters or emplacers instead of kwargs")]]
 	explicit cEmbed(kw::arg<Keys>&... kwargs) : cEmbed(kw::pack{ kwargs...}) {}
 	/* Getters */
-	cColor           GetColor()       const noexcept { return m_color;           }
-	std::string_view GetTitle()       const noexcept { return m_title;           }
-	std::string_view GetDescription() const noexcept { return m_description;     }
-	std::string_view GetUrl()         const noexcept { return m_url;             }
+	cColor                 GetColor() const noexcept { return m_color;       }
+	std::string_view       GetTitle() const noexcept { return m_title;       }
+	std::string_view GetDescription() const noexcept { return m_description; }
+	std::string_view         GetUrl() const noexcept { return m_url;         }
+	chEmbedMedia       GetThumbnail() const noexcept { return m_thumbnail ? m_thumbnail.operator->() : nullptr; }
+	 hEmbedMedia       GetThumbnail()       noexcept { return m_thumbnail ? m_thumbnail.operator->() : nullptr; }
+	chEmbedMedia           GetImage() const noexcept { return m_image     ?     m_image.operator->() : nullptr; }
+	 hEmbedMedia           GetImage()       noexcept { return m_image     ?     m_image.operator->() : nullptr; }
+	chEmbedMedia           GetVideo() const noexcept { return m_video     ?     m_video.operator->() : nullptr; }
+	 hEmbedMedia           GetVideo()       noexcept { return m_video     ?     m_video.operator->() : nullptr; }
+	chEmbedFooter         GetFooter() const noexcept { return m_footer    ?    m_footer.operator->() : nullptr; }
+	 hEmbedFooter         GetFooter()       noexcept { return m_footer    ?    m_footer.operator->() : nullptr; }
+	chEmbedAuthor         GetAuthor() const noexcept { return m_author    ?    m_author.operator->() : nullptr; }
+	 hEmbedAuthor         GetAuthor()       noexcept { return m_author    ?    m_author.operator->() : nullptr; }
+	std::span<const cEmbedField> GetFields() const noexcept { return m_fields; }
+	std::span<      cEmbedField> GetFields()       noexcept { return m_fields; }
 	template<typename Duration = std::chrono::milliseconds>
 	std::chrono::sys_time<Duration> GetTimestamp() const noexcept {
 		return std::chrono::floor<Duration>(m_timestamp);
 	}
-	std::span<const cEmbedField> GetFields() const noexcept { return m_fields; }
-	std::span<      cEmbedField> GetFields()       noexcept { return m_fields; }
-	chEmbedMedia  GetThumbnail() const noexcept { return m_thumbnail ? &*m_thumbnail : nullptr; }
-	hEmbedMedia   GetThumbnail()       noexcept { return m_thumbnail ? &*m_thumbnail : nullptr; }
-	chEmbedMedia  GetImage() const noexcept { return m_image ? &*m_image : nullptr; }
-	hEmbedMedia   GetImage()       noexcept { return m_image ? &*m_image : nullptr; }
-	chEmbedMedia  GetVideo() const noexcept { return m_video ? &*m_video : nullptr; }
-	hEmbedMedia   GetVideo()       noexcept { return m_video ? &*m_video : nullptr; }
-	chEmbedFooter GetFooter() const noexcept { return m_footer ? &*m_footer : nullptr; }
-	hEmbedFooter  GetFooter()       noexcept { return m_footer ? &*m_footer : nullptr; }
-	chEmbedAuthor GetAuthor() const noexcept { return m_author ? &*m_author : nullptr; }
-	hEmbedAuthor  GetAuthor()       noexcept { return m_author ? &*m_author : nullptr; }
-
-	template<typename... Args> requires std::constructible_from<cEmbedAuthor, Args&&...>
-	cEmbedAuthor& EmplaceAuthor(Args&&... args) {
-		return m_author.emplace(std::forward<Args>(args)...);
-	}
-
+	/* Movers */
+	std::string                    MoveTitle() noexcept { return std::move(m_title);       }
+	std::string              MoveDescription() noexcept { return std::move(m_description); }
+	std::string                      MoveUrl() noexcept { return std::move(m_url);         }
+	std::optional<cEmbedMedia> MoveThumbnail() noexcept { return std::move(m_thumbnail);   }
+	std::optional<cEmbedMedia>     MoveImage() noexcept { return std::move(m_image);       }
+	std::optional<cEmbedMedia>     MoveVideo() noexcept { return std::move(m_video);       }
+	std::optional<cEmbedFooter>   MoveFooter() noexcept { return std::move(m_footer);      }
+	std::optional<cEmbedAuthor>   MoveAuthor() noexcept { return std::move(m_author);      }
+	std::vector<cEmbedField>      MoveFields() noexcept { return std::move(m_fields);      }
+	/* Resetters */
+	void       ResetColor() noexcept { m_color = {};          }
+	void       ResetTitle() noexcept { m_title.clear();       }
+	void ResetDescription() noexcept { m_description.clear(); }
+	void         ResetUrl() noexcept { m_url.clear();         }
+	void   ResetThumbnail() noexcept { m_thumbnail.reset();   }
+	void       ResetImage() noexcept { m_image.reset();       }
+	void      ResetFooter() noexcept { m_footer.reset();      }
+	void      ResetAuthor() noexcept { m_author.reset();      }
+	void      ResetFields() noexcept { m_fields.clear();      }
+	void   ResetTimestamp() noexcept { m_timestamp = {};      }
 	/* Setters */
 	cEmbed& SetColor(cColor c) {
 		m_color = c;
 		return *this;
 	}
-	template<typename Str = std::string> requires std::assignable_from<std::string&, Str&&>
-	cEmbed& SetTitle(Str&& arg) {
-		m_title = std::forward<Str>(arg);
+	template<typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
+	cEmbed& SetTitle(Arg&& arg) {
+		set_var(m_title, std::forward<Arg>(arg));
 		return *this;
 	}
-	template<typename Str = std::string> requires std::assignable_from<std::string&, Str&&>
-	cEmbed& SetDescription(Str&& arg) {
-		m_description = std::forward<Str>(arg);
+	template<typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
+	cEmbed& SetDescription(Arg&& arg) {
+		set_var(m_description, std::forward<Arg>(arg));
 		return *this;
 	}
-	template<typename Str = std::string> requires std::assignable_from<std::string&, Str&&>
-	cEmbed& SetUrl(Str&& arg) {
-		m_url = std::forward<Str>(arg);
+	template<typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
+	cEmbed& SetUrl(Arg&& arg) {
+		set_var(m_url, std::forward<Arg>(arg));
 		return *this;
 	}
 	cEmbed& SetTimestamp(std::chrono::sys_time<std::chrono::milliseconds> arg) {
 		m_timestamp = arg;
 		return *this;
 	}
-	template<typename Arg = cEmbedMedia, typename... Args> requires std::constructible_from<cEmbedMedia, Arg&&, Args&&...>
-	cEmbed& SetThumbnail(Arg&& arg, Args&&... args) {
-		m_thumbnail.emplace(std::forward<Arg>(arg), std::forward<Args>(args)...);
+	template<typename Arg = cEmbedMedia> requires std::constructible_from<cEmbedMedia, Arg&&>
+	cEmbed& SetThumbnail(Arg&& arg) {
+		set_var(m_thumbnail, std::forward<Arg>(arg));
 		return *this;
 	}
-	template<typename Arg = cEmbedMedia, typename... Args> requires std::constructible_from<cEmbedMedia, Arg&&, Args&&...>
-	cEmbed& SetImage(Arg&& arg, Args&&... args) {
-		m_image.emplace(std::forward<Arg>(arg), std::forward<Args>(args)...);
+	template<typename Arg = cEmbedMedia> requires std::constructible_from<cEmbedMedia, Arg&&>
+	cEmbed& SetImage(Arg&& arg) {
+		set_var(m_image, std::forward<Arg>(arg));
 		return *this;
 	}
-	template<typename Arg = cEmbedFooter, typename... Args> requires std::constructible_from<cEmbedFooter, Arg&&, Args&&...>
-	cEmbed& SetFooter(Arg&& arg, Args&&... args) {
-		m_footer.emplace(std::forward<Arg>(arg), std::forward<Args>(args)...);
+	template<typename Arg = cEmbedFooter> requires std::constructible_from<cEmbedFooter, Arg&&>
+	cEmbed& SetFooter(Arg&& arg) {
+		set_var(m_footer, std::forward<Arg>(arg));
 		return *this;
 	}
-	template<typename Arg = cEmbedAuthor, typename... Args> requires std::constructible_from<cEmbedAuthor, Arg&&, Args&&...>
-	cEmbed& SetAuthor(Arg&& arg, Args&&... args) {
-		m_author.emplace(std::forward<Arg>(arg), std::forward<Args>(args)...);
+	template<typename Arg = cEmbedAuthor> requires std::constructible_from<cEmbedAuthor, Arg&&>
+	cEmbed& SetAuthor(Arg&& arg) {
+		set_var(m_author, std::forward<Arg>(arg));
 		return *this;
 	}
-	template<typename Arg = std::vector<cEmbedField>> requires std::assignable_from<std::vector<cEmbedField>&, Arg&&>
+	template<typename Arg = std::vector<cEmbedField>> requires std::constructible_from<std::vector<cEmbedField>, Arg&&>
 	cEmbed& SetFields(Arg&& arg) {
-		m_fields = std::forward<Arg>(arg);
+		set_var(m_fields, std::forward<Arg>(arg));
 		return *this;
 	}
-	template<typename Arg = cEmbedField, typename... Args> requires std::constructible_from<cEmbedField, Arg&&, Args&&...>
-	cEmbed& AddField(Arg&& arg, Args&&... args) {
-		m_fields.emplace_back(std::forward<Arg>(arg), std::forward<Args>(args)...);
-		return *this;
+	/* Emplacers */
+	cColor& EmplaceColor(cColor color) noexcept {
+		return m_color = color;
 	}
-	/* Deleters */
-	cEmbed& ClearTitle() noexcept {
+	std::string& EmplaceTitle() noexcept {
 		m_title.clear();
-		return *this;
+		return m_title;
 	}
-	cEmbed& ClearDescription() noexcept {
+	template<typename Arg = std::string, typename... Args> requires std::constructible_from<std::string, Arg&&, Args&&...>
+	std::string& EmplaceTitle(Arg&& arg, Args&&... args) {
+		return emplace_var(m_title, std::forward<Arg>(arg), std::forward<Args>(args)...);
+	}
+	std::string& EmplaceDescription() noexcept {
 		m_description.clear();
-		return *this;
+		return m_description;
 	}
-	cEmbed& ClearUrl() noexcept {
+	template<typename Arg = std::string, typename... Args> requires std::constructible_from<std::string, Arg&&, Args&&...>
+	std::string& EmplaceDescription(Arg&& arg, Args&&... args) {
+		return emplace_var(m_description, std::forward<Arg>(arg), std::forward<Args>(args)...);
+	}
+	std::string& EmplaceUrl() noexcept {
 		m_url.clear();
-		return *this;
+		return m_url;
 	}
-	cEmbed& ClearTimestamp() noexcept {
-		m_timestamp = {};
-		return *this;
+	template<typename Arg = std::string, typename... Args> requires std::constructible_from<std::string, Arg&&, Args&&...>
+	std::string& EmplaceUrl(Arg&& arg, Args&&... args) {
+		return emplace_var(m_url, std::forward<Arg>(arg), std::forward<Args>(args)...);
 	}
-	cEmbed& ClearThumbnail() noexcept {
-		m_thumbnail.reset();
-		return *this;
+	template<typename... Args> requires std::constructible_from<cEmbedMedia, Args&&...>
+	cEmbedMedia& EmplaceThumbnail(Args&&... args) {
+		return m_thumbnail.emplace(std::forward<Args>(args)...);
 	}
-	cEmbed& ClearImage() noexcept {
-		m_image.reset();
-		return *this;
+	template<typename... Args> requires std::constructible_from<cEmbedMedia, Args&&...>
+	cEmbedMedia& EmplaceImage(Args&&... args) {
+		return m_image.emplace(std::forward<Args>(args)...);
 	}
-	cEmbed& ClearFooter() noexcept {
-		m_footer.reset();
-		return *this;
+	template<typename... Args> requires std::constructible_from<cEmbedFooter, Args&&...>
+	cEmbedFooter& EmplaceFooter(Args&&... args) {
+		return m_footer.emplace(std::forward<Args>(args)...);
 	}
-	cEmbed& ClearAuthor() noexcept {
-		m_author.reset();
-		return *this;
+	template<typename... Args> requires std::constructible_from<cEmbedAuthor, Args&&...>
+	cEmbedAuthor& EmplaceAuthor(Args&&... args) {
+		return m_author.emplace(std::forward<Args>(args)...);
 	}
-	cEmbed& ClearFields() noexcept {
+	std::vector<cEmbedField>& EmplaceFields() noexcept {
 		m_fields.clear();
-		return *this;
+		return m_fields;
+	}
+	template<typename Arg, typename... Args> requires std::constructible_from<std::vector<cEmbedField>, Arg&&, Args&&...>
+	std::vector<cEmbedField>& EmplaceFields(Arg&& arg, Args&&... args) {
+		return emplace_var(m_fields, std::forward<Arg>(arg), std::forward<Args>(args)...);
 	}
 };
 typedef   hHandle<cEmbed>   hEmbed;

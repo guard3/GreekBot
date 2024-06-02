@@ -33,17 +33,19 @@ cGreekBot::OnMessageUpdate(cMessageUpdate& msg, hSnowflake guild_id, hPartialMem
 
 			cMessageParams response;
 			cEmbed& embed = response.EmplaceEmbeds().emplace_back();
+			embed.SetColor(0x2ECD72);
+			embed.SetDescription(fmt::format("📝 A message was **edited** in <#{}>", db_msg->channel_id));
 			if (user) {
 				auto disc = user->GetDiscriminator();
 				embed.EmplaceAuthor(disc ? fmt::format("{}#{:04}", user->GetUsername(), disc) : user->MoveUsername()).SetIconUrl(cCDN::GetUserAvatar(*user));
 			} else {
 				embed.EmplaceAuthor("Deleted user").SetIconUrl(cCDN::GetDefaultUserAvatar(db_msg->author_id));
 			}
-			embed.SetDescription(fmt::format("📝 A message was **edited** in <#{}>", db_msg->channel_id));
+			auto& fields = embed.EmplaceFields();
+			fields.reserve(2);
 			if (!db_msg->content.empty())
-				embed.AddField("Old content", db_msg->content);
-			embed.AddField(pContent->empty() ? "No new content" : "New content", *pContent);
-			embed.SetColor(0x2ECD72);
+				fields.emplace_back("Old content", db_msg->content);
+			fields.emplace_back(pContent->empty() ? "No new content" : "New content", *pContent);
 
 			co_await CreateMessage(MESSAGE_LOG_CHANNEL_ID, response);
 		}

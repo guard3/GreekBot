@@ -101,9 +101,11 @@ cGreekBot::process_ban(cInteraction& i, uint32_t subcmd, const cSnowflake& user_
 			fmt::format("{} was banned", username),
 			kw::icon_url=cCDN::GetUserAvatar(user_id, hash, discr)
 		},
-		kw::color=0xC43135,
-		kw::fields={{ "Reason", reason }}
+		kw::color=0xC43135
 	);
+	auto& fields = e.EmplaceFields();
+	fields.reserve(2);
+	fields.emplace_back("Reason", reason);
 	/* DM the goodbye message */
 	try {
 		co_await CreateDMMessage(user_id, cMessageParams()
@@ -111,9 +113,8 @@ cGreekBot::process_ban(cInteraction& i, uint32_t subcmd, const cSnowflake& user_
 		);
 		/* Add the goodbye message field only after the DM was sent successfully */
 		if (reason != goodbye)
-			e.AddField("Goodbye message", goodbye);
-	}
-	catch (...) {
+			fields.emplace_back("Goodbye message", goodbye);
+	} catch (...) {
 		/* Couldn't send ban reason in DMs, the user may not be a member of the guild but that's fine */
 	}
 	/* Ban */
@@ -150,13 +151,13 @@ cGreekBot::process_unban(cMsgCompInteraction& i, const cSnowflake& user_id) HAND
 	} catch (xDiscordError &e) {
 		/* Ban not found, but that's fine */
 	}
-	cMessageUpdate msg;
-	auto& embeds = msg.EmplaceEmbeds(i.GetMessage().MoveEmbeds());
-	auto& e = embeds.front();
-	auto name = e.GetAuthor()->GetName();
+	cMessageUpdate response;
+	auto& embed = response.EmplaceEmbeds(i.GetMessage().MoveEmbeds()).front();
+	auto name = embed.GetAuthor()->GetName();
 	name.remove_suffix(11);
-	e.ClearFields().SetColor(0x248046).SetDescription("User was unbanned").GetAuthor()->SetName(name);
-	co_await InteractionEditMessage(i, msg.SetComponents({
+	embed.ResetFields();
+	embed.SetColor(0x248046).SetDescription("User was unbanned").GetAuthor()->SetName(name);
+	co_await InteractionEditMessage(i, response.SetComponents({
 		cActionRow{
 			cButton{
 				BUTTON_STYLE_SECONDARY,
