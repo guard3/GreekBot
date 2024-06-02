@@ -140,7 +140,7 @@ cGreekBot::process_booster_menu(cMsgCompInteraction& i) HANDLER_BEGIN {
 		1109212629882392586, // @Τούρκος
 		1121773567785308181, // @Πέγκω
 		1156980445058170991, // @Κυνεζί
-		1163945469567832215, // @Κόκκινο Πάντα
+		1163945469567832215, // @Πάπια
 	};
 	/* Acknowledge interaction */
 	co_await InteractionDefer(i);
