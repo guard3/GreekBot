@@ -11,64 +11,72 @@
         "value": "350483752490631181",
         "description": "If greek is your native language",
         "emoji": {
-          "name": "level_gr",
-          "id": "875469185529036880"
+          "id": "1247170349523669086",
+          "name": "select_gr"
+        }
+      }, {
+        "label": "Cypriot",
+        "value": "1247132108686884894",
+        "description": "If cypriot greek is your native language",
+        "emoji": {
+          "id": "1247170344385642556",
+          "name": "select_cy"
         }
       }, {
         "label": "Beginner",
         "value": "351117824300679169",
         "description": "If you just started learning greek or your level is A1",
         "emoji": {
-          "name": "level_a1",
-          "id": "875469185793286164"
+          "id": "1247170325872119918",
+          "name": "select_a1"
         }
       }, {
         "label": "Elementary",
         "value": "351117954974482435",
         "description": "If your greek level is A2",
         "emoji": {
-          "name": "level_a2",
-          "id": "875469185394827355"
+          "id": "1247170328967516163",
+          "name": "select_a2"
         }
       }, {
         "label": "Intermediate",
         "value": "350485376109903882",
         "description": "If your greek level is B1",
         "emoji": {
-          "name": "level_b1",
-          "id": "875469185659056138"
+          "id": "1247170331450540084",
+          "name": "select_b1"
         }
       }, {
         "label": "Upper Intermediate",
         "value": "351118486426091521",
         "description": "If your greek level is B2",
         "emoji": {
-          "name": "level_b2",
-          "id": "875469185751347251"
+          "id": "1247170334155739176",
+          "name": "select_b2"
         }
       }, {
         "label": "Advanced",
         "value": "350485279238258689",
         "description": "If your greek level is C1",
         "emoji": {
-          "name": "level_c1",
-          "id": "875469185726173276"
+          "id": "1247170337498599455",
+          "name": "select_c1"
         }
       }, {
         "label": "Fluent",
         "value": "350483489461895168",
         "description": "If your greek level is C2",
         "emoji": {
-          "name": "level_c2",
-          "id": "875469185734541382"
+          "id": "1247170341059694655",
+          "name": "select_c2"
         }
       }, {
         "label": "Non Learner",
         "value": "352001527780474881",
         "description": "If you don't know greek and you don't want to learn it",
         "emoji": {
-          "name": "352001527780474881",
-          "id": "875469185466109992"
+          "id": "1247170352585375754",
+          "name": "select_no"
         }
       }]
     }]

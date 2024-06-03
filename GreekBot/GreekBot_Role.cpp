@@ -20,14 +20,15 @@ enum : uint32_t {
 };
 /* ================================================================================================================== */
 enum : uint64_t {
-	ROLE_ID_NATIVE             = 350483752490631181, // @Native
-	ROLE_ID_BEGINNER           = 351117824300679169, // @Beginner
-	ROLE_ID_ELEMENTARY         = 351117954974482435, // @Elementary
-	ROLE_ID_INTERMEDIATE       = 350485376109903882, // @Intermediate
-	ROLE_ID_UPPER_INTERMEDIATE = 351118486426091521, // @Upper Intermediate
-	ROLE_ID_ADVANCED           = 350485279238258689, // @Advanced
-	ROLE_ID_FLUENT             = 350483489461895168, // @Fluent
-	ROLE_ID_NON_LEARNER        = 352001527780474881  // @Non Learner
+	ROLE_ID_FLUENT             = 350483489461895168,  // @Fluent
+	ROLE_ID_NATIVE             = 350483752490631181,  // @Native
+	ROLE_ID_ADVANCED           = 350485279238258689,  // @Advanced
+	ROLE_ID_INTERMEDIATE       = 350485376109903882,  // @Intermediate
+	ROLE_ID_BEGINNER           = 351117824300679169,  // @Beginner
+	ROLE_ID_ELEMENTARY         = 351117954974482435,  // @Elementary
+	ROLE_ID_UPPER_INTERMEDIATE = 351118486426091521,  // @Upper Intermediate
+	ROLE_ID_NON_LEARNER        = 352001527780474881,  // @Non Learner
+	ROLE_ID_CYPRUS             = 1247132108686884894, // @Cyprus
 };
 /* ================================================================================================================== */
 cTask<>
@@ -92,30 +93,34 @@ cGreekBot::process_role_button(cMsgCompInteraction& i, uint32_t button_id) HANDL
 /* ================================================================================================================== */
 cTask<>
 cGreekBot::process_proficiency_menu(cMsgCompInteraction& i) HANDLER_BEGIN {
-	/* The proficiency roles of Learning Greek */
+	/* The proficiency roles of Learning Greek; sorted for binary search to work! */
 	static const cSnowflake pr_roles[] {
-		ROLE_ID_NATIVE,
-		ROLE_ID_BEGINNER,
-		ROLE_ID_ELEMENTARY,
-		ROLE_ID_INTERMEDIATE,
-		ROLE_ID_UPPER_INTERMEDIATE,
-		ROLE_ID_ADVANCED,
-		ROLE_ID_FLUENT,
-		ROLE_ID_NON_LEARNER
+		ROLE_ID_FLUENT,             // 350483489461895168  @Fluent
+		ROLE_ID_NATIVE,             // 350483752490631181  @Native
+		ROLE_ID_ADVANCED,           // 350485279238258689  @Advanced
+		ROLE_ID_INTERMEDIATE,       // 350485376109903882  @Intermediate
+		ROLE_ID_BEGINNER,           // 351117824300679169  @Beginner
+		ROLE_ID_ELEMENTARY,         // 351117954974482435  @Elementary
+		ROLE_ID_UPPER_INTERMEDIATE, // 351118486426091521  @Upper Intermediate
+		ROLE_ID_NON_LEARNER,        // 352001527780474881  @Non Learner
+		ROLE_ID_CYPRUS              // 1247132108686884894 @Cyprus
 	};
 	co_await InteractionDefer(i);
 	auto member_roles = i.GetMember()->GetRoles();
 	/* Add roles to member update options */
 	cMemberOptions options;
 	auto& roles = options.EmplaceRoles();
-	roles.reserve(member_roles.size() + 1);
+	roles.reserve(member_roles.size() + 2);
 	/* Copy all member roles, except the proficiency ones */
 	rng::copy_if(member_roles, std::back_inserter(roles), [](cSnowflake& role_id) {
-		return rng::find(pr_roles, role_id) == rng::end(pr_roles);
+		return !rng::binary_search(pr_roles, role_id);
 	});
 	/* Append the selected role id */
-	auto selected_role_id = i.GetValues().front();
-	roles.emplace_back(selected_role_id);
+	cSnowflake selected_role_id = i.GetValues().front();
+	roles.push_back(selected_role_id);
+	/* If the user chose "Cyprus", also give them "Native" */
+	if (selected_role_id == ROLE_ID_CYPRUS)
+		roles.emplace_back(ROLE_ID_NATIVE);
 	/* Update member and send confirmation message */
 	co_await ModifyGuildMember(*i.GetGuildId(), i.GetUser().GetId(), options);
 	co_await InteractionSendMessage(i, cMessageParams()
