@@ -1,9 +1,8 @@
-#ifndef GREEKBOT_EMOJI_H
-#define GREEKBOT_EMOJI_H
-#include "Common.h"
+#ifndef DISCORD_EMOJI_H
+#define DISCORD_EMOJI_H
+#include "EmojiFwd.h"
 
 class cEmoji final {
-private:
 	cSnowflake  m_id;
 	std::string m_name;
 	bool        m_animated;
@@ -29,12 +28,9 @@ public:
 
 	std::string ToString() const;
 };
-typedef   hHandle<cEmoji>   hEmoji;
-typedef  chHandle<cEmoji>  chEmoji;
-typedef  uhHandle<cEmoji>  uhEmoji;
-typedef uchHandle<cEmoji> uchEmoji;
+
 cEmoji
 tag_invoke(json::value_to_tag<cEmoji>, const json::value& v);
 void
 tag_invoke(json::value_from_tag, json::value&, const cEmoji&);
-#endif //GREEKBOT_EMOJI_H
+#endif /* DISCORD_EMOJI_H */

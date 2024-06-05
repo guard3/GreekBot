@@ -1,10 +1,11 @@
 #ifndef GREEKBOT_GATEWAY_H
 #define GREEKBOT_GATEWAY_H
 #include "Coroutines.h"
+#include "EmojiFwd.h"
 #include "Guild.h"
 #include "InteractionFwd.h"
 #include "Member.h"
-#include "Message.h"
+#include "MessageFwd.h"
 #include <span>
 
 enum eIntent {

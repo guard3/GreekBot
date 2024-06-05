@@ -38,7 +38,9 @@ add_executable(GreekBot main.cpp boost/json.h Discord/Bot.cpp Discord/Bot.h Disc
         Discord/Objects/Component/Button.cpp
         Discord/Objects/Component/TextInput.cpp
         Discord/Objects/Component/UnsupportedComponent.h
-        Discord/Objects/Component/UnsupportedComponent.cpp)
+        Discord/Objects/Component/UnsupportedComponent.cpp
+        Discord/Objects/MessageFwd.h
+        Discord/Objects/EmojiFwd.h)
 
 target_include_directories(
     GreekBot PRIVATE

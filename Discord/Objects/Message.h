@@ -1,10 +1,11 @@
-#ifndef GREEKBOT_MESSAGE_H
-#define GREEKBOT_MESSAGE_H
-#include "User.h"
+#ifndef DISCORD_MESSAGE_H
+#define DISCORD_MESSAGE_H
+#include "Attachment.h"
+#include "Component.h"
 #include "Embed.h"
 #include "Member.h"
-#include "Component.h"
-#include "Attachment.h"
+#include "MessageFwd.h"
+#include "User.h"
 #include <span>
 
 enum eMessageType {
@@ -240,10 +241,7 @@ public:
 		return m_embeds.emplace(std::forward<Args>(args)...);
 	}
 };
-using   hMessageUpdate =   hHandle<cMessageUpdate>;
-using  chMessageUpdate =  chHandle<cMessageUpdate>;
-using  uhMessageUpdate =  uhHandle<cMessageUpdate>;
-using uchMessageUpdate = uchHandle<cMessageUpdate>;
+
 cMessageUpdate
 tag_invoke(json::value_to_tag<cMessageUpdate>, const json::value&);
 void
@@ -296,10 +294,6 @@ public:
 	std::vector<cEmbed> MoveEmbeds() noexcept { return std::move(embeds); }
 	std::vector<cAttachment> MoveAttachments() noexcept { return std::move(attachments); }
 };
-typedef   hHandle<cMessage>   hMessage;
-typedef  chHandle<cMessage>  chMessage;
-typedef  uhHandle<cMessage>  uhMessage;
-typedef uchHandle<cMessage> uchMessage;
 
 template<>
 inline std::chrono::sys_time<std::chrono::milliseconds> cMessage::GetTimestamp() const noexcept {
@@ -319,4 +313,4 @@ public:
 
 	const cSnowflake& GetId() const noexcept { return m_id; }
 };
-#endif /* GREEKBOT_MESSAGE_H */
+#endif /* DISCORD_MESSAGE_H */
