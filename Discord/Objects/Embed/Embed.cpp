@@ -1,17 +1,22 @@
 #include "Embed.h"
-#include "json.h"
 #include "Utils.h"
+#include "json.h"
 /* ================================================================================================================== */
 cEmbedAuthor::cEmbedAuthor(const json::value& v): cEmbedAuthor(v.as_object()) {}
 cEmbedAuthor::cEmbedAuthor(const json::object& o):
-	m_name(json::value_to<std::string>(o.at("name"))) {
-	if (auto p = o.if_contains("url"))
-		m_url = json::value_to<std::string>(*p);
-	if (auto p = o.if_contains("icon_url"))
-		m_icon_url = json::value_to<std::string>(*p);
-	if (auto p = o.if_contains("proxy_icon_url"))
-		m_proxy_icon_url = json::value_to<std::string>(*p);
-}
+	m_name(json::value_to<std::string>(o.at("name"))),
+	m_url([&o] {
+		const auto p = o.if_contains("url");
+		return p ? json::value_to<std::string>(*p) : std::string();
+	}()),
+	m_icon_url([&o] {
+		const auto p = o.if_contains("icon_url");
+		return p ? json::value_to<std::string>(*p) : std::string();
+	}()),
+	m_proxy_icon_url([&o] {
+		const auto p = o.if_contains("proxy_icon_url");
+		return p ? json::value_to<std::string>(*p) : std::string();
+	}()) {}
 /* ================================================================================================================== */
 cEmbedAuthor
 tag_invoke(json::value_to_tag<cEmbedAuthor>, const json::value& v) {
@@ -27,36 +32,65 @@ tag_invoke(json::value_from_tag, json::value& v, const cEmbedAuthor& e) {
 		obj.emplace("icon_url", icon_url);
 }
 /* ================================================================================================================== */
-cEmbedField::cEmbedField(const json::value& v):
-		m_name(json::value_to<std::string>(v.at("name"))),
-		m_value(json::value_to<std::string>(v.at("value"))) {
-	auto p = v.get_object().if_contains("inline");
+cEmbedField::cEmbedField(const json::value& v): cEmbedField(v.as_object()) {}
+cEmbedField::cEmbedField(const json::object& o):
+	m_name(json::value_to<std::string>(o.at("name"))),
+	m_value(json::value_to<std::string>(o.at("value"))) {
+	const auto p = o.if_contains("inline");
 	m_inline = p && p->as_bool();
 }
 /* ================================================================================================================== */
-cEmbedFooter::cEmbedFooter(const json::value& v):
-		m_text(json::value_to<std::string>(v.at("text"))) {
-	const json::object& o = v.as_object();
-	if (auto p = o.if_contains("icon_url"))
-		m_icon_url = json::value_to<std::string>(*p);
-	if (auto p = o.if_contains("proxy_icon_url"))
-		m_proxy_icon_url = json::value_to<std::string>(*p);
+cEmbedField
+tag_invoke(json::value_to_tag<cEmbedField>, const json::value& v) {
+	return cEmbedField{ v };
+}
+void
+tag_invoke(json::value_from_tag, json::value& v, const cEmbedField& e) {
+	auto& obj = v.emplace_object();
+	obj.emplace("name", e.GetName());
+	obj.emplace("value", e.GetValue());
+	if (e.IsInline())
+		obj.emplace("inline", true);
+}
+/* ================================================================================================================== */
+cEmbedFooter::cEmbedFooter(const json::value& v): cEmbedFooter(v.as_object()) {}
+cEmbedFooter::cEmbedFooter(const json::object& o):
+	m_text(json::value_to<std::string>(o.at("text"))),
+	m_icon_url([&o] {
+		const auto p = o.if_contains("icon_url");
+		return p ? json::value_to<std::string>(*p) : std::string();
+	}()),
+	m_proxy_icon_url([&o] {
+		const auto p = o.if_contains("proxy_icon_url");
+		return p ? json::value_to<std::string>(*p) : std::string();
+	}()) {}
+/* ================================================================================================================== */
+cEmbedFooter
+tag_invoke(json::value_to_tag<cEmbedFooter>, const json::value& v) {
+	return cEmbedFooter{ v };
+}
+void
+tag_invoke(json::value_from_tag, json::value& v, const cEmbedFooter& e) {
+	auto& obj = v.emplace_object();
+	obj.emplace("text", e.GetText());
+	if (auto icon_url = e.GetIconUrl(); !icon_url.empty())
+		obj.emplace("icon_url", icon_url);
 }
 /* ================================================================================================================== */
 cEmbedMedia::cEmbedMedia(const json::value& v): cEmbedMedia(v.as_object()) {}
 cEmbedMedia::cEmbedMedia(const json::object& o):
-	m_width([&o] {
-		auto p = o.if_contains("width");
-		return p ? p->to_number<int>() : -1;
+	m_url([&o] {
+		const auto p = o.if_contains("url");
+		return p ? json::value_to<std::string>(*p) : std::string();
 	}()),
-	m_height([&o] {
-		auto p = o.if_contains("height");
-		return p ? p->to_number<int>() : -1;
+	m_proxy_url([&o] {
+		const auto p = o.if_contains("proxy_url");
+		return p ? json::value_to<std::string>(*p) : std::string();
 	}()) {
-	if (auto p = o.if_contains("url"))
-		m_url = json::value_to<std::string>(*p);
-	if (auto p = o.if_contains("proxy_url"))
-		m_proxy_url = json::value_to<std::string>(*p);
+	auto p = o.if_contains("width");
+	m_width = p ? p->to_number<int>() : -1;
+	p = o.if_contains("height");
+	m_height = p ? p->to_number<int>() : -1;
 }
 /* ================================================================================================================== */
 cEmbedMedia
@@ -94,23 +128,12 @@ cEmbed::cEmbed(const json::object& o) {
 		m_fields = json::value_to<std::vector<cEmbedField>>(*p);
 }
 /* ================================================================================================================== */
-void
-tag_invoke(const json::value_from_tag&, json::value& v, const cEmbedField& e) {
-	v = {
-		{ "name",   e.GetName()  },
-		{ "value",  e.GetValue() },
-		{ "inline", e.IsInline() }
-	};
+cEmbed
+tag_invoke(json::value_to_tag<cEmbed>, const json::value& v) {
+	return cEmbed{ v };
 }
 void
-tag_invoke(const json::value_from_tag&, json::value& v, const cEmbedFooter& e) {
-	v = {
-		{ "text",     e.GetText()    },
-		{ "icon_url", e.GetIconUrl() }
-	};
-}
-void
-tag_invoke(const json::value_from_tag&, json::value& v, const cEmbed& e) {
+tag_invoke(json::value_from_tag, json::value& v, const cEmbed& e) {
 	json::object& obj = v.emplace_object();
 	obj = {
 		{ "color",       e.GetColor().ToInt() },
@@ -131,12 +154,4 @@ tag_invoke(const json::value_from_tag&, json::value& v, const cEmbed& e) {
 		json::value_from(*e.GetFooter(), obj["footer"]);
 	if (e.GetAuthor())
 		json::value_from(*e.GetAuthor(), obj["author"]);
-}
-cEmbedField
-tag_invoke(json::value_to_tag<cEmbedField>, const json::value& v) {
-	return cEmbedField{ v };
-}
-cEmbed
-tag_invoke(json::value_to_tag<cEmbed>, const json::value& v) {
-	return cEmbed{ v };
 }
