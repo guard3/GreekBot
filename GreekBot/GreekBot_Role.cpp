@@ -94,7 +94,7 @@ cGreekBot::process_role_button(cMsgCompInteraction& i, uint32_t button_id) HANDL
 cTask<>
 cGreekBot::process_proficiency_menu(cMsgCompInteraction& i) HANDLER_BEGIN {
 	/* The proficiency roles of Learning Greek; sorted for binary search to work! */
-	static const cSnowflake pr_roles[] {
+	static constexpr std::uint64_t pr_roles[] {
 		ROLE_ID_FLUENT,             // 350483489461895168  @Fluent
 		ROLE_ID_NATIVE,             // 350483752490631181  @Native
 		ROLE_ID_ADVANCED,           // 350485279238258689  @Advanced
@@ -105,6 +105,7 @@ cGreekBot::process_proficiency_menu(cMsgCompInteraction& i) HANDLER_BEGIN {
 		ROLE_ID_NON_LEARNER,        // 352001527780474881  @Non Learner
 		ROLE_ID_CYPRUS              // 1247132108686884894 @Cyprus
 	};
+	static_assert(rng::is_sorted(pr_roles), "Must be sorted for binary search");
 	co_await InteractionDefer(i);
 	auto member_roles = i.GetMember()->GetRoles();
 	/* Add roles to member update options */
@@ -113,7 +114,7 @@ cGreekBot::process_proficiency_menu(cMsgCompInteraction& i) HANDLER_BEGIN {
 	roles.reserve(member_roles.size() + 2);
 	/* Copy all member roles, except the proficiency ones */
 	rng::copy_if(member_roles, std::back_inserter(roles), [](cSnowflake& role_id) {
-		return !rng::binary_search(pr_roles, role_id);
+		return !rng::binary_search(pr_roles, role_id.ToInt());
 	});
 	/* Append the selected role id */
 	cSnowflake selected_role_id = i.GetValues().front();
@@ -133,7 +134,7 @@ cTask<>
 cGreekBot::process_booster_menu(cMsgCompInteraction& i) HANDLER_BEGIN {
 	using namespace std::chrono;
 	/* All the color roles available in Learning Greek; sorted for binary search to work */
-	static const cSnowflake color_roles[] {
+	static constexpr std::uint64_t color_roles[] {
 		 657145859439329280, // @Κακούλης
 		 677183404743327764, // @Πορτοκαλί
 		 735954079355895889, // @Μέλας
@@ -147,6 +148,7 @@ cGreekBot::process_booster_menu(cMsgCompInteraction& i) HANDLER_BEGIN {
 		1156980445058170991, // @Κυνεζί
 		1163945469567832215, // @Πάπια
 	};
+	static_assert(rng::is_sorted(color_roles), "Must be sorted for binary search");
 	/* Acknowledge interaction */
 	co_await InteractionDefer(i);
 	/* Prepare confirmation message */
@@ -160,7 +162,7 @@ cGreekBot::process_booster_menu(cMsgCompInteraction& i) HANDLER_BEGIN {
 	roles.reserve(member_roles.size() + 1);
 	/* Copy all roles, except the color ones */
 	rng::copy_if(member_roles, std::back_inserter(roles), [](cSnowflake& role_id) {
-		return !rng::binary_search(color_roles, role_id);
+		return !rng::binary_search(color_roles, role_id.ToInt());
 	});
 	/* Retrieve the selected role id */
 	cSnowflake selected_id = i.GetValues().front();
