@@ -60,7 +60,7 @@ public:
 
 	static void Initialize();
 
-	static cTask<> UpdateLeaderboard(const cMessage&);
+	static cTask<std::uint64_t> UpdateLeaderboard(const cMessage&);
 	static cTask<tRankQueryData> GetUserRank(const cUser&);
 	static cTask<tRankQueryData> GetTop10();
 

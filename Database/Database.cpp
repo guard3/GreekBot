@@ -173,24 +173,23 @@ public:
 	void await_resume() {}
 };
 /* ================================================================================================================== */
-cTask<>
+cTask<std::uint64_t>
 cDatabase::UpdateLeaderboard(const cMessage& msg) {
-	co_await resume_on_db_strand();
-
 	using namespace std::chrono;
-	/* Execute QUERY_UPDATE_LB */
-	sqlite3_stmt* stmt;
-	if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_UPDATE_LB, sizeof(QUERY_UPDATE_LB), &stmt, nullptr)) {
-		if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, msg.GetAuthor().GetId().ToInt())) {
-			if (SQLITE_OK == sqlite3_bind_int64(stmt, 2, time_point_cast<seconds>(msg.GetId().GetTimestamp()).time_since_epoch().count())) {
-				if (SQLITE_DONE == sqlite3_step(stmt)) {
-					sqlite3_finalize(stmt);
-					co_return;
-				}
-			}
+	co_await resume_on_db_strand();
+	auto stmt = sqlite3_prepare(QUERY_UPDATE_LB);
+	if (   stmt
+	    && SQLITE_OK  == sqlite3_bind_int64(stmt, 1, msg.GetAuthor().GetId().ToInt())
+	    && SQLITE_OK  == sqlite3_bind_int64(stmt, 2, floor<seconds>(msg.GetTimestamp()).time_since_epoch().count())) {
+		switch (sqlite3_step(stmt)) {
+			case SQLITE_DONE:
+				co_return 0;
+			case SQLITE_ROW:
+				co_return sqlite3_column_int64(stmt, 0);
+			default:
+				break;
 		}
 	}
-	sqlite3_finalize(stmt);
 	throw xDatabaseError();
 }
 cTask<uint64_t>

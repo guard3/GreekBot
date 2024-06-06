@@ -76,6 +76,8 @@ private:
 	cTask<> process_interaction(cMsgCompInteraction&);
 	cTask<> process_interaction(cModalSubmitInteraction&);
 
+	cTask<> process_leaderboard_new_message(cMessage& msg, cPartialMember& member);
+
 	cTask<> OnGuildCreate(uhGuild guild) override;
 	cTask<> OnGuildRoleCreate(cSnowflake& guild_id, cRole& role) override;
 	cTask<> OnGuildRoleUpdate(cSnowflake& guild_id, cRole& role) override;

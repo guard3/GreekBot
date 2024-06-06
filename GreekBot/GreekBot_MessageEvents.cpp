@@ -9,17 +9,19 @@ cTask<>
 cGreekBot::OnMessageCreate(cMessage& msg, hSnowflake guild_id, hPartialMember member) {
 	/* Make sure we're in Learning Greek and that the message author is a real user */
 	if (cUser& author = msg.GetAuthor(); guild_id && *guild_id == LMG_GUILD_ID && !author.IsBotUser() && !author.IsSystemUser()) {
-		/* Save message for logging purposes */
-		co_await cDatabase::RegisterMessage(msg);
-		/* Update leaderboard */
-		co_await cDatabase::UpdateLeaderboard(msg);
-		/* Cleanup old logged messages in 1 hour intervals */
-		using namespace std::chrono;
-		using namespace std::chrono_literals;
-		if (auto now = steady_clock::now(); now - m_before > 1h) {
-			m_before = now;
-			co_await cDatabase::CleanupMessages();
-		}
+		try {
+			/* Save message for logging purposes */
+			co_await cDatabase::RegisterMessage(msg);
+			/* Cleanup old logged messages in 1 hour intervals */
+			using namespace std::chrono;
+			using namespace std::chrono_literals;
+			if (auto now = steady_clock::now(); now - m_before > 1h) {
+				m_before = now;
+				co_await cDatabase::CleanupMessages();
+			}
+		} catch (...) {}
+		/* Do leaderboard stuff */
+		co_await process_leaderboard_new_message(msg, *member);
 	}
 }
 cTask<>
