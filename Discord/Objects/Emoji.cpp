@@ -4,8 +4,8 @@
 cEmoji::cEmoji(const json::value& v) : cEmoji(v.as_object()) {}
 cEmoji::cEmoji(const json::object& o) :
 	m_id([&o] {
-		auto& v = o.at("id");
-		return v.is_null() ? cSnowflake{} : json::value_to<cSnowflake>(v);
+		auto p = o.if_contains("id");
+		return p && !p->is_null() ? json::value_to<cSnowflake>(*p) : cSnowflake{};
 	}()),
 	m_name([&o] {
 		auto& v = o.at("name");
