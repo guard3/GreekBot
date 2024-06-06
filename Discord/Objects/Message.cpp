@@ -44,9 +44,10 @@ tag_invoke(json::value_to_tag<cMessageUpdate>, const json::value& v) {
 }
 void
 tag_invoke(json::value_from_tag, json::value& v, const cMessageUpdate& m) {
-	json::object& obj = v.emplace_object();
+	auto& obj = v.emplace_object();
+	obj.reserve(3);
 	if (auto p = m.GetContent().Get())
-		json::value_from(*p, obj["content"]);
+		obj.emplace("content", *p);
 	if (auto p = m.GetComponents().Get())
 		json::value_from(*p, obj["components"]);
 	if (auto p = m.GetEmbeds().Get())
