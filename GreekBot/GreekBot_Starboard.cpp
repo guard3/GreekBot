@@ -31,7 +31,7 @@ cGreekBot::OnMessageReactionAdd(cSnowflake& user_id, cSnowflake& channel_id, cSn
 		co_return;
 	/* Also make sure that the message author id is provided */
 	std::optional<cMessage> msg;
-	cMessage* pMsg;
+	cMessage* pMsg = nullptr;
 	if (!message_author_id) {
 		pMsg = &msg.emplace(co_await GetChannelMessage(channel_id, message_id));
 		message_author_id = &pMsg->GetAuthor().GetId();
