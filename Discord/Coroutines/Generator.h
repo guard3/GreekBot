@@ -11,10 +11,9 @@ public:
 	cGenerator(cGenerator&& o) noexcept : m_handle(o.m_handle) { o.m_handle = nullptr; }
 	~cGenerator() { if (m_handle) m_handle.destroy(); }
 
-	cGenerator& operator=(const cGenerator&) = delete;
-	cGenerator& operator=(cGenerator&& o) noexcept {
-		~cGenerator();
-		return *new (this) cGenerator(std::move(o));
+	cGenerator& operator=(cGenerator o) noexcept {
+		swap(m_handle, o.m_handle);
+		return *this;
 	}
 
 	bool HasValue();

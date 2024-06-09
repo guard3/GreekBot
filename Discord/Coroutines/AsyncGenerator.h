@@ -25,10 +25,8 @@ public:
 	cAsyncGenerator(cAsyncGenerator&& o) noexcept : m_coro(std::exchange(o.m_coro, {})) {}
 	~cAsyncGenerator() { if (m_coro) m_coro.destroy(); }
 	/* Move-only assignment */
-	cAsyncGenerator& operator=(const cAsyncGenerator&) = delete;
-	cAsyncGenerator& operator=(cAsyncGenerator&& o) noexcept {
-		std::destroy_at(this);
-		std::construct_at(this, std::move(o));
+	cAsyncGenerator& operator=(cAsyncGenerator o) noexcept {
+		swap(m_coro, o.m_coro);
 		return *this;
 	}
 	/* Iterators */
@@ -161,10 +159,8 @@ public:
 	iterator(iterator&& o) noexcept : m_coro(std::exchange(o.m_coro, {})) {}
 	~iterator() { if (m_coro) m_coro.destroy(); }
 	/* Move-only assignment */
-	iterator& operator=(const iterator&) = delete;
-	iterator& operator=(iterator&& o) noexcept {
-		std::destroy_at(this);
-		std::construct_at(this, std::move(o));
+	iterator& operator=(iterator o) noexcept {
+		swap(m_coro, o.m_coro);
 		return *this;
 	}
 	/* Operators to access the currently yielded value */

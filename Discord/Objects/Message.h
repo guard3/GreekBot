@@ -89,38 +89,6 @@ public:
 	void ResetEmbeds() noexcept {
 		m_embeds.clear();
 	}
-	/* Setters */
-	cMessageParams& SetFlags(eMessageFlag flags) noexcept {
-		m_flags = flags;
-		return *this;
-	}
-	template<typename T = decltype(m_content), typename Arg = T> requires std::constructible_from<T, Arg&&>
-	cMessageParams& SetContent(Arg&& arg) {
-		if constexpr (std::assignable_from<T&, Arg&&>) {
-			m_content = std::forward<Arg>(arg);
-		} else {
-			m_content = T(std::forward<Arg>(arg));
-		}
-		return *this;
-	}
-	template<typename T = decltype(m_components), typename Arg = T> requires std::constructible_from<T, Arg&&>
-	cMessageParams& SetComponents(Arg&& arg) {
-		if constexpr (std::assignable_from<T&, Arg&&>) {
-			m_components = std::forward<Arg>(arg);
-		} else {
-			m_components = T(std::forward<Arg>(arg));
-		}
-		return *this;
-	}
-	template<typename T = decltype(m_embeds), typename Arg = T> requires std::constructible_from<T, Arg&&>
-	cMessageParams& SetEmbeds(Arg&& arg) {
-		if constexpr (std::assignable_from<T&, Arg&&>) {
-			m_embeds = std::forward<Arg>(arg);
-		} else {
-			m_embeds = T(std::forward<Arg>(arg));
-		}
-		return *this;
-	}
 	/* Emplacers */
 	eMessageFlag& EmplaceFlags(eMessageFlag flags = MESSAGE_FLAG_NONE) noexcept {
 		return m_flags = flags;
@@ -129,49 +97,54 @@ public:
 		m_content.clear();
 		return m_content;
 	}
-	template<typename T = std::string, typename Arg = T, typename... Args> requires std::constructible_from<T, Arg&&, Args&&...>
-	T& EmplaceContent(Arg&& arg, Args&&... args) {
-		if constexpr (std::assignable_from<T&, Arg&&> && sizeof...(Args) == 0) {
-			return m_content = std::forward<Arg>(arg);
-		} else try {
-			std::destroy_at(&m_content);
-			return *std::construct_at(&m_content, std::forward<Arg>(arg), std::forward<Args>(args)...);
-		} catch (...) {
-			std::construct_at(&m_content);
-			throw;
-		}
-	}
 	std::vector<cActionRow>& EmplaceComponents() noexcept {
 		m_components.clear();
 		return m_components;
-	}
-	template<typename T = decltype(m_components), typename Arg = T, typename... Args> requires std::constructible_from<T, Arg&&, Args&&...>
-	T& EmplaceComponents(Arg&& arg, Args&&... args) {
-		if constexpr (std::assignable_from<T&, Arg&&> && sizeof...(Args) == 0) {
-			return m_components = std::forward<Arg>(arg);
-		} else try {
-			std::destroy_at(&m_components);
-			return *std::construct_at(&m_components, std::forward<Arg>(arg), std::forward<Args>(args)...);
-		} catch (...) {
-			std::construct_at(&m_components);
-			throw;
-		}
 	}
 	std::vector<cEmbed>& EmplaceEmbeds() noexcept {
 		m_embeds.clear();
 		return m_embeds;
 	}
+	template<typename T = decltype(m_content), typename Arg = T, typename... Args> requires std::constructible_from<T, Arg&&, Args&&...>
+	T& EmplaceContent(Arg&& arg, Args&&... args) {
+		if constexpr (std::assignable_from<T&, Arg&&> && sizeof...(Args) == 0)
+			return m_content = std::forward<Arg>(arg);
+		else
+			return m_content = T(std::forward<Arg>(arg), std::forward<Args>(args)...);
+	}
+	template<typename T = decltype(m_components), typename Arg = T, typename... Args> requires std::constructible_from<T, Arg&&, Args&&...>
+	T& EmplaceComponents(Arg&& arg, Args&&... args) {
+		if constexpr (std::assignable_from<T&, Arg&&> && sizeof...(Args) == 0)
+			return m_components = std::forward<Arg>(arg);
+		else
+			return m_components = T(std::forward<Arg>(arg), std::forward<Args>(args)...);
+	}
 	template<typename T = decltype(m_embeds), typename Arg = T, typename... Args> requires std::constructible_from<T, Arg&&, Args&&...>
 	T& EmplaceEmbeds(Arg&& arg, Args&&... args) {
-		if constexpr (std::assignable_from<T&, Arg&&> && sizeof...(Args) == 0) {
+		if constexpr (std::assignable_from<T&, Arg&&> && sizeof...(Args) == 0)
 			return m_embeds = std::forward<Arg>(arg);
-		} else try {
-			std::destroy_at(&m_embeds);
-			return *std::construct_at(&m_embeds, std::forward<Arg>(arg), std::forward<Args>(args)...);
-		} catch (...) {
-			std::construct_at(&m_embeds);
-			throw;
-		}
+		else
+			return m_embeds = T(std::forward<Arg>(arg), std::forward<Args>(args)...);
+	}
+	/* Setters */
+	cMessageParams& SetFlags(eMessageFlag flags) noexcept {
+		m_flags = flags;
+		return *this;
+	}
+	template<typename T = decltype(m_content), typename Arg = T> requires std::constructible_from<T, Arg&&>
+	cMessageParams& SetContent(Arg&& arg) {
+		EmplaceContent(std::forward<Arg>(arg));
+		return *this;
+	}
+	template<typename T = decltype(m_components), typename Arg = T> requires std::constructible_from<T, Arg&&>
+	cMessageParams& SetComponents(Arg&& arg) {
+		EmplaceComponents(std::forward<Arg>(arg));
+		return *this;
+	}
+	template<typename T = decltype(m_embeds), typename Arg = T> requires std::constructible_from<T, Arg&&>
+	cMessageParams& SetEmbeds(Arg&& arg) {
+		EmplaceEmbeds(std::forward<Arg>(arg));
+		return *this;
 	}
 };
 

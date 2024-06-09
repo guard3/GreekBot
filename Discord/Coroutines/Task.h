@@ -14,10 +14,9 @@ public:
 	cTask(cTask&& o) noexcept : cTask(o.m_handle) { o.m_handle = nullptr; }
 	~cTask() { if (m_handle) m_handle.destroy(); }
 
-	cTask& operator=(const cTask&) = delete;
-	cTask& operator=(cTask&& o) noexcept {
-		~cTask();
-		return *new(this) cTask(std::move(o));
+	cTask& operator=(cTask o) noexcept {
+		swap(m_handle, o.m_handle);
+		return *this;
 	}
 
 	std::coroutine_handle<> await_suspend(std::coroutine_handle<> h) {
