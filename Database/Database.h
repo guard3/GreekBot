@@ -13,23 +13,12 @@ public:
 	int code() const noexcept { return m_code; }
 };
 /* ================================================================================================================== */
-class cRankQueryDataElement final {
-private:
-	int64_t rank;
-	cSnowflake id;
-	int64_t xp;
-	int64_t num_msg;
-
-public:
-	cRankQueryDataElement(int64_t rank, cSnowflake id, int64_t xp, int64_t num_msg) : rank(rank), id(id), xp(xp), num_msg(num_msg) {};
-
-	int64_t GetRank()        const { return rank;    }
-	int64_t GetXp()          const { return xp;      }
-	int64_t GetNumMessages() const { return num_msg; }
-
-	chSnowflake GetUserId() const { return &id; }
+struct leaderboard_entry {
+	cSnowflake    user_id;
+	std::uint64_t rank;
+	std::uint64_t xp;
+	std::uint64_t num_msg;
 };
-typedef std::vector<cRankQueryDataElement> tRankQueryData;
 
 struct starboard_entry {
 	cSnowflake author_id;
@@ -61,8 +50,8 @@ public:
 	static void Initialize();
 
 	static cTask<std::uint64_t> UpdateLeaderboard(const cMessage&);
-	static cTask<tRankQueryData> GetUserRank(const cUser&);
-	static cTask<tRankQueryData> GetTop10();
+	static cTask<std::optional<leaderboard_entry>> GetUserRank(const cUser&);
+	static cTask<std::vector<leaderboard_entry>> GetTop10();
 
 	static cTask<uint64_t> WC_RegisterMember(const cMember&);
 	static cTask<> WC_UpdateMessage(const cUser&, const cMessage&);

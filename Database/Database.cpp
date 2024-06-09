@@ -466,54 +466,45 @@ cDatabase::SB_GetRank(const cUser& user, int threshold) {
 	sqlite3_finalize(stmt);
 	throw xDatabaseError();
 }
-cTask<tRankQueryData>
+cTask<std::optional<leaderboard_entry>>
 cDatabase::GetUserRank(const cUser& user) {
 	co_await resume_on_db_strand();
-	sqlite3_stmt* stmt = nullptr;
-	if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_GET_RANK, sizeof(QUERY_GET_RANK), &stmt, nullptr)) {
-		if (SQLITE_OK == sqlite3_bind_int64(stmt, 1, user.GetId().ToInt())) {
-			tRankQueryData result;
-			switch (sqlite3_step(stmt)) {
-				case SQLITE_ROW:
-					/* Statement returned data for the user */
-					result.emplace_back(
-						sqlite3_column_int64(stmt, 0),
-						user.GetId(),
-						sqlite3_column_int64(stmt, 1),
-						sqlite3_column_int64(stmt, 2)
-					);
-				case SQLITE_DONE:
-					/* Statement didn't return, no user data found */
-					sqlite3_finalize(stmt);
-					co_return result;
-				default:
-					break;
-			}
+	auto stmt = sqlite3_prepare(QUERY_GET_RANK);
+	if (stmt && SQLITE_OK == sqlite3_bind_int64(stmt, 1, user.GetId().ToInt())) {
+		std::optional<leaderboard_entry> result;
+		switch (sqlite3_step(stmt)) {
+			case SQLITE_ROW:
+				result.emplace(
+					user.GetId(),
+					sqlite3_column_int64(stmt, 0),
+					sqlite3_column_int64(stmt, 1),
+					sqlite3_column_int64(stmt, 2)
+				);
+			case SQLITE_DONE:
+				co_return result;
+			default:
+				break;
 		}
 	}
-	sqlite3_finalize(stmt);
 	throw xDatabaseError();
 }
-cTask<tRankQueryData>
+cTask<std::vector<leaderboard_entry>>
 cDatabase::GetTop10() {
 	co_await resume_on_db_strand();
-	int rc = SQLITE_OK;
-	tRankQueryData res;
-	sqlite3_stmt* stmt = nullptr;
-	if (SQLITE_OK == sqlite3_prepare_v2(g_db, QUERY_GET_TOP_10, sizeof(QUERY_GET_TOP_10), &stmt, nullptr)) {
-		res.reserve(10);
-		while (SQLITE_ROW == (rc = sqlite3_step(stmt))) {
-			res.emplace_back(
+	if (auto stmt = sqlite3_prepare(QUERY_GET_TOP_10)) {
+		int rc;
+		std::vector<leaderboard_entry> result;
+		for (result.reserve(10); SQLITE_ROW == (rc = sqlite3_step(stmt));) {
+			result.emplace_back(
 				sqlite3_column_int64(stmt, 0),
 				sqlite3_column_int64(stmt, 1),
 				sqlite3_column_int64(stmt, 2),
 				sqlite3_column_int64(stmt, 3)
 			);
 		}
+		if (rc == SQLITE_DONE)
+			co_return result;
 	}
-	sqlite3_finalize(stmt);
-	if (rc == SQLITE_DONE)
-		co_return res;
 	throw xDatabaseError();
 }
 cTask<>

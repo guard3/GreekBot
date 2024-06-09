@@ -24,63 +24,56 @@ enum : std::uint64_t {
 	ROLE_ID_ELLINOPOULO          = 608687509291008000, // @Ελληνόπουλο
 	ROLE_ID_PALIOS               = 631559446782410752  // @Παλιός
 };
-/* Given xp, calculate:
- * - level, the current level
- * - level_xp, the minimum xp required to reach level
- * - next_level_xp, the xp required to reach next level
- */
-static void calculate_level_info(std::uint64_t xp, std::uint64_t& level, std::uint64_t& level_xp, std::uint64_t& next_level_xp) noexcept {
-	level = 0;
-	level_xp = 0;
-	next_level_xp = 100;
-	while (next_level_xp < xp) {
-		level++;
-		level_xp = next_level_xp;
-		next_level_xp += 5 * level * (level + 10) + 100;
+/* ========== Helper function to calculate a member's level info based on their XP count ============================ */
+struct level_info {
+	std::uint64_t level;         // The current level
+	std::uint64_t level_xp;      // The minimum XP required to reach current level
+	std::uint64_t next_level_xp; // The XP required to reach the next level
+};
+static level_info calculate_level_info(std::uint64_t xp) noexcept {
+	level_info result{ 0, 0, 100 };
+	while (result.next_level_xp < xp) {
+		result.level++;
+		result.level_xp = result.next_level_xp;
+		result.next_level_xp += 5 * result.level * (result.level + 10) + 100;
 	}
+	return result;
 }
-
-/* Helper functions that create embeds */
-static cEmbed make_no_xp_embed(const cUser& user, cColor c) {
-	cEmbed embed;
-	embed.EmplaceAuthor(user.GetUsername()).SetIconUrl(cCDN::GetUserAvatar(user));
-	embed.SetDescription("User has no XP yet.");
-	embed.SetColor(c);
-	return embed;
-}
-static cEmbed make_no_member_embed(const cUser* pUser, std::string_view guild_name, bool bAnymore) {
-	cEmbed embed;
+/* ========== Helper functions that create embeds =================================================================== */
+static void insert_no_member_embed(std::vector<cEmbed>& embeds, const cUser* pUser, std::string_view guild_name, bool bAnymore) {
+	auto& embed = embeds.emplace_back();
 	embed.SetDescription(fmt::format("User is not a member of **{}**{}.", guild_name, bAnymore ? " anymore": ""));
 	embed.SetColor(0x0096FF);
 	if (pUser)
 		embed.EmplaceAuthor(pUser->GetUsername()).SetIconUrl(cCDN::GetUserAvatar(*pUser));
 	else
 		embed.EmplaceAuthor("Deleted user").SetIconUrl(cCDN::GetDefaultUserAvatar(cSnowflake{}));
-	return embed;
 }
-static cEmbed make_embed(const cUser& user, cColor c, int64_t rank, int64_t xp, int64_t num_msg) {
+static void insert_embed(std::vector<cEmbed>& embeds, const cUser& user, cColor c, const leaderboard_entry* pLb) {
+	auto& embed = embeds.emplace_back();
+	embed.EmplaceAuthor(user.GetUsername()).SetIconUrl(cCDN::GetUserAvatar(user));
+	embed.SetColor(c);
+	if (!pLb) {
+		embed.SetDescription("User has no XP yet.");
+		return;
+	}
 	/* Choose a medal emoji depending on the user's rank */
 	const char* medal;
-	switch (rank) {
+	switch (pLb->rank) {
 		case 1:  medal = "🥇"; break;
 		case 2:  medal = "🥈"; break;
 		case 3:  medal = "🥉"; break;
 		default: medal = "🏅"; break;
 	}
 	/* Resolve user's leaderboard level */
-	std::uint64_t level, level_xp, next_level_xp;
-	calculate_level_info(xp, level, level_xp, next_level_xp);
+	auto[level, level_xp, next_level_xp] = calculate_level_info(pLb->xp);
 	/* Create embed */
-	cEmbed embed;
-	embed.EmplaceAuthor(user.GetUsername()).SetIconUrl(cCDN::GetUserAvatar(user));
-	embed.SetTitle(fmt::format("{} Rank **#{}**\tLevel **{}**", medal, rank, level));
-	embed.SetColor(c);
+	embed.SetTitle(fmt::format("{} Rank **#{}**\tLevel **{}**", medal, pLb->rank, level));
 	embed.SetFields({
-		{ "XP Progress", fmt::format("{}/{}", xp - level_xp, next_level_xp - level_xp), true},
-		{ "Total XP", std::to_string(xp), true },
-		{ "Messages", std::to_string(num_msg), true }
+		{ "XP Progress", fmt::format("{}/{}", pLb->xp - level_xp, next_level_xp - level_xp), true},
+		{ "Total XP", std::to_string(pLb->xp), true },
+		{ "Messages", std::to_string(pLb->num_msg), true }
 	});
-	return embed;
 }
 
 cTask<>
@@ -103,8 +96,7 @@ cGreekBot::process_leaderboard_new_message(cMessage& msg, cPartialMember& member
 	if (xp == 0)
 		co_return;
 	/* Calculate member level from xp */
-	std::uint64_t level, level_xp, next_level_xp;
-	calculate_level_info(xp, level, level_xp, next_level_xp);
+	auto[level, level_xp, next_level_xp] = calculate_level_info(xp);
 	/* Get the appropriate rank role for the current level, or 0 for no role */
 	std::uint64_t target_role_id;
 	if (level >= 100) {
@@ -192,38 +184,23 @@ cGreekBot::process_rank(cAppCmdInteraction& i) HANDLER_BEGIN {
 	/* Acknowledge interaction while we're looking through the database */
 	co_await InteractionDefer(i, true);
 	/* Get user's ranking info from the database */
-	tRankQueryData db_result = co_await cDatabase::GetUserRank(*user);
+	auto db_result = co_await cDatabase::GetUserRank(*user);
 	co_await ResumeOnEventThread();
 	/* Make sure that the selected user is a member of Learning Greek */
-	if (!member)
-		co_return co_await InteractionSendMessage(i, response.SetEmbeds({
-			make_no_member_embed(user.Get(), m_guilds.at(LMG_GUILD_ID)->GetName(), !db_result.empty())
-		}));
-	/* Respond */
-	cColor color = get_lmg_member_color(*member);
-	if (db_result.empty()) {
-		/* User not registered in the leaderboard */
-		co_await InteractionSendMessage(i, response.SetEmbeds({
-			make_no_xp_embed(*user, color)
-		}));
-	} else {
-		/* Respond to interaction with a proper embed */
-		auto& res = db_result.front();
-		co_await InteractionSendMessage(i, response
-			.SetEmbeds({
-				make_embed(*user, color, res.GetRank(), res.GetXp(), res.GetNumMessages())
-			})
-			.SetComponents({
-				cActionRow{
-					cButton{
-						BUTTON_STYLE_SECONDARY,
-						"LEADERBOARD_HELP",
-						"How does this work?"
-					}
-				}
-			})
-		);
-	}
+	auto& embeds = response.EmplaceEmbeds();
+	if (member)
+		insert_embed(embeds, *user, get_lmg_member_color(*member), db_result ? &*db_result : nullptr);
+	else
+		insert_no_member_embed(embeds, user.Get(), m_guilds.at(LMG_GUILD_ID)->GetName(), db_result.has_value());
+	co_await InteractionSendMessage(i, response.SetComponents({
+		cActionRow{
+			cButton{
+				BUTTON_STYLE_SECONDARY,
+				"LEADERBOARD_HELP",
+				"How does this work?"
+			}
+		}
+	}));
 } HANDLER_END
 
 cTask<>
@@ -233,7 +210,7 @@ cGreekBot::process_top(cAppCmdInteraction& i) HANDLER_BEGIN {
 	/* Acknowledge interaction */
 	co_await InteractionDefer(i);
 	/* Get data from the database */
-	tRankQueryData db_result = co_await cDatabase::GetTop10();
+	auto db_result = co_await cDatabase::GetTop10();
 	co_await ResumeOnEventThread();
 	if (db_result.empty())
 		co_return co_await InteractionSendMessage(i, response.SetContent("I don't have any data yet. Start talking!"));
@@ -241,7 +218,7 @@ cGreekBot::process_top(cAppCmdInteraction& i) HANDLER_BEGIN {
 	std::vector<cSnowflake> ids;
 	ids.reserve(db_result.size());
 	for (auto& r : db_result)
-		ids.emplace_back(*r.GetUserId());
+		ids.emplace_back(r.user_id);
 	std::vector<cMember> members;
 	members.reserve(db_result.size());
 	auto gen = GetGuildMembers(*i.GetGuildId(), kw::user_ids=ids);
@@ -250,22 +227,21 @@ cGreekBot::process_top(cAppCmdInteraction& i) HANDLER_BEGIN {
 	/* Prepare embeds */
 	auto& embeds = response.EmplaceEmbeds();
 	embeds.reserve(db_result.size());
-	for (auto &d: db_result) {
-		/* If the user is still a member of Learning Greek, make a regular embed */
-		auto m = std::find_if(members.begin(), members.end(), [&](const cMember& k) { return k.GetUser()->GetId() == *d.GetUserId(); });
-		if (m != members.end()) {
-			embeds.push_back(make_embed(*m->GetUser(), get_lmg_member_color(*m), d.GetRank(), d.GetXp(), d.GetNumMessages()));
-			continue;
+	for (auto& lb: db_result) {
+		if (auto it = rng::find(members, lb.user_id, [](const cMember& m) -> const cSnowflake& { return m.GetUser()->GetId(); }); it != end(members)) {
+			/* If the user is a member of Learning Greek, make a regular embed */
+			insert_embed(embeds, *it->GetUser(), get_lmg_member_color(*it), &lb);
+		} else {
+			/* Otherwise, make a no-member embed */
+			std::optional<cUser> opt;
+			cUser *pUser = nullptr;
+			try {
+				pUser = &opt.emplace(co_await GetUser(lb.user_id));
+			} catch (const xDiscordError&) {
+				/* User object couldn't be retrieved, likely deleted */
+			}
+			insert_no_member_embed(embeds, pUser, m_guilds.at(LMG_GUILD_ID)->GetName(), true);
 		}
-		/* Otherwise, make a no-member embed */
-		std::optional<cUser> opt;
-		cUser* pUser = nullptr;
-		try {
-			pUser = &opt.emplace(co_await GetUser(*d.GetUserId()));
-		} catch (const xDiscordError&) {
-			/* User object couldn't be retrieved, likely deleted */
-		}
-		embeds.push_back(make_no_member_embed(pUser, m_guilds.at(LMG_GUILD_ID)->GetName(), true));
 	}
 	/* Respond to interaction */
 	co_await InteractionSendMessage(i, response.SetComponents({
