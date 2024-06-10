@@ -55,7 +55,7 @@ ePermission tag_invoke(boost::json::value_to_tag<ePermission>, const boost::json
 class cRoleTags final {
 	cSnowflake bot_id;
 	cSnowflake integration_id;
-	//premium subscriber
+	// various other crap...
 
 public:
 	cRoleTags(const json::value&);
@@ -70,37 +70,34 @@ typedef  uhHandle<cRoleTags>  uhRoleTags;
 typedef uchHandle<cRoleTags> uchRoleTags;
 
 class cRole final {
-private:
-	cSnowflake  id;
-	std::string name;
-	cColor      color;
-	bool        hoist;
-	std::string icon;
-	std::string unicode_emoji;
-	int         position;
-	ePermission permissions;
-	bool        managed;
-	bool        mentionable;
-	std::optional<cRoleTags> tags;
+	cSnowflake  m_id;
+	std::size_t m_position;
+	ePermission m_permissions;
+	cColor      m_color;
+	bool        m_hoist;
+	bool        m_managed;
+	bool        m_mentionable;
+	std::string m_name;
+	std::string m_icon;
+	std::string m_unicode_emoji;
+	std::optional<cRoleTags> m_tags;
 
 public:
 	cRole(const json::value&);
 	cRole(const json::object&);
 
-	const cSnowflake&  GetId()           const { return id;            }
-	const std::string& GetName()         const { return name;          }
-	cColor             GetColor()        const { return color;         }
-	int                GetPosition()     const { return position;      }
-	ePermission        GetPermissions()  const { return permissions;   }
-	chRoleTags         GetTags()         const { return tags ? tags.operator->() : nullptr; }
-	const std::string& GetIconUrl()      const { return icon;          }
-	const std::string& GetUnicodeEmoji() const { return unicode_emoji; }
+	const cSnowflake&          GetId() const noexcept { return m_id;            }
+	std::size_t          GetPosition() const noexcept { return m_position;      }
+	ePermission       GetPermissions() const noexcept { return m_permissions;   }
+	cColor                  GetColor() const noexcept { return m_color;         }
+	std::string_view         GetName() const noexcept { return m_name;          }
+	std::string_view         GetIcon() const noexcept { return m_icon;          }
+	std::string_view GetUnicodeEmoji() const noexcept { return m_unicode_emoji; }
+	chRoleTags               GetTags() const noexcept { return m_tags ? m_tags.operator->() : nullptr; }
 
-	bool IsHoisted()     const { return hoist;       }
-	bool IsManaged()     const { return managed;     }
-	bool IsMentionable() const { return mentionable; }
-
-	cRole& SetPosition(int v) { position = v; return *this; }
+	bool     IsHoisted() const noexcept { return m_hoist;       }
+	bool     IsManaged() const noexcept { return m_managed;     }
+	bool IsMentionable() const noexcept { return m_mentionable; }
 };
 typedef   hHandle<cRole>   hRole;
 typedef  chHandle<cRole>  chRole;
