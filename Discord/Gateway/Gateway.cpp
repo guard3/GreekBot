@@ -1,6 +1,6 @@
 #include "GatewayImpl.h"
 /* ================================================================================================================== */
-cGateway::cGateway(std::string_view t, eIntent i) : m_pImpl(cHandle::MakeUnique<implementation>(this, t, i)) {}
+cGateway::cGateway(std::string_view t, eIntent i) : m_pImpl(std::make_unique<implementation>(this, t, i)) {}
 cGateway::~cGateway() = default;
 /* ================================================================================================================== */
 cTask<json::value>

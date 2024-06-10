@@ -17,7 +17,7 @@
 #define DISCORD_API_HOST        "discord.com"
 #define DISCORD_API_ENDPOINT    "/api/v" STR(DISCORD_API_VERSION)
 
-/* Boost Json forward declarations */
+/* ========== Boost Json forward declarations ======================================================================= */
 namespace boost::json {
 	class value;
 	class object;
@@ -28,7 +28,7 @@ namespace boost::json {
 }
 namespace json = boost::json;
 
-/* ========== Handle types ========== */
+/* ========== Handle types ========================================================================================== */
 template<typename T> // handle
 using   hHandle = cPtr<T>;
 template<typename T> // const handle
@@ -37,20 +37,7 @@ template<typename T> // unique handle
 using  uhHandle = std::unique_ptr<T>;
 template<typename T> // unique const handle
 using uchHandle = std::unique_ptr<const T>;
-template<typename T> // shared handle
-using  shHandle = std::shared_ptr<T>;
-template<typename T> // shared const handle
-using schHandle = std::shared_ptr<const T>;
 
-/* ========== Handle creation functions ========== */
-class cHandle final {
-	cHandle() = default;
-
-public:
-	template<typename T, typename... Args>
-	[[deprecated("Use std::make_unique instead")]]
-	static uhHandle<T> MakeUnique(Args&&... args) { return std::make_unique<T>(std::forward<Args>(args)...); }
-};
 /* ========== Discord snowflake ===================================================================================== */
 class cSnowflake final {
 	char          m_str[20]; // The snowflake as a string
@@ -98,7 +85,7 @@ struct fmt::formatter<cSnowflake> : fmt::formatter<std::string_view> {
 	}
 };
 
-/* ========== Color ========== */
+/* ========== Color ================================================================================================= */
 class cColor final {
 	std::int32_t m_value;
 

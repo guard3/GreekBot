@@ -1,8 +1,9 @@
 #ifndef GREEKBOT_ROLE_H
 #define GREEKBOT_ROLE_H
 #include "Common.h"
+#include <optional>
 
-enum ePermission : uint64_t {
+enum ePermission : std::uint64_t {
 	PERM_NONE = 0,
 	PERM_CREATE_INSTANT_INVITE      = 0x0000000000000001, // Allows creation of instant invites
 	PERM_KICK_MEMBERS               = 0x0000000000000002, // Allows kicking members
@@ -52,28 +53,21 @@ inline ePermission operator&(ePermission a, ePermission b) { return (ePermission
 ePermission tag_invoke(boost::json::value_to_tag<ePermission>, const boost::json::value&);
 
 class cRoleTags final {
-private:
-	uhSnowflake bot_id;
-	uhSnowflake integration_id;
+	cSnowflake bot_id;
+	cSnowflake integration_id;
 	//premium subscriber
 
 public:
 	cRoleTags(const json::value&);
 	cRoleTags(const json::object&);
-	cRoleTags(const cRoleTags&);
-	cRoleTags(cRoleTags&&) = default;
 
-	cRoleTags& operator=(cRoleTags o);
-
-	chSnowflake GetBotId()         const { return bot_id.get();         }
-	chSnowflake GetIntegrationId() const { return integration_id.get(); }
+	chSnowflake         GetBotId() const noexcept { return         bot_id.ToInt() ?         &bot_id : nullptr; }
+	chSnowflake GetIntegrationId() const noexcept { return integration_id.ToInt() ? &integration_id : nullptr; }
 };
 typedef   hHandle<cRoleTags>   hRoleTags;
 typedef  chHandle<cRoleTags>  chRoleTags;
 typedef  uhHandle<cRoleTags>  uhRoleTags;
 typedef uchHandle<cRoleTags> uchRoleTags;
-typedef  shHandle<cRoleTags>  shRoleTags;
-typedef schHandle<cRoleTags> schRoleTags;
 
 class cRole final {
 private:
@@ -87,22 +81,18 @@ private:
 	ePermission permissions;
 	bool        managed;
 	bool        mentionable;
-	uhRoleTags  tags;
+	std::optional<cRoleTags> tags;
 
 public:
 	cRole(const json::value&);
 	cRole(const json::object&);
-	cRole(const cRole&);
-	cRole(cRole&&) = default;
-
-	cRole& operator=(cRole o);
 
 	const cSnowflake&  GetId()           const { return id;            }
 	const std::string& GetName()         const { return name;          }
 	cColor             GetColor()        const { return color;         }
 	int                GetPosition()     const { return position;      }
 	ePermission        GetPermissions()  const { return permissions;   }
-	chRoleTags         GetTags()         const { return tags.get();    }
+	chRoleTags         GetTags()         const { return tags ? tags.operator->() : nullptr; }
 	const std::string& GetIconUrl()      const { return icon;          }
 	const std::string& GetUnicodeEmoji() const { return unicode_emoji; }
 
@@ -116,8 +106,6 @@ typedef   hHandle<cRole>   hRole;
 typedef  chHandle<cRole>  chRole;
 typedef  uhHandle<cRole>  uhRole;
 typedef uchHandle<cRole> uchRole;
-typedef  shHandle<cRole>  shRole;
-typedef schHandle<cRole> schRole;
 
 cRole tag_invoke(boost::json::value_to_tag<cRole>, const boost::json::value&);
 #endif /* GREEKBOT_ROLE_H */

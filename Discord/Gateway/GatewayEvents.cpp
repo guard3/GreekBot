@@ -41,7 +41,7 @@ cGateway::implementation::process_event(const json::value& v) try {
 		case READY: {
 			m_session_id = json::value_to<std::string>(d.at("session_id"));
 			m_resume_gateway_url = json::value_to<std::string>(d.at("resume_gateway_url"));
-			auto user = cHandle::MakeUnique<cUser>(d.at("user"));
+			auto user = std::make_unique<cUser>(d.at("user"));
 			auto app = json::value_to<cApplication>(d.at("application"));
 			co_await ResumeOnEventThread();
 			m_application = std::move(app);
@@ -49,7 +49,7 @@ cGateway::implementation::process_event(const json::value& v) try {
 			break;
 		}
 		case GUILD_CREATE: {
-			auto pGuild = cHandle::MakeUnique<cGuild>(d);
+			auto pGuild = std::make_unique<cGuild>(d);
 			co_await ResumeOnEventThread();
 			co_await m_parent->OnGuildCreate(std::move(pGuild));
 			break;
@@ -242,7 +242,7 @@ cGateway::implementation::process_event(const json::value& v) try {
 			break;
 		}
 		case USER_UPDATE: {
-			auto user = cHandle::MakeUnique<cUser>(d);
+			auto user = std::make_unique<cUser>(d);
 			m_application = json::value_to<cApplication>(co_await DiscordGet("/oauth2/applications/@me"));
 			co_await m_parent->OnUserUpdate(std::move(user));
 			break;
