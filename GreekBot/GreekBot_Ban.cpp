@@ -58,7 +58,7 @@ cGreekBot::process_ban(cInteraction& i, uint32_t subcmd, const cSnowflake& user_
 			.SetContent("You can't do that. You're missing the `BAN_MEMBERS` permission.")
 		);
 	/* Make sure we're not banning ourselves */
-	if (user_id == GetUser()->GetId())
+	if (user_id == GetUser().GetId())
 		co_return co_await InteractionSendMessage(i, cMessageParams()
 			.SetFlags(MESSAGE_FLAG_EPHEMERAL)
 			.SetContent(get_no_ban_msg(subcmd))
@@ -105,7 +105,7 @@ cGreekBot::process_ban(cInteraction& i, uint32_t subcmd, const cSnowflake& user_
 	/* DM the goodbye message */
 	try {
 		co_await CreateDMMessage(user_id, cMessageParams()
-			.SetContent(fmt::format("You've been banned from **{}** with reason:\n```{}```", m_guilds.at(*i.GetGuildId())->GetName(), goodbye))
+			.SetContent(fmt::format("You've been banned from **{}** with reason:\n```{}```", m_guilds.at(*i.GetGuildId()).GetName(), goodbye))
 		);
 		/* Add the goodbye message field only after the DM was sent successfully */
 		if (reason != goodbye)
@@ -178,7 +178,7 @@ cGreekBot::process_ban_ctx_menu(cAppCmdInteraction& i, eSubcommand subcmd) HANDL
 			.SetContent("You can't do that. You're missing the `BAN_MEMBERS` permission")
 		);
 	/* Make sure we're not banning ourselves */
-	if (user->GetId() == GetUser()->GetId())
+	if (user->GetId() == GetUser().GetId())
 		co_return co_await InteractionSendMessage(i, cMessageParams()
 			.SetFlags(MESSAGE_FLAG_EPHEMERAL)
 			.SetContent(get_no_ban_msg(subcmd))

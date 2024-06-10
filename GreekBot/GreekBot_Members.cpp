@@ -32,7 +32,7 @@ cGreekBot::OnGuildMemberUpdate(cSnowflake& guild_id, cMemberUpdate& member) {
 						},
 						cButton{
 							BUTTON_STYLE_SECONDARY,
-							fmt::format("DLT#{}", GetUser()->GetId()), // Save the GreekBot id as the author
+							fmt::format("DLT#{}", GetUser().GetId()), // Save the GreekBot id as the author
 							"Dismiss"
 						}
 					}
@@ -50,7 +50,7 @@ cGreekBot::OnGuildMemberUpdate(cSnowflake& guild_id, cMemberUpdate& member) {
 						cActionRow{
 							cButton{
 								BUTTON_STYLE_SECONDARY,
-								fmt::format("DLT#{}", GetUser()->GetId()), // Save the GreekBot id as the author
+								fmt::format("DLT#{}", GetUser().GetId()), // Save the GreekBot id as the author
 								"Dismiss"
 							}
 						}

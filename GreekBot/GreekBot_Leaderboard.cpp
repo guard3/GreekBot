@@ -191,7 +191,7 @@ cGreekBot::process_rank(cAppCmdInteraction& i) HANDLER_BEGIN {
 	if (member)
 		insert_embed(embeds, *user, get_lmg_member_color(*member), db_result ? &*db_result : nullptr);
 	else
-		insert_no_member_embed(embeds, user.Get(), m_guilds.at(LMG_GUILD_ID)->GetName(), db_result.has_value());
+		insert_no_member_embed(embeds, user.Get(), m_guilds.at(LMG_GUILD_ID).GetName(), db_result.has_value());
 	co_await InteractionSendMessage(i, response.SetComponents({
 		cActionRow{
 			cButton{
@@ -240,7 +240,7 @@ cGreekBot::process_top(cAppCmdInteraction& i) HANDLER_BEGIN {
 			} catch (const xDiscordError&) {
 				/* User object couldn't be retrieved, likely deleted */
 			}
-			insert_no_member_embed(embeds, pUser, m_guilds.at(LMG_GUILD_ID)->GetName(), true);
+			insert_no_member_embed(embeds, pUser, m_guilds.at(LMG_GUILD_ID).GetName(), true);
 		}
 	}
 	/* Respond to interaction */

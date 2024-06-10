@@ -41,14 +41,15 @@ cGreekBot::get_lmg_member_color(const cPartialMember& member) {
 }
 
 cTask<>
-cGreekBot::OnGuildCreate(uhGuild guild) {
-	if (guild->GetId() == LMG_GUILD_ID) {
+cGreekBot::OnGuildCreate(cGuild& guild) {
+	auto guild_id = guild.GetId();
+	if (guild_id == LMG_GUILD_ID) {
 		/* If the guild is 'Learning Greek', save its role vector */
-		m_lmg_roles = guild->MoveRoles();
+		m_lmg_roles = guild.MoveRoles();
 		/* Which is most likely not sorted */
 		m_bSorted = false;
 	}
-	m_guilds[guild->GetId()] = std::move(guild);
+	m_guilds.insert_or_assign(guild_id, std::move(guild));
 	co_return;
 }
 

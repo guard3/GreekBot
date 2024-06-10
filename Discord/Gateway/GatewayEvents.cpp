@@ -41,17 +41,17 @@ cGateway::implementation::process_event(const json::value& v) try {
 		case READY: {
 			m_session_id = json::value_to<std::string>(d.at("session_id"));
 			m_resume_gateway_url = json::value_to<std::string>(d.at("resume_gateway_url"));
-			auto user = std::make_unique<cUser>(d.at("user"));
+			cUser user{ d.at("user") };
 			auto app = json::value_to<cApplication>(d.at("application"));
 			co_await ResumeOnEventThread();
 			m_application = std::move(app);
-			co_await m_parent->OnReady(std::move(user));
+			co_await m_parent->OnReady(user);
 			break;
 		}
 		case GUILD_CREATE: {
-			auto pGuild = std::make_unique<cGuild>(d);
+			cGuild guild{ d };
 			co_await ResumeOnEventThread();
-			co_await m_parent->OnGuildCreate(std::move(pGuild));
+			co_await m_parent->OnGuildCreate(guild);
 			break;
 		}
 		case GUILD_ROLE_CREATE: {
@@ -242,9 +242,9 @@ cGateway::implementation::process_event(const json::value& v) try {
 			break;
 		}
 		case USER_UPDATE: {
-			auto user = std::make_unique<cUser>(d);
+			cUser user{ d };
 			m_application = json::value_to<cApplication>(co_await DiscordGet("/oauth2/applications/@me"));
-			co_await m_parent->OnUserUpdate(std::move(user));
+			co_await m_parent->OnUserUpdate(user);
 			break;
 		}
 		default:

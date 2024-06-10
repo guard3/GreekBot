@@ -3,15 +3,15 @@
 #include "json.h"
 
 cTask<>
-cBot::OnReady(uhUser user) {
-	cUtils::PrintMsg("Connected as: {} {}", user->GetUsername(), user->GetId());
+cBot::OnReady(cUser& user) {
+	cUtils::PrintMsg("Connected as: {} {}", user.GetUsername(), user.GetId());
 	m_user = std::move(user);
 	co_return;
 }
 
 cTask<>
-cBot::OnUserUpdate(uhUser user) {
-	cUtils::PrintMsg("User updated: {} {}", user->GetUsername(), user->GetId());
+cBot::OnUserUpdate(cUser& user) {
+	cUtils::PrintMsg("User updated: {} {}", user.GetUsername(), user.GetId());
 	m_user = std::move(user);
 	co_return;
 }

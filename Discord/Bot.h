@@ -11,13 +11,14 @@
 #include "Guild.h"
 #include "Channel.h"
 #include "Modal.h"
+#include <optional>
 
 class cBot : public cGateway {
 private:
-	uhUser m_user;
+	std::optional<cUser> m_user;
 
-	cTask<> OnReady(uhUser) override;
-	cTask<> OnUserUpdate(uhUser) override;
+	cTask<> OnReady(cUser&) override;
+	cTask<> OnUserUpdate(cUser&) override;
 
 protected:
 	using cGateway::OnInteractionCreate;
@@ -32,7 +33,8 @@ public:
 
 	using cGateway::GetToken;
 
-	chUser GetUser() const { return m_user.get(); }
+	const cUser& GetUser() const noexcept { return m_user.value(); }
+	cUser& GetUser() noexcept { return m_user.value(); }
 
 	cTask<cUser> GetUser(const cSnowflake& user_id);
 	cTask<cMember> GetGuildMember(const cSnowflake& guild_id, const cSnowflake& user_id);

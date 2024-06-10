@@ -81,9 +81,9 @@ public:
 		return get_guild_members(guild_id, kw::get<"query">(pack), kw::get<"user_ids">(pack));
 	}
 
-	virtual cTask<> OnReady(uhUser) { co_return; }
-	virtual cTask<> OnUserUpdate(uhUser) { co_return; }
-	virtual cTask<> OnGuildCreate(uhGuild) { co_return; }
+	virtual cTask<> OnReady(cUser&) { co_return; }
+	virtual cTask<> OnUserUpdate(cUser&) { co_return; }
+	virtual cTask<> OnGuildCreate(cGuild&) { co_return; }
 	virtual cTask<> OnGuildRoleCreate(cSnowflake& guild_id, cRole& role) { co_return; }
 	virtual cTask<> OnGuildRoleUpdate(cSnowflake& guild_id, cRole& role) { co_return; }
 	virtual cTask<> OnGuildRoleDelete(cSnowflake& guild_id, cSnowflake& role_id) { co_return; }

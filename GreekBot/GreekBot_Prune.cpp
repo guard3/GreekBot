@@ -55,7 +55,7 @@ cGreekBot::process_prune_lmg(cAppCmdInteraction& i) HANDLER_BEGIN {
 			num_days = 1;
 	}
 	/* Collect guild information */
-	const cGuild& guild = *m_guilds.at(*i.GetGuildId());
+	const cGuild& guild = m_guilds.at(*i.GetGuildId());
 	cSnowflake guild_id = guild.GetId();
 	std::string guild_name = guild.GetName();
 	int total = 0, fails = 0;

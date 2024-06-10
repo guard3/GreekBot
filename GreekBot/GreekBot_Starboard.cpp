@@ -37,7 +37,7 @@ cGreekBot::OnMessageReactionAdd(cSnowflake& user_id, cSnowflake& channel_id, cSn
 		message_author_id = &pMsg->GetAuthor().GetId();
 	}
 	/* Check that reactions from the author don't count */
-	if (*message_author_id == user_id || *message_author_id == GetUser()->GetId()) co_return;
+	if (*message_author_id == user_id || *message_author_id == GetUser().GetId()) co_return;
 	/* Register received reaction in the database */
 	auto[sb_msg_id, num_reactions] = co_await cDatabase::SB_RegisterReaction(message_id, *message_author_id);
 	/* Process */
@@ -54,7 +54,7 @@ cGreekBot::OnMessageReactionRemove(cSnowflake& user_id, cSnowflake& channel_id, 
 		co_return;
 	/* Make sure that reactions from the author don't count */
 	int64_t author_id = co_await cDatabase::SB_GetMessageAuthor(message_id);
-	if (author_id == 0 || author_id == user_id || author_id == GetUser()->GetId()) co_return;
+	if (author_id == 0 || author_id == user_id || author_id == GetUser().GetId()) co_return;
 	/* Remove one reaction from the database */
 	auto[sb_msg_id, num_reactions] = co_await cDatabase::SB_RemoveReaction(message_id);
 	/* Process */
@@ -257,7 +257,7 @@ cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) HANDLER_BEGIN {
 			co_await ResumeOnEventThread();
 			/* If the user isn't a member of Learning Greek... */
 			if (!member) {
-				embeds.push_back(make_no_member_embed(user.Get(), m_guilds.at(LMG_GUILD_ID)->GetName(), !results.empty()));
+				embeds.push_back(make_no_member_embed(user.Get(), m_guilds.at(LMG_GUILD_ID).GetName(), !results.empty()));
 				break;
 			}
 			cColor color = get_lmg_member_color(*member);
@@ -299,6 +299,8 @@ cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) HANDLER_BEGIN {
 				for (auto it = co_await gen.begin(); it != gen.end(); co_await ++it)
 					members.push_back(std::move(*it));
 			}
+			/* Get guild name in case it's needed */
+			std::string guild_name = m_guilds.at(LMG_GUILD_ID).GetName();
 			/* Create embeds */
 			embeds.reserve(10);
 			for (auto& entry : results) {
@@ -307,7 +309,6 @@ cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) HANDLER_BEGIN {
 				});
 				if (it == members.end()) {
 					/* If there's no member object for a user, then this user isn't a member of Learning Greek anymore */
-					auto& guild_name = m_guilds.at(LMG_GUILD_ID)->GetName();
 					try {
 						cUser user = co_await GetUser(entry.author_id);
 						embeds.push_back(make_no_member_embed(&user, guild_name, true));

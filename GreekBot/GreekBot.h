@@ -40,15 +40,11 @@ private:
 	bool m_bSorted = false;
 	std::span<const cRole> get_lmg_roles();
 
-	std::unordered_map<cSnowflake, uhGuild> m_guilds;
+	std::unordered_map<cSnowflake, cGuild> m_guilds;
 
 	cColor get_lmg_member_color(const cPartialMember&);
 
 	std::chrono::steady_clock::time_point m_before;
-
-	/* Voice */
-	std::vector<uint64_t> m_lmg_voice_channels;
-	std::vector<std::vector<uint64_t>> m_lmg_users_connected_to_voice;
 
 	cTask<> process_avatar(cAppCmdInteraction&);
 	cTask<> process_rank(cAppCmdInteraction&);
@@ -78,7 +74,7 @@ private:
 
 	cTask<> process_leaderboard_new_message(cMessage& msg, cPartialMember& member);
 
-	cTask<> OnGuildCreate(uhGuild guild) override;
+	cTask<> OnGuildCreate(cGuild& guild) override;
 	cTask<> OnGuildRoleCreate(cSnowflake& guild_id, cRole& role) override;
 	cTask<> OnGuildRoleUpdate(cSnowflake& guild_id, cRole& role) override;
 	cTask<> OnGuildRoleDelete(cSnowflake& guild_id, cSnowflake& role_id) override;
