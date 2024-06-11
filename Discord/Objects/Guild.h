@@ -12,6 +12,7 @@ private:
 
 public:
 	explicit cGuild(const boost::json::value&);
+	explicit cGuild(const boost::json::object&);
 
 	const cSnowflake&      GetId()    const noexcept { return id;    }
 	const std::string&     GetName()  const noexcept { return name;  }

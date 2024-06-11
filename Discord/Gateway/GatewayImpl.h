@@ -4,12 +4,13 @@
 #include "Gateway.h"
 #include "GuildMembersResult.h"
 #include "beast.h"
-#include "json.h"
+#include <boost/json.hpp>
 #include <deque>
 #include <thread>
 #include <zlib.h>
 
 namespace chrono = std::chrono;
+namespace json = boost::json;
 
 /* ========== Make void a valid coroutine return type =============================================================== */
 template<typename... Args>

@@ -1,6 +1,8 @@
 #include "Common.h"
 #include "Utils.h"
-#include "json.h"
+#include <boost/json.hpp>
+
+namespace json = boost::json;
 
 cSnowflake::cSnowflake(std::uint64_t i) noexcept : m_int(i) {
 	auto[ptr, _] = std::to_chars(std::begin(m_str), std::end(m_str), i);

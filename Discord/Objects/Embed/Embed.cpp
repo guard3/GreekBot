@@ -1,6 +1,8 @@
 #include "Embed.h"
 #include "Utils.h"
-#include "json.h"
+#include <boost/json.hpp>
+/* ================================================================================================================== */
+namespace json = boost::json;
 /* ================================================================================================================== */
 cEmbedAuthor::cEmbedAuthor(const json::value& v): cEmbedAuthor(v.as_object()) {}
 cEmbedAuthor::cEmbedAuthor(const json::object& o):

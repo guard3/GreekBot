@@ -39,7 +39,7 @@ private:
 	struct user_data {
 		cUser user;
 		std::optional<cPartialMember> member;
-		user_data(const json::value&, const json::value*);
+		user_data(const boost::json::value&, const boost::json::value*);
 	};
 	std::variant<int, double, bool, std::string, cSnowflake, std::vector<cAppCmdOption>, user_data> m_value;
 	/* Helper functions for moving specific values */
@@ -47,8 +47,8 @@ private:
 	std::pair<cUser, std::optional<cPartialMember>> move_value_user();
 
 public:
-	explicit cAppCmdOption(const json::value& v, cPtr<const json::value> r);
-	explicit cAppCmdOption(eAppCmdType, std::string_view, const json::object&);
+	explicit cAppCmdOption(const boost::json::value& v, cPtr<const boost::json::value> r);
+	explicit cAppCmdOption(eAppCmdType, std::string_view, const boost::json::object&);
 	/* Simple member getters */
 	eAppCmdOptionType GetType() const noexcept { return m_type;            }
 	std::string_view  GetName() const noexcept { return m_name;            }
@@ -105,17 +105,17 @@ private:
 	std::optional<cSnowflake> m_guild_id;
 	std::vector<cAppCmdOption> m_options;
 
-	explicit cAppCmdInteraction(const json::object&, const json::object&);
+	explicit cAppCmdInteraction(const boost::json::object&, const boost::json::object&);
 	using cInteraction::Visit;
 
 public:
-	explicit cAppCmdInteraction(const json::value&);
-	explicit cAppCmdInteraction(const json::object&);
+	explicit cAppCmdInteraction(const boost::json::value&);
+	explicit cAppCmdInteraction(const boost::json::object&);
 
-	const cSnowflake&         GetCommandId() const noexcept { return m_id;   }
-	eAppCmdType GetCommandType() const noexcept { return m_type; }
-	std::string_view        GetCommandName() const noexcept { return m_name; }
-	chSnowflake          GetCommandGuildId() const noexcept { return m_guild_id ? &*m_guild_id : nullptr; }
+	const cSnowflake&  GetCommandId() const noexcept { return m_id;   }
+	eAppCmdType      GetCommandType() const noexcept { return m_type; }
+	std::string_view GetCommandName() const noexcept { return m_name; }
+	chSnowflake   GetCommandGuildId() const noexcept { return m_guild_id ? &*m_guild_id : nullptr; }
 
 	std::span<const cAppCmdOption> GetOptions() const noexcept { return m_options; }
 	std::span<      cAppCmdOption> GetOptions()       noexcept { return m_options; }

@@ -1,6 +1,9 @@
 #include "ModalSubmitInteraction.h"
-#include "json.h"
+#include <boost/json.hpp>
+/* ================================================================================================================== */
 using namespace detail;
+namespace json = boost::json;
+/* ================================================================================================================== */
 cModalSubmitInteraction::cModalSubmitInteraction(const json::value& v) : cModalSubmitInteraction(v.as_object()) {}
 cModalSubmitInteraction::cModalSubmitInteraction(const json::object& o) : cModalSubmitInteraction(o, o.at("data").as_object()) {}
 cModalSubmitInteraction::cModalSubmitInteraction(const json::object& o, const json::object& d) :

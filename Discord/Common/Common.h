@@ -17,7 +17,7 @@
 #define DISCORD_API_HOST        "discord.com"
 #define DISCORD_API_ENDPOINT    "/api/v" STR(DISCORD_API_VERSION)
 
-/* ========== Boost Json forward declarations ======================================================================= */
+/* ========== Boost/JSON forward declarations ======================================================================= */
 namespace boost::json {
 	class value;
 	class object;
@@ -25,8 +25,10 @@ namespace boost::json {
 	template<typename>
 	struct value_to_tag;
 	struct value_from_tag;
+
+	template<typename>
+	struct is_variant_like;
 }
-namespace json = boost::json;
 
 /* ========== Handle types ========================================================================================== */
 template<typename T> // handle

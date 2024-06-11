@@ -8,8 +8,8 @@ class cEmoji final {
 	bool        m_animated;
 
 public:
-	explicit cEmoji(const json::value&);
-	explicit cEmoji(const json::object&);
+	explicit cEmoji(const boost::json::value&);
+	explicit cEmoji(const boost::json::object&);
 
 	template<typename Str = std::string> requires std::constructible_from<std::string, Str&&>
 	explicit cEmoji(Str&& unicode_emoji) : m_name(std::forward<Str>(unicode_emoji)), m_animated(false) {}
@@ -30,7 +30,7 @@ public:
 };
 
 cEmoji
-tag_invoke(json::value_to_tag<cEmoji>, const json::value& v);
+tag_invoke(boost::json::value_to_tag<cEmoji>, const boost::json::value& v);
 void
-tag_invoke(json::value_from_tag, json::value&, const cEmoji&);
+tag_invoke(boost::json::value_from_tag, boost::json::value&, const cEmoji&);
 #endif /* DISCORD_EMOJI_H */

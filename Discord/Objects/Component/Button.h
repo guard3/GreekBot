@@ -11,9 +11,9 @@ enum eButtonStyle : std::uint8_t {
 	BUTTON_STYLE_LINK
 };
 eButtonStyle
-tag_invoke(json::value_to_tag<eButtonStyle>, const json::value&);
+tag_invoke(boost::json::value_to_tag<eButtonStyle>, const boost::json::value&);
 void
-tag_invoke(json::value_from_tag, json::value&, eButtonStyle);
+tag_invoke(boost::json::value_from_tag, boost::json::value&, eButtonStyle);
 
 class cButton final {
 	eButtonStyle          m_style;
@@ -23,8 +23,8 @@ class cButton final {
 	std::optional<cEmoji> m_emoji;
 
 public:
-	explicit cButton(const json::value&);
-	explicit cButton(const json::object&);
+	explicit cButton(const boost::json::value&);
+	explicit cButton(const boost::json::object&);
 
 	template<typename Str1 = std::string, typename Str2 = std::string> requires requires {
 		requires std::constructible_from<std::string, Str1&&>;
@@ -93,7 +93,7 @@ public:
 	cButton&& SetEmoji(Arg&& arg) && { return std::move(SetEmoji(std::forward<Arg>(arg))); }
 };
 cButton
-tag_invoke(json::value_to_tag<cButton>, const json::value&);
+tag_invoke(boost::json::value_to_tag<cButton>, const boost::json::value&);
 void
-tag_invoke(json::value_from_tag, json::value&, const cButton&);
+tag_invoke(boost::json::value_from_tag, boost::json::value&, const cButton&);
 #endif /* DISCORD_BUTTON_H */

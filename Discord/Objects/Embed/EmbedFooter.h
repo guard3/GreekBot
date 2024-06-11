@@ -6,8 +6,8 @@ class cEmbedFooter final {
 	std::string m_text, m_icon_url, m_proxy_icon_url;
 
 public:
-	explicit cEmbedFooter(const json::value&);
-	explicit cEmbedFooter(const json::object&);
+	explicit cEmbedFooter(const boost::json::value&);
+	explicit cEmbedFooter(const boost::json::object&);
 
 	template<typename Str1 = std::string, typename Str2 = std::string> requires requires {
 		requires std::constructible_from<std::string, Str1&&>;

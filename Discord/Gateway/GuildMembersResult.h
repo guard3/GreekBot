@@ -14,8 +14,8 @@ private:
 	uint64_t m_nonce;
 
 public:
-	cGuildMembersChunk(const json::object&);
-	cGuildMembersChunk(const json::value&);
+	cGuildMembersChunk(const boost::json::object&);
+	cGuildMembersChunk(const boost::json::value&);
 
 	const cSnowflake& GetGuildId() const noexcept { return m_guild_id; }
 	int GetChunkIndex() const noexcept { return m_chunk_index; }

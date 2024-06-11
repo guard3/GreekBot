@@ -1,5 +1,7 @@
 #include "UnsupportedComponent.h"
-#include "json.h"
+#include <boost/json.hpp>
+/* ================================================================================================================== */
+namespace json = boost::json;
 /* ========== Constructor definitions =============================================================================== */
 cUnsupportedComponent::cUnsupportedComponent(const json::value& v): m_value(std::make_unique<json::value>(v)) {}
 cUnsupportedComponent::cUnsupportedComponent(const cUnsupportedComponent& o): m_value(std::make_unique<json::value>(*o.m_value)) {}

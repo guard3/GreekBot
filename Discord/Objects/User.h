@@ -14,8 +14,8 @@ private:
 	// other stuff unimplemented
 	
 public:
-	explicit cUser(const json::object&);
-	explicit cUser(const json::value&);
+	explicit cUser(const boost::json::object&);
+	explicit cUser(const boost::json::value&);
 
 	const cSnowflake&        GetId() const noexcept { return m_id;            }
 	std::string_view   GetUsername() const noexcept { return m_username;      }

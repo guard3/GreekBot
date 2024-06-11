@@ -1,5 +1,7 @@
 #include "Exception.h"
-#include "json.h"
+#include <boost/json.hpp>
+/* ================================================================================================================== */
+namespace json = boost::json;
 /* ================================================================================================================== */
 static std::shared_ptr<char[]> shared_copy(const char* str) {
 	if (!str) return {};

@@ -1,6 +1,5 @@
 #include "Exception.h"
 #include "GatewayImpl.h"
-#include "json.h"
 /* ================================================================================================================== */
 void
 cGateway::implementation::http_resolve() {

@@ -149,7 +149,7 @@ public:
 };
 
 void
-tag_invoke(json::value_from_tag, json::value& v, const cMessageParams&);
+tag_invoke(boost::json::value_from_tag, boost::json::value& v, const cMessageParams&);
 
 class cMessageUpdate final {
 private:
@@ -160,8 +160,8 @@ private:
 	std::optional<std::vector<cEmbed>> m_embeds;
 public:
 	cMessageUpdate() = default;
-	explicit cMessageUpdate(const json::object&);
-	explicit cMessageUpdate(const json::value&);
+	explicit cMessageUpdate(const boost::json::object&);
+	explicit cMessageUpdate(const boost::json::value&);
 
 	const cSnowflake& GetId() const noexcept { return m_id; }
 	const cSnowflake& GetChannelId() const noexcept { return m_channel_id; }
@@ -216,9 +216,9 @@ public:
 };
 
 cMessageUpdate
-tag_invoke(json::value_to_tag<cMessageUpdate>, const json::value&);
+tag_invoke(boost::json::value_to_tag<cMessageUpdate>, const boost::json::value&);
 void
-tag_invoke(json::value_from_tag, json::value&, const cMessageUpdate&);
+tag_invoke(boost::json::value_from_tag, boost::json::value&, const cMessageUpdate&);
 
 class cMessage final {
 private:
@@ -237,8 +237,8 @@ private:
 	std::vector<cAttachment> attachments;
 
 public:
-	explicit cMessage(const json::object&);
-	explicit cMessage(const json::value&);
+	explicit cMessage(const boost::json::object&);
+	explicit cMessage(const boost::json::value&);
 
 	const cSnowflake& GetId() const noexcept { return id; }
 	const cSnowflake& GetChannelId() const noexcept { return channel_id; }

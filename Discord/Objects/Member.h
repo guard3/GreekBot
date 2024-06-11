@@ -27,10 +27,10 @@ public:
 		return m_roles.emplace(std::forward<Args>(args)...);
 	}
 
-	friend void tag_invoke(json::value_from_tag, json::value&, const cMemberOptions&);
+	friend void tag_invoke(boost::json::value_from_tag, boost::json::value&, const cMemberOptions&);
 };
 void
-tag_invoke(json::value_from_tag, json::value&, const cMemberOptions&);
+tag_invoke(boost::json::value_from_tag, boost::json::value&, const cMemberOptions&);
 
 class cMemberUpdate final {
 private:
@@ -40,7 +40,7 @@ private:
 	bool m_pending;
 
 public:
-	explicit cMemberUpdate(const json::value&);
+	explicit cMemberUpdate(const boost::json::value&);
 
 	const cUser& GetUser() const noexcept { return m_user; }
 	std::string_view GetNickname() const noexcept { return m_nick; }
@@ -57,14 +57,14 @@ enum eMemberFlag {
 };
 inline eMemberFlag operator|(eMemberFlag a, eMemberFlag b) noexcept { return (eMemberFlag)((int)a | (int)b); }
 inline eMemberFlag operator&(eMemberFlag a, eMemberFlag b) noexcept { return (eMemberFlag)((int)a & (int)b); }
-eMemberFlag tag_invoke(json::value_to_tag<eMemberFlag>, const json::value&);
+eMemberFlag tag_invoke(boost::json::value_to_tag<eMemberFlag>, const boost::json::value&);
 
 class cPartialMember {
 public:
 	typedef std::chrono::sys_time<std::chrono::milliseconds> time_point;
 
-	explicit cPartialMember(const json::value&);
-	explicit cPartialMember(const json::object&);
+	explicit cPartialMember(const boost::json::value&);
+	explicit cPartialMember(const boost::json::object&);
 
 	std::string_view   GetNick() const noexcept { return m_nick;        }
 	std::string_view GetAvatar() const noexcept { return m_avatar;      }
@@ -101,13 +101,15 @@ typedef  chHandle<cPartialMember>  chPartialMember;
 typedef  uhHandle<cPartialMember>  uhPartialMember;
 typedef uchHandle<cPartialMember> uchPartialMember;
 
+cPartialMember tag_invoke(boost::json::value_to_tag<cPartialMember>, const boost::json::value&);
+
 class cMember final : public cPartialMember {
 private:
 	std::optional<cUser> m_user;
 
 public:
-	explicit cMember(const json::value&);
-	explicit cMember(const json::object&);
+	explicit cMember(const boost::json::value&);
+	explicit cMember(const boost::json::object&);
 
 	chUser GetUser() const noexcept { return m_user ? &*m_user : nullptr; }
 	hUser  GetUser()       noexcept { return m_user ? &*m_user : nullptr; }

@@ -22,8 +22,8 @@ private:
 	std::uint16_t   m_max_length;
 
 public:
-	explicit cTextInput(const json::value&);
-	explicit cTextInput(const json::object&);
+	explicit cTextInput(const boost::json::value&);
+	explicit cTextInput(const boost::json::object&);
 
 	template<typename Str1 = std::string, typename Str2 = std::string> requires requires {
 		requires std::constructible_from<std::string, Str1&&>;
@@ -62,7 +62,7 @@ public:
 	cTextInput&& SetMaxLength(std::uint16_t arg) && noexcept { return std::move(SetMaxLength(arg)); }
 };
 cTextInput
-tag_invoke(json::value_to_tag<cTextInput>, const json::value&);
+tag_invoke(boost::json::value_to_tag<cTextInput>, const boost::json::value&);
 void
-tag_invoke(json::value_from_tag, json::value&, const cTextInput&);
+tag_invoke(boost::json::value_from_tag, boost::json::value&, const cTextInput&);
 #endif /* DISCORD_TEXTINPUT_H */

@@ -1,5 +1,7 @@
 #include "Emoji.h"
-#include "json.h"
+#include <boost/json.hpp>
+
+namespace json = boost::json;
 
 cEmoji::cEmoji(const json::value& v) : cEmoji(v.as_object()) {}
 cEmoji::cEmoji(const json::object& o) :

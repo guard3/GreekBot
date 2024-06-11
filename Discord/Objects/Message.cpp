@@ -1,6 +1,8 @@
 #include "Message.h"
 #include "Utils.h"
-#include "json.h"
+#include <boost/json.hpp>
+/* ================================================================================================================== */
+namespace json = boost::json;
 /* ================================================================================================================== */
 eMessageType
 tag_invoke(json::value_to_tag<eMessageType>, const json::value& v) {

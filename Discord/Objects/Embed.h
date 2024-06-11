@@ -22,8 +22,8 @@ class cEmbed final {
 	std::optional<cEmbedAuthor> m_author;
 
 public:
-	explicit cEmbed(const json::value&);
-	explicit cEmbed(const json::object&);
+	explicit cEmbed(const boost::json::value&);
+	explicit cEmbed(const boost::json::object&);
 	cEmbed() = default;
 	/* Getters */
 	cColor                 GetColor() const noexcept { return m_color;       }

@@ -6,8 +6,8 @@ class cEmbedAuthor final {
 	std::string m_name, m_url, m_icon_url, m_proxy_icon_url;
 
 public:
-	explicit cEmbedAuthor(const json::value&);
-	explicit cEmbedAuthor(const json::object&);
+	explicit cEmbedAuthor(const boost::json::value&);
+	explicit cEmbedAuthor(const boost::json::object&);
 	/* Constructor */
 	template<typename Str = std::string> requires std::constructible_from<std::string, Str&&>
 	explicit cEmbedAuthor(Str&& name) : m_name(std::forward<Str>(name)) {}

@@ -12,8 +12,8 @@ class cSelectOption final {
 	std::optional<cEmoji> m_emoji;
 
 public:
-	explicit cSelectOption(const json::value&);
-	explicit cSelectOption(const json::object&);
+	explicit cSelectOption(const boost::json::value&);
+	explicit cSelectOption(const boost::json::object&);
 
 	template<typename Str1 = std::string, typename Str2 = std::string, typename Str3 = std::string> requires requires {
 		requires std::constructible_from<std::string, Str1&&>;
@@ -96,9 +96,9 @@ public:
 	cSelectOption&& SetEmoji(Arg&& arg) && { return std::move(SetEmoji(std::forward<Arg>(arg))); }
 };
 cSelectOption
-tag_invoke(json::value_to_tag<cSelectOption>, const json::value&);
+tag_invoke(boost::json::value_to_tag<cSelectOption>, const boost::json::value&);
 void
-tag_invoke(json::value_from_tag, json::value&, const cSelectOption&);
+tag_invoke(boost::json::value_from_tag, boost::json::value&, const cSelectOption&);
 
 class cSelectMenu final {
 	std::string m_custom_id;
@@ -106,8 +106,8 @@ class cSelectMenu final {
 	std::vector<cSelectOption> m_options;
 
 public:
-	explicit cSelectMenu(const json::value&);
-	explicit cSelectMenu(const json::object&);
+	explicit cSelectMenu(const boost::json::value&);
+	explicit cSelectMenu(const boost::json::object&);
 
 	template<typename Str1 = std::string, typename Str2 = std::string, typename Vec = std::vector<cSelectOption>> requires requires {
 		requires std::constructible_from<std::string, Str1&&>;
@@ -128,7 +128,7 @@ public:
 	std::vector<cSelectOption> MoveOptions() noexcept { return std::move(m_options);     }
 };
 cSelectMenu
-tag_invoke(json::value_to_tag<cSelectMenu>, const json::value&);
+tag_invoke(boost::json::value_to_tag<cSelectMenu>, const boost::json::value&);
 void
-tag_invoke(json::value_from_tag, json::value&, const cSelectMenu&);
+tag_invoke(boost::json::value_from_tag, boost::json::value&, const cSelectMenu&);
 #endif /* DISCORD_SELECTMENU_H */

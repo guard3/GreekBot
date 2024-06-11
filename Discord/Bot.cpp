@@ -1,6 +1,8 @@
 #include "Bot.h"
 #include "Utils.h"
-#include "json.h"
+#include <boost/json.hpp>
+
+namespace json = boost::json;
 
 cTask<>
 cBot::OnReady(cUser& user) {

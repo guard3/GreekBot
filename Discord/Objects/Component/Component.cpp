@@ -1,5 +1,16 @@
 #include "Component.h"
-#include "json.h"
+#include <boost/json.hpp>
+/* ================================================================================================================== */
+namespace json = boost::json;
+/* ================================================================================================================== */
+eComponentType
+tag_invoke(json::value_to_tag<eComponentType>, const json::value& v) {
+	return (eComponentType)v.to_number<std::underlying_type_t<eComponentType>>();
+}
+void
+tag_invoke(json::value_from_tag, json::value& v, eComponentType t) {
+	v = t;
+}
 /* ================================================================================================================== */
 cActionRow::cActionRow(const json::value& v) : cActionRow(v.as_object()) {}
 cActionRow::cActionRow(const json::object& o) : m_components(json::value_to<std::vector<cComponent>>(o.at("components"))) {}

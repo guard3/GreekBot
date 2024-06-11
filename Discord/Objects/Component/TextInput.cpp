@@ -1,5 +1,7 @@
 #include "TextInput.h"
-#include "json.h"
+#include <boost/json.hpp>
+/* ================================================================================================================== */
+namespace json = boost::json;
 /* ================================================================================================================== */
 eTextInputStyle
 tag_invoke(json::value_to_tag<eTextInputStyle>, const json::value& v) {

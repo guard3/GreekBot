@@ -9,8 +9,8 @@ class cEmbedMedia final {
 	int         m_height;
 
 public:
-	explicit cEmbedMedia(const json::value&);
-	explicit cEmbedMedia(const json::object&);
+	explicit cEmbedMedia(const boost::json::value&);
+	explicit cEmbedMedia(const boost::json::object&);
 	/* Constructor */
 	template<typename Str = std::string> requires std::constructible_from<std::string, Str&&>
 	explicit cEmbedMedia(Str&& url) : m_url(std::forward<Str>(url)), m_width(-1), m_height(-1) {}

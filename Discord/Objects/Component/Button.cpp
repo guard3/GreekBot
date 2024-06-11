@@ -1,5 +1,7 @@
 #include "Button.h"
-#include "json.h"
+#include <boost/json.hpp>
+
+namespace json = boost::json;
 
 cButton::cButton(const json::value& v) : cButton(v.as_object()) {}
 cButton::cButton(const json::object& o):

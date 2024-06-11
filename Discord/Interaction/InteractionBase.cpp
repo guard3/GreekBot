@@ -1,7 +1,7 @@
 #include "InteractionBase.h"
-#include "json.h"
+#include <boost/json.hpp>
 /* ================================================================================================================== */
-cInteraction::guild_data::guild_data(const json::value& s, const json::value& v): guild_id(s.as_string()), member(v) {}
+namespace json = boost::json;
 /* ================================================================================================================== */
 cInteraction::cInteraction(std::uint8_t type, const json::object& o):
 	m_ack(false),
@@ -20,5 +20,8 @@ cInteraction::cInteraction(std::uint8_t type, const json::object& o):
 		return;
 	/* Otherwise collect guild related data */
 	m_app_permissions = json::value_to<ePermission>(o.at("app_permissions"));
-	m_guild_data.emplace(o.at("guild_id"), o.at("member"));
+	m_guild_data.emplace(
+		json::value_to<cSnowflake>(o.at("guild_id")),
+		json::value_to<cPartialMember>(o.at("member"))
+	);
 }

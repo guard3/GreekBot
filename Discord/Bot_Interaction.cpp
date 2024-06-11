@@ -1,5 +1,7 @@
 #include "Bot.h"
-#include "json.h"
+#include <boost/json.hpp>
+
+namespace json = boost::json;
 
 template<typename... Ts>
 struct visitor : Ts... { using Ts::operator()...; };

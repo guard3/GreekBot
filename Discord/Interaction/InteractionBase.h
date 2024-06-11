@@ -46,12 +46,11 @@ private:
 	struct guild_data {
 		cSnowflake   guild_id;
 		cPartialMember member;
-		guild_data(const json::value&, const json::value&);
 	};
 	std::optional<guild_data> m_guild_data;
 
 protected:
-	cInteraction(std::uint8_t, const json::object&);
+	cInteraction(std::uint8_t, const boost::json::object&);
 	cInteraction(const cInteraction&) = default;
 
 public:

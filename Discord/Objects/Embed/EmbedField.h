@@ -7,8 +7,8 @@ class cEmbedField final {
 	bool        m_inline;
 
 public:
-	explicit cEmbedField(const json::value&);
-	explicit cEmbedField(const json::object&);
+	explicit cEmbedField(const boost::json::value&);
+	explicit cEmbedField(const boost::json::object&);
 
 	template<typename Str1 = std::string, typename Str2 = std::string> requires requires {
 		requires std::constructible_from<std::string, Str1&&>;

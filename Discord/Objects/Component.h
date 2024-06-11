@@ -13,6 +13,10 @@ enum eComponentType {
 	COMPONENT_SELECT_MENU,    // A select menu for picking from choices
 	COMPONENT_TEXT_INPUT      // A Text input object
 };
+eComponentType
+tag_invoke(boost::json::value_to_tag<eComponentType>, const boost::json::value& v);
+void
+tag_invoke(boost::json::value_from_tag, boost::json::value&, eComponentType);
 /* Define component as a variant of all types that may appear in an action row */
 using cComponent = std::variant<cButton, cSelectMenu, cTextInput, cUnsupportedComponent>;
 using   hComponent =   hHandle<cComponent>;
@@ -20,24 +24,20 @@ using  chComponent =  chHandle<cComponent>;
 using  uhComponent =  uhHandle<cComponent>;
 using uchComponent = uchHandle<cComponent>;
 /* Provide custom JSON conversions for cComponent */
-namespace boost::json {
-	template<typename>
-	struct is_variant_like;
-	template<>
-	struct is_variant_like<::cComponent> : std::false_type {};
-}
+template<>
+struct boost::json::is_variant_like<cComponent> : std::false_type {};
 cComponent
-tag_invoke(json::value_to_tag<cComponent>, const json::value&);
+tag_invoke(boost::json::value_to_tag<cComponent>, const boost::json::value&);
 void
-tag_invoke(json::value_from_tag, json::value&, const cComponent&);
+tag_invoke(boost::json::value_from_tag, boost::json::value&, const cComponent&);
 
 class cActionRow final {
 private:
 	std::vector<cComponent> m_components;
 
 public:
-	explicit cActionRow(const json::value&);
-	explicit cActionRow(const json::object&);
+	explicit cActionRow(const boost::json::value&);
+	explicit cActionRow(const boost::json::object&);
 
 	template<std::convertible_to<cButton>... Buttons> requires (sizeof...(Buttons) < 6)
 	explicit cActionRow(Buttons&&... buttons): m_components{ std::forward<Buttons>(buttons)... } {}
@@ -52,7 +52,7 @@ typedef  chHandle<cActionRow>  chActionRow;
 typedef  uhHandle<cActionRow>  uhActionRow;
 typedef uchHandle<cActionRow> uchActionRow;
 cActionRow
-tag_invoke(json::value_to_tag<cActionRow>, const json::value&);
+tag_invoke(boost::json::value_to_tag<cActionRow>, const boost::json::value&);
 void
-tag_invoke(json::value_from_tag, json::value&, const cActionRow&);
+tag_invoke(boost::json::value_from_tag, boost::json::value&, const cActionRow&);
 #endif /* DISCORD_COMPONENT_H */

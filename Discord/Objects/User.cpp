@@ -1,26 +1,28 @@
 #include "User.h"
 #include "Utils.h"
-#include "json.h"
+#include <boost/json.hpp>
 
-static std::string as_string(const json::value& v) {
-	return v.is_null() ? std::string() : json::value_to<std::string>(v);
-}
+namespace json = boost::json;
 
 cUser::cUser(const json::value& v) : cUser(v.as_object()) {}
 cUser::cUser(const json::object& o):
 	m_id(o.at("id").as_string()),
-	m_username(json::value_to<std::string>(o.at("username"))),
-	m_avatar(as_string(o.at("avatar"))),
-	m_global_name(as_string(o.at("global_name"))) {
+	m_avatar([&o] {
+		auto& s = o.at("avatar");
+		return s.is_null() ? std::string() : json::value_to<std::string>(s);
+	}()),
+	m_global_name([&o] {
+		auto& s = o.at("global_name");
+		return s.is_null() ? std::string() : json::value_to<std::string>(s);
+	}()) {
 	/* Combine username and discriminator to account for new usernames */
-	auto disc = json::value_to<std::string_view>(o.at("discriminator"));
-	m_discriminator = cUtils::ParseInt<uint16_t>(disc);
-	if (m_discriminator)
-		m_username = fmt::format("{}#{}", m_username, disc);
+	std::string_view disc_str = o.at("discriminator").as_string();
+	std::string_view username = o.at("username").as_string();
+	auto disc_int = cUtils::ParseInt<std::uint16_t>(disc_str);
+	m_username = disc_int ? fmt::format("{}#{}", username, disc_str) : (std::string)username;
+	m_discriminator = disc_int;
 
 	const json::value* p;
-	p = o.if_contains("bot");
-	m_bot = p && p->as_bool();
-	p = o.if_contains("system");
-	m_system = p && p->as_bool();
+	m_bot = (p = o.if_contains("bot")) && p->as_bool();
+	m_system = (p = o.if_contains("system")) && p->as_bool();
 }

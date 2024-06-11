@@ -10,12 +10,12 @@ private:
 	std::string m_custom_id;
 	std::vector<cActionRow> m_components;
 
-	explicit cModalSubmitInteraction(const json::object&, const json::object&);
+	explicit cModalSubmitInteraction(const boost::json::object&, const boost::json::object&);
 	using cInteraction::Visit;
 
 public:
-	explicit cModalSubmitInteraction(const json::value&);
-	explicit cModalSubmitInteraction(const json::object&);
+	explicit cModalSubmitInteraction(const boost::json::value&);
+	explicit cModalSubmitInteraction(const boost::json::object&);
 
 	std::string_view              GetCustomId() const noexcept { return m_custom_id;  }
 	std::span<const cActionRow> GetComponents() const noexcept { return m_components; }

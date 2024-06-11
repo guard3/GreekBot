@@ -3,14 +3,14 @@
 #include "Common.h"
 /* ========== A dummy component not directly supported ============================================================== */
 class cUnsupportedComponent final {
-	std::unique_ptr<json::value> m_value;
+	std::unique_ptr<boost::json::value> m_value;
 
 	friend cUnsupportedComponent
-	tag_invoke(json::value_to_tag<cUnsupportedComponent>, const json::value&);
+	tag_invoke(boost::json::value_to_tag<cUnsupportedComponent>, const boost::json::value&);
 	friend void
-	tag_invoke(json::value_from_tag, json::value&, const cUnsupportedComponent&);
+	tag_invoke(boost::json::value_from_tag, boost::json::value&, const cUnsupportedComponent&);
 public:
-	explicit cUnsupportedComponent(const json::value&);
+	explicit cUnsupportedComponent(const boost::json::value&);
 	cUnsupportedComponent(const cUnsupportedComponent&);
 	cUnsupportedComponent(cUnsupportedComponent&&) noexcept = default;
 	~cUnsupportedComponent();
@@ -24,7 +24,7 @@ using  uhUnsupportedComponent =  uhHandle<cUnsupportedComponent>;
 using uchUnsupportedComponent = uchHandle<cUnsupportedComponent>;
 /* ========== JSON conversion overloads ============================================================================= */
 cUnsupportedComponent
-tag_invoke(json::value_to_tag<cUnsupportedComponent>, const json::value&);
+tag_invoke(boost::json::value_to_tag<cUnsupportedComponent>, const boost::json::value&);
 void
-tag_invoke(json::value_from_tag, json::value&, const cUnsupportedComponent&);
+tag_invoke(boost::json::value_from_tag, boost::json::value&, const cUnsupportedComponent&);
 #endif /* DISCORD_UNSUPPORTEDCOMPONENT_H */

@@ -64,14 +64,14 @@ public:
 
 	std::string_view GetToken() const noexcept;
 
-	cTask<json::value> DiscordGet   (std::string_view path,                          std::span<const cHttpField> fields = {});
-	cTask<json::value> DiscordPost  (std::string_view path, const json::object& obj, std::span<const cHttpField> fields = {});
-	cTask<json::value> DiscordPatch (std::string_view path, const json::object& obj, std::span<const cHttpField> fields = {});
-	cTask<json::value> DiscordPut   (std::string_view path,                          std::span<const cHttpField> fields = {});
-	cTask<json::value> DiscordPut   (std::string_view path, const json::object& obj, std::span<const cHttpField> fields = {});
-	cTask<json::value> DiscordDelete(std::string_view path,                          std::span<const cHttpField> fields = {});
+	cTask<boost::json::value> DiscordGet   (std::string_view path,                                 std::span<const cHttpField> fields = {});
+	cTask<boost::json::value> DiscordPost  (std::string_view path, const boost::json::object& obj, std::span<const cHttpField> fields = {});
+	cTask<boost::json::value> DiscordPatch (std::string_view path, const boost::json::object& obj, std::span<const cHttpField> fields = {});
+	cTask<boost::json::value> DiscordPut   (std::string_view path,                                 std::span<const cHttpField> fields = {});
+	cTask<boost::json::value> DiscordPut   (std::string_view path, const boost::json::object& obj, std::span<const cHttpField> fields = {});
+	cTask<boost::json::value> DiscordDelete(std::string_view path,                                 std::span<const cHttpField> fields = {});
 
-	cTask<json::value> DiscordPostNoRetry(std::string_view path, const json::object& obj, std::span<const cHttpField> fields = {});
+	cTask<boost::json::value> DiscordPostNoRetry(std::string_view path, const boost::json::object& obj, std::span<const cHttpField> fields = {});
 
 	cTask<> ResumeOnEventThread();
 	cTask<> WaitOnEventThread(std::chrono::milliseconds);

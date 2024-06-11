@@ -16,6 +16,7 @@ enum eChannelType {
 	CHANNEL_GUILD_DIRECTORY,
 	CHANNEL_GUILD_FORUM
 };
+eChannelType tag_invoke(boost::json::value_to_tag<eChannelType>, const boost::json::value&);
 
 class cChannel final {
 private:
@@ -24,8 +25,8 @@ private:
 	// ...
 
 public:
-	explicit cChannel(const json::object&);
-	explicit cChannel(const json::value&);
+	explicit cChannel(const boost::json::object&);
+	explicit cChannel(const boost::json::value&);
 
 	const cSnowflake& GetId() const noexcept { return id; }
 	eChannelType GetType() const noexcept { return type; }

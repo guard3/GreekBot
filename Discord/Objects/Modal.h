@@ -14,9 +14,8 @@ public:
 		m_title(std::move(title)),
 		m_components(std::move(components)) {}
 
-	friend void tag_invoke(const json::value_from_tag&, json::value&, const cModal&);
+	friend void tag_invoke(boost::json::value_from_tag, boost::json::value&, const cModal&);
 };
 
-void tag_invoke(const json::value_from_tag&, json::value&, const cModal&);
-
+void tag_invoke(boost::json::value_from_tag, boost::json::value&, const cModal&);
 #endif /* GREEKBOT_MODAL_H */

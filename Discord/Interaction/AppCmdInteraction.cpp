@@ -1,5 +1,7 @@
 #include "AppCmdInteraction.h"
-#include "json.h"
+#include <boost/json.hpp>
+/* ================================================================================================================== */
+namespace json = boost::json;
 /* ================================================================================================================== */
 eAppCmdType
 tag_invoke(json::value_to_tag<eAppCmdType>, const json::value& v) {

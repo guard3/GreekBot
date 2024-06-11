@@ -1,6 +1,8 @@
 #include "Member.h"
 #include "Utils.h"
-#include "json.h"
+#include <boost/json.hpp>
+
+namespace json = boost::json;
 
 eMemberFlag
 tag_invoke(json::value_to_tag<eMemberFlag>, const json::value& v) {
@@ -22,30 +24,45 @@ cMemberUpdate::cMemberUpdate(const json::value& v):
 
 cPartialMember::cPartialMember(const json::value& v): cPartialMember(v.as_object()) {}
 cPartialMember::cPartialMember(const json::object& o):
-	m_roles(json::value_to<std::vector<cSnowflake>>(o.at("roles"))),
+	m_nick([&o] {
+		auto p = o.if_contains("nick");
+		return p && !p->is_null() ? json::value_to<std::string>(*p) : std::string();
+	}()),
+	m_avatar([&o] {
+		auto p = o.if_contains("avatar");
+		return p && !p->is_null() ? json::value_to<std::string>(*p) : std::string();
+	}()),
 	m_joined_at(cUtils::ParseISOTimestamp(o.at("joined_at").as_string())),
-	m_flags(json::value_to<eMemberFlag>(o.at("flags"))) {
-	const json::value* p;
-	if ((p = o.if_contains("nick"))) {
-		if (!p->is_null())
-			m_nick = json::value_to<std::string>(*p);
-	}
-	if ((p = o.if_contains("avatar"))) {
-		if (!p->is_null())
-			m_avatar = json::value_to<std::string>(*p);
-	}
-	if ((p = o.if_contains("premium_since"))) {
-		if (!p->is_null())
-			m_premium_since = cUtils::ParseISOTimestamp(p->as_string());
-	}
-	if ((p = o.if_contains("communication_disabled_until"))) {
-		if (!p->is_null())
-			m_communication_disabled_until = cUtils::ParseISOTimestamp(p->as_string());
-	}
-	m_permissions = (p = o.if_contains("permissions")) ? json::value_to<ePermission>(*p) : PERM_NONE;
-	m_deaf = (p = o.if_contains("deaf")) && p->as_bool();
-	m_mute = (p = o.if_contains("mute")) && p->as_bool();
-	m_pending = (p = o.if_contains("pending")) && p->as_bool();
+	m_premium_since([&o] {
+		auto p = o.if_contains("premium_since");
+		return p && !p->is_null() ? cUtils::ParseISOTimestamp(p->as_string()) : time_point{};
+	}()),
+	m_communication_disabled_until([&o] {
+		auto p = o.if_contains("communication_disabled_until");
+		return p && !p->is_null() ? cUtils::ParseISOTimestamp(p->as_string()) : time_point{};
+	}()),
+	m_deaf([&o] {
+		auto p = o.if_contains("deaf");
+		return p && p->as_bool();
+	}()),
+	m_mute([&o] {
+		auto p = o.if_contains("mute");
+		return p && p->as_bool();
+	}()),
+	m_pending([&o] {
+		auto p = o.if_contains("pending");
+		return p && p->as_bool();
+	}()),
+	m_flags(json::value_to<eMemberFlag>(o.at("flags"))),
+	m_permissions([&o] {
+		auto p = o.if_contains("permissions");
+		return p ? json::value_to<ePermission>(*p) : PERM_NONE;
+	}()),
+	m_roles(json::value_to<std::vector<cSnowflake>>(o.at("roles"))) {}
+
+cPartialMember
+tag_invoke(json::value_to_tag<cPartialMember>, const json::value& v) {
+	return cPartialMember{ v };
 }
 
 cMember::cMember(const json::value& v) : cMember(v.as_object()) {}

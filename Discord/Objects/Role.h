@@ -58,8 +58,8 @@ class cRoleTags final {
 	// various other crap...
 
 public:
-	cRoleTags(const json::value&);
-	cRoleTags(const json::object&);
+	cRoleTags(const boost::json::value&);
+	cRoleTags(const boost::json::object&);
 
 	chSnowflake         GetBotId() const noexcept { return         bot_id.ToInt() ?         &bot_id : nullptr; }
 	chSnowflake GetIntegrationId() const noexcept { return integration_id.ToInt() ? &integration_id : nullptr; }
@@ -83,8 +83,8 @@ class cRole final {
 	std::optional<cRoleTags> m_tags;
 
 public:
-	cRole(const json::value&);
-	cRole(const json::object&);
+	cRole(const boost::json::value&);
+	cRole(const boost::json::object&);
 
 	const cSnowflake&          GetId() const noexcept { return m_id;            }
 	std::size_t          GetPosition() const noexcept { return m_position;      }

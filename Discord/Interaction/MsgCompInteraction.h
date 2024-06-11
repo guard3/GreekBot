@@ -13,12 +13,12 @@ private:
 	eComponentType m_component_type;
 	std::vector<std::string> m_values;
 
-	explicit cMsgCompInteraction(const json::object&, const json::object&);
+	explicit cMsgCompInteraction(const boost::json::object&, const boost::json::object&);
 	using cInteraction::Visit;
 
 public:
-	explicit cMsgCompInteraction(const json::value&);
-	explicit cMsgCompInteraction(const json::object&);
+	explicit cMsgCompInteraction(const boost::json::value&);
+	explicit cMsgCompInteraction(const boost::json::object&);
 
 	const cMessage&             GetMessage() const noexcept { return m_message;        }
 	std::string_view           GetCustomId() const noexcept { return m_custom_id;      }
