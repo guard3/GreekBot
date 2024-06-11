@@ -201,7 +201,7 @@ cGreekBot::process_ban_ctx_menu(cAppCmdInteraction& i, eSubcommand subcmd) HANDL
 					TEXT_INPUT_SHORT,
 					"BAN_REASON",
 					"Ban reason (optional)",
-					kw::required=false
+					false
 				}
 			},
 			cActionRow{
@@ -209,7 +209,7 @@ cGreekBot::process_ban_ctx_menu(cAppCmdInteraction& i, eSubcommand subcmd) HANDL
 					TEXT_INPUT_PARAGRAPH,
 					"BAN_MESSAGE",
 					"Custom goodbye message (optional)",
-					kw::required=false
+					false
 				}
 			}
 		}
