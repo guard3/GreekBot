@@ -83,8 +83,7 @@ cGreekBot::OnGuildRoleDelete(cSnowflake& guild_id, cSnowflake& role_id) {
 	if (guild_id == LMG_GUILD_ID) {
 		/* If the guild is 'Learning Greek', just remove all occurrences of the deleted role.
 		 * m_bSorted isn't updated because the order of other roles doesn't change */
-		auto r = rng::remove(m_lmg_roles, role_id, &cRole::GetId);
-		m_lmg_roles.erase(begin(r), end(r));
+		std::erase_if(m_lmg_roles, [&role_id](cRole& role) { return role.GetId() == role_id; });
 	}
 	co_return;
 }
@@ -105,10 +104,13 @@ cGreekBot::OnInteractionCreate(cInteraction& i) {
 		}
 	}
 	/* ...and send error message to the user */
-	co_await InteractionSendMessage(i, cMessageParams()
-		.SetFlags(MESSAGE_FLAG_EPHEMERAL)
-		.SetContent("An unexpected error has occurred. Try again later.")
-	);
+	static const auto FAIL_MESSAGE = []{
+		cMessageParams result;
+		result.SetFlags(MESSAGE_FLAG_EPHEMERAL);
+		result.SetContent("An unexpected error has occurred. Try again later.");
+		return result;
+	}();
+	co_await InteractionSendMessage(i, FAIL_MESSAGE);
 }
 
 cTask<>
@@ -129,11 +131,11 @@ cGreekBot::process_interaction(cAppCmdInteraction& i) {
 		case 1177042125205024868: // timestamp
 			return process_timestamp(i);
 		case 1170787836434317363: // Apps > Ban
-			return process_ban_ctx_menu(i, SUBCMD_USER);
+			return process_ban_ctx_menu(i, "user");
 		case 1174826008474570892: // Apps > Ban Turk
-			return process_ban_ctx_menu(i, SUBCMD_TURK);
+			return process_ban_ctx_menu(i, "turk");
 		case 1174836455714078740: // Apps > Ban Greek
-			return process_ban_ctx_menu(i, SUBCMD_GREEK);
+			return process_ban_ctx_menu(i, "greek");
 		default:
 			return [this](const cAppCmdInteraction& i) -> cTask<> {
 				cUtils::PrintMsg("Unhandled command: {} {}", i.GetCommandName(), i.GetCommandId());

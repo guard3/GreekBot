@@ -234,8 +234,12 @@ cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) HANDLER_BEGIN {
 	auto& embeds = response.EmplaceEmbeds();
 	/* Check which subcommand was invoked */
 	switch (auto& subcommand = i.GetOptions().front(); cUtils::CRC32(0, subcommand.GetName())) {
-		default:
-			throw std::runtime_error("Unknown subcommand");
+		default: {
+			struct _ : std::exception {
+				const char* what() const noexcept override { return "Unknown subsommand"; }
+			};
+			throw _();
+		}
 		case 0x8879E8E5: { // rank
 			/* Retrieve selected member and user */
 			hUser user;

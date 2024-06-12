@@ -1,21 +1,47 @@
 #include "GreekBot.h"
 #include "Utils.h"
 #include "CDN.h"
-
-static std::string get_no_ban_msg(uint32_t e) {
-	const char* msg;
+/* ========== Subcommand name hashes for easy switching ============================================================= */
+enum : std::uint32_t {
+	SUBCMD_USER  = 0x8D93D649, // "user"
+	SUBCMD_TURK  = 0x504AE1C8, // "turk"
+	SUBCMD_GREEK = 0xA0F01AAE  // "greek"
+};
+/* ========== A static message indicating missing `BAN_MEMBERS` permission ========================================== */
+static const auto MISSING_PERMISSION_MESSAGE = []{
+	cMessageParams result;
+	result.SetFlags(MESSAGE_FLAG_EPHEMERAL).SetContent("You can't do that. You're missing the `BAN_MEMBERS` permission.");
+	return result;
+}();
+/* ========== A function that returns an appropriate message for when trying to ban the bot itself ================== */
+static const cMessageParams&
+get_no_ban_msg(std::uint32_t e) {
 	switch (e) {
-		case SUBCMD_TURK:
-			msg = "Excuse me, ı'm not türk!";
-			break;
-		case SUBCMD_GREEK:
-			msg = "Όπα κάτσε, τι έκανα; Είμαι καλό μποτ εγώ.";
-			break;
-		default:
-			msg = "I'm not gonna ban myself, I'm a good bot.";
-			break;
+		case SUBCMD_TURK: {
+			static const auto result = []{
+				cMessageParams result;
+				result.SetFlags(MESSAGE_FLAG_EPHEMERAL).SetContent("Excuse me, ı'm not türk! Beep Bop... 🤖");
+				return result;
+			}();
+			return result;
+		}
+		case SUBCMD_GREEK: {
+			static const auto result = []{
+				cMessageParams result;
+				result.SetFlags(MESSAGE_FLAG_EPHEMERAL).SetContent("Όπα κάτσε, τι έκανα; Είμαι καλό μποτ εγώ. Beep Bop... 🤖");
+				return result;
+			}();
+			return result;
+		}
+		default: {
+			static const auto result = []{
+				cMessageParams result;
+				result.SetFlags(MESSAGE_FLAG_EPHEMERAL).SetContent("I'm not gonna ban myself, I'm a good bot. Beep Bop... 🤖");
+				return result;
+			}();
+			return result;
+		}
 	}
-	return fmt::format("{} Beep Bop... 🤖", msg);
 }
 
 cTask<>
@@ -50,19 +76,13 @@ cGreekBot::process_ban(cAppCmdInteraction& i) HANDLER_BEGIN {
 } HANDLER_END
 
 cTask<>
-cGreekBot::process_ban(cInteraction& i, uint32_t subcmd, const cSnowflake& user_id, std::string_view hash, std::uint16_t discr, std::string_view username, std::chrono::seconds delete_messages, std::string_view reason, std::string_view goodbye) {
+cGreekBot::process_ban(cInteraction& i, std::uint32_t subcmd, const cSnowflake& user_id, std::string_view hash, std::uint16_t discr, std::string_view username, std::chrono::seconds delete_messages, std::string_view reason, std::string_view goodbye) {
 	/* Check that the invoking user has appropriate permissions, for extra measure */
 	if (!(i.GetMember()->GetPermissions() & PERM_BAN_MEMBERS))
-		co_return co_await InteractionSendMessage(i, cMessageParams()
-			.SetFlags(MESSAGE_FLAG_EPHEMERAL)
-			.SetContent("You can't do that. You're missing the `BAN_MEMBERS` permission.")
-		);
+		co_return co_await InteractionSendMessage(i, MISSING_PERMISSION_MESSAGE);
 	/* Make sure we're not banning ourselves */
 	if (user_id == GetUser().GetId())
-		co_return co_await InteractionSendMessage(i, cMessageParams()
-			.SetFlags(MESSAGE_FLAG_EPHEMERAL)
-			.SetContent(get_no_ban_msg(subcmd))
-		);
+		co_return co_await InteractionSendMessage(i, get_no_ban_msg(subcmd));
 	/* Acknowledge interaction */
 	co_await InteractionDefer(i, true);
 	/* Update reason and goodbye message */
@@ -135,12 +155,9 @@ cGreekBot::process_ban(cInteraction& i, uint32_t subcmd, const cSnowflake& user_
 cTask<>
 cGreekBot::process_unban(cMsgCompInteraction& i, const cSnowflake& user_id) HANDLER_BEGIN {
 	/* Make sure that the invoking user has the appropriate permissions */
-	if (!(i.GetMember()->GetPermissions() & PERM_BAN_MEMBERS)) {
-		co_return co_await InteractionSendMessage(i, cMessageParams()
-			.SetFlags(MESSAGE_FLAG_EPHEMERAL)
-			.SetContent("You can't do that. You're missing the `BAN_MEMBERS` permission.")
-		);
-	}
+	if (!(i.GetMember()->GetPermissions() & PERM_BAN_MEMBERS))
+		co_return co_await InteractionSendMessage(i, MISSING_PERMISSION_MESSAGE);
+	/* Unban user */
 	co_await InteractionDefer(i);
 	try {
 		co_await RemoveGuildBan(*i.GetGuildId(), user_id);
@@ -165,24 +182,19 @@ cGreekBot::process_unban(cMsgCompInteraction& i, const cSnowflake& user_id) HAND
 } HANDLER_END
 
 cTask<>
-cGreekBot::process_ban_ctx_menu(cAppCmdInteraction& i, eSubcommand subcmd) HANDLER_BEGIN {
+cGreekBot::process_ban_ctx_menu(cAppCmdInteraction& i, std::string_view subcommand) HANDLER_BEGIN {
 	/* Retrieve the user to be banned */
 	auto[user, member] = i.GetOptions().front().GetValue<APP_CMD_OPT_USER>();
 	/* If the subcommand is about banning trolls specifically, ban right away */
+	auto subcmd = cUtils::CRC32(0, subcommand);
 	if (subcmd != SUBCMD_USER)
 		co_return co_await process_ban(i, subcmd, user->GetId(), user->GetAvatar(), user->GetDiscriminator(), user->GetUsername(), std::chrono::days(7), {}, {});
 	/* Check that the invoking member has appropriate permissions */
 	if (!(i.GetMember()->GetPermissions() & PERM_BAN_MEMBERS))
-		co_return co_await InteractionSendMessage(i, cMessageParams()
-			.SetFlags(MESSAGE_FLAG_EPHEMERAL)
-			.SetContent("You can't do that. You're missing the `BAN_MEMBERS` permission")
-		);
+		co_return co_await InteractionSendMessage(i, MISSING_PERMISSION_MESSAGE);
 	/* Make sure we're not banning ourselves */
 	if (user->GetId() == GetUser().GetId())
-		co_return co_await InteractionSendMessage(i, cMessageParams()
-			.SetFlags(MESSAGE_FLAG_EPHEMERAL)
-			.SetContent(get_no_ban_msg(subcmd))
-		);
+		co_return co_await InteractionSendMessage(i, get_no_ban_msg(subcmd));
 	/* Otherwise, retrieve the user's display name in the guild... */
 	std::string_view display_name;
 	if (member && !member->GetNick().empty())
@@ -216,10 +228,6 @@ cGreekBot::process_ban_ctx_menu(cAppCmdInteraction& i, eSubcommand subcmd) HANDL
 	});
 } HANDLER_END
 
-[[noreturn]]
-static void throw_exception() {
-	throw std::runtime_error("Error parsing modal id");
-}
 cTask<>
 cGreekBot::process_ban_modal(cModalSubmitInteraction& i) HANDLER_BEGIN {
 	/* Retrieve submitted options */
@@ -239,18 +247,23 @@ cGreekBot::process_ban_modal(cModalSubmitInteraction& i) HANDLER_BEGIN {
 			}
 		}
 	}
+	/* A simple exception for when the modal id (for whatever reason) is invalid */
+	struct _ : std::exception {
+		const char* what() const noexcept override { return "Invalid modal id"; }
+	};
 	/* Retrieve user id */
 	size_t f1 = 4, f2 = 0; // Start at 4 chars to skip "ban:"
 	std::string_view custom_id = i.GetCustomId();
-	if (f2 = custom_id.find(':', f1); f2 == std::string_view::npos) throw_exception();
+	if (!custom_id.starts_with("ban:")) throw _();
+	if (f2 = custom_id.find(':', f1); f2 == std::string_view::npos) throw _();
 	cSnowflake user_id = custom_id.substr(f1, f2 - f1);
 	/* Retrieve user avatar */
 	f1 = f2 + 1;
-	if (f2 = custom_id.find(':', f1); f2 == std::string_view::npos) throw_exception();
+	if (f2 = custom_id.find(':', f1); f2 == std::string_view::npos) throw _();
 	auto user_avatar = custom_id.substr(f1, f2 - f1);
 	/* Retrieve user discriminator */
 	f1 = f2 + 1;
-	if (f2 = custom_id.find(':', f1); f2 == std::string_view::npos) throw_exception();
+	if (f2 = custom_id.find(':', f1); f2 == std::string_view::npos) throw _();
 	auto user_discr = cUtils::ParseInt<std::uint16_t>(custom_id.substr(f1, f2 - f1));
 	/* Ban */
 	co_await process_ban(i, SUBCMD_USER, user_id, user_avatar, user_discr, custom_id.substr(f2 + 1), std::chrono::days(7), reason, goodbye);

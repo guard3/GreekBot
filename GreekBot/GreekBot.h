@@ -17,12 +17,6 @@ public:
 	}
 };
 
-enum eSubcommand : uint32_t {
-	SUBCMD_USER  = 0x8D93D649, // "user"
-	SUBCMD_TURK  = 0x504AE1C8, // "turk"
-	SUBCMD_GREEK = 0xA0F01AAE  // "greek"
-};
-
 /* Handling exceptions when they escape the current interaction process function */
 struct unhandled_exception_t {
 	const char* name;
@@ -52,9 +46,9 @@ private:
 	cTask<> process_prune(cAppCmdInteraction&);
 	cTask<> process_prune_lmg(cAppCmdInteraction&);
 	cTask<> process_ban(cAppCmdInteraction&);
-	cTask<> process_ban_ctx_menu(cAppCmdInteraction&, eSubcommand);
+	cTask<> process_ban_ctx_menu(cAppCmdInteraction&, std::string_view);
 	cTask<> process_ban_modal(cModalSubmitInteraction&);
-	cTask<> process_ban(cInteraction&, uint32_t, const cSnowflake&, std::string_view, std::uint16_t, std::string_view, std::chrono::seconds, std::string_view, std::string_view);
+	cTask<> process_ban(cInteraction&, std::uint32_t, const cSnowflake&, std::string_view, std::uint16_t, std::string_view, std::chrono::seconds, std::string_view, std::string_view);
 	cTask<> process_unban(cMsgCompInteraction&, const cSnowflake& user_id);
 	cTask<> process_dismiss(cMsgCompInteraction&, const cSnowflake& user_id);
 	cTask<> process_nickname_button(cMsgCompInteraction&, const cSnowflake& user_id);
