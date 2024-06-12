@@ -3,6 +3,7 @@
 #include "CDN.h"
 #include "Utils.h"
 #include <algorithm>
+#include <ranges>
 /* ================================================================================================================== */
 namespace rng = std::ranges;
 /* ========== Helper macros to catch and report errors ============================================================== */
@@ -214,14 +215,17 @@ cGreekBot::process_top(cAppCmdInteraction& i) HANDLER_BEGIN {
 	co_await ResumeOnEventThread();
 	if (db_result.empty())
 		co_return co_await InteractionSendMessage(i, response.SetContent("I don't have any data yet. Start talking!"));
+	/* Members generator */
+	cRequestGuildMembers rgm;
+	auto gen = [this, &guild_id = *i.GetGuildId(), &db_result, &rgm]() mutable {
+		auto& ids = rgm.EmplaceUserIds();
+		ids.reserve(db_result.size());
+		rng::copy(db_result | std::views::transform([](leaderboard_entry& e) -> cSnowflake& { return e.user_id; }), std::back_inserter(ids));
+		return RequestGuildMembers(guild_id, rgm);
+	}();
 	/* Get members */
-	std::vector<cSnowflake> ids;
-	ids.reserve(db_result.size());
-	for (auto& r : db_result)
-		ids.emplace_back(r.user_id);
 	std::vector<cMember> members;
 	members.reserve(db_result.size());
-	auto gen = GetGuildMembers(*i.GetGuildId(), kw::user_ids=ids);
 	for (auto it = co_await gen.begin(); it != gen.end(); co_await ++it)
 		members.push_back(std::move(*it));
 	/* Prepare embeds */

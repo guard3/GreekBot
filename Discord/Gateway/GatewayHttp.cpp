@@ -208,25 +208,34 @@ cGateway::implementation::DiscordPostNoRetry(std::string_view t, const json::obj
 // TODO: make custom exceptions, preferably in Exceptions.h
 // TODO: make getting all members from the gateway
 cAsyncGenerator<cMember>
-cGateway::implementation::get_guild_members(const cSnowflake& guild_id, const std::string& query, const std::vector<cSnowflake>& user_ids) {
+cGateway::implementation::RequestGuildMembers(const cSnowflake& guild_id) {
+	return request_guild_members(guild_id, {}, {});
+}
+cAsyncGenerator<cMember>
+cGateway::implementation::RequestGuildMembers(const cSnowflake& guild_id, const cRequestGuildMembers& rgm) {
+	return request_guild_members(guild_id, rgm.GetQuery(), rgm.GetUserIds());
+}
+cAsyncGenerator<cMember>
+cGateway::implementation::request_guild_members(const cSnowflake& guild_id, std::string_view query, std::span<const cSnowflake> user_ids) {
 	if (!user_ids.empty()) {
 		/* Make sure we're running on the event thread */
 		co_await ResumeOnEventThread();
 		/* Save the current nonce to get the result later */
 		auto nonce = m_rgm_nonce;
 		/* Prepare the gateway payload */
-		json::array a;
-		a.reserve(user_ids.size());
-		for (auto& s : user_ids)
-			a.emplace_back(s.ToString());
-		m_rgm_payload = json::serialize(json::object {
-			{ "op", 8 },
-			{ "d", json::object {
-				{ "guild_id", guild_id.ToString() },
-				{ "user_ids", std::move(a) },
-				{ "nonce", std::to_string(nonce) }
-			}}
-		});
+		m_rgm_payload = [&guild_id, user_ids, nonce] {
+			json::object obj;
+			obj.reserve(2);
+			obj.emplace("op", 8);
+			auto& data = obj["d"].emplace_object();
+			data.reserve(3);
+			json::value_from(guild_id, data["guild_id"]);
+			json::value_from(user_ids, data["user_ids"]);
+			char str[20];
+			auto[end, _] = std::to_chars(std::begin(str), std::end(str), nonce);
+			data.emplace("nonce", json::string_view(str, end - str));
+			return json::serialize(obj);
+		}();
 		/* Send the payload to the gateway and wait for the result to be available */
 		m_await_command = AWAIT_GUILD_MEMBERS;
 		co_await *this;
@@ -246,7 +255,7 @@ cGateway::implementation::get_guild_members(const cSnowflake& guild_id, const st
 		/* If no query is specified, return all guild members, provided we have the appropriate intents */
 		if (!(m_application->GetFlags() & (APP_FLAG_GATEWAY_GUILD_MEMBERS | APP_FLAG_GATEWAY_GUILD_MEMBERS_LIMITED)))
 			throw std::runtime_error("Missing privileged intents");
-		for (cSnowflake last_id = "0";;) {
+		for (cSnowflake last_id{};;) {
 			json::value result = co_await DiscordGet(fmt::format("/guilds/{}/members?limit=1000&after={}", guild_id, last_id));
 			json::array& members = result.as_array();
 			if (members.empty())

@@ -295,7 +295,7 @@ cGateway::implementation::run_session() try {
 					r.set(beast::http::field::user_agent, "GreekBot");
 				}));
 				/* Perform the WebSocket handshake */
-				m_ws->async_handshake(host, "/?v=" STR(DISCORD_API_VERSION) "&encoding=json&compress=zlib-stream", [this](const beast::error_code& ec) HANDLER_BEGIN(ec) {
+				m_ws->async_handshake(host, "/?v=" DISCORD_API_VERSION_STR "&encoding=json&compress=zlib-stream", [this](const beast::error_code& ec) HANDLER_BEGIN(ec) {
 					/* Start the asynchronous read operation */
 					m_ws->async_read(m_buffer, [this](const beast::error_code& ec, std::size_t size) { on_read(ec, size); });
 					m_async_status = ASYNC_READ;

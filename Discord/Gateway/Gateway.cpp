@@ -38,8 +38,12 @@ cGateway::ResumeOnEventThread() { co_await m_pImpl->ResumeOnEventThread(); }
 cTask<>
 cGateway::WaitOnEventThread(chrono::milliseconds d) { co_await m_pImpl->WaitOnEventThread(d); }
 cAsyncGenerator<cMember>
-cGateway::get_guild_members(const cSnowflake& g, const std::string& s, const std::vector<cSnowflake>& u) {
-	return m_pImpl->get_guild_members(g, s, u);
+cGateway::RequestGuildMembers(const cSnowflake& guild_id) {
+	return m_pImpl->RequestGuildMembers(guild_id);
+}
+cAsyncGenerator<cMember>
+cGateway::RequestGuildMembers(const cSnowflake& guild_id, const cRequestGuildMembers& rgm) {
+	return m_pImpl->RequestGuildMembers(guild_id, rgm);
 }
 /* ================================================================================================================== */
 std::string_view

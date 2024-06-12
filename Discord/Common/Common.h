@@ -1,6 +1,5 @@
-#ifndef GREEKBOT_COMMON_H
-#define GREEKBOT_COMMON_H
-#include "kwarg.h"
+#ifndef DISCORD_COMMON_H
+#define DISCORD_COMMON_H
 #include "Ptr.h"
 #include <chrono>
 #include <compare>
@@ -10,12 +9,13 @@
 #include <string_view>
 #include <fmt/format.h>
 
-#define STR_(x) #x
-#define STR(x) STR_(x)
+#define DISCORD_STR_(x) #x
+#define DISCORD_STR(x) DISCORD_STR_(x)
 
 #define DISCORD_API_VERSION     10
+#define DISCORD_API_VERSION_STR DISCORD_STR(DISCORD_API_VERSION)
 #define DISCORD_API_HOST        "discord.com"
-#define DISCORD_API_ENDPOINT    "/api/v" STR(DISCORD_API_VERSION)
+#define DISCORD_API_ENDPOINT    "/api/v" DISCORD_API_VERSION_STR
 
 /* ========== Boost/JSON forward declarations ======================================================================= */
 namespace boost::json {
@@ -112,4 +112,4 @@ cColor
 tag_invoke(boost::json::value_to_tag<cColor>, const boost::json::value&);
 void
 tag_invoke(boost::json::value_from_tag, boost::json::value&, cColor);
-#endif // GREEKBOT_COMMON_H
+#endif /* DISCORD_COMMON_H */

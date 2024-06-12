@@ -2,7 +2,9 @@
 #include "GreekBot.h"
 #include "CDN.h"
 #include <algorithm>
+#include <ranges>
 
+namespace rng = std::ranges;
 static const cSnowflake MESSAGE_LOG_CHANNEL_ID = 539521989061378048;
 
 cTask<>
@@ -104,22 +106,24 @@ cGreekBot::OnMessageDeleteBulk(std::span<cSnowflake> ids, cSnowflake& channel_id
 		try {
 			/* Delete messages from the database */
 			auto db_msgs = co_await cDatabase::DeleteMessages(ids);
+			/* Prepare guild member generator */
+			cRequestGuildMembers rgm;
+			auto gen = [this, &db_msgs, &rgm, guild_id]() mutable {
+				auto& user_ids = rgm.EmplaceUserIds();
+				user_ids.reserve(db_msgs.size());
+				rng::copy(db_msgs | rng::views::transform([](auto& db_msg) -> auto& { return db_msg.author_id; }), std::back_inserter(user_ids));
+				return RequestGuildMembers(*guild_id, rgm);
+			}();
 			/* Retrieve the authors of the deleted messages */
+			// TODO: use a vector of variants to save space...
 			std::vector<cMember> members;
-			members.reserve(ids.size());
+			members.reserve(db_msgs.size());
 			std::vector<cUser> non_members;
-			non_members.reserve(ids.size());
+			non_members.reserve(db_msgs.size());
 			std::vector<cSnowflake> non_users;
-			non_users.reserve(ids.size());
-			{
-				std::vector<cSnowflake> author_ids;
-				author_ids.reserve(ids.size());
-				for (auto& db_msg : db_msgs)
-					author_ids.push_back(db_msg.author_id);
-				auto gen = GetGuildMembers(LMG_GUILD_ID, kw::user_ids=std::move(author_ids));
-				for (auto it = co_await gen.begin(); it != gen.end(); co_await ++it)
-					members.push_back(std::move(*it));
-			}
+			non_users.reserve(db_msgs.size());
+			for (auto it = co_await gen.begin(); it != gen.end(); co_await ++it)
+				members.push_back(std::move(*it));
 			/* Prepare the embed vector for the log messages */
 			cMessageParams response;
 			auto& embeds = response.EmplaceEmbeds();
@@ -127,15 +131,15 @@ cGreekBot::OnMessageDeleteBulk(std::span<cSnowflake> ids, cSnowflake& channel_id
 			for (auto& db_msg : db_msgs) {
 				/* Retrieve the user object of the message author */
 				const cUser* pUser{};
-				if (auto it = std::ranges::find_if(members, [id = db_msg.author_id](const cMember& member) {
+				if (auto it = rng::find_if(members, [id = db_msg.author_id](const cMember& member) {
 					return member.GetUser()->GetId() == id;
 				}); it != std::ranges::end(members)) {
 					pUser = it->GetUser().Get();
-				} else if (auto it = std::ranges::find_if(non_members, [id = db_msg.author_id](const cUser& user) {
+				} else if (auto it = rng::find_if(non_members, [id = db_msg.author_id](const cUser& user) {
 					return user.GetId() == id;
-				}); it != std::ranges::end(non_members)) {
+				}); it != rng::end(non_members)) {
 					pUser = &*it;
-				} else if (auto it = std::ranges::find(non_users, db_msg.author_id); it == std::ranges::end(non_users)) try {
+				} else if (auto it = rng::find(non_users, db_msg.author_id); it == rng::end(non_users)) try {
 					pUser = &non_members.emplace_back(co_await GetUser(db_msg.author_id));
 				} catch (...) {
 					non_users.push_back(db_msg.author_id);

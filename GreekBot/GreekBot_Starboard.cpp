@@ -2,6 +2,9 @@
 #include "Database.h"
 #include "Utils.h"
 #include "CDN.h"
+#include <ranges>
+
+namespace rng = std::ranges;
 
 static constexpr int REACTION_THRESHOLD = 5;
 
@@ -287,38 +290,34 @@ cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) HANDLER_BEGIN {
 			auto results = co_await cDatabase::SB_GetTop10(REACTION_THRESHOLD);
 			if (results.empty())
 				co_return co_await InteractionSendMessage(i, response.SetContent("I have no <:Holy:409075809723219969> data yet. Y'all boring as fuck!"));
+			/* Prepare member generator */
+			cRequestGuildMembers rgm;
+			auto gen = [this, &rgm, &results, &guild_id=*i.GetGuildId()]() mutable {
+				auto& ids = rgm.EmplaceUserIds();
+				ids.reserve(results.size());
+				rng::copy(results | rng::views::transform([](starboard_entry& e) -> cSnowflake& { return e.author_id; }), std::back_inserter(ids));
+				return RequestGuildMembers(guild_id, rgm);
+			}();
 			/* Retrieve members */
 			std::vector<cMember> members;
-			{
-				std::vector<cSnowflake> ids;
-				ids.reserve(10);
-				for (auto &e: results)
-					ids.push_back(e.author_id);
-				auto gen = GetGuildMembers(LMG_GUILD_ID, kw::user_ids=std::move(ids));
-				members.reserve(10);
-				for (auto it = co_await gen.begin(); it != gen.end(); co_await ++it)
-					members.push_back(std::move(*it));
-			}
+			members.reserve(results.size());
+			for (auto it = co_await gen.begin(); it != gen.end(); co_await ++it)
+				members.push_back(std::move(*it));
 			/* Get guild name in case it's needed */
 			std::string guild_name = m_guilds.at(LMG_GUILD_ID).GetName();
 			/* Create embeds */
-			embeds.reserve(10);
+			embeds.reserve(results.size());
 			for (auto& entry : results) {
-				auto it = std::find_if(members.begin(), members.end(), [&entry](const cMember& m) {
-					return m.GetUser()->GetId() == entry.author_id;
-				});
-				if (it == members.end()) {
-					/* If there's no member object for a user, then this user isn't a member of Learning Greek anymore */
-					try {
-						cUser user = co_await GetUser(entry.author_id);
-						embeds.push_back(make_no_member_embed(&user, guild_name, true));
-					} catch (const xDiscordError&) {
-						/* User object couldn't be retrieved, likely deleted */
-						embeds.push_back(make_no_member_embed(nullptr, guild_name, true));
-					}
-				} else {
+				if (auto it = rng::find(members, entry.author_id, [](auto& m) -> auto& { return m.GetUser()->GetId(); }); it != members.end()) {
 					/* If the member is found, create an embed */
 					embeds.push_back(make_embed(*it->GetUser(), entry, get_lmg_member_color(*it)));
+				} else try {
+					/* If there's no member object for a user, then this user isn't a member of Learning Greek anymore */
+					cUser user = co_await GetUser(entry.author_id);
+					embeds.push_back(make_no_member_embed(&user, guild_name, true));
+				} catch (const xDiscordError&) {
+					/* User object couldn't be retrieved, likely deleted */
+					embeds.push_back(make_no_member_embed(nullptr, guild_name, true));
 				}
 			}
 			break;

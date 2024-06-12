@@ -6,7 +6,7 @@
 #include "InteractionFwd.h"
 #include "Member.h"
 #include "MessageFwd.h"
-#include <span>
+#include "RequestGuildMembers.h"
 
 enum eIntent {
 	INTENT_GUILDS                        = 1 << 0,
@@ -42,15 +42,10 @@ public:
 };
 typedef std::vector<cHttpField> tHttpFields;
 
-KW_DECLARE(query, std::string)
-KW_DECLARE(user_ids, std::vector<cSnowflake>)
-
 class cGateway {
 private:
 	class implementation;
 	uhHandle<implementation> m_pImpl;
-
-	cAsyncGenerator<cMember> get_guild_members(const cSnowflake&, const std::string&, const std::vector<cSnowflake>&);
 
 protected:
 	std::string_view GetHttpAuthorization() const noexcept;
@@ -75,11 +70,9 @@ public:
 
 	cTask<> ResumeOnEventThread();
 	cTask<> WaitOnEventThread(std::chrono::milliseconds);
-	template<kw::key... Keys>
-	cAsyncGenerator<cMember> GetGuildMembers(const cSnowflake& guild_id, kw::arg<Keys>&... kwargs) {
-		kw::pack pack{ kwargs... };
-		return get_guild_members(guild_id, kw::get<"query">(pack), kw::get<"user_ids">(pack));
-	}
+
+	cAsyncGenerator<cMember> RequestGuildMembers(const cSnowflake& guild_id);
+	cAsyncGenerator<cMember> RequestGuildMembers(const cSnowflake& guild_id, const cRequestGuildMembers& rgm);
 
 	virtual cTask<> OnReady(cUser&) { co_return; }
 	virtual cTask<> OnUserUpdate(cUser&) { co_return; }
