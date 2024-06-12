@@ -56,7 +56,7 @@ private:
 	cTask<> process_role_button(cMsgCompInteraction&, uint32_t);
 	cTask<> process_booster_menu(cMsgCompInteraction&);
 	cTask<> process_proficiency_menu(cMsgCompInteraction&);
-	cTask<> process_reaction(const cSnowflake&, const cSnowflake&, int64_t, int64_t, cMessage*);
+	cTask<> process_reaction(const cSnowflake&, const cSnowflake&, int64_t, int64_t, std::optional<cMessage>&);
 	cTask<> process_starboard_leaderboard(cAppCmdInteraction&);
 	cTask<> process_starboard_help(cMsgCompInteraction&);
 	cTask<> process_leaderboard_help(cMsgCompInteraction&);

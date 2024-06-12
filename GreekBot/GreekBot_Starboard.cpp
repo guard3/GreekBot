@@ -9,18 +9,31 @@ namespace rng = std::ranges;
 static constexpr int REACTION_THRESHOLD = 5;
 
 /* This array must be sorted for binary search to work */
-static const cSnowflake excluded_channels[] {
-	355242373380308993, // #moderators
-	366366855117668383, // #controversial
-	486311040477298690, // #word-of-the-day
-	595658812128624670, // #deepest-lore
-	598873442288271423, // #contributors
-	611889781227520003, // #travel-and-meetups
-	618350374348390406, // #bulletin-board
-	627084297123266561, // #moderators-voice
-	650331739293745172, // #native-polls
-	817078394331856907, // #private-discussions
+static constexpr std::uint64_t excluded_channels[] {
+	350234736754688020,  // #rules
+	355242373380308993,  // #moderators
+	363441099307483139,  // #announcements
+	366366855117668383,  // #controversial
+	469274019565142017,  // #user-log
+	486311040477298690,  // #word-of-the-day
+	539521989061378048,  // #message-log
+	595658812128624670,  // #deepest-lore
+	598873442288271423,  // #contributors
+	611889781227520003,  // #travel-and-meetups
+	618350374348390406,  // #bulletin-board
+	627082548706541568,  // #moderators 📣
+	630486369495679007,  // #rules-welcome
+	645650220440485927,  // #faq
+	645650358042886175,  // #faq-welcome
+	650331739293745172,  // #native-polls
+	672924470750478338,  // #moderation-log
+	817078394331856907,  // #private-discussions
+	1138145632134115348, // #automod-channel
+	1140760999331381260, // #temp-friendos 📣
+	1143284169502367805, // #welcoming
+	1143888492422770778  // #new-members
 };
+static_assert(rng::is_sorted(excluded_channels), "Must be sorted for binary search");
 
 cTask<>
 cGreekBot::OnMessageReactionAdd(cSnowflake& user_id, cSnowflake& channel_id, cSnowflake& message_id, hSnowflake guild_id, hSnowflake message_author_id, hMember member, cEmoji& emoji) {
@@ -30,21 +43,20 @@ cGreekBot::OnMessageReactionAdd(cSnowflake& user_id, cSnowflake& channel_id, cSn
 	if (*guild_id != LMG_GUILD_ID || *emoji.GetId() != HOLY_EMOJI_ID)
 		co_return;
 	/* Also make sure that we're not in an excluded channel */
-	if (std::binary_search(std::begin(excluded_channels), std::end(excluded_channels), channel_id))
+	if (rng::binary_search(excluded_channels, channel_id.ToInt()))
 		co_return;
 	/* Also make sure that the message author id is provided */
 	std::optional<cMessage> msg;
-	cMessage* pMsg = nullptr;
 	if (!message_author_id) {
-		pMsg = &msg.emplace(co_await GetChannelMessage(channel_id, message_id));
-		message_author_id = &pMsg->GetAuthor().GetId();
+		auto& m = msg.emplace(co_await GetChannelMessage(channel_id, message_id));
+		message_author_id = &m.GetAuthor().GetId();
 	}
 	/* Check that reactions from the author don't count */
 	if (*message_author_id == user_id || *message_author_id == GetUser().GetId()) co_return;
 	/* Register received reaction in the database */
 	auto[sb_msg_id, num_reactions] = co_await cDatabase::SB_RegisterReaction(message_id, *message_author_id);
 	/* Process */
-	co_await process_reaction(channel_id, message_id, sb_msg_id, num_reactions, pMsg);
+	co_await process_reaction(channel_id, message_id, sb_msg_id, num_reactions, msg);
 }
 
 cTask<>
@@ -53,7 +65,7 @@ cGreekBot::OnMessageReactionRemove(cSnowflake& user_id, cSnowflake& channel_id, 
 	if (!guild_id || !emoji.GetId()) co_return;
 	if (*guild_id != LMG_GUILD_ID || *emoji.GetId() != HOLY_EMOJI_ID) co_return;
 	/* Also make sure that we're not in an excluded channel */
-	if (std::binary_search(std::begin(excluded_channels), std::end(excluded_channels), channel_id))
+	if (rng::binary_search(excluded_channels, channel_id.ToInt()))
 		co_return;
 	/* Make sure that reactions from the author don't count */
 	int64_t author_id = co_await cDatabase::SB_GetMessageAuthor(message_id);
@@ -61,11 +73,12 @@ cGreekBot::OnMessageReactionRemove(cSnowflake& user_id, cSnowflake& channel_id, 
 	/* Remove one reaction from the database */
 	auto[sb_msg_id, num_reactions] = co_await cDatabase::SB_RemoveReaction(message_id);
 	/* Process */
-	co_await process_reaction(channel_id, message_id, sb_msg_id, num_reactions, nullptr);
+	std::optional<cMessage> msg;
+	co_await process_reaction(channel_id, message_id, sb_msg_id, num_reactions, msg);
 }
 
 cTask<>
-cGreekBot::process_reaction(const cSnowflake& channel_id, const cSnowflake& message_id, int64_t sb_msg_id, int64_t num_reactions, cMessage* msg) {
+cGreekBot::process_reaction(const cSnowflake& channel_id, const cSnowflake& message_id, int64_t sb_msg_id, int64_t num_reactions, std::optional<cMessage>& msg) {
 	/* If the number of reactions is less than the threshold, delete the starboard message if it was posted before */
 	if (num_reactions < REACTION_THRESHOLD) {
 		if (sb_msg_id) {
@@ -95,9 +108,8 @@ cGreekBot::process_reaction(const cSnowflake& channel_id, const cSnowflake& mess
 		co_return;
 	}
 	/* Make sure that we have the message object available */
-	std::optional<cMessage> opt;
 	if (!msg)
-		msg = &opt.emplace(co_await GetChannelMessage(channel_id, message_id));
+		msg.emplace(co_await GetChannelMessage(channel_id, message_id));
 	cMember author_member = co_await GetGuildMember(LMG_GUILD_ID, msg->GetAuthor().GetId());
 	cUser&  author_user = *author_member.GetUser();
 	/* Prepare the message response with a preview embed */
