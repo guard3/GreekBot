@@ -59,6 +59,9 @@ cGateway::implementation::send(std::string msg) {
 /* ================================================================================================================== */
 void
 cGateway::implementation::close() {
+	/* If we're already closing, don't do anything */
+	if (m_async_status & ASYNC_CLOSE)
+		return;
 	/* Stop heartbeating to prevent writing further data to the stream */
 	m_heartbeat_timer.cancel();
 	/* Close the stream */
