@@ -1,8 +1,10 @@
 #include "Database.h"
 #include "GreekBot.h"
 #include "CDN.h"
+#include "Utils.h"
 #include <algorithm>
 #include <ranges>
+#include <variant>
 
 namespace rng = std::ranges;
 static const cSnowflake MESSAGE_LOG_CHANNEL_ID = 539521989061378048;
@@ -115,34 +117,31 @@ cGreekBot::OnMessageDeleteBulk(std::span<cSnowflake> ids, cSnowflake& channel_id
 				return RequestGuildMembers(*guild_id, rgm);
 			}();
 			/* Retrieve the authors of the deleted messages */
-			// TODO: use a vector of variants to save space...
-			std::vector<cMember> members;
+			std::vector<std::variant<cUser, cSnowflake>> members;
 			members.reserve(db_msgs.size());
-			std::vector<cUser> non_members;
-			non_members.reserve(db_msgs.size());
-			std::vector<cSnowflake> non_users;
-			non_users.reserve(db_msgs.size());
 			for (auto it = co_await gen.begin(); it != gen.end(); co_await ++it)
-				members.push_back(std::move(*it));
+				members.emplace_back(std::move(*it->GetUser()));
 			/* Prepare the embed vector for the log messages */
 			cMessageParams response;
 			auto& embeds = response.EmplaceEmbeds();
 			embeds.reserve(10);
 			for (auto& db_msg : db_msgs) {
 				/* Retrieve the user object of the message author */
-				const cUser* pUser{};
-				if (auto it = rng::find_if(members, [id = db_msg.author_id](const cMember& member) {
-					return member.GetUser()->GetId() == id;
-				}); it != std::ranges::end(members)) {
-					pUser = it->GetUser().Get();
-				} else if (auto it = rng::find_if(non_members, [id = db_msg.author_id](const cUser& user) {
-					return user.GetId() == id;
-				}); it != rng::end(non_members)) {
-					pUser = &*it;
-				} else if (auto it = rng::find(non_users, db_msg.author_id); it == rng::end(non_users)) try {
-					pUser = &non_members.emplace_back(co_await GetUser(db_msg.author_id));
-				} catch (...) {
-					non_users.push_back(db_msg.author_id);
+				const cUser* pUser = nullptr;
+				for (auto it = members.begin();; ++it) {
+					if (it == members.end()) {
+						try {
+							pUser = &std::get<cUser>(members.emplace_back(co_await GetUser(db_msg.author_id)));
+						} catch (const xDiscordError&) {
+							members.emplace_back(db_msg.author_id);
+						}
+						break;
+					}
+					auto& var = *it;
+					if (auto user = std::get_if<cUser>(&var); db_msg.author_id == (user ? user->GetId() : std::get<cSnowflake>(var))) {
+						pUser = user;
+						break;
+					}
 				}
 				/* Create the embed */
 				add_message_delete_embed(embeds, db_msg, pUser);
@@ -155,11 +154,14 @@ cGreekBot::OnMessageDeleteBulk(std::span<cSnowflake> ids, cSnowflake& channel_id
 			/* Send any remaining embeds */
 			if (!embeds.empty())
 				co_await CreateMessage(MESSAGE_LOG_CHANNEL_ID, response);
-		} catch (...) {}
+		} catch (const std::exception& e) {
+			cUtils::PrintErr("An error occurred while reporting deleted messages: {}", e.what());
+		}
 		/* Delete the starboard messages from the channel and the database (if found) */
 		for (cSnowflake& id : ids) {
-			if (int64_t sb_msg_id = co_await cDatabase::SB_RemoveAll(id))
+			if (int64_t sb_msg_id = co_await cDatabase::SB_RemoveAll(id)) try {
 				co_await DeleteMessage(HOLY_CHANNEL_ID, sb_msg_id);
+			} catch (...) {}
 		}
 	}
 }
