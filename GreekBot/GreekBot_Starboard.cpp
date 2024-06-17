@@ -307,18 +307,19 @@ cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) HANDLER_BEGIN {
 			if (results.empty())
 				co_return co_await InteractionSendMessage(i, response.SetContent("I have no <:Holy:409075809723219969> data yet. Y'all boring as fuck!"));
 			/* Prepare member generator */
-			cRequestGuildMembers rgm;
-			auto gen = [this, &rgm, &results, &guild_id=*i.GetGuildId()]() mutable {
-				auto& ids = rgm.EmplaceUserIds();
-				ids.reserve(results.size());
-				rng::copy(results | rng::views::transform([](starboard_entry& e) -> cSnowflake& { return e.author_id; }), std::back_inserter(ids));
-				return RequestGuildMembers(guild_id, rgm);
+			const auto members = co_await [this, &i, &results]() -> cTask<std::vector<cMember>> {
+				const auto size = results.size();
+				std::vector<cSnowflake> user_ids;
+				user_ids.reserve(size);
+				for (auto& res : results)
+					user_ids.push_back(res.author_id);
+				std::vector<cMember> members;
+				members.reserve(size);
+				auto gen = RequestGuildMembers(*i.GetGuildId(), user_ids);
+				for (auto it = co_await gen.begin(); it != gen.end(); co_await ++it)
+					members.push_back(std::move(*it));
+				co_return members;
 			}();
-			/* Retrieve members */
-			std::vector<cMember> members;
-			members.reserve(results.size());
-			for (auto it = co_await gen.begin(); it != gen.end(); co_await ++it)
-				members.push_back(std::move(*it));
 			/* Get guild name in case it's needed */
 			std::string guild_name = m_guilds.at(LMG_GUILD_ID).GetName();
 			/* Create embeds */

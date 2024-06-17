@@ -46,15 +46,30 @@ cGateway::implementation::rgm_timeout() {
 }
 
 cAsyncGenerator<cMember>
-cGateway::implementation::RequestGuildMembers(const cSnowflake& guild_id) {
-	return request_guild_members(guild_id, {}, {});
+cGateway::implementation::RequestGuildMembers(const cSnowflake& guild_id, std::string_view query) {
+	return RequestGuildMembers(guild_id, query, {});
 }
 cAsyncGenerator<cMember>
-cGateway::implementation::RequestGuildMembers(const cSnowflake& guild_id, const cRequestGuildMembers& rgm) {
-	return request_guild_members(guild_id, rgm.GetQuery(), rgm.GetUserIds());
+cGateway::implementation::RequestGuildMembers(const cSnowflake &guild_id, std::span<const cSnowflake> user_ids) {
+	/* If the user_ids array is empty, return an empty generator */
+	if (user_ids.empty())
+		return []() -> cAsyncGenerator<cMember> { co_return; }();
+	/* Requesting user ids returns at most 100 members, so if we request 100 at most, return the appropriate generator right away */
+	if (user_ids.size() <= 100)
+		return RequestGuildMembers(guild_id, {}, user_ids);
+	/* Otherwise, execute multiple queries with 100 ids at a time */
+	return [](implementation& self, const cSnowflake& guild_id, std::span<const cSnowflake> user_ids) -> cAsyncGenerator<cMember> {
+		std::size_t offset = 0, size = user_ids.size();
+		do {
+			auto gen = self.RequestGuildMembers(guild_id, {}, user_ids.subspan(offset, std::min<std::size_t>(size - offset, 100)));
+			for (auto it = co_await gen.begin(); it != gen.end(); co_await ++it)
+				co_yield *it;
+			offset += 100;
+		} while (offset < size);
+	}(*this, guild_id, user_ids);
 }
 cAsyncGenerator<cMember>
-cGateway::implementation::request_guild_members(const cSnowflake& guild_id, std::string_view query, std::span<const cSnowflake> user_ids) {
+cGateway::implementation::RequestGuildMembers(const cSnowflake& guild_id, std::string_view query, std::span<const cSnowflake> user_ids) {
 	co_await ResumeOnWebSocketStrand();
 	/* If we're requesting all guild members, make sure that we have the appropriate privileged intents */
 	if (user_ids.empty() && query.empty()) {
@@ -88,7 +103,7 @@ cGateway::implementation::request_guild_members(const cSnowflake& guild_id, std:
 		auto& data = obj["d"].emplace_object();
 		data.reserve(4);
 		json::value_from(guild_id, data["guild_id"]);
-		data.emplace("limit", user_ids.size());
+		data.emplace("limit", 0);
 		if (user_ids.empty())
 			data.emplace("query", query);
 		else

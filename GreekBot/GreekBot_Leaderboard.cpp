@@ -216,18 +216,19 @@ cGreekBot::process_top(cAppCmdInteraction& i) HANDLER_BEGIN {
 	if (db_result.empty())
 		co_return co_await InteractionSendMessage(i, response.SetContent("I don't have any data yet. Start talking!"));
 	/* Members generator */
-	cRequestGuildMembers rgm;
-	auto gen = [this, &guild_id = *i.GetGuildId(), &db_result, &rgm]() mutable {
-		auto& ids = rgm.EmplaceUserIds();
-		ids.reserve(db_result.size());
-		rng::copy(db_result | std::views::transform([](leaderboard_entry& e) -> cSnowflake& { return e.user_id; }), std::back_inserter(ids));
-		return RequestGuildMembers(guild_id, rgm);
+	const auto members = co_await [this, &i, &db_result]() -> cTask<std::vector<cMember>> {
+		const auto size = db_result.size();
+		std::vector<cSnowflake> user_ids;
+		user_ids.reserve(size);
+		for (auto& entry : db_result)
+			user_ids.push_back(entry.user_id);
+		std::vector<cMember> members;
+		members.reserve(size);
+		auto gen = RequestGuildMembers(*i.GetGuildId(), user_ids);
+		for (auto it = co_await gen.begin(); it != gen.end(); co_await ++it)
+			members.push_back(std::move(*it));
+		co_return members;
 	}();
-	/* Get members */
-	std::vector<cMember> members;
-	members.reserve(db_result.size());
-	for (auto it = co_await gen.begin(); it != gen.end(); co_await ++it)
-		members.push_back(std::move(*it));
 	/* Prepare embeds */
 	auto& embeds = response.EmplaceEmbeds();
 	embeds.reserve(db_result.size());

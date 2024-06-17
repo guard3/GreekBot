@@ -1,12 +1,11 @@
-#ifndef GREEKBOT_GATEWAY_H
-#define GREEKBOT_GATEWAY_H
+#ifndef DISCORD_GATEWAY_H
+#define DISCORD_GATEWAY_H
 #include "Coroutines.h"
 #include "EmojiFwd.h"
 #include "Guild.h"
 #include "InteractionFwd.h"
 #include "Member.h"
 #include "MessageFwd.h"
-#include "RequestGuildMembers.h"
 
 enum eIntent {
 	INTENT_GUILDS                        = 1 << 0,
@@ -87,8 +86,8 @@ public:
 	cTask<> ResumeOnEventThread();
 	cTask<> WaitOnEventThread(std::chrono::milliseconds);
 
-	cAsyncGenerator<cMember> RequestGuildMembers(const cSnowflake& guild_id);
-	cAsyncGenerator<cMember> RequestGuildMembers(const cSnowflake& guild_id, const cRequestGuildMembers& rgm);
+	cAsyncGenerator<cMember> RequestGuildMembers(const cSnowflake& guild_id, std::string_view query = {});
+	cAsyncGenerator<cMember> RequestGuildMembers(const cSnowflake& guild_id, std::span<const cSnowflake> user_ids);
 
 	virtual cTask<> OnReady(cUser&) { co_return; }
 	virtual cTask<> OnUserUpdate(cUser&) { co_return; }
@@ -111,4 +110,4 @@ public:
 
 	void Run();
 };
-#endif /* GREEKBOT_GATEWAY_H */
+#endif /* DISCORD_GATEWAY_H */

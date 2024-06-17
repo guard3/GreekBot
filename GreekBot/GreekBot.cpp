@@ -137,18 +137,7 @@ cGreekBot::process_interaction(cAppCmdInteraction& i) {
 		case 1174836455714078740: // Apps > Ban Greek
 			return process_ban_ctx_menu(i, "greek");
 		default:
-			return [this](const cAppCmdInteraction& i) -> cTask<> {
-				cUtils::PrintMsg("Unhandled command: {} {}", i.GetCommandName(), i.GetCommandId());
-				co_await InteractionSendMessage(i, cMessageParams().SetContent("test").SetComponents({
-					cActionRow{
-						cButton{
-							BUTTON_STYLE_LINK,
-							"https://wikipedia.org/",
-							"meow"
-						}.SetEmoji("🇬🇷")
-					}
-				}));
-			}(i);
+			return process_unhandled_command(i);
 	}
 }
 
@@ -193,4 +182,15 @@ cGreekBot::process_interaction(cModalSubmitInteraction& i) {
 		cUtils::PrintErr("Unknown modal id: {} 0x{:08X}", id, cUtils::CRC32(0, id));
 		co_return;
 	} (custom_id);
+}
+
+cTask<>
+cGreekBot::process_unhandled_command(cAppCmdInteraction& i) {
+	static const auto MESSAGE = [] {
+		cMessageParams msg;
+		msg.SetFlags(MESSAGE_FLAG_EPHEMERAL).SetContent("Nothing to see here, go look elsewhere.");
+		return msg;
+	}();
+	cUtils::PrintMsg("Unhandled command: {} {}", i.GetCommandName(), i.GetCommandId());
+	co_await InteractionSendMessage(i, MESSAGE);
 }

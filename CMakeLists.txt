@@ -40,8 +40,7 @@ add_executable(GreekBot main.cpp Discord/Bot.cpp Discord/Bot.h Discord/Common/Co
         Discord/Objects/Component/UnsupportedComponent.cpp
         Discord/Objects/MessageFwd.h
         Discord/Objects/EmojiFwd.h
-        Discord/Gateway/RequestGuildMembers.h
-        Discord/Gateway/RequestGuildMembers.cpp)
+        Discord/Gateway/GatewayGuildMembers.cpp)
 
 target_include_directories(
     GreekBot PRIVATE

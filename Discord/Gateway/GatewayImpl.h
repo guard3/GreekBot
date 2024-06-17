@@ -200,9 +200,10 @@ public:
 		};
 		return awaitable(m_http_strand, duration);
 	}
-	cAsyncGenerator<cMember> RequestGuildMembers(const cSnowflake& guild_id);
-	cAsyncGenerator<cMember> RequestGuildMembers(const cSnowflake& guild_id, const cRequestGuildMembers& rgm);
-	cAsyncGenerator<cMember> request_guild_members(const cSnowflake& guild_id, std::string_view query, std::span<const cSnowflake> user_ids);
+
+	cAsyncGenerator<cMember> RequestGuildMembers(const cSnowflake&, std::string_view);
+	cAsyncGenerator<cMember> RequestGuildMembers(const cSnowflake&, std::span<const cSnowflake>);
+	cAsyncGenerator<cMember> RequestGuildMembers(const cSnowflake&, std::string_view, std::span<const cSnowflake>);
 
 	void Run();
 };

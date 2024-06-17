@@ -108,19 +108,20 @@ cGreekBot::OnMessageDeleteBulk(std::span<cSnowflake> ids, cSnowflake& channel_id
 		try {
 			/* Delete messages from the database */
 			auto db_msgs = co_await cDatabase::DeleteMessages(ids);
-			/* Prepare guild member generator */
-			cRequestGuildMembers rgm;
-			auto gen = [this, &db_msgs, &rgm, guild_id]() mutable {
-				auto& user_ids = rgm.EmplaceUserIds();
-				user_ids.reserve(db_msgs.size());
-				rng::copy(db_msgs | rng::views::transform([](auto& db_msg) -> auto& { return db_msg.author_id; }), std::back_inserter(user_ids));
-				return RequestGuildMembers(*guild_id, rgm);
-			}();
 			/* Retrieve the authors of the deleted messages */
-			std::vector<std::variant<cUser, cSnowflake>> members;
-			members.reserve(db_msgs.size());
-			for (auto it = co_await gen.begin(); it != gen.end(); co_await ++it)
-				members.emplace_back(std::move(*it->GetUser()));
+			auto members = co_await [this, guild_id, &db_msgs]() -> cTask<std::vector<std::variant<cUser, cSnowflake>>> {
+				const auto size = db_msgs.size();
+				std::vector<cSnowflake> user_ids;
+				user_ids.reserve(size);
+				for (auto& db_msg : db_msgs)
+					user_ids.push_back(db_msg.author_id);
+				std::vector<std::variant<cUser, cSnowflake>> members;
+				members.reserve(size);
+				auto gen = RequestGuildMembers(*guild_id, user_ids);
+				for (auto it = co_await gen.begin(); it != gen.end(); co_await ++it)
+					members.emplace_back(std::move(*it->GetUser()));
+				co_return members;
+			}();
 			/* Prepare the embed vector for the log messages */
 			cMessageParams response;
 			auto& embeds = response.EmplaceEmbeds();
