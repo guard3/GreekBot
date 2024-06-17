@@ -32,6 +32,19 @@ enum eIntent {
 inline eIntent operator|(eIntent a, eIntent b) { return (eIntent)((int)a | (int)b); }
 inline eIntent operator&(eIntent a, eIntent b) { return (eIntent)((int)a & (int)b); }
 
+struct xGatewayError : std::runtime_error {
+	xGatewayError(const char* what_arg) : std::runtime_error(what_arg) {}
+};
+struct xGatewaySessionResetError : xGatewayError {
+	xGatewaySessionResetError() : xGatewayError("The request can't be fulfilled because the Gateway session was reset.") {}
+};
+struct xGatewayEventError : xGatewayError {
+	xGatewayEventError() : xGatewayError("The event parameters were invalid.") {}
+};
+struct xGatewayTimeoutError : xGatewayError {
+	xGatewayTimeoutError() : xGatewayError("The request timed out.") {}
+};
+
 class cHttpField final {
 private:
 	std::string m_name, m_value;

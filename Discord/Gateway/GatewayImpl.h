@@ -1,5 +1,5 @@
-#ifndef GREEKBOT_GATEWAYIMPL_H
-#define GREEKBOT_GATEWAYIMPL_H
+#ifndef DISCORD_GATEWAYIMPL_H
+#define DISCORD_GATEWAYIMPL_H
 #include "Application.h"
 #include "Gateway.h"
 #include "GuildMembersResult.h"
@@ -33,9 +33,11 @@ struct request_entry {
 	request_entry(const request_entry&) = delete;
 };
 
-enum eAwaitCommand {
-	AWAIT_REQUEST,
-	AWAIT_GUILD_MEMBERS
+struct guild_members_entry {
+	std::deque<cGuildMembersChunk> chunks;
+	std::coroutine_handle<> coro;
+	std::exception_ptr except;
+	chrono::system_clock::time_point started_at;
 };
 
 /* Separate cGateway implementation class to avoid including boost everywhere */
@@ -80,9 +82,10 @@ private:
 	z_stream m_inflate_stream;
 	Byte     m_inflate_buffer[4096];
 	/* Request Guild Members stuff */
-	std::string m_rgm_payload;   // The gateway payload to be sent
-	uint64_t    m_rgm_nonce = 0; // The nonce of the payload
-	std::unordered_map<uint64_t, cGuildMembersResult> m_rgm_map; // A map to hold and manage all responses
+	std::uint64_t                 m_rgm_nonce = 0; // The nonce of the payload
+	std::exception_ptr            m_rgm_exception; // An exception in case all pending requests need to be canceled
+	std::deque<std::coroutine_handle<>> m_pending; // The queue of pending requests for when the gateway is unavailable
+	std::unordered_map<std::uint64_t, guild_members_entry> m_rgm_entries; // A map to hold and manage all responses
 	/* Partial application object */
 	std::optional<cApplication> m_application;
 	/* A buffer to hold exception messages for when allocations are unfavorable */
@@ -112,6 +115,9 @@ private:
 	void http_write();
 	void http_shutdown_ssl();
 	void http_shutdown();
+	/* Canceling guild member requests */
+	void rgm_reset();
+	void rgm_timeout();
 
 	/* An enum to keep track of the status of async operations of the WebSocket stream */
 	enum {
@@ -121,51 +127,25 @@ private:
 		ASYNC_CLOSE = 1 << 2
 	};
 
-	eAwaitCommand m_await_command;
 	bool await_ready() { return false; }
 	void await_suspend(std::coroutine_handle<> h) {
-		switch (m_await_command) {
-			case AWAIT_REQUEST:
-				/* Save the coroutine handle to the entry we just added to the queue */
-				m_request_queue.back().coro = h;
-				/* If there's more than one request in the queue, just return and let it be processed later */
-				if (m_request_queue.size() > 1)
-					return;
-				if (m_http_stream) {
-					/* If there is an http stream, attempt to start sending requests right away */
-					http_write();
-				}
-				else {
-					/* Otherwise, start by resolving host */
-					http_resolve();
-				}
-				break;
-			case AWAIT_GUILD_MEMBERS:
-				/* If the WebSocket stream is unavailable, throw */
-				if (m_async_status & ASYNC_CLOSE)
-					throw std::runtime_error("Gateway unavailable");
-				/* Save the coroutine handle to resume after all members have been received */
-				m_rgm_map[m_rgm_nonce++].Fill(h);
-				/* Send the payload */
-				send(std::move(m_rgm_payload));
-				break;
-			default:
-				throw std::runtime_error("Unexpected await command");
-				break;
+		/* Save the coroutine handle to the entry we just added to the queue */
+		m_request_queue.back().coro = h;
+		/* If there's more than one request in the queue, just return and let it be processed later */
+		if (m_request_queue.size() > 1)
+			return;
+		if (m_http_stream) {
+			/* If there is an http stream, attempt to start sending requests right away */
+			http_write();
+		}
+		else {
+			/* Otherwise, start by resolving host */
+			http_resolve();
 		}
 	}
 	void await_resume() {
-		if (m_except) {
-			std::exception_ptr e = m_except;
-			m_except = nullptr;
-			std::rethrow_exception(e);
-		}
-	}
-
-	void rgm_reset() {
-		m_rgm_payload.clear();
-		m_rgm_map.clear();
-		m_rgm_nonce = 0;
+		if (auto ex = std::exchange(m_except, {}))
+			std::rethrow_exception(ex);
 	}
 
 public:
@@ -223,7 +203,8 @@ public:
 	cAsyncGenerator<cMember> RequestGuildMembers(const cSnowflake& guild_id);
 	cAsyncGenerator<cMember> RequestGuildMembers(const cSnowflake& guild_id, const cRequestGuildMembers& rgm);
 	cAsyncGenerator<cMember> request_guild_members(const cSnowflake& guild_id, std::string_view query, std::span<const cSnowflake> user_ids);
+	cAsyncGenerator<cMember> Test(const cSnowflake& guild_id, std::string_view query, std::span<const cSnowflake> user_ids);
 
 	void Run();
 };
-#endif /* GREEKBOT_GATEWAYIMPL_H */
+#endif /* DISCORD_GATEWAYIMPL_H */

@@ -8,10 +8,10 @@ cGateway::implementation::resume() {
 
 void
 cGateway::implementation::identify() {
-	/* Reset everything related to RequestGuildMembers command in case smth got stuck */
-	asio::post(m_http_strand, [this](){ rgm_reset(); });
 	/* Then send the payload */
 	send(fmt::format(R"({{"op":2,"d":{{"token":{:?},"intents":{},"compress":true,"properties":{{"os":{:?},"browser":"GreekBot","device":"GreekBot"}}}}}})", GetToken(), (int)m_intents, cUtils::GetOS()));
+	/* Cancel ongoing guild member requests */
+	rgm_reset();
 }
 
 void
@@ -21,4 +21,6 @@ cGateway::implementation::heartbeat() {
 		send(fmt::format(R"({{"op":1,"d":{}}})", m_last_sequence));
 	else
 		send(R"({"op":1,"d":null})");
+	/* Cancel any stuck guild member requests */
+	rgm_timeout();
 }

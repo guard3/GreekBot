@@ -42,6 +42,12 @@ cGateway::implementation::process_event(const json::value& v) {
 		/* Trigger the appropriate event methods
 		 * All JSON data is parsed BEFORE co_awaiting, as doing so will invalidate the argument reference! */
 		switch (const json::object& d = v.at("d").as_object(); type) {
+			case RESUMED: {
+				while (!m_pending.empty()) {
+					m_pending.front().resume();
+					m_pending.pop_front();
+				}
+			}	break;
 			case READY: {
 				m_session_id = json::value_to<std::string>(d.at("session_id"));
 				m_resume_gateway_url = json::value_to<std::string>(d.at("resume_gateway_url"));
@@ -213,10 +219,23 @@ cGateway::implementation::process_event(const json::value& v) {
 				co_await m_parent->OnMessageReactionRemoveEmoji(channel_id, message_id, guild_id, emoji);
 			}	break;
 			case GUILD_MEMBERS_CHUNK: {
-				cGuildMembersChunk c{ d };
-				co_await switch_strand();
-				auto &r = m_rgm_map[c.GetNonce()];
-				r.Fill(std::move(c));
+				auto it = m_rgm_entries.find(cUtils::ParseInt<std::uint64_t>(d.at("nonce").as_string()));
+				/* If there's no entry with nonce, smth must have gone pretty wrong */
+				if (it == m_rgm_entries.end()) {
+					struct _ : std::exception {
+						const char* what() const noexcept override { return "Unexpected chunk."; }
+					}; throw _{};
+				}
+				/* Add the chunk to the end of the queue, saving any exception if it occurs */
+				auto& entry = it->second;
+				try {
+					entry.chunks.emplace_back(d);
+				} catch (...) {
+					entry.except = std::current_exception();
+				}
+				/* Resume the coroutine to consume the chunks */
+				if (entry.coro)
+					entry.coro.resume();
 			}	break;
 			case USER_UPDATE: {
 				cUser user{ d };
@@ -237,10 +256,13 @@ cGateway::implementation::process_event(const json::value& v) {
 			std::strcpy(s1, "processing a");
 			std::strcat(s2, " payload");
 		}
-		if (event_name.empty())
-			std::strcat(s1, "n");
-		else if (char c = event_name.front(); c == 'A' || c == 'E' || c == 'I' || c == 'O' || c == 'U')
-			std::strcat(s1, "n ");
+		std::strcat(s1, [&event_name] {
+			if (event_name.empty())
+				return "n";
+			if (char c = event_name.front(); c == 'A' || c == 'E' || c == 'I' || c == 'O' || c == 'U')
+				return "n ";
+			return " ";
+		}());
 		/* Log exception message */
 		try {
 			throw;

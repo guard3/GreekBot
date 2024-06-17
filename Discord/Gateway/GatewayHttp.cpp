@@ -164,7 +164,6 @@ cGateway::implementation::DiscordRequestNoRetry(beast::http::verb method, std::s
 	request.keep_alive(true);
 	request.prepare_payload();
 	/* Start the async operation of sending the request */
-	m_await_command = AWAIT_REQUEST;
 	co_await *this;
 	/* Process response */
 	auto status = m_response.result();
@@ -208,15 +207,8 @@ cGateway::implementation::DiscordPostNoRetry(std::string_view t, const json::obj
 // TODO: make custom exceptions, preferably in Exceptions.h
 // TODO: make getting all members from the gateway
 cAsyncGenerator<cMember>
-cGateway::implementation::RequestGuildMembers(const cSnowflake& guild_id) {
-	return request_guild_members(guild_id, {}, {});
-}
-cAsyncGenerator<cMember>
-cGateway::implementation::RequestGuildMembers(const cSnowflake& guild_id, const cRequestGuildMembers& rgm) {
-	return request_guild_members(guild_id, rgm.GetQuery(), rgm.GetUserIds());
-}
-cAsyncGenerator<cMember>
-cGateway::implementation::request_guild_members(const cSnowflake& guild_id, std::string_view query, std::span<const cSnowflake> user_ids) {
+cGateway::implementation::Test(const cSnowflake& guild_id, std::string_view query, std::span<const cSnowflake> user_ids) {
+#if 0
 	if (!user_ids.empty()) {
 		/* Make sure we're running on the event thread */
 		co_await ResumeOnEventThread();
@@ -275,5 +267,6 @@ cGateway::implementation::request_guild_members(const cSnowflake& guild_id, std:
 		for (auto& v : result.as_array())
 			co_yield cMember(v);
 	}
+#endif
 	co_return;
 }
