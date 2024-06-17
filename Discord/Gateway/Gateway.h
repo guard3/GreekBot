@@ -44,6 +44,9 @@ struct xGatewayEventError : xGatewayError {
 struct xGatewayTimeoutError : xGatewayError {
 	xGatewayTimeoutError() : xGatewayError("The request timed out.") {}
 };
+struct xGatewayPrivilegedIntentsError : xGatewayError {
+	xGatewayPrivilegedIntentsError() : xGatewayError("The request can't be fulfilled because you are missing privileged intents.") {}
+};
 
 class cHttpField final {
 private:

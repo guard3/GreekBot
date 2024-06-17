@@ -51,10 +51,9 @@ cGateway::implementation::process_event(const json::value& v) {
 			case READY: {
 				m_session_id = json::value_to<std::string>(d.at("session_id"));
 				m_resume_gateway_url = json::value_to<std::string>(d.at("resume_gateway_url"));
+				m_application.emplace(d.at("application"));
 				cUser user{ d.at("user") };
-				cApplication app{ d.at("application") };
 				co_await switch_strand();
-				m_application = std::move(app);
 				co_await m_parent->OnReady(user);
 			}	break;
 			case GUILD_CREATE: {
@@ -239,7 +238,7 @@ cGateway::implementation::process_event(const json::value& v) {
 			}	break;
 			case USER_UPDATE: {
 				cUser user{ d };
-				m_application = json::value_to<cApplication>(co_await DiscordGet("/oauth2/applications/@me"));
+				m_application.reset();
 				co_await switch_strand();
 				co_await m_parent->OnUserUpdate(user);
 			}	break;

@@ -1,5 +1,4 @@
 #include "GatewayImpl.h"
-#include "Utils.h"
 
 void
 cGateway::implementation::rgm_reset() {
@@ -57,6 +56,16 @@ cGateway::implementation::RequestGuildMembers(const cSnowflake& guild_id, const 
 cAsyncGenerator<cMember>
 cGateway::implementation::request_guild_members(const cSnowflake& guild_id, std::string_view query, std::span<const cSnowflake> user_ids) {
 	co_await ResumeOnWebSocketStrand();
+	/* If we're requesting all guild members, make sure that we have the appropriate privileged intents */
+	if (user_ids.empty() && query.empty()) {
+		if (!m_application) {
+			const auto json = co_await DiscordGet("/oauth2/applications/@me");
+			co_await ResumeOnWebSocketStrand();
+			m_application.emplace(json);
+		}
+		if (!(m_application->GetFlags() & (APP_FLAG_GATEWAY_GUILD_MEMBERS | APP_FLAG_GATEWAY_GUILD_MEMBERS_LIMITED)))
+			throw xGatewayPrivilegedIntentsError();
+	}
 	/* Wait for the websocket stream to become available */
 	co_await [this] {
 		struct _ {
@@ -77,7 +86,7 @@ cGateway::implementation::request_guild_members(const cSnowflake& guild_id, std:
 		obj.reserve(2);
 		obj.emplace("op", 8);
 		auto& data = obj["d"].emplace_object();
-		data.reserve(3);
+		data.reserve(4);
 		json::value_from(guild_id, data["guild_id"]);
 		data.emplace("limit", user_ids.size());
 		if (user_ids.empty())
