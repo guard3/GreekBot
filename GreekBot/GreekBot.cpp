@@ -171,7 +171,7 @@ cTask<>
 cGreekBot::process_interaction(cModalSubmitInteraction& i) HANDLER_BEGIN {
 	const auto custom_id = i.GetCustomId();
 	if (custom_id.starts_with("ban:"))
-		return process_ban_modal(i);
+		return process_ban_modal(i, custom_id.substr(4));
 	if (custom_id == "NICKNAME_MODAL")
 		return process_modal(i);
 	throw std::runtime_error(fmt::format("Unknown modal id {:?} 0x{:08X}", custom_id, cUtils::CRC32(0, custom_id)));
