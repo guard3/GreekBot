@@ -153,7 +153,7 @@ cGreekBot::process_ban(cInteraction& i, std::uint32_t subcmd, const cSnowflake& 
 }
 
 cTask<>
-cGreekBot::process_unban(cMsgCompInteraction& i, const cSnowflake& user_id) HANDLER_BEGIN {
+cGreekBot::process_unban(cMsgCompInteraction& i, cSnowflake user_id) HANDLER_BEGIN {
 	/* Make sure that the invoking user has the appropriate permissions */
 	if (!(i.GetMember()->GetPermissions() & PERM_BAN_MEMBERS))
 		co_return co_await InteractionSendMessage(i, MISSING_PERMISSION_MESSAGE);

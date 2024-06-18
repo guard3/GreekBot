@@ -49,11 +49,11 @@ private:
 	cTask<> process_ban_ctx_menu(cAppCmdInteraction&, std::string_view);
 	cTask<> process_ban_modal(cModalSubmitInteraction&);
 	cTask<> process_ban(cInteraction&, std::uint32_t, const cSnowflake&, std::string_view, std::uint16_t, std::string_view, std::chrono::seconds, std::string_view, std::string_view);
-	cTask<> process_unban(cMsgCompInteraction&, const cSnowflake& user_id);
-	cTask<> process_dismiss(cMsgCompInteraction&, const cSnowflake& user_id);
-	cTask<> process_nickname_button(cMsgCompInteraction&, const cSnowflake& user_id);
+	cTask<> process_unban(cMsgCompInteraction&, cSnowflake);
+	cTask<> process_dismiss(cMsgCompInteraction&, cSnowflake);
+	cTask<> process_nickname_button(cMsgCompInteraction&, cSnowflake);
 	cTask<> process_modal(cModalSubmitInteraction&);
-	cTask<> process_role_button(cMsgCompInteraction&, uint32_t);
+	cTask<> process_role_button(cMsgCompInteraction&, cSnowflake);
 	cTask<> process_booster_menu(cMsgCompInteraction&);
 	cTask<> process_proficiency_menu(cMsgCompInteraction&);
 	cTask<> process_reaction(const cSnowflake&, const cSnowflake&, int64_t, int64_t, std::optional<cMessage>&);
@@ -61,7 +61,7 @@ private:
 	cTask<> process_starboard_help(cMsgCompInteraction&);
 	cTask<> process_leaderboard_help(cMsgCompInteraction&);
 	cTask<> process_timestamp(cAppCmdInteraction&);
-	cTask<> process_unhandled_command(cAppCmdInteraction&);
+	cTask<> process_test(cAppCmdInteraction&);
 
 	cTask<> process_interaction(cAppCmdInteraction&);
 	cTask<> process_interaction(cMsgCompInteraction&);

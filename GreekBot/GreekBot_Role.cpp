@@ -32,63 +32,42 @@ enum : uint64_t {
 };
 /* ================================================================================================================== */
 cTask<>
-cGreekBot::process_role_button(cMsgCompInteraction& i, uint32_t button_id) HANDLER_BEGIN {
-	auto roles = i.GetMember()->GetRoles();
-
-	uint64_t role_id;
-	switch (button_id) {
-		case CMP_ID_HERITAGE_SPEAKER:
-			role_id = 762747975164100608;
-			break;
-		case CMP_ID_IPA_LITERATE:
-			role_id = 481544681520365577;
-			break;
-		case CMP_ID_STUDENT:
-			role_id = 469239964119597056;
-			break;
-		case CMP_ID_WORD_OF_THE_DAY:
-			role_id = 649313942002466826;
-			break;
-		case CMP_ID_EVENTS:
-			role_id = 683443550410506273;
-			break;
-		case CMP_ID_DIALECT:
-			role_id = 637359870009409576;
-			break;
-		case CMP_ID_GAMER:
-			role_id = 357714047698993162;
-			break;
-		case CMP_ID_LINGUISTICS_READING:
-			role_id = 800464173385515058;
-			break;
-		case CMP_ID_POLL:
-			role_id = 650330610358943755;
-			if (rng::find(roles, ROLE_ID_NATIVE) == rng::end(roles))
-				co_return co_await InteractionSendMessage(i, cMessageParams()
-					.SetFlags(MESSAGE_FLAG_EPHEMERAL)
-					.SetContent(fmt::format("Sorry, <@&{}> is only available for <@{}>s!", role_id, (uint64_t)ROLE_ID_NATIVE))
-				);
-			break;
-		case CMP_ID_VCER:
-			role_id = 886625423167979541;
-			break;
-		case CMP_ID_BOOK_CLUB:
-			role_id = 928364890601685033;
-			break;
-		default:
-			cUtils::PrintLog("COMPONENT ID: 0x{:08X}", button_id);
-			co_return;
-	}
-	co_await InteractionDefer(i);
+cGreekBot::process_role_button(cMsgCompInteraction& i, cSnowflake selected_role_id) HANDLER_BEGIN {
+	static constexpr std::uint64_t valid_roles[] {
+		357714047698993162, // @Gamer
+		469239964119597056, // @Student
+		481544681520365577, // @IPA Literate
+		637359870009409576, // @Dialect
+		649313942002466826, // @Word of the day
+		683443550410506273, // @Events
+		762747975164100608, // @Heritage speaker
+		800464173385515058, // @Linguistics Reading
+		886625423167979541, // @VCer
+		928364890601685033, // @Book Club
+	};
+	static_assert(rng::is_sorted(valid_roles), "Must be sorted for binary search");
+	/* Prepare response */
 	cMessageParams response;
-	if (rng::find(roles, role_id) == rng::end(roles)) {
-		co_await AddGuildMemberRole(LMG_GUILD_ID, i.GetUser(), role_id);
-		response.SetContent(fmt::format("I gave you the <@&{}> role!", role_id));
-	} else {
-		co_await RemoveGuildMemberRole(LMG_GUILD_ID, i.GetUser(), role_id);
-		response.SetContent(fmt::format("I took away your <@&{}> role!", role_id));
+	response.SetFlags(MESSAGE_FLAG_EPHEMERAL);
+	const auto member_role_ids = i.GetMember()->GetRoles();
+	/* Validate selected role */
+	if (selected_role_id.ToInt() == 650330610358943755) {
+		/* @Poll is only available for natives */
+		if (rng::find(member_role_ids, ROLE_ID_NATIVE, &cSnowflake::ToInt) == member_role_ids.end())
+			co_return co_await InteractionSendMessage(i, response.SetContent(fmt::format("Sorry, <@&{}> is only available for <@{}>s!", selected_role_id, (std::uint64_t)ROLE_ID_NATIVE)));
+	} else if (!rng::binary_search(valid_roles, selected_role_id.ToInt())) {
+		throw std::runtime_error(fmt::format("Role id {} was unexpected", selected_role_id));
 	}
-	co_await InteractionSendMessage(i, response.SetFlags(MESSAGE_FLAG_EPHEMERAL));
+	/* Give or take away the selected role */
+	co_await InteractionDefer(i);
+	if (rng::find(member_role_ids, selected_role_id) == member_role_ids.end()) {
+		co_await AddGuildMemberRole(*i.GetGuildId(), i.GetUser(), selected_role_id);
+		response.SetContent(fmt::format("I gave you the <@&{}> role!", selected_role_id));
+	} else {
+		co_await RemoveGuildMemberRole(LMG_GUILD_ID, i.GetUser(), selected_role_id);
+		response.SetContent(fmt::format("I took away your <@&{}> role!", selected_role_id));
+	}
+	co_await InteractionSendMessage(i, response);
 } HANDLER_END
 /* ================================================================================================================== */
 cTask<>

@@ -5,17 +5,15 @@
     "components": [{
       "type": 2,
       "style": 1,
-      "custom_id": "HERITAGE_SPEAKER",
+      "custom_id": "role:762747975164100608",
       "emoji": {
-        "id": null,
         "name": "🇬🇷"
       }
     }, {
       "type": 2,
       "style": 1,
-      "custom_id": "IPA_LITERATE",
+      "custom_id": "role:481544681520365577",
       "emoji": {
-        "id": null,
         "name": "👅"
       }
     }]

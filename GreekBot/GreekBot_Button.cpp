@@ -8,7 +8,7 @@ static const cMessageParams MISSING_PERMISSION_MESSAGE = [] {
 }();
 
 cTask<>
-cGreekBot::process_nickname_button(cMsgCompInteraction& i, const cSnowflake& user_id) HANDLER_BEGIN {
+cGreekBot::process_nickname_button(cMsgCompInteraction& i, cSnowflake user_id) HANDLER_BEGIN {
 	/* Make sure that the invoking member has the appropriate permissions */
 	if (!(i.GetMember()->GetPermissions() & PERM_MANAGE_NICKNAMES))
 		co_return co_await InteractionSendMessage(i, MISSING_PERMISSION_MESSAGE);

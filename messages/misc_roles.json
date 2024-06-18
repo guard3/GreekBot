@@ -5,33 +5,29 @@
     "components": [{
       "type": 2,
       "style": 1,
-      "custom_id": "POLL",
+      "custom_id": "role:650330610358943755",
       "emoji": {
-        "id": null,
         "name": "☎️"
       }
     }, {
       "type": 2,
       "style": 1,
-      "custom_id": "GAMER",
+      "custom_id": "role:357714047698993162",
       "emoji": {
-        "id": null,
         "name": "🎮"
       }
     }, {
       "type": 2,
       "style": 1,
-      "custom_id": "VCER",
+      "custom_id": "role:886625423167979541",
       "emoji": {
-        "id": null,
         "name": "🗣️"
       }
     }, {
       "type": 2,
       "style": 1,
-      "custom_id": "BOOK_CLUB",
+      "custom_id": "role:928364890601685033",
       "emoji": {
-        "id": null,
         "name": "📚"
       }
     }]

@@ -5,15 +5,14 @@
     "components": [{
       "type": 2,
       "style": 1,
-      "custom_id": "STUDENT",
+      "custom_id": "role:469239964119597056",
       "emoji": {
-        "id": null,
         "name": "🧑‍🎓"
       }
     }, {
       "type": 2,
       "style": 1,
-      "custom_id": "WORD_OF_THE_DAY",
+      "custom_id": "role:649313942002466826",
       "emoji": {
         "id": "486886779941683211",
         "name": "omega"
@@ -21,25 +20,22 @@
     }, {
       "type": 2,
       "style": 1,
-      "custom_id": "EVENTS",
+      "custom_id": "role:683443550410506273",
       "emoji": {
-        "id": null,
         "name": "🤗"
       }
     }, {
       "type": 2,
       "style": 1,
-      "custom_id": "DIALECTS",
+      "custom_id": "role:637359870009409576",
       "emoji": {
-        "id": null,
         "name": "🗺️"
       }
     }, {
       "type": 2,
       "style": 1,
-      "custom_id": "LINGUISTICS_READING",
+      "custom_id": "role:800464173385515058",
       "emoji": {
-        "id": null,
         "name": "📑"
       }
     }]

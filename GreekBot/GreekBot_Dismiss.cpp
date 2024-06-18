@@ -1,7 +1,7 @@
 #include "GreekBot.h"
 
 cTask<>
-cGreekBot::process_dismiss(cMsgCompInteraction& i, const cSnowflake& user_id) HANDLER_BEGIN {
+cGreekBot::process_dismiss(cMsgCompInteraction& i, cSnowflake user_id) HANDLER_BEGIN {
 	/* If we're on a guild, check if the user is the original author or if they have appropriate permissions */
 	if (i.GetUser().GetId() != user_id && i.GetMember() && !(i.GetMember()->GetPermissions() & PERM_MANAGE_MESSAGES))
 		co_return co_await InteractionSendMessage(i, cMessageParams()

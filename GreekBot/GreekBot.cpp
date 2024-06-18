@@ -106,15 +106,14 @@ cGreekBot::OnInteractionCreate(cInteraction& i) {
 	/* ...and send error message to the user */
 	static const auto FAIL_MESSAGE = []{
 		cMessageParams result;
-		result.SetFlags(MESSAGE_FLAG_EPHEMERAL);
-		result.SetContent("An unexpected error has occurred. Try again later.");
+		result.SetFlags(MESSAGE_FLAG_EPHEMERAL).SetContent("An unexpected error has occurred. Try again later.");
 		return result;
 	}();
 	co_await InteractionSendMessage(i, FAIL_MESSAGE);
 }
 
 cTask<>
-cGreekBot::process_interaction(cAppCmdInteraction& i) {
+cGreekBot::process_interaction(cAppCmdInteraction& i) HANDLER_BEGIN {
 	switch (i.GetCommandId().ToInt()) {
 		case 878391425568473098: // avatar
 			return process_avatar(i);
@@ -136,61 +135,54 @@ cGreekBot::process_interaction(cAppCmdInteraction& i) {
 			return process_ban_ctx_menu(i, "turk");
 		case 1174836455714078740: // Apps > Ban Greek
 			return process_ban_ctx_menu(i, "greek");
+		case 1178824125192613939: // test
+			return process_test(i);
 		default:
-			return process_unhandled_command(i);
+			throw std::runtime_error(fmt::format("Unhandled command {:?} {}", i.GetCommandName(), i.GetCommandId()));
 	}
-}
+} HANDLER_END
 
 cTask<>
-cGreekBot::process_interaction(cMsgCompInteraction& i) {
-	const std::string_view custom_id = i.GetCustomId();
-	switch (const uint32_t hash = cUtils::CRC32(0, custom_id)) {
+cGreekBot::process_interaction(cMsgCompInteraction& i) HANDLER_BEGIN {
+	const auto custom_id = i.GetCustomId();
+	switch (const auto hash = cUtils::CRC32(0, custom_id)) {
 		case CMP_ID_LEADERBOARD_HELP:
-			co_await process_leaderboard_help(i);
-			break;
+			return process_leaderboard_help(i);
 		case CMP_ID_STARBOARD_HELP:
-			co_await process_starboard_help(i);
-			break;
+			return process_starboard_help(i);
 		case CMP_ID_PROFICIENCY_MENU:
-			co_await process_proficiency_menu(i);
-			break;
+			return process_proficiency_menu(i);
 		case CMP_ID_BOOSTER_MENU:
-			co_await process_booster_menu(i);
-			break;
+			return process_booster_menu(i);
 		default:
 			if (custom_id.starts_with("BAN#"))
-				co_await process_unban(i, custom_id.substr(4));
-			else if (custom_id.starts_with("DLT#"))
-				co_await process_dismiss(i, custom_id.substr(4));
-			else if (custom_id.starts_with("NCK#"))
-				co_await process_nickname_button(i, custom_id.substr(4));
-			else
-				co_await process_role_button(i, hash); // TODO: Make custom_id use one specific prefix for roles
-			break;
+				return process_unban(i, custom_id.substr(4));
+			if (custom_id.starts_with("DLT#"))
+				return process_dismiss(i, custom_id.substr(4));
+			if (custom_id.starts_with("NCK#"))
+				return process_nickname_button(i, custom_id.substr(4));
+			if (custom_id.starts_with("role:"))
+				return process_role_button(i, custom_id.substr(5));
+			throw std::runtime_error(fmt::format("Unknown component id {:?} 0x{:08X}", custom_id, hash));
 	}
-}
+} HANDLER_END
 
 cTask<>
-cGreekBot::process_interaction(cModalSubmitInteraction& i) {
-	std::string_view custom_id = i.GetCustomId();
+cGreekBot::process_interaction(cModalSubmitInteraction& i) HANDLER_BEGIN {
+	const auto custom_id = i.GetCustomId();
 	if (custom_id.starts_with("ban:"))
 		return process_ban_modal(i);
 	if (custom_id == "NICKNAME_MODAL")
 		return process_modal(i);
-
-	return [](std::string_view id) -> cTask<> {
-		cUtils::PrintErr("Unknown modal id: {} 0x{:08X}", id, cUtils::CRC32(0, id));
-		co_return;
-	} (custom_id);
-}
+	throw std::runtime_error(fmt::format("Unknown modal id {:?} 0x{:08X}", custom_id, cUtils::CRC32(0, custom_id)));
+} HANDLER_END
 
 cTask<>
-cGreekBot::process_unhandled_command(cAppCmdInteraction& i) {
+cGreekBot::process_test(cAppCmdInteraction& i) HANDLER_BEGIN {
 	static const auto MESSAGE = [] {
 		cMessageParams msg;
 		msg.SetFlags(MESSAGE_FLAG_EPHEMERAL).SetContent("Nothing to see here, go look elsewhere.");
 		return msg;
 	}();
-	cUtils::PrintMsg("Unhandled command: {} {}", i.GetCommandName(), i.GetCommandId());
 	co_await InteractionSendMessage(i, MESSAGE);
-}
+} HANDLER_END
