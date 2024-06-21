@@ -47,7 +47,7 @@ public:
 	template<typename Arg = std::string, typename... Args> requires std::constructible_from<std::string, Arg&&, Args&&...>
 	std::string& EmplaceUrl(Arg&& arg, Args&&... args) {
 		if constexpr (std::assignable_from<std::string&, Arg&&> && sizeof...(args) == 0)
-			return m_url = std::forward<Arg>;
+			return m_url = std::forward<Arg>(arg);
 		else
 			return m_url = std::string(std::forward<Arg>(arg), std::forward<Args>(args)...);
 	}
