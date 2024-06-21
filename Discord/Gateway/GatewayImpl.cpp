@@ -281,7 +281,7 @@ cGateway::implementation::run_session() try {
 #define HANDLER_BEGIN(ec) { if (ec) return retry(ec.message(m_err_msg, std::size(m_err_msg))); try
 #define HANDLER_END catch (const std::exception& ex) { retry(ex.what()); } catch (...) { retry(); }}
 	/* Switch to the HTTP strand and resolve host */
-	co_await ResumeOnEventThread();
+	co_await ResumeOnEventStrand();
 	m_resolver.async_resolve(host, "https", asio::bind_executor(m_ws_strand, [this, host = (std::string)host](const beast::error_code& ec, asio::ip::tcp::resolver::results_type results) mutable HANDLER_BEGIN(ec) {
 		/* Create a WebSocket stream and connect to the resolved host */
 		m_ws = std::make_unique<beast::websocket::stream<beast::ssl_stream<beast::tcp_stream>>>(m_ws_strand, m_ctx);

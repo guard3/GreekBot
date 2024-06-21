@@ -87,7 +87,7 @@ cGreekBot::process_reaction(const cSnowflake& channel_id, const cSnowflake& mess
 		}
 		co_return;
 	}
-	co_await ResumeOnEventThread();
+	co_await ResumeOnEventStrand();
 	/* Otherwise, prepare the message content with the :Holy: count */
 	const char* reaction;
 	switch (num_reactions) {
@@ -273,7 +273,7 @@ cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) HANDLER_BEGIN {
 			co_await InteractionDefer(i);
 			/* Retrieve user's starboard entry */
 			auto results = co_await cDatabase::SB_GetRank(*user, REACTION_THRESHOLD);
-			co_await ResumeOnEventThread();
+			co_await ResumeOnEventStrand();
 			/* If the user isn't a member of Learning Greek... */
 			if (!member) {
 				embeds.push_back(make_no_member_embed(user.Get(), m_guilds.at(LMG_GUILD_ID).GetName(), !results.empty()));
@@ -317,6 +317,7 @@ cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) HANDLER_BEGIN {
 				members.reserve(size);
 				co_for(auto& mem, RequestGuildMembers(*i.GetGuildId(), user_ids))
 					members.push_back(std::move(mem));
+				co_await ResumeOnEventStrand();
 				co_return members;
 			}();
 			/* Get guild name in case it's needed */

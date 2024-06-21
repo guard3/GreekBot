@@ -3,6 +3,6 @@
 
 int main(int argc, const char** argv) {
 	cDatabase::Initialize();
-	cGreekBot(argv[1]).Run();
+	DiscordMain<cGreekBot>(argv[1]);
 	return 0;
 }

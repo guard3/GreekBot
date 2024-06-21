@@ -29,7 +29,7 @@ void
 cGateway::implementation::process_event(const json::value& v) {
 	bool bSuccess = false;  // Indicates whether the event payload was successfully parsed;
 	std::string event_name; // The name of the event as a string
-#define switch_strand() ResumeOnEventThread(); bSuccess = true
+#define switch_strand() ResumeOnEventStrand(); bSuccess = true
 	try {
 		/* Update last sequence received */
 		m_last_sequence = v.at("s").as_int64();

@@ -26,7 +26,9 @@ enum eIntent {
 	INTENT_MESSAGE_CONTENT               = 1 << 15,
 	INTENT_GUILD_SCHEDULED_EVENTS        = 1 << 16,
 	INTENT_AUTO_MODERATION_CONFIGURATION = 1 << 20,
-	INTENT_AUTO_MODERATION_EXECUTION     = 1 << 21
+	INTENT_AUTO_MODERATION_EXECUTION     = 1 << 21,
+	INTENT_GUILD_MESSAGE_POLLS           = 1 << 24,
+	INTENT_DIRECT_MESSAGE_POLLS          = 1 << 25,
 };
 inline eIntent operator|(eIntent a, eIntent b) { return (eIntent)((int)a | (int)b); }
 inline eIntent operator&(eIntent a, eIntent b) { return (eIntent)((int)a & (int)b); }
@@ -58,9 +60,15 @@ public:
 typedef std::vector<cHttpField> tHttpFields;
 
 class cGateway {
-private:
 	class implementation;
-	uhHandle<implementation> m_pImpl;
+	std::unique_ptr<implementation> m_pImpl;
+
+	void Run();
+	/* Make DiscordMain invoke Run()
+	 * TODO: Upgrade to Clang 18 because 17 and newer don't recognise templated friends with concepts... YIKES!!! */
+	template<typename Gateway, typename... Args>
+	friend std::enable_if_t<std::is_base_of_v<cGateway, Gateway> && std::is_constructible_v<Gateway, Args&&...>>
+	DiscordMain(Args&&...);
 
 protected:
 	std::string_view GetHttpAuthorization() const noexcept;
@@ -83,8 +91,8 @@ public:
 
 	cTask<boost::json::value> DiscordPostNoRetry(std::string_view path, const boost::json::object& obj, std::span<const cHttpField> fields = {});
 
-	cTask<> ResumeOnEventThread();
-	cTask<> WaitOnEventThread(std::chrono::milliseconds);
+	cTask<> ResumeOnEventStrand();
+	cTask<> WaitOnEventStrand(std::chrono::milliseconds);
 
 	cAsyncGenerator<cMember> RequestGuildMembers(const cSnowflake& guild_id, std::string_view query = {});
 	cAsyncGenerator<cMember> RequestGuildMembers(const cSnowflake& guild_id, std::span<const cSnowflake> user_ids);
@@ -107,7 +115,12 @@ public:
 	virtual cTask<> OnMessageReactionRemove(cSnowflake& user_id, cSnowflake& channel_id, cSnowflake& message_id, hSnowflake guild_id, cEmoji& emoji) { co_return; }
 	virtual cTask<> OnMessageReactionRemoveAll(cSnowflake& channel_id, cSnowflake& message_id, hSnowflake guild_id) { co_return; }
 	virtual cTask<> OnMessageReactionRemoveEmoji(cSnowflake& channel_id, cSnowflake& message_id, hSnowflake guild_id, cEmoji&) { co_return; }
-
-	void Run();
 };
+
+template<typename Gateway, typename... Args>
+inline std::enable_if_t<std::is_base_of_v<cGateway, Gateway> && std::is_constructible_v<Gateway, Args&&...>>
+DiscordMain(Args&&... args) {
+	Gateway client(std::forward<Args>(args)...);
+	client.Run();
+}
 #endif /* DISCORD_GATEWAY_H */

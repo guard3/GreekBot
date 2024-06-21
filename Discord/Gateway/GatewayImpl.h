@@ -178,25 +178,16 @@ public:
 	};
 
 	strand_awaitable ResumeOnWebSocketStrand() noexcept { return { m_ws_strand }; }
-	strand_awaitable ResumeOnEventThread() noexcept { return { m_http_strand }; }
-	auto WaitOnEventThread(std::chrono::milliseconds duration) {
+	strand_awaitable ResumeOnEventStrand() noexcept { return { m_http_strand }; }
+	auto WaitOnEventStrand(std::chrono::milliseconds duration) {
 		struct awaitable {
 			asio::steady_timer timer;
-			std::exception_ptr except;
 			awaitable(asio::strand<asio::io_context::executor_type>& strand, std::chrono::milliseconds d): timer(strand, d) {}
 			bool await_ready() noexcept { return false; }
 			void await_suspend(std::coroutine_handle<> h) {
-				timer.async_wait([this, h](const boost::system::error_code& ec) {
-					try {
-						if (ec) throw std::system_error(ec);
-					}
-					catch (...) {
-						except = std::current_exception();
-					}
-					h.resume();
-				});
+				timer.async_wait([h](const boost::system::error_code&) { h.resume(); });
 			}
-			void await_resume() { if (except) std::rethrow_exception(except); }
+			void await_resume() noexcept {}
 		};
 		return awaitable(m_http_strand, duration);
 	}

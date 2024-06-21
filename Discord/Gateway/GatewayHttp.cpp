@@ -138,13 +138,13 @@ cGateway::implementation::DiscordRequest(beast::http::verb m, std::string_view t
 	catch (const xRateLimitError& e) {
 		retry_after = e.retry_after();
 	}
-	co_await WaitOnEventThread(retry_after);
+	co_await WaitOnEventStrand(retry_after);
 	co_return co_await DiscordRequest(m, t, o, f);
 }
 cTask<json::value>
 cGateway::implementation::DiscordRequestNoRetry(beast::http::verb method, std::string_view target, const json::object* obj, std::span<const cHttpField> fields) {
 	/* First make sure that we are on the http thread */
-	co_await ResumeOnEventThread();
+	co_await ResumeOnEventStrand();
 	/* Since we're about to send a request, cancel the timeout timer */
 	m_http_timer.cancel();
 	/* Create a new request object and push it at the end of the queue */

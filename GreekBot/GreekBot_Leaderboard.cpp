@@ -186,7 +186,7 @@ cGreekBot::process_rank(cAppCmdInteraction& i) HANDLER_BEGIN {
 	co_await InteractionDefer(i, true);
 	/* Get user's ranking info from the database */
 	auto db_result = co_await cDatabase::GetUserRank(*user);
-	co_await ResumeOnEventThread();
+	co_await ResumeOnEventStrand();
 	/* Make sure that the selected user is a member of Learning Greek */
 	auto& embeds = response.EmplaceEmbeds();
 	if (member)
@@ -212,7 +212,6 @@ cGreekBot::process_top(cAppCmdInteraction& i) HANDLER_BEGIN {
 	co_await InteractionDefer(i);
 	/* Get data from the database */
 	auto db_result = co_await cDatabase::GetTop10();
-	co_await ResumeOnEventThread();
 	if (db_result.empty())
 		co_return co_await InteractionSendMessage(i, response.SetContent("I don't have any data yet. Start talking!"));
 	/* Members generator */
@@ -226,6 +225,7 @@ cGreekBot::process_top(cAppCmdInteraction& i) HANDLER_BEGIN {
 		members.reserve(size);
 		co_for(auto& mem, RequestGuildMembers(*i.GetGuildId(), user_ids))
 			members.push_back(std::move(mem));
+		co_await ResumeOnEventStrand();
 		co_return members;
 	}();
 	/* Prepare embeds */
