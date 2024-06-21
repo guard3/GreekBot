@@ -40,6 +40,8 @@ private:
 
 	std::chrono::steady_clock::time_point m_before;
 
+	std::vector<cVoiceState> m_lmg_voice_states;
+
 	cTask<> process_avatar(cAppCmdInteraction&);
 	cTask<> process_rank(cAppCmdInteraction&);
 	cTask<> process_top(cAppCmdInteraction&);
@@ -69,7 +71,7 @@ private:
 
 	cTask<> process_leaderboard_new_message(cMessage& msg, cPartialMember& member);
 
-	cTask<> OnGuildCreate(cGuild& guild) override;
+	cTask<> OnGuildCreate(cGuild& guild, cGuildCreate& guild_create) override;
 	cTask<> OnGuildRoleCreate(cSnowflake& guild_id, cRole& role) override;
 	cTask<> OnGuildRoleUpdate(cSnowflake& guild_id, cRole& role) override;
 	cTask<> OnGuildRoleDelete(cSnowflake& guild_id, cSnowflake& role_id) override;
@@ -85,8 +87,9 @@ private:
 	cTask<> OnMessageReactionRemove(cSnowflake&, cSnowflake&, cSnowflake&, hSnowflake, cEmoji&) override;
 	cTask<> OnMessageReactionRemoveAll(cSnowflake&, cSnowflake&, hSnowflake) override;
 	cTask<> OnMessageReactionRemoveEmoji(cSnowflake&, cSnowflake&, hSnowflake, cEmoji&) override;
+	cTask<> OnVoiceStateUpdate(cVoiceState&) override;
 
 public:
-	explicit cGreekBot(std::string_view token) : cBot(token, INTENT_GUILD_INTEGRATIONS | INTENT_GUILD_MESSAGES | INTENT_GUILDS | INTENT_GUILD_MEMBERS | INTENT_GUILD_MESSAGE_REACTIONS | INTENT_MESSAGE_CONTENT) {}
+	explicit cGreekBot(std::string_view token) : cBot(token, INTENT_GUILD_INTEGRATIONS | INTENT_GUILD_MESSAGES | INTENT_GUILDS | INTENT_GUILD_MEMBERS | INTENT_GUILD_MESSAGE_REACTIONS | INTENT_MESSAGE_CONTENT | INTENT_GUILD_VOICE_STATES) {}
 };
 #endif /* GREEKBOT_GREEKBOT_H */

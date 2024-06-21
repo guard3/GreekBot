@@ -6,6 +6,7 @@
 #include "InteractionFwd.h"
 #include "Member.h"
 #include "MessageFwd.h"
+#include "VoiceState.h"
 
 enum eIntent {
 	INTENT_GUILDS                        = 1 << 0,
@@ -99,7 +100,7 @@ public:
 
 	virtual cTask<> OnReady(cUser&) { co_return; }
 	virtual cTask<> OnUserUpdate(cUser&) { co_return; }
-	virtual cTask<> OnGuildCreate(cGuild&) { co_return; }
+	virtual cTask<> OnGuildCreate(cGuild&, cGuildCreate&) { co_return; }
 	virtual cTask<> OnGuildRoleCreate(cSnowflake& guild_id, cRole& role) { co_return; }
 	virtual cTask<> OnGuildRoleUpdate(cSnowflake& guild_id, cRole& role) { co_return; }
 	virtual cTask<> OnGuildRoleDelete(cSnowflake& guild_id, cSnowflake& role_id) { co_return; }
@@ -115,6 +116,7 @@ public:
 	virtual cTask<> OnMessageReactionRemove(cSnowflake& user_id, cSnowflake& channel_id, cSnowflake& message_id, hSnowflake guild_id, cEmoji& emoji) { co_return; }
 	virtual cTask<> OnMessageReactionRemoveAll(cSnowflake& channel_id, cSnowflake& message_id, hSnowflake guild_id) { co_return; }
 	virtual cTask<> OnMessageReactionRemoveEmoji(cSnowflake& channel_id, cSnowflake& message_id, hSnowflake guild_id, cEmoji&) { co_return; }
+	virtual cTask<> OnVoiceStateUpdate(cVoiceState&) { co_return; }
 };
 
 template<typename Gateway, typename... Args>

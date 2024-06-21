@@ -1,8 +1,27 @@
 #ifndef GREEKBOT_GUILD_H
 #define GREEKBOT_GUILD_H
 #include "Role.h"
+#include "VoiceState.h"
 #include <vector>
 #include <span>
+
+class cGuildCreate final {
+	std::vector<cVoiceState> m_voice_states;
+
+public:
+	explicit cGuildCreate(const boost::json::value&);
+	explicit cGuildCreate(const boost::json::object&);
+
+	std::span<const cVoiceState> GetVoiceStates() const noexcept { return m_voice_states; }
+	std::vector<cVoiceState> MoveVoiceStates() noexcept { return std::move(m_voice_states); }
+};
+using   hGuildCreate =   hHandle<cGuildCreate>;
+using  chGuildCreate =  chHandle<cGuildCreate>;
+using  uhGuildCreate =  uhHandle<cGuildCreate>;
+using uchGuildCreate = uchHandle<cGuildCreate>;
+
+cGuildCreate
+tag_invoke(boost::json::value_to_tag<cGuildCreate>, const boost::json::value&);
 
 class cGuild final {
 private:
@@ -25,5 +44,6 @@ typedef  chHandle<cGuild>  chGuild;
 typedef  uhHandle<cGuild>  uhGuild;
 typedef uchHandle<cGuild> uchGuild;
 
-cGuild tag_invoke(boost::json::value_to_tag<cGuild>, const boost::json::value&);
+cGuild
+tag_invoke(boost::json::value_to_tag<cGuild>, const boost::json::value&);
 #endif /* GREEKBOT_GUILD_H */

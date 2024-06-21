@@ -22,7 +22,8 @@ enum : std::uint32_t {
 	MESSAGE_REACTION_REMOVE_ALL   = 0x02A1D6E9,
 	MESSAGE_REACTION_REMOVE_EMOJI = 0xEB390E5D,
 	GUILD_MEMBERS_CHUNK           = 0x343F4BC5,
-	USER_UPDATE                   = 0xBFC98531
+	USER_UPDATE                   = 0xBFC98531,
+	VOICE_STATE_UPDATE            = 0x1555C75D
 };
 /* ========== Implement process_event() ============================================================================= */
 void
@@ -58,8 +59,9 @@ cGateway::implementation::process_event(const json::value& v) {
 			}	break;
 			case GUILD_CREATE: {
 				cGuild guild{ d };
+				cGuildCreate guild_create{ d };
 				co_await switch_strand();
-				co_await m_parent->OnGuildCreate(guild);
+				co_await m_parent->OnGuildCreate(guild, guild_create);
 			}	break;
 			case GUILD_ROLE_CREATE: {
 				cSnowflake guild_id{ d.at("guild_id").as_string() };
@@ -241,6 +243,11 @@ cGateway::implementation::process_event(const json::value& v) {
 				m_application.reset();
 				co_await switch_strand();
 				co_await m_parent->OnUserUpdate(user);
+			}	break;
+			case VOICE_STATE_UPDATE: {
+				cVoiceState vs{ d };
+				co_await switch_strand();
+				co_await m_parent->OnVoiceStateUpdate(vs);
 			}	break;
 			default:
 				break;
