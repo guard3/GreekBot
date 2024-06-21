@@ -117,9 +117,8 @@ cGreekBot::OnMessageDeleteBulk(std::span<cSnowflake> ids, cSnowflake& channel_id
 					user_ids.push_back(db_msg.author_id);
 				std::vector<std::variant<cUser, cSnowflake>> members;
 				members.reserve(size);
-				auto gen = RequestGuildMembers(*guild_id, user_ids);
-				for (auto it = co_await gen.begin(); it != gen.end(); co_await ++it)
-					members.emplace_back(std::move(*it->GetUser()));
+				co_for(auto& mem, RequestGuildMembers(*guild_id, user_ids))
+					members.emplace_back(std::move(*mem.GetUser()));
 				co_return members;
 			}();
 			/* Prepare the embed vector for the log messages */

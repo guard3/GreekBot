@@ -206,4 +206,9 @@ inline cTask<> cAsyncGenerator<T>::ForEach(Fn&& fn) {
 	for (auto it = co_await begin(); it != end(); co_await ++it)
 		co_await fn(*it);
 }
+/* ========== A range-for helper macro for cAsyncGenerator; similar to for co_await(...) from coroutines TS ========= */
+#define __DISCORD_UNIQUE__(x, y) __discord_##x##_##y##__
+#define __DISCORD_UNIQUE_(x, y) __DISCORD_UNIQUE__(x, y)
+#define __DISCORD_UNIQUE(name) __DISCORD_UNIQUE_(name, __LINE__)
+#define co_for(elem, generator) if (auto&& __DISCORD_UNIQUE(gen) = (generator); false) {} else for (auto __DISCORD_UNIQUE(it) = co_await __DISCORD_UNIQUE(gen).begin(); __DISCORD_UNIQUE(it) != __DISCORD_UNIQUE(gen).end(); co_await ++__DISCORD_UNIQUE(it)) if (elem = *__DISCORD_UNIQUE(it); false) {} else
 #endif /* DISCORD_ASYNCGENERATOR_H */

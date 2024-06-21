@@ -61,9 +61,7 @@ cGreekBot::process_prune_lmg(cAppCmdInteraction& i) HANDLER_BEGIN {
 	int total = 0, fails = 0;
 	auto started_at = system_clock::now();
 	/* Iterate through all members of the guild */
-	auto gen = RequestGuildMembers(guild_id);
-	for (auto it = co_await gen.begin(); it != gen.end(); co_await ++it) {
-		cMember& member = *it;
+	co_for(auto& member, RequestGuildMembers(guild_id)) {
 		/* Interaction tokens are valid for 15 minutes, so, just to be safe, abort after 14 minutes have passed */
 		if (system_clock::now() - started_at > 14min)
 			break;

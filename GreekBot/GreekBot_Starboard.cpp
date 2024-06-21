@@ -315,9 +315,8 @@ cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) HANDLER_BEGIN {
 					user_ids.push_back(res.author_id);
 				std::vector<cMember> members;
 				members.reserve(size);
-				auto gen = RequestGuildMembers(*i.GetGuildId(), user_ids);
-				for (auto it = co_await gen.begin(); it != gen.end(); co_await ++it)
-					members.push_back(std::move(*it));
+				co_for(auto& mem, RequestGuildMembers(*i.GetGuildId(), user_ids))
+					members.push_back(std::move(mem));
 				co_return members;
 			}();
 			/* Get guild name in case it's needed */
