@@ -187,4 +187,9 @@ cGreekBot::process_test(cAppCmdInteraction& i) HANDLER_BEGIN {
 		return msg;
 	}();
 	co_await InteractionSendMessage(i, MESSAGE);
+
+	std::size_t count = 0;
+	co_for (auto& msg, GetChannelMessages(i.GetChannelId(), 201)) {
+		cUtils::PrintLog("Count: {} ID: {} CONTENT: {}", ++count, msg.GetId(), msg.GetContent());
+	}
 } HANDLER_END

@@ -43,7 +43,8 @@ add_executable(GreekBot main.cpp Discord/Bot.cpp Discord/Bot.h Discord/Common/Co
         Discord/Gateway/GatewayGuildMembers.cpp
         Discord/VoiceState.h
         Discord/VoiceState.cpp
-        GreekBot/GreekBot_Voice.cpp)
+        GreekBot/GreekBot_Voice.cpp
+        Discord/Bot_ChannelMessages.cpp)
 
 target_include_directories(
     GreekBot PRIVATE
