@@ -1,16 +1,14 @@
 {
-	"name": "clear",
-	"description": "Mass delete messages in a channel",
-	"default_member_permissions": 8192,
-	"contexts": [0],
-	"options": [
-		{
-			"name": "amount",
-			"description": "The number of messages to delete",
-			"type": 4,
-			"min_value": 1,
-			"max_value": 100,
-			"required": true
-		}
-	]
+  "name": "clear",
+  "description": "Mass delete messages in a channel",
+  "default_member_permissions": "8192",
+  "contexts": [0],
+  "options": [{
+    "name": "amount",
+    "description": "The number of messages to delete",
+    "type": 4,
+    "min_value": 1,
+    "max_value": 100,
+    "required": true
+  }]
 }

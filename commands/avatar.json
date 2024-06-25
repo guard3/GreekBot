@@ -1,11 +1,9 @@
 {
-	"name": "avatar",
-	"description": "Get a user's avatar.",
-	"options": [
-		{
-			"name": "user",
-			"description": "The user to retrieve the avatar from.",
-			"type": 6
-		}
-	]
+  "name": "avatar",
+  "description": "Get a user's avatar.",
+  "options": [{
+    "name": "user",
+    "description": "The user to retrieve the avatar from.",
+    "type": 6
+  }]
 }

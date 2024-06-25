@@ -1,11 +1,9 @@
 {
-	"name": "rank",
-	"description": "Get a user's rank on the leaderboard.",
-	"options": [
-		{
-			"name": "user",
-			"description": "The user to display the rank for.",
-			"type": 6
-		}
-	]
+  "name": "rank",
+  "description": "Get a user's rank on the leaderboard.",
+  "options": [{
+    "name": "user",
+    "description": "The user to display the rank for.",
+    "type": 6
+  }]
 }
