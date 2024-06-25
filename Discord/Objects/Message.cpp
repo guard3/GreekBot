@@ -37,8 +37,8 @@ tag_invoke(json::value_from_tag, json::value& v, const cMessageUpdate& m) {
 		json::value_from(*p, obj["embeds"]);
 }
 /* ================================================================================================================== */
-cPartialMessage::cPartialMessage(const json::value& v) : cPartialMessage(v.as_object()) {}
-cPartialMessage::cPartialMessage(const json::object& o):
+cMessageBase::cMessageBase(const json::value& v) : cMessageBase(v.as_object()) {}
+cMessageBase::cMessageBase(const json::object& o):
 	m_flags([&o] {
 		const auto p = o.if_contains("flags");
 		const auto f = p ? p->to_number<std::underlying_type_t<eMessageFlag>>() : 0;
@@ -52,7 +52,7 @@ cPartialMessage::cPartialMessage(const json::object& o):
 	m_embeds(json::value_to<std::vector<cEmbed>>(o.at("embeds"))) {}
 /* ================================================================================================================== */
 void
-tag_invoke(json::value_from_tag, json::value& v, const cPartialMessage& m) {
+tag_invoke(json::value_from_tag, json::value& v, const cMessageBase& m) {
 	auto& obj = v.emplace_object();
 	obj.reserve(5);
 	/* Set flags */
@@ -71,9 +71,9 @@ tag_invoke(json::value_from_tag, json::value& v, const cPartialMessage& m) {
 		json::value_from(e, obj["embeds"]);
 }
 /* ================================================================================================================== */
-cMessage::cMessage(const json::value &v) : cMessage(v.as_object()) {}
-cMessage::cMessage(const json::object &o):
-	cPartialMessage(o),
+cMessage::cMessage(const json::value&  v) : cMessage(v.as_object()) {}
+cMessage::cMessage(const json::object& o) :
+	cMessageCRTP<cMessage>(o),
 	id(json::value_to<cSnowflake>(o.at("id"))),
 	channel_id(json::value_to<cSnowflake>(o.at("channel_id"))),
 	author(o.at("author")),
@@ -83,4 +83,9 @@ cMessage::cMessage(const json::object &o):
 	/* Parse edited_timestamp */
 	if (auto& v = o.at("edited_timestamp"); !v.is_null())
 		edited_timestamp = cUtils::ParseISOTimestamp(v.as_string());
+}
+/* ================================================================================================================== */
+cMessage
+tag_invoke(json::value_to_tag<cMessage>, const json::value& v) {
+	return cMessage{ v };
 }

@@ -65,14 +65,14 @@ cBot::CreateDM(const cSnowflake& recipient_id) {
 }
 
 cTask<cMessage>
-cBot::CreateMessage(crefChannel channel, const cPartialMessage& msg) {
+cBot::CreateMessage(crefChannel channel, const cMessageBase& msg) {
 	co_return cMessage{
 		co_await DiscordPost(fmt::format("/channels/{}/messages", channel.GetId()), json::value_from(msg).get_object())
 	};
 }
 
 cTask<cMessage>
-cBot::CreateDMMessage(const cSnowflake& recipient_id, const cPartialMessage& msg) {
+cBot::CreateDMMessage(const cSnowflake& recipient_id, const cMessageBase& msg) {
 	co_return co_await CreateMessage(co_await CreateDM(recipient_id), msg);
 }
 
