@@ -107,7 +107,7 @@ cGreekBot::OnInteractionCreate(cInteraction& i) {
 	}
 	/* ...and send error message to the user */
 	static const auto FAIL_MESSAGE = []{
-		cMessageParams result;
+		cPartialMessage result;
 		result.SetFlags(MESSAGE_FLAG_EPHEMERAL).SetContent("An unexpected error has occurred. Try again later.");
 		return result;
 	}();
@@ -184,7 +184,7 @@ cGreekBot::process_interaction(cModalSubmitInteraction& i) HANDLER_BEGIN {
 cTask<>
 cGreekBot::process_test(cAppCmdInteraction& i) HANDLER_BEGIN {
 	static const auto MESSAGE = [] {
-		cMessageParams msg;
+		cPartialMessage msg;
 		msg.SetFlags(MESSAGE_FLAG_EPHEMERAL).SetContent("Nothing to see here, go look elsewhere.");
 		return msg;
 	}();

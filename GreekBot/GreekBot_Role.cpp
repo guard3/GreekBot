@@ -47,7 +47,7 @@ cGreekBot::process_role_button(cMsgCompInteraction& i, cSnowflake selected_role_
 	};
 	static_assert(rng::is_sorted(valid_roles), "Must be sorted for binary search");
 	/* Prepare response */
-	cMessageParams response;
+	cPartialMessage response;
 	response.SetFlags(MESSAGE_FLAG_EPHEMERAL);
 	const auto member_role_ids = i.GetMember()->GetRoles();
 	/* Validate selected role */
@@ -103,7 +103,7 @@ cGreekBot::process_proficiency_menu(cMsgCompInteraction& i) HANDLER_BEGIN {
 		roles.emplace_back(ROLE_ID_NATIVE);
 	/* Update member and send confirmation message */
 	co_await ModifyGuildMember(*i.GetGuildId(), i.GetUser().GetId(), options);
-	co_await InteractionSendMessage(i, cMessageParams()
+	co_await InteractionSendMessage(i, cPartialMessage()
 		.SetFlags(MESSAGE_FLAG_EPHEMERAL)
 		.SetContent(fmt::format("I gave you the <@&{}> role!", selected_role_id))
 	);
@@ -131,7 +131,7 @@ cGreekBot::process_booster_menu(cMsgCompInteraction& i) HANDLER_BEGIN {
 	/* Acknowledge interaction */
 	co_await InteractionDefer(i);
 	/* Prepare confirmation message */
-	cMessageParams response;
+	cPartialMessage response;
 	response.SetFlags(MESSAGE_FLAG_EPHEMERAL);
 	/* Create a new role vector */
 	auto member = i.GetMember();

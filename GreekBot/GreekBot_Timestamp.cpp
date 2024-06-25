@@ -5,7 +5,7 @@ cTask<>
 cGreekBot::process_timestamp(cAppCmdInteraction& i) HANDLER_BEGIN {
 	using namespace std::chrono;
 	/* Variables */
-	cMessageParams response;
+	cPartialMessage response;
 	std::string_view input;
 	std::string_view style = "f";
 	switch (auto& subcmd = i.GetOptions().front(); cUtils::CRC32(0, subcmd.GetName())) {

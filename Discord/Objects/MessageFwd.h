@@ -2,11 +2,11 @@
 #define DISCORD_MESSAGEFWD_H
 #include "Common.h"
 /* ================================================================================================================== */
-class cMessageParams;
-using   hMessageParams =   hHandle<cMessageParams>;
-using  chMessageParams =  chHandle<cMessageParams>;
-using  uhMessageParams =  uhHandle<cMessageParams>;
-using uchMessageParams = uchHandle<cMessageParams>;
+class cPartialMessage;
+using   hPartialMessage =   hHandle<cPartialMessage>;
+using  chPartialMessage =  chHandle<cPartialMessage>;
+using  uhPartialMessage =  uhHandle<cPartialMessage>;
+using uchPartialMessage = uchHandle<cPartialMessage>;
 /* ================================================================================================================== */
 class cMessageUpdate;
 using   hMessageUpdate =   hHandle<cMessageUpdate>;

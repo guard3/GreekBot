@@ -174,7 +174,7 @@ cGreekBot::process_rank(cAppCmdInteraction& i) HANDLER_BEGIN {
 		member = i.GetMember();
 	}
 	/* Prepare the response */
-	cMessageParams response;
+	cPartialMessage response;
 	response.SetFlags(MESSAGE_FLAG_EPHEMERAL);
 	/* Don't display data for bot users */
 	if (user->IsBotUser())
@@ -207,7 +207,7 @@ cGreekBot::process_rank(cAppCmdInteraction& i) HANDLER_BEGIN {
 cTask<>
 cGreekBot::process_top(cAppCmdInteraction& i) HANDLER_BEGIN {
 	/* Prepare the response */
-	cMessageParams response;
+	cPartialMessage response;
 	/* Acknowledge interaction */
 	co_await InteractionDefer(i);
 	/* Get data from the database */
@@ -261,7 +261,7 @@ cGreekBot::process_top(cAppCmdInteraction& i) HANDLER_BEGIN {
 
 cTask<>
 cGreekBot::process_leaderboard_help(cMsgCompInteraction& i) HANDLER_BEGIN {
-	co_await InteractionSendMessage(i, cMessageParams()
+	co_await InteractionSendMessage(i, cPartialMessage()
 		.SetFlags(MESSAGE_FLAG_EPHEMERAL)
 		.SetContent("Every minute that you're messaging, you randomly gain between 15 and 25 **XP**.")
 	);

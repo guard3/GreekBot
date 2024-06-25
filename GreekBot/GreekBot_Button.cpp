@@ -1,9 +1,8 @@
 #include "GreekBot.h"
 
-static const cMessageParams MISSING_PERMISSION_MESSAGE = [] {
-	cMessageParams result;
-	result.SetFlags(MESSAGE_FLAG_EPHEMERAL);
-	result.SetContent("You can't do that. You're missing the `MANAGE_NICKNAMES` permission.");
+static const auto MISSING_PERMISSION_MESSAGE = [] {
+	cPartialMessage result;
+	result.SetFlags(MESSAGE_FLAG_EPHEMERAL).SetContent("You can't do that. You're missing the `MANAGE_NICKNAMES` permission.");
 	return result;
 }();
 

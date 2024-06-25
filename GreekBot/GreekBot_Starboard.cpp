@@ -113,7 +113,7 @@ cGreekBot::process_reaction(const cSnowflake& channel_id, const cSnowflake& mess
 	cMember author_member = co_await GetGuildMember(LMG_GUILD_ID, msg->GetAuthor().GetId());
 	cUser&  author_user = *author_member.GetUser();
 	/* Prepare the message response with a preview embed */
-	cMessageParams response;
+	cPartialMessage response;
 	cEmbed& preview = response.EmplaceEmbeds().emplace_back();
 	preview.EmplaceAuthor(author_user.MoveUsername()).SetIconUrl(cCDN::GetUserAvatar(author_user));
 	preview.SetColor(get_lmg_member_color(author_member));
@@ -242,7 +242,7 @@ static cEmbed make_no_member_embed(const cUser* pUser, std::string_view guild_na
 
 cTask<>
 cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) HANDLER_BEGIN {
-	cMessageParams response;
+	cPartialMessage response;
 	auto& embeds = response.EmplaceEmbeds();
 	/* Check which subcommand was invoked */
 	switch (auto& subcommand = i.GetOptions().front(); cUtils::CRC32(0, subcommand.GetName())) {
@@ -354,7 +354,7 @@ cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) HANDLER_BEGIN {
 
 cTask<>
 cGreekBot::process_starboard_help(cMsgCompInteraction& i) HANDLER_BEGIN {
-	co_await InteractionSendMessage(i, cMessageParams()
+	co_await InteractionSendMessage(i, cPartialMessage()
 		.SetFlags(MESSAGE_FLAG_EPHEMERAL)
 		.SetContent("When a message receives **5 or more** <:Holy:409075809723219969> reactions, it gets to appear in <#978993330694266920>. Reacting to *your own* messages doesn't count!")
 	);

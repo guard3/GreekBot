@@ -9,17 +9,17 @@ enum : std::uint32_t {
 };
 /* ========== A static message indicating missing `BAN_MEMBERS` permission ========================================== */
 static const auto MISSING_PERMISSION_MESSAGE = []{
-	cMessageParams result;
+	cPartialMessage result;
 	result.SetFlags(MESSAGE_FLAG_EPHEMERAL).SetContent("You can't do that. You're missing the `BAN_MEMBERS` permission.");
 	return result;
 }();
 /* ========== A function that returns an appropriate message for when trying to ban the bot itself ================== */
-static const cMessageParams&
+static const cPartialMessage&
 get_no_ban_msg(std::uint32_t e) noexcept {
 	switch (e) {
 		case SUBCMD_TURK: {
 			static const auto result = []{
-				cMessageParams result;
+				cPartialMessage result;
 				result.SetFlags(MESSAGE_FLAG_EPHEMERAL).SetContent("Excuse me, ı'm not türk! Beep Bop... 🤖");
 				return result;
 			}();
@@ -27,7 +27,7 @@ get_no_ban_msg(std::uint32_t e) noexcept {
 		}
 		case SUBCMD_GREEK: {
 			static const auto result = []{
-				cMessageParams result;
+				cPartialMessage result;
 				result.SetFlags(MESSAGE_FLAG_EPHEMERAL).SetContent("Όπα κάτσε, τι έκανα; Είμαι καλό μποτ εγώ. Beep Bop... 🤖");
 				return result;
 			}();
@@ -35,7 +35,7 @@ get_no_ban_msg(std::uint32_t e) noexcept {
 		}
 		default: {
 			static const auto result = []{
-				cMessageParams result;
+				cPartialMessage result;
 				result.SetFlags(MESSAGE_FLAG_EPHEMERAL).SetContent("I'm not gonna ban myself, I'm a good bot. Beep Bop... 🤖");
 				return result;
 			}();
@@ -231,7 +231,7 @@ cGreekBot::process_ban(cInteraction& i, std::uint32_t sc, const cSnowflake& user
 			break;
 	}
 	/* Create the embed of the confirmation message */
-	cMessageParams response;
+	cPartialMessage response;
 	cEmbed& embed = response.EmplaceEmbeds().emplace_back();
 	embed.EmplaceAuthor(fmt::format("{} was banned", username)).SetIconUrl(cCDN::GetUserAvatar(user_id, hash, discr));
 	embed.SetColor(0xC43135);
@@ -240,7 +240,7 @@ cGreekBot::process_ban(cInteraction& i, std::uint32_t sc, const cSnowflake& user
 	fields.emplace_back("Reason", reason);
 	/* DM the goodbye message */
 	try {
-		co_await CreateDMMessage(user_id, cMessageParams().SetContent(fmt::format("You've been banned from **{}** with reason:\n```{}```", m_guilds.at(*i.GetGuildId()).GetName(), goodbye)));
+		co_await CreateDMMessage(user_id, cPartialMessage().SetContent(fmt::format("You've been banned from **{}** with reason:\n```{}```", m_guilds.at(*i.GetGuildId()).GetName(), goodbye)));
 		/* Add the goodbye message field only after the DM was sent successfully */
 		if (reason != goodbye)
 			fields.emplace_back("Goodbye message", goodbye);

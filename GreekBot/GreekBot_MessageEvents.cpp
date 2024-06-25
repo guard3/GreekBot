@@ -37,7 +37,7 @@ cGreekBot::OnMessageUpdate(cMessageUpdate& msg, hSnowflake guild_id, hPartialMem
 				user.emplace(co_await GetUser(db_msg->author_id));
 			} catch (...) {}
 
-			cMessageParams response;
+			cPartialMessage response;
 			cEmbed& embed = response.EmplaceEmbeds().emplace_back();
 			embed.SetColor(0x2ECD72);
 			embed.SetDescription(fmt::format("📝 Their message was **edited** https://discord.com/channels/{}/{}/{}", LMG_GUILD_ID, db_msg->channel_id, db_msg->id));
@@ -92,7 +92,7 @@ cGreekBot::OnMessageDelete(cSnowflake& message_id, cSnowflake& channel_id, hSnow
 				pUser = &user.emplace(co_await GetUser(db_msg->author_id));
 			} catch (...) {}
 
-			cMessageParams response;
+			cPartialMessage response;
 			add_message_delete_embed(response.EmplaceEmbeds(), *db_msg, pUser);
 			co_await CreateMessage(MESSAGE_LOG_CHANNEL_ID, response);
 		} catch (...) {}
@@ -122,7 +122,7 @@ cGreekBot::OnMessageDeleteBulk(std::span<cSnowflake> ids, cSnowflake& channel_id
 				co_return members;
 			}();
 			/* Prepare the embed vector for the log messages */
-			cMessageParams response;
+			cPartialMessage response;
 			auto& embeds = response.EmplaceEmbeds();
 			embeds.reserve(10);
 			for (auto& db_msg : db_msgs) {

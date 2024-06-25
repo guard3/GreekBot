@@ -17,7 +17,7 @@ cGreekBot::OnVoiceStateUpdate(cVoiceState& voice_state) {
 	auto it = rng::find(m_lmg_voice_states, voice_state.GetUserId(), &cVoiceState::GetUserId);
 	/* Prepare the log message */
 	auto& user = *voice_state.GetMember()->GetUser();
-	cMessageParams msg;
+	cPartialMessage msg;
 	auto& embed = msg.EmplaceEmbeds().emplace_back();
 	embed.EmplaceAuthor(user.GetUsername()).SetIconUrl(cCDN::GetUserAvatar(user));
 	embed.SetTimestamp(floor<milliseconds>(system_clock::now()));

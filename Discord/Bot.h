@@ -50,7 +50,7 @@ public:
 	cTask<> InteractionDefer(const cModalSubmitInteraction&, bool thinking = false);
 	cTask<> InteractionDefer(const cInteraction&, bool thinking = false);
 	/* Interactions - Send new message */
-	cTask<> InteractionSendMessage(const cInteraction&, const cMessageParams&);
+	cTask<> InteractionSendMessage(const cInteraction&, const cPartialMessage&);
 	/* Interactions - Send modal */
 	cTask<> InteractionSendModal(const cAppCmdInteraction&, const cModal&);
 	cTask<> InteractionSendModal(const cMsgCompInteraction&, const cModal&);
@@ -63,8 +63,8 @@ public:
 	cTask<int> BeginGuildPrune(const cSnowflake& id, int days, std::string_view reason = {});
 
 	cTask<cChannel> CreateDM(const cSnowflake& recipient_id);
-	cTask<cMessage> CreateMessage(crefChannel channel, const cMessageParams& msg);
-	cTask<cMessage> CreateDMMessage(const cSnowflake& recipient_id, const cMessageParams& msg);
+	cTask<cMessage> CreateMessage(crefChannel channel, const cPartialMessage& msg);
+	cTask<cMessage> CreateDMMessage(const cSnowflake& recipient_id, const cPartialMessage& msg);
 	cTask<cMessage> EditMessage(const cSnowflake& channel_id, const cSnowflake& target_msg, const cMessageUpdate& msg);
 	cTask<> DeleteMessage(const cSnowflake& channel_id, const cSnowflake& msg_id, std::string_view reason = {});
 	cTask<> DeleteMessages(crefChannel channel, std::span<const cSnowflake> msg_ids, std::string_view reason = {});

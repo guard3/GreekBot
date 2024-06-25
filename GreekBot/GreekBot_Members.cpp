@@ -21,7 +21,7 @@ cGreekBot::OnGuildMemberUpdate(cSnowflake& guild_id, cMemberUpdate& member) {
 		/* Check if there's a message registered in the database for this member */
 		const int64_t msg_id = co_await cDatabase::WC_GetMessage(member);
 		if (msg_id == 0 && member.GetNickname().empty()) {
-			cMessage msg = co_await CreateMessage(NEW_MEMBERS_CHANNEL_ID, cMessageParams()
+			cMessage msg = co_await CreateMessage(NEW_MEMBERS_CHANNEL_ID, cPartialMessage()
 				.SetContent(fmt::format("<@{}> Just got a rank!", member.GetUser().GetId()))
 				.SetComponents({
 					cActionRow{

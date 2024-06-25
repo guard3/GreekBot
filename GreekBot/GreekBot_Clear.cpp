@@ -1,7 +1,7 @@
 #include "GreekBot.h"
 
 static const auto MISSING_PERMISSION_MSG = [] {
-	cMessageParams msg;
+	cPartialMessage msg;
 	msg.SetFlags(MESSAGE_FLAG_EPHEMERAL).SetContent("You can't do that. You're missing the `MANAGE_MESSAGES` permission");
 	return msg;
 }();
@@ -25,7 +25,7 @@ cGreekBot::process_clear(cAppCmdInteraction& i) {
 	for (; it != gen.end(); co_await ++it)
 		ids.push_back(it->GetId());
 	/* Delete messages */
-	cMessageParams response;
+	cPartialMessage response;
 	if (ids.empty()) {
 		response.SetContent("There are no messages to delete.");
 	} else {

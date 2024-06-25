@@ -58,7 +58,7 @@ inline eMessageFlag operator&(eMessageFlag a, eMessageFlag b) { return (eMessage
 
 /* TODO: make cMessage inherit from here */
 /* Base class of cMessage; used for creating messages */
-class cMessageParams {
+class cPartialMessage {
 private:
 	eMessageFlag            m_flags;
 	std::string             m_content;
@@ -66,12 +66,16 @@ private:
 	std::vector<cEmbed>     m_embeds;
 
 public:
-	cMessageParams() noexcept : m_flags{ MESSAGE_FLAG_NONE } {}
+	explicit cPartialMessage(const boost::json::value&);
+	explicit cPartialMessage(const boost::json::object&);
+	cPartialMessage() noexcept : m_flags{ MESSAGE_FLAG_NONE } {}
 	/* Getters */
 	eMessageFlag                     GetFlags() const noexcept { return m_flags;      }
 	std::string_view               GetContent() const noexcept { return m_content;    }
 	std::span<const cActionRow> GetComponents() const noexcept { return m_components; }
+	std::span<      cActionRow> GetComponents()       noexcept { return m_components; }
 	std::span<const cEmbed>         GetEmbeds() const noexcept { return m_embeds;     }
+	std::span<      cEmbed>         GetEmbeds()       noexcept { return m_embeds;     }
 	/* Movers */
 	std::string                MoveContent() noexcept { return std::move(m_content);    }
 	std::vector<cActionRow> MoveComponents() noexcept { return std::move(m_components); }
@@ -127,29 +131,25 @@ public:
 			return m_embeds = T(std::forward<Arg>(arg), std::forward<Args>(args)...);
 	}
 	/* Setters */
-	cMessageParams& SetFlags(eMessageFlag flags) noexcept {
-		m_flags = flags;
-		return *this;
-	}
+	cPartialMessage& SetFlags(eMessageFlag flags) & noexcept { m_flags = flags; return *this; }
 	template<typename T = decltype(m_content), typename Arg = T> requires std::constructible_from<T, Arg&&>
-	cMessageParams& SetContent(Arg&& arg) {
-		EmplaceContent(std::forward<Arg>(arg));
-		return *this;
-	}
+	cPartialMessage& SetContent(Arg&& arg) & { EmplaceContent(std::forward<Arg>(arg)); return *this; }
 	template<typename T = decltype(m_components), typename Arg = T> requires std::constructible_from<T, Arg&&>
-	cMessageParams& SetComponents(Arg&& arg) {
-		EmplaceComponents(std::forward<Arg>(arg));
-		return *this;
-	}
+	cPartialMessage& SetComponents(Arg&& arg) & { EmplaceComponents(std::forward<Arg>(arg)); return *this; }
 	template<typename T = decltype(m_embeds), typename Arg = T> requires std::constructible_from<T, Arg&&>
-	cMessageParams& SetEmbeds(Arg&& arg) {
-		EmplaceEmbeds(std::forward<Arg>(arg));
-		return *this;
-	}
+	cPartialMessage& SetEmbeds(Arg&& arg) & { EmplaceEmbeds(std::forward<Arg>(arg)); return *this; }
+
+	cPartialMessage&& SetFlags(eMessageFlag flags) && noexcept { return std::move(SetFlags(flags)); }
+	template<typename T = decltype(m_content), typename Arg = T> requires std::constructible_from<T, Arg&&>
+	cPartialMessage&& SetContent(Arg&& arg) && { return std::move(SetContent(std::forward<Arg>(arg))); }
+	template<typename T = decltype(m_components), typename Arg = T> requires std::constructible_from<T, Arg&&>
+	cPartialMessage&& SetComponents(Arg&& arg) && { return std::move(SetComponents(std::forward<Arg>(arg))); }
+	template<typename T = decltype(m_embeds), typename Arg = T> requires std::constructible_from<T, Arg&&>
+	cPartialMessage&& SetEmbeds(Arg&& arg) && { return std::move(SetEmbeds(std::forward<Arg>(arg))); }
 };
 
 void
-tag_invoke(boost::json::value_from_tag, boost::json::value& v, const cMessageParams&);
+tag_invoke(boost::json::value_from_tag, boost::json::value& v, const cPartialMessage&);
 
 class cMessageUpdate final {
 private:
@@ -220,62 +220,36 @@ tag_invoke(boost::json::value_to_tag<cMessageUpdate>, const boost::json::value&)
 void
 tag_invoke(boost::json::value_from_tag, boost::json::value&, const cMessageUpdate&);
 
-class cMessage final {
-private:
+class cMessage final : public cPartialMessage {
 	cSnowflake  id;
 	cSnowflake  channel_id;
 	cUser       author;
-	std::string content;
 	std::chrono::sys_time<std::chrono::milliseconds> timestamp;
 	std::chrono::sys_time<std::chrono::milliseconds> edited_timestamp;
 	// ...
 	eMessageType type;
-	// ...
-	eMessageFlag flags;
 
-	std::vector<cEmbed> embeds;
 	std::vector<cAttachment> attachments;
 
 public:
 	explicit cMessage(const boost::json::object&);
 	explicit cMessage(const boost::json::value&);
-
-	const cSnowflake& GetId() const noexcept { return id; }
-	const cSnowflake& GetChannelId() const noexcept { return channel_id; }
-	const cUser& GetAuthor() const noexcept { return author; }
-	std::string_view GetContent() const noexcept { return content; }
-	eMessageType GetType() const noexcept { return type; }
-	eMessageFlag GetFlags() const noexcept { return flags; }
-	std::span<const cEmbed> GetEmbeds() const noexcept { return embeds; }
+	/* Getters */
+	const cSnowflake&        GetId() const noexcept { return id;               }
+	      cSnowflake&        GetId()       noexcept { return id;               }
+	const cSnowflake& GetChannelId() const noexcept { return channel_id;       }
+	      cSnowflake& GetChannelId()       noexcept { return channel_id;       }
+	const cUser&         GetAuthor() const noexcept { return author;           }
+	      cUser&         GetAuthor()       noexcept { return author;           }
+	eMessageType           GetType() const noexcept { return type;             }
+	auto              GetTimestamp() const noexcept { return timestamp;        }
+	auto        GetEditedTimestamp() const noexcept { return edited_timestamp; }
 	std::span<const cAttachment> GetAttachments() const noexcept { return attachments; }
-	template<typename Duration = std::chrono::milliseconds>
-	std::chrono::sys_time<Duration> GetTimestamp() const noexcept {
-		return std::chrono::floor<Duration>(timestamp);
-	}
-	template<typename Duration = std::chrono::milliseconds>
-	std::chrono::sys_time<Duration> GetEditedTimestamp() const noexcept {
-		return std::chrono::floor<Duration>(edited_timestamp);
-	}
-
-	cSnowflake& GetId() noexcept { return id; }
-	cSnowflake& GetChannelId() noexcept { return channel_id; }
-	cUser& GetAuthor() noexcept { return author; };
-	std::span<cEmbed> GetEmbeds() noexcept { return embeds; }
-	std::span<cAttachment> GetAttachments() noexcept { return attachments; }
-
-	std::string MoveContent() noexcept { return std::move(content); }
-	std::vector<cEmbed> MoveEmbeds() noexcept { return std::move(embeds); }
+	std::span<      cAttachment> GetAttachments()       noexcept { return attachments; }
+	/* Movers */
+	cUser MoveAuthor() noexcept { return std::move(author); }
 	std::vector<cAttachment> MoveAttachments() noexcept { return std::move(attachments); }
 };
-
-template<>
-inline std::chrono::sys_time<std::chrono::milliseconds> cMessage::GetTimestamp() const noexcept {
-	return timestamp;
-}
-template<>
-inline std::chrono::sys_time<std::chrono::milliseconds> cMessage::GetEditedTimestamp() const noexcept {
-	return edited_timestamp;
-}
 
 class crefMessage final {
 private:

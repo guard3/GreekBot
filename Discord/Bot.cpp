@@ -59,20 +59,20 @@ cBot::BeginGuildPrune(const cSnowflake &id, int days, std::string_view reason) {
 
 cTask<cChannel>
 cBot::CreateDM(const cSnowflake& recipient_id) {
-	co_return cChannel {
+	co_return cChannel{
 		co_await DiscordPost("/users/@me/channels", {{ "recipient_id", recipient_id.ToString() }})
 	};
 }
 
 cTask<cMessage>
-cBot::CreateMessage(crefChannel channel, const cMessageParams& params) {
+cBot::CreateMessage(crefChannel channel, const cPartialMessage& msg) {
 	co_return cMessage{
-		co_await DiscordPost(fmt::format("/channels/{}/messages", channel.GetId()), json::value_from(params).get_object())
+		co_await DiscordPost(fmt::format("/channels/{}/messages", channel.GetId()), json::value_from(msg).get_object())
 	};
 }
 
 cTask<cMessage>
-cBot::CreateDMMessage(const cSnowflake& recipient_id, const cMessageParams& msg) {
+cBot::CreateDMMessage(const cSnowflake& recipient_id, const cPartialMessage& msg) {
 	co_return co_await CreateMessage(co_await CreateDM(recipient_id), msg);
 }
 
