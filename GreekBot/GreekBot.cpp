@@ -137,6 +137,8 @@ cGreekBot::process_interaction(cAppCmdInteraction& i) HANDLER_BEGIN {
 			return process_ban_ctx_menu(i, "turk");
 		case 1174836455714078740: // Apps > Ban Greek
 			return process_ban_ctx_menu(i, "greek");
+		case 1254933366562754591: // clear
+			return process_clear(i);
 		case 1178824125192613939: // test
 			return process_test(i);
 		default:
@@ -187,9 +189,14 @@ cGreekBot::process_test(cAppCmdInteraction& i) HANDLER_BEGIN {
 		return msg;
 	}();
 	co_await InteractionSendMessage(i, MESSAGE);
+	if (!(i.GetMember()->GetPermissions() & PERM_MANAGE_MESSAGES))
+		co_return;
 
-	std::size_t count = 0;
-	co_for (auto& msg, GetChannelMessages(i.GetChannelId(), 201)) {
-		cUtils::PrintLog("Count: {} ID: {} CONTENT: {}", ++count, msg.GetId(), msg.GetContent());
+	std::vector<cSnowflake> msg_ids;
+	msg_ids.reserve(5);
+	co_for (auto& msg, GetChannelMessages(i.GetChannelId(), 5)) {
+		msg_ids.push_back(msg.GetId());
 	}
+	co_await DeleteMessages(i.GetChannelId(), msg_ids, fmt::format("/clear by {}", i.GetUser().GetUsername()));
+
 } HANDLER_END

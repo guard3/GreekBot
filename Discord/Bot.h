@@ -21,6 +21,7 @@ private:
 	cTask<> OnUserUpdate(cUser&) override;
 
 	cAsyncGenerator<cMessage> get_channel_messages(std::string);
+	cTask<> delete_message(const cSnowflake& channel_id, const cSnowflake& msg_id, std::span<const cHttpField> fields);
 
 protected:
 	using cGateway::OnInteractionCreate;
@@ -66,6 +67,7 @@ public:
 	cTask<cMessage> CreateDMMessage(const cSnowflake& recipient_id, const cMessageParams& msg);
 	cTask<cMessage> EditMessage(const cSnowflake& channel_id, const cSnowflake& target_msg, const cMessageUpdate& msg);
 	cTask<> DeleteMessage(const cSnowflake& channel_id, const cSnowflake& msg_id, std::string_view reason = {});
+	cTask<> DeleteMessages(crefChannel channel, std::span<const cSnowflake> msg_ids, std::string_view reason = {});
 	cTask<cMessage> GetChannelMessage(const cSnowflake& channel_id, const cSnowflake& message_id);
 	cAsyncGenerator<cMessage> GetChannelMessages(crefChannel channel, std::size_t limit = 50);
 	cAsyncGenerator<cMessage> GetChannelMessagesBefore(crefChannel channel, crefMessage before_this_message, std::size_t limit = 50);

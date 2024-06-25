@@ -63,6 +63,7 @@ private:
 	cTask<> process_starboard_help(cMsgCompInteraction&);
 	cTask<> process_leaderboard_help(cMsgCompInteraction&);
 	cTask<> process_timestamp(cAppCmdInteraction&);
+	cTask<> process_clear(cAppCmdInteraction&);
 	cTask<> process_test(cAppCmdInteraction&);
 
 	cTask<> process_interaction(cAppCmdInteraction&);
