@@ -2,8 +2,9 @@
 #include "Queries.h"
 #include "Utils.h"
 #include <filesystem>
-#include <boost/asio/strand.hpp>
-#include <boost/asio/system_executor.hpp>
+#include <thread>
+#include <boost/asio/defer.hpp>
+#include <boost/asio/io_context.hpp>
 #include <sqlite3.h>
 #if   defined _WIN32
 #  define WIN32_LEAN_AND_MEAN
@@ -162,15 +163,28 @@ cDatabase::~cDatabase() {
 namespace net = boost::asio;
 class resume_on_db_strand {
 private:
-	static inline net::strand<net::system_executor> ms_strand;
+	/* A custom io_context that runs on one strand and never runs out of work */
+	static inline auto ms_ioc = [] {
+		class _ : public net::io_context {
+			net::executor_work_guard<net::io_context::executor_type> m_work_guard;
+			std::thread m_work_thread;
+		public:
+			_() : net::io_context(1), m_work_guard(net::make_work_guard(*this)), m_work_thread([this] { run(); }) {}
+			~_() {
+				m_work_guard.reset();
+				m_work_thread.join();
+			}
+		};
+		return _();
+	}();
 public:
-	bool await_ready() {
-		return ms_strand.running_in_this_thread();
+	bool await_ready() const {
+		return ms_ioc.get_executor().running_in_this_thread();
 	}
-	void await_suspend(std::coroutine_handle<> h) {
-		net::post(ms_strand, [h]{ h.resume(); });
+	void await_suspend(std::coroutine_handle<> h) const {
+		net::defer(ms_ioc, [h]{ h.resume(); });
 	}
-	void await_resume() {}
+	void await_resume() const {}
 };
 /* ================================================================================================================== */
 cTask<std::uint64_t>

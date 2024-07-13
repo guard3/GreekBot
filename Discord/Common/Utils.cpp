@@ -1,11 +1,25 @@
 #include "Utils.h"
 #include <cstdio>
-#include <boost/asio/strand.hpp>
-#include <boost/asio/system_executor.hpp>
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/post.hpp>
+#include <thread>
 #include <zlib.h>
 /* ================================================================================================================== */
 namespace net = boost::asio;
-static net::strand<net::system_executor> system_strand;
+/* ========== A custom io_context that runs on one strand and never runs out of work ================================ */
+static auto printer_ioc = [] {
+	class _ : public net::io_context {
+		net::executor_work_guard<net::io_context::executor_type> m_work_guard;
+		std::thread m_work_thread;
+	public:
+		_() : net::io_context(1), m_work_guard(net::make_work_guard(*this)), m_work_thread([this] { run(); }) {}
+		~_() {
+			m_work_guard.reset();
+			m_work_thread.join();
+		}
+	};
+	return _();
+}();
 /* ========== Random engine stuff =================================================================================== */
 static std::random_device g_rd;
 std::mt19937    cUtils::ms_gen(g_rd());
@@ -44,15 +58,15 @@ struct printer {
 /* ================================================================================================================== */
 void
 cUtils::print_err(std::string str, char nl) noexcept try {
-	net::post(system_strand, printer{ stderr, "ERR", std::move(str), nl });
+	net::post(printer_ioc, printer{ stderr, "ERR", std::move(str), nl });
 } catch (...) {}
 void
 cUtils::print_log(std::string str, char nl) noexcept try {
-	net::post(system_strand, printer{ stdout, "LOG", std::move(str), nl });
+	net::post(printer_ioc, printer{ stdout, "LOG", std::move(str), nl });
 } catch (...) {}
 void
 cUtils::print_msg(std::string str, char nl) noexcept try {
-	net::post(system_strand, printer{ stdout, "MSG", std::move(str), nl });
+	net::post(printer_ioc, printer{ stdout, "MSG", std::move(str), nl });
 } catch (...) {}
 /* ================================================================================================================== */
 std::string
