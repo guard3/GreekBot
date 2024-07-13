@@ -9,7 +9,7 @@ cGateway::implementation::resume() {
 void
 cGateway::implementation::identify() {
 	/* Then send the payload */
-	send(fmt::format(R"({{"op":2,"d":{{"token":{:?},"intents":{},"compress":true,"properties":{{"os":{:?},"browser":"GreekBot","device":"GreekBot"}}}}}})", GetToken(), (int)m_intents, cUtils::GetOS()));
+	send(fmt::format(R"({{"op":2,"d":{{"token":{:?},"intents":{},"properties":{{"os":{:?},"browser":"GreekBot","device":"GreekBot"}}}}}})", GetToken(), (int)m_intents, cUtils::GetOS()));
 	/* Cancel ongoing guild member requests */
 	rgm_reset();
 }
