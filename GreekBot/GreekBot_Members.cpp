@@ -22,7 +22,7 @@ cGreekBot::OnGuildMemberUpdate(cSnowflake& guild_id, cMemberUpdate& member) {
 		const int64_t msg_id = co_await cDatabase::WC_GetMessage(member);
 		if (msg_id == 0 && member.GetNickname().empty()) {
 			cMessage msg = co_await CreateMessage(NEW_MEMBERS_CHANNEL_ID, cPartialMessage()
-				.SetContent(fmt::format("<@{}> Just got a rank!", member.GetUser().GetId()))
+				.SetContent(fmt::format("<@{}> Just got a rank!{}", member.GetUser().GetId(), member.GetFlags() & MEMBER_FLAG_DID_REJOIN ? "\n-# They rejoined the server." : ""))
 				.SetComponents({
 					cActionRow{
 						cButton{
@@ -45,7 +45,7 @@ cGreekBot::OnGuildMemberUpdate(cSnowflake& guild_id, cMemberUpdate& member) {
 			 * If editing fails, in cases like where the original message is deleted, that's fine */
 			try {
 				co_await EditMessage(NEW_MEMBERS_CHANNEL_ID, msg_id, cMessageUpdate()
-					.SetContent(fmt::format("<@{}> Just got a nickname!", member.GetUser().GetId()))
+					.SetContent(fmt::format("<@{}> Just got a nickname!{}", member.GetUser().GetId(), member.GetFlags() & MEMBER_FLAG_DID_REJOIN ? "\n-# They rejoined the server." : ""))
 					.SetComponents({
 						cActionRow{
 							cButton{
@@ -56,8 +56,7 @@ cGreekBot::OnGuildMemberUpdate(cSnowflake& guild_id, cMemberUpdate& member) {
 						}
 					})
 				);
-			}
-			catch (const xDiscordError&) {}
+			} catch (const xDiscordError&) {}
 			co_await cDatabase::WC_EditMessage(msg_id);
 		}
 	}
@@ -68,7 +67,6 @@ cGreekBot::OnGuildMemberRemove(cSnowflake& guild_id, cUser& user) {
 	if (guild_id == LMG_GUILD_ID) {
 		if (uint64_t msg_id = co_await cDatabase::WC_DeleteMember(user); msg_id != 0) try {
 			co_await DeleteMessage(NEW_MEMBERS_CHANNEL_ID, msg_id);
-		}
-		catch (...) {}
+		} catch (...) {}
 	}
 }

@@ -9,10 +9,10 @@ tag_invoke(json::value_to_tag<eMemberFlag>, const json::value& v) {
 	return static_cast<eMemberFlag>(v.to_number<int>());
 }
 
-cMemberUpdate::cMemberUpdate(const json::value& v):
-	m_user{ v.at("user") },
-	m_roles{ json::value_to<std::vector<cSnowflake>>(v.at("roles")) } {
-	auto& o = v.as_object();
+cMemberUpdate::cMemberUpdate(const json::value& v) : cMemberUpdate(v.as_object()) {}
+cMemberUpdate::cMemberUpdate(const json::object& o) :
+	m_user{ o.at("user") },
+	m_roles{ json::value_to<std::vector<cSnowflake>>(o.at("roles")) } {
 	const json::value* p;
 	if ((p = o.if_contains("nick"))) {
 		auto result = json::try_value_to<std::string>(*p);
@@ -20,6 +20,7 @@ cMemberUpdate::cMemberUpdate(const json::value& v):
 			m_nick = std::move(result.value());
 	}
 	m_pending = (p = o.if_contains("pending")) && p->as_bool();
+	m_flags = (p = o.if_contains("flags")) ? json::value_to<eMemberFlag>(*p) : MEMBER_FLAG_NONE;
 }
 
 cPartialMember::cPartialMember(const json::value& v): cPartialMember(v.as_object()) {}

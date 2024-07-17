@@ -32,22 +32,6 @@ public:
 void
 tag_invoke(boost::json::value_from_tag, boost::json::value&, const cMemberOptions&);
 
-class cMemberUpdate final {
-private:
-	cUser m_user;
-	std::string m_nick;
-	std::vector<cSnowflake> m_roles;
-	bool m_pending;
-
-public:
-	explicit cMemberUpdate(const boost::json::value&);
-
-	const cUser& GetUser() const noexcept { return m_user; }
-	std::string_view GetNickname() const noexcept { return m_nick; }
-	std::span<const cSnowflake> GetRoles() const noexcept { return m_roles; }
-	bool IsPending() const noexcept { return m_pending; }
-};
-
 enum eMemberFlag {
 	MEMBER_FLAG_NONE                  = 0,
 	MEMBER_FLAG_DID_REJOIN            = 1 << 0,
@@ -58,6 +42,25 @@ enum eMemberFlag {
 inline eMemberFlag operator|(eMemberFlag a, eMemberFlag b) noexcept { return (eMemberFlag)((int)a | (int)b); }
 inline eMemberFlag operator&(eMemberFlag a, eMemberFlag b) noexcept { return (eMemberFlag)((int)a & (int)b); }
 eMemberFlag tag_invoke(boost::json::value_to_tag<eMemberFlag>, const boost::json::value&);
+
+class cMemberUpdate final {
+private:
+	cUser m_user;
+	std::string m_nick;
+	std::vector<cSnowflake> m_roles;
+	bool m_pending;
+	eMemberFlag m_flags;
+
+public:
+	explicit cMemberUpdate(const boost::json::value&);
+	explicit cMemberUpdate(const boost::json::object&);
+
+	const cUser& GetUser() const noexcept { return m_user; }
+	std::string_view GetNickname() const noexcept { return m_nick; }
+	std::span<const cSnowflake> GetRoles() const noexcept { return m_roles; }
+	eMemberFlag GetFlags() const noexcept { return m_flags; }
+	bool IsPending() const noexcept { return m_pending; }
+};
 
 class cPartialMember {
 public:

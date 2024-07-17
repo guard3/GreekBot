@@ -189,14 +189,4 @@ cGreekBot::process_test(cAppCmdInteraction& i) HANDLER_BEGIN {
 		return msg;
 	}();
 	co_await InteractionSendMessage(i, MESSAGE);
-	if (!(i.GetMember()->GetPermissions() & PERM_MANAGE_MESSAGES))
-		co_return;
-
-	std::vector<cSnowflake> msg_ids;
-	msg_ids.reserve(5);
-	co_for (auto& msg, GetChannelMessages(i.GetChannelId(), 5)) {
-		msg_ids.push_back(msg.GetId());
-	}
-	co_await DeleteMessages(i.GetChannelId(), msg_ids, fmt::format("/clear by {}", i.GetUser().GetUsername()));
-
 } HANDLER_END
