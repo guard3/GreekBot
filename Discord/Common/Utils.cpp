@@ -1,4 +1,5 @@
 #include "Utils.h"
+#include <array>
 #include <cstdio>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/post.hpp>
@@ -35,20 +36,17 @@ struct printer {
 	const char *m_tag;
 	std::string m_str;
 	char        m_nl;
-	void operator()() const noexcept try {
-		/* Short month names */
-		static const char months[12][4] { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+	void operator()() const noexcept {
 		/* Retrieve the current local time; This should ideally use C++20 extensions for chrono but THAT'S STILL NOT AVAILABLE, LIKE HOLY SHIT BRUH */
 		const std::time_t t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-		const std::tm* p = std::localtime(&t);
-		if (!p) {
-			static const std::tm default_tm{ .tm_year = 70 };
-			p = &default_tm;
+		if (const std::tm* p = std::localtime(&t)) try {
+			/* Print */
+			static const std::array<char[4], 12> months { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+			fmt::print(m_strm, "{:02}/{}/{} {:02}:{:02}:{:02} [{}] {}{}", p->tm_mday, months.at(p->tm_mon), p->tm_year + 1900, p->tm_hour, p->tm_min, p->tm_sec, m_tag, m_str, m_nl);
+			return;
+		} catch (...) {
+			/* If any exception occurs from fmt::print, try again with an empty message */
 		}
-		/* Print */
-		fmt::print(m_strm, "{:02}/{}/{} {:02}:{:02}:{:02} [{}] {}{}", p->tm_mday, months[p->tm_mon], p->tm_year + 1900, p->tm_hour, p->tm_min, p->tm_sec, m_tag, m_str, m_nl);
-	} catch (...) {
-		/* If any exception occurs from fmt::print, try again with an empty message */
 		std::fputs("                     [", m_strm);
 		std::fputs(m_tag, m_strm);
 		std::fputs("] Output stream error.", m_strm);
