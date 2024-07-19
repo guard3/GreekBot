@@ -169,9 +169,7 @@ LABEL_PARSED:
 	/* Start the next asynchronous read operation to keep listening for more events */
 	m_ws->async_read(m_buffer, [this](const beast::error_code& ec, std::size_t size) { on_read(ec, size); });
 	m_async_status |= ASYNC_READ;
-#ifdef GW_LOG_LVL_2
-	cUtils::PrintLog("{}", json::serialize(v));
-#endif
+	cUtils::PrintDbg("{}", json::serialize(v));
 	/* Process the event */
 	switch (v.at("op").to_number<int>()) {
 		case OP_DISPATCH:

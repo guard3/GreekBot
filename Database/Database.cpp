@@ -1,17 +1,10 @@
 #include "Database.h"
 #include "Queries.h"
 #include "Utils.h"
-#include <filesystem>
 #include <thread>
 #include <boost/asio/defer.hpp>
 #include <boost/asio/io_context.hpp>
 #include <sqlite3.h>
-#if   defined _WIN32
-#  define WIN32_LEAN_AND_MEAN
-#  include <Windows.h>
-#elif defined __APPLE__
-#  include <mach-o/dyld.h>
-#endif
 /* ========== The global sqlite connection handle =================================================================== */
 static sqlite3* g_db = nullptr;
 /* ========== The database instance which invokes the constructor that initializes the sqlite connection ============ */
@@ -70,53 +63,6 @@ sqlite3_prepare(sqlite3_query_str query) noexcept {
 	sqlite3_prepare_v2(g_db, query.str, query.size, &stmt, nullptr);
 	return sqlite3_stmt_ptr(stmt);
 }
-/* ========== A helper function which returns a fully qualified UTF-8 path for the database file ==================== */
-static std::u8string get_db_filename() {
-	namespace fs = std::filesystem;
-#if defined _WIN32
-	std::vector<WCHAR> szPath(MAX_PATH);
-	for (DWORD dwLen;;) {
-		/* Retrieve the fully qualified path of the executable */
-		dwLen = GetModuleFileNameW(NULL, szPath.data(), (DWORD)szPath.size());
-		/* If the length is 0, an error occured */
-		if (dwLen == 0) {
-			const DWORD dwMsg = GetLastError();
-			LPSTR lpszMsg = NULL;
-			try {
-				constexpr DWORD FORMAT_FLAGS = FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS;
-				if (0 == FormatMessageA(FORMAT_FLAGS, NULL, dwMsg, 0, (LPSTR)&lpszMsg, 256, NULL))
-					throw std::runtime_error("Cannot find a suitable filepath.");
-				throw std::runtime_error(lpszMsg);
-			} catch (...) {
-				LocalFree(lpszMsg);
-				throw;
-			}
-		}
-		/* If the length is smaller than the total vector size, then the full path has been retrieved */
-		if (dwLen < szPath.size()) {
-			szPath.resize(dwLen);
-			break;
-		}
-		/* Otherwise, increase the vector size and retry */
-		szPath.resize(dwLen * 2);
-	}
-	fs::path result{ szPath.begin(), szPath.end() };
-#elif defined __APPLE__
-	std::vector<char> path(256);
-	/* Retrieve 'a' path to the executable. */
-	if (uint32_t size = 256; _NSGetExecutablePath(path.data(), &size) < 0) {
-		/* If the path vector isn't large enough, 'size' is updated to the required size */
-		path.resize(size);
-		/* Retry */
-		_NSGetExecutablePath(path.data(), &size);
-	}
-	fs::path result = fs::canonical(path.data());
-#else
-	fs::path result = fs::canonical("/proc/self/exe");
-#endif
-	/* Replace the filename and convert the final path to a UTF-8 encoded string */
-	return result.replace_filename("database.db").u8string();
-}
 /* ========== The database instance constructor which initializes the global sqlite connection ====================== */
 void cDatabase::Initialize() {
 	sqlite3* db = nullptr; // The database connection handle
@@ -124,7 +70,7 @@ void cDatabase::Initialize() {
 	try {
 		/* Open a database connection; NOMUTEX since we make sure to use the connection in a strand */
 		constexpr int DB_FLAGS = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX;
-		int rc = sqlite3_open_v2((const char*)get_db_filename().c_str(), &db, DB_FLAGS, nullptr);
+		int rc = sqlite3_open_v2(reinterpret_cast<const char*>(cUtils::GetExecutablePath().replace_filename("database.db").u8string().c_str()), &db, DB_FLAGS, nullptr);
 		/* If db is null after opening, a memory error occurred */
 		if (!db) throw std::bad_alloc();
 		/* If database handle is open, execute the init statements */
@@ -138,7 +84,7 @@ void cDatabase::Initialize() {
 						break;
 				} else {
 					g_db = db;
-					cUtils::PrintLog("Database initialized successfully");
+					cUtils::PrintDbg("Database initialized successfully");
 					return;
 				}
 			}

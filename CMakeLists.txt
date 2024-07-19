@@ -57,13 +57,7 @@ target_include_directories(
     ${PROJECT_SOURCE_DIR}/Database
 )
 
-option(GW_LOG_LVL "Whether or not to print logs from the gateway" 1)
-if(GW_LOG_LVL EQUAL 1)
-    target_compile_definitions(GreekBot PRIVATE GW_LOG_LVL_1)
-elseif(GW_LOG_LVL EQUAL 2)
-    target_compile_definitions(GreekBot PRIVATE GW_LOG_LVL_2)
-    target_compile_definitions(GreekBot PRIVATE GW_LOG_LVL_1)
-endif()
+target_compile_definitions(GreekBot PRIVATE $<$<CONFIG:Debug>:DEBUG>)
 
 # Link OpenSSL
 set(OPENSSL_USE_STATIC_LIBS TRUE)

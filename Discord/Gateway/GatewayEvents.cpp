@@ -37,9 +37,7 @@ cGateway::implementation::process_event(const json::value& v) {
 		/* Determine the event type */
 		event_name = json::value_to<std::string>(v.at("t"));
 		auto  type = cUtils::CRC32(0, event_name);
-#ifdef GW_LOG_LVL_1
 		cUtils::PrintLog("Event: 0x{:08X} {}", type, event_name);
-#endif
 		/* Trigger the appropriate event methods
 		 * All JSON data is parsed BEFORE co_awaiting, as doing so will invalidate the argument reference! */
 		switch (const json::object& d = v.at("d").as_object(); type) {

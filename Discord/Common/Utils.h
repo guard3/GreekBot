@@ -3,6 +3,7 @@
 #include <charconv>
 #include <chrono>
 #include <concepts>
+#include <filesystem>
 #include <random>
 #include <stdexcept>
 #include <string>
@@ -25,6 +26,7 @@ private:
 	static void print_err(std::string, char) noexcept;
 	static void print_log(std::string, char) noexcept;
 	static void print_msg(std::string, char) noexcept;
+	static void print_dbg(std::string, char) noexcept;
 public:
 	cUtils() = delete;
 	/* Random functions */
@@ -59,6 +61,17 @@ public:
 	} catch (...) {
 		print_msg(std::string(), nl);
 	}
+	template<char nl = '\n', typename... Args>
+	static void PrintDbg(fmt::format_string<Args...> format, Args&&... args) noexcept
+#ifdef DEBUG
+	try {
+		print_dbg(fmt::format(format, std::forward<Args>(args)...), nl);
+	} catch (...) {
+		print_dbg(std::string(), nl);
+	}
+#else
+	{}
+#endif
 	/* Converting a string to int */
 	template<std::integral T = int>
 	static T ParseInt(std::string_view str) {
@@ -95,5 +108,7 @@ public:
 	}
 	/* Resolving the OS we're running on */
 	static std::string_view GetOS() noexcept;
+	/* Get a fully qualified path to the running executable */
+	static std::filesystem::path GetExecutablePath();
 };
 #endif //GREEKBOT_UTILS_H

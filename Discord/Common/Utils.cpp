@@ -1,10 +1,17 @@
 #include "Utils.h"
 #include <array>
 #include <cstdio>
+#include <fstream>
+#include <thread>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/post.hpp>
-#include <thread>
 #include <zlib.h>
+#if   defined _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#elif defined __APPLE__
+#include <mach-o/dyld.h>
+#endif
 /* ================================================================================================================== */
 namespace net = boost::asio;
 /* ========== A custom io_context that runs on one strand and never runs out of work ================================ */
@@ -36,35 +43,52 @@ struct printer {
 	const char *m_tag;
 	std::string m_str;
 	char        m_nl;
+	bool        m_bWriteToLogFile;
 	void operator()() const noexcept {
 		/* Retrieve the current local time; This should ideally use C++20 extensions for chrono but THAT'S STILL NOT AVAILABLE, LIKE HOLY SHIT BRUH */
+		char datetime[128];
 		const std::time_t t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-		if (const std::tm* p = std::localtime(&t)) try {
-			/* Print */
-			static const std::array<char[4], 12> months { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
-			fmt::print(m_strm, "{:02}/{}/{} {:02}:{:02}:{:02} [{}] {}{}", p->tm_mday, months.at(p->tm_mon), p->tm_year + 1900, p->tm_hour, p->tm_min, p->tm_sec, m_tag, m_str, m_nl);
-			return;
-		} catch (...) {
-			/* If any exception occurs from fmt::print, try again with an empty message */
+		const std::tm* p = std::localtime(&t);
+		if (!p || 0 == std::strftime(datetime, 128, "%d/%b/%Y %T [", p))
+			std::strcpy(datetime, "                     [");
+		/* Print supplied datetime and strings */
+		std::fputs(datetime,      m_strm);
+		std::fputs(m_tag,         m_strm);
+		std::fputs("] ",          m_strm);
+		std::fputs(m_str.c_str(), m_strm);
+		std::fputc(m_nl,          m_strm);
+		/* If the tag is "LOG", print to the log file too */
+		if (m_bWriteToLogFile) {
+			/* Make sure the log file is open */
+			static std::ofstream logfile;
+			if (!logfile.is_open()) {
+				logfile.open(cUtils::GetExecutablePath().replace_extension("log"), std::ios::app);
+				if (!logfile)
+					return;
+			}
+			/* Print; std::endl flushes the stream to file */
+			logfile << datetime << m_tag << "] " << m_str << std::endl;
+			if (!logfile)
+				logfile.close();
 		}
-		std::fputs("                     [", m_strm);
-		std::fputs(m_tag, m_strm);
-		std::fputs("] Output stream error.", m_strm);
-		std::fputc(m_nl, m_strm);
 	}
 };
 /* ================================================================================================================== */
 void
 cUtils::print_err(std::string str, char nl) noexcept try {
-	net::post(printer_ioc, printer{ stderr, "ERR", std::move(str), nl });
+	net::post(printer_ioc, printer{ stderr, "ERR", std::move(str), nl, true });
 } catch (...) {}
 void
 cUtils::print_log(std::string str, char nl) noexcept try {
-	net::post(printer_ioc, printer{ stdout, "LOG", std::move(str), nl });
+	net::post(printer_ioc, printer{ stdout, "LOG", std::move(str), nl, true });
 } catch (...) {}
 void
 cUtils::print_msg(std::string str, char nl) noexcept try {
-	net::post(printer_ioc, printer{ stdout, "MSG", std::move(str), nl });
+	net::post(printer_ioc, printer{ stdout, "MSG", std::move(str), nl, false });
+} catch (...) {}
+void
+cUtils::print_dbg(std::string str, char nl) noexcept try {
+	net::post(printer_ioc, printer{ stdout, "DBG", std::move(str), nl, false });
 } catch (...) {}
 /* ================================================================================================================== */
 std::string
@@ -252,5 +276,50 @@ cUtils::GetOS() noexcept {
 	return "FreeBSD";
 #else
 	return "Unix";
+#endif
+}
+/* ================================================================================================================== */
+std::filesystem::path
+cUtils::GetExecutablePath() {
+#if defined _WIN32
+	std::vector<WCHAR> szPath(MAX_PATH);
+	for (DWORD dwLen;;) {
+		/* Retrieve the fully qualified path of the executable */
+		dwLen = GetModuleFileNameW(NULL, szPath.data(), (DWORD)szPath.size());
+		/* If the length is 0, an error occured */
+		if (dwLen == 0) {
+			const DWORD dwMsg = GetLastError();
+			LPSTR lpszMsg = NULL;
+			try {
+				constexpr DWORD FORMAT_FLAGS = FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS;
+				if (0 == FormatMessageA(FORMAT_FLAGS, NULL, dwMsg, 0, (LPSTR)&lpszMsg, 256, NULL))
+					throw std::runtime_error("Cannot find a suitable filepath.");
+				throw std::runtime_error(lpszMsg);
+			} catch (...) {
+				LocalFree(lpszMsg);
+				throw;
+			}
+		}
+		/* If the length is smaller than the total vector size, then the full path has been retrieved */
+		if (dwLen < szPath.size()) {
+			szPath.resize(dwLen);
+			break;
+		}
+		/* Otherwise, increase the vector size and retry */
+		szPath.resize(dwLen * 2);
+	}
+	return std::filesystem::path(szPath.begin(), szPath.end());
+#elif defined __APPLE__
+	std::vector<char> path(256);
+	/* Retrieve a path to the executable. */
+	if (uint32_t size = 256; _NSGetExecutablePath(path.data(), &size) < 0) {
+		/* If the path vector isn't large enough, 'size' is updated to the required size */
+		path.resize(size);
+		/* Retry */
+		_NSGetExecutablePath(path.data(), &size);
+	}
+	return std::filesystem::canonical(path.data());
+#else
+	return std::filesystem::canonical("/proc/self/exe");
 #endif
 }
