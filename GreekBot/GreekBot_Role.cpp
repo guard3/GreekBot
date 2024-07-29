@@ -126,6 +126,7 @@ cGreekBot::process_booster_menu(cMsgCompInteraction& i) HANDLER_BEGIN {
 		1121773567785308181, // @Πέγκω
 		1156980445058170991, // @Κυνεζί
 		1163945469567832215, // @Πάπια
+		1265742860783845558  // @Κατσίκα
 	};
 	static_assert(rng::is_sorted(color_roles), "Must be sorted for binary search");
 	/* Acknowledge interaction */
