@@ -43,6 +43,9 @@ struct guild_members_entry {
 /* Separate cGateway implementation class to avoid including boost everywhere */
 class cGateway::implementation final {
 private:
+	/* Aliases for the stream types used for http and websocket with SSL support */
+	using ssl_stream = asio::ssl::stream<beast::tcp_stream>;
+	using websocket_stream = beast::websocket::stream<ssl_stream>;
 	/* The parent gateway object through which events are handled */
 	cGateway* m_parent;
 	/* The contexts for asio */
@@ -57,8 +60,8 @@ private:
 	beast::flat_buffer      m_buffer;      // A buffer for reading from the websocket
 	beast::flat_buffer      m_http_buffer; // A buffer for storing http responses
 	std::deque<std::string> m_queue;       // A queue with all pending messages to be sent
-	uhHandle<beast::websocket::stream<beast::ssl_stream<beast::tcp_stream>>> m_ws; // The websocket stream
-	uhHandle<beast::ssl_stream<beast::tcp_stream>> m_http_stream;
+	std::unique_ptr<websocket_stream> m_ws; // The websocket stream
+	std::unique_ptr<ssl_stream> m_http_stream;
 	asio::steady_timer m_http_timer;
 	std::deque<request_entry> m_request_queue;
 	std::exception_ptr m_except;

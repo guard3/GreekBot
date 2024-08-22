@@ -69,7 +69,7 @@ add_compile_definitions(BOOST_ASIO_SEPARATE_COMPILATION BOOST_BEAST_SEPARATE_COM
 set(Boost_USE_STATIC_LIBS     ON)
 set(Boost_USE_MULTITHREADED   ON)
 set(Boost_USE_STATIC_RUNTIME OFF)
-find_package(Boost 1.84.0 REQUIRED OPTIONAL_COMPONENTS json)
+find_package(Boost 1.86.0 REQUIRED OPTIONAL_COMPONENTS json)
 include_directories(SYSTEM ${Boost_INCLUDE_DIR})
 if(Boost_JSON_FOUND)
     target_link_libraries(GreekBot ${Boost_LIBRARIES})

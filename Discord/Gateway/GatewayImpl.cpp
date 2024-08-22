@@ -282,7 +282,7 @@ cGateway::implementation::run_session() try {
 	co_await ResumeOnEventStrand();
 	m_resolver.async_resolve(host, "https", asio::bind_executor(m_ws_strand, [this, host = (std::string)host](const beast::error_code& ec, asio::ip::tcp::resolver::results_type results) mutable HANDLER_BEGIN(ec) {
 		/* Create a WebSocket stream and connect to the resolved host */
-		m_ws = std::make_unique<beast::websocket::stream<beast::ssl_stream<beast::tcp_stream>>>(m_ws_strand, m_ctx);
+		m_ws = std::make_unique<websocket_stream>(m_ws_strand, m_ctx);
 		beast::get_lowest_layer(*m_ws).expires_after(30s);
 		beast::get_lowest_layer(*m_ws).async_connect(results, [this, host = std::move(host)](const beast::error_code& ec, const asio::ip::tcp::endpoint& ep) HANDLER_BEGIN(ec) {
 			/* Perform the SSL handshake */

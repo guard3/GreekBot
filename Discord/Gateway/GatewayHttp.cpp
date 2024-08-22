@@ -9,7 +9,7 @@ cGateway::implementation::http_resolve() {
 			if (ec) throw std::system_error(ec);
 			/* Create a new http stream */
 			m_http_buffer.clear();
-			m_http_stream = std::make_unique<beast::ssl_stream<beast::tcp_stream>>(m_http_strand, m_ctx);
+			m_http_stream = std::make_unique<ssl_stream>(m_http_strand, m_ctx);
 			/* Connect to one of the resolved endpoints */
 			m_http_stream->next_layer().expires_after(30s);
 			m_http_stream->next_layer().async_connect(results, [this](const beast::error_code& ec, const asio::ip::tcp::endpoint&) {
