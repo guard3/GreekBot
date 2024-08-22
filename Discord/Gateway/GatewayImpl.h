@@ -3,15 +3,19 @@
 #include "Application.h"
 #include "Gateway.h"
 #include "GuildMembersResult.h"
-#include "beast.h"
-#include <boost/json.hpp>
 #include <deque>
 #include <thread>
+#include <boost/asio.hpp>
+#include <boost/asio/ssl.hpp>
+#include <boost/beast.hpp>
+#include <boost/beast/ssl.hpp>
+#include <boost/json.hpp>
 #include <zlib.h>
-
+/* ========= Namespace aliases ====================================================================================== */
+namespace beast  = boost::beast;
 namespace chrono = std::chrono;
-namespace json = boost::json;
-
+namespace json   = boost::json;
+namespace net    = boost::asio;
 /* ========== Make void a valid coroutine return type =============================================================== */
 template<typename... Args>
 struct std::coroutine_traits<void, cGateway::implementation&, Args...> {
@@ -44,25 +48,25 @@ struct guild_members_entry {
 class cGateway::implementation final {
 private:
 	/* Aliases for the stream types used for http and websocket with SSL support */
-	using ssl_stream = asio::ssl::stream<beast::tcp_stream>;
+	using ssl_stream = net::ssl::stream<beast::tcp_stream>;
 	using websocket_stream = beast::websocket::stream<ssl_stream>;
 	/* The parent gateway object through which events are handled */
 	cGateway* m_parent;
 	/* The contexts for asio */
-	asio::io_context   m_ioc;
-	asio::ssl::context m_ctx;
+	net::io_context   m_ioc;
+	net::ssl::context m_ctx;
 	/* Strands for synchronisation */
-	asio::strand<asio::io_context::executor_type> m_ws_strand;   // A strand for WebSocket operations
-	asio::strand<asio::io_context::executor_type> m_http_strand; // A strand for HTTP operations
+	net::strand<net::io_context::executor_type> m_ws_strand;   // A strand for WebSocket operations
+	net::strand<net::io_context::executor_type> m_http_strand; // A strand for HTTP operations
 	/* Resolvers */
-	asio::ip::tcp::resolver m_resolver;
+	net::ip::tcp::resolver  m_resolver;
 	int                     m_async_status;
 	beast::flat_buffer      m_buffer;      // A buffer for reading from the websocket
 	beast::flat_buffer      m_http_buffer; // A buffer for storing http responses
 	std::deque<std::string> m_queue;       // A queue with all pending messages to be sent
 	std::unique_ptr<websocket_stream> m_ws; // The websocket stream
 	std::unique_ptr<ssl_stream> m_http_stream;
-	asio::steady_timer m_http_timer;
+	net::steady_timer m_http_timer;
 	std::deque<request_entry> m_request_queue;
 	std::exception_ptr m_except;
 	beast::http::response<beast::http::string_body> m_response;
@@ -71,12 +75,12 @@ private:
 	std::string m_http_auth; // The authorization parameter for HTTP requests 'Bot token'
 	eIntent     m_intents;   // The gateway intents
 	/* Session attributes */
-	std::string m_cached_gateway_url; // The url used for initial connections
-	std::string m_resume_gateway_url; // The url used for resuming connections
-	std::string m_session_id;         // The current session id, used for resuming; empty = no valid session
-	int64_t     m_last_sequence;      // The last event sequence received, used for heartbeating; 0 = none received
+	std::string  m_cached_gateway_url; // The url used for initial connections
+	std::string  m_resume_gateway_url; // The url used for resuming connections
+	std::string  m_session_id;         // The current session id, used for resuming; empty = no valid session
+	std::int64_t m_last_sequence;      // The last event sequence received, used for heartbeating; 0 = none received
 	/* Heartbeating */
-	asio::steady_timer   m_heartbeat_timer;    // The async timer for heartbeats
+	net::steady_timer    m_heartbeat_timer;    // The async timer for heartbeats
 	chrono::milliseconds m_heartbeat_interval; // The interval between heartbeats
 	bool                 m_heartbeat_ack;      // Is the heartbeat acknowledged?
 	/* Json parsing for gateway events */
@@ -140,8 +144,7 @@ private:
 		if (m_http_stream) {
 			/* If there is an http stream, attempt to start sending requests right away */
 			http_write();
-		}
-		else {
+		} else {
 			/* Otherwise, start by resolving host */
 			http_resolve();
 		}
@@ -174,9 +177,9 @@ public:
 	std::string_view GetToken() const noexcept { return GetHttpAuthorization().substr(4); }
 
 	struct strand_awaitable {
-		asio::strand<asio::io_context::executor_type>& strand;
+		net::strand<net::io_context::executor_type>& strand;
 		bool await_ready() noexcept { return strand.running_in_this_thread(); }
-		void await_suspend(std::coroutine_handle<> h) { asio::post(strand, [h]() { h.resume(); }); }
+		void await_suspend(std::coroutine_handle<> h) { net::post(strand, [h]() { h.resume(); }); }
 		void await_resume() noexcept {}
 	};
 
@@ -184,8 +187,8 @@ public:
 	strand_awaitable ResumeOnEventStrand() noexcept { return { m_http_strand }; }
 	auto WaitOnEventStrand(std::chrono::milliseconds duration) {
 		struct awaitable {
-			asio::steady_timer timer;
-			awaitable(asio::strand<asio::io_context::executor_type>& strand, std::chrono::milliseconds d): timer(strand, d) {}
+			net::steady_timer timer;
+			awaitable(net::strand<net::io_context::executor_type>& strand, std::chrono::milliseconds d): timer(strand, d) {}
 			bool await_ready() noexcept { return false; }
 			void await_suspend(std::coroutine_handle<> h) {
 				timer.async_wait([h](const boost::system::error_code&) { h.resume(); });

@@ -278,6 +278,6 @@ cGateway::implementation::process_event(const json::value& v) {
 		}
 		/* Restart if the error occurred while parsing the event payload */
 		if (!bSuccess)
-			asio::defer(m_ws_strand, [this] { close(); });
+			net::defer(m_ws_strand, [this] { close(); });
 	}
 }

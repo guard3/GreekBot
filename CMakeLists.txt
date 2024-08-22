@@ -7,7 +7,7 @@ if (MSVC)
     add_definitions(/bigobj)
 endif()
 
-add_executable(GreekBot main.cpp Discord/Bot.cpp Discord/Bot.h Discord/Common/Common.h Discord/Interaction/InteractionBase.cpp Discord/Interaction/InteractionBase.h Discord/Objects/Member.cpp Discord/Objects/Member.h Discord/Objects/User.cpp Discord/Objects/User.h Discord/Objects/Component.h Discord/Objects/Emoji.h Discord/Objects/Guild.h Discord/Objects/Channel.h Discord/Objects/Message.h Database/Database.h Database/Database.cpp Discord/Objects/Embed.h Discord/Objects/Embed/Embed.cpp Discord/Objects/Role.h Discord/Objects/Role.cpp GreekBot/GreekBot.h GreekBot/GreekBot.cpp GreekBot/GreekBot_Leaderboard.cpp GreekBot/GreekBot_Avatar.cpp GreekBot/GreekBot_Role.cpp GreekBot/GreekBot_Button.cpp Discord/Objects/Message.cpp Discord/Coroutines/Task.h Discord/Gateway/Gateway.h Discord/Gateway/Gateway.cpp Discord/Gateway/GatewayCommands.cpp Discord/Gateway/GatewayEvents.cpp Discord/Common/Common.cpp Discord/Objects/Guild.cpp boost/beast.h Discord/Gateway/GatewayImpl.h Discord/Gateway/GatewayImpl.cpp Discord/Gateway/GatewayHttp.cpp GreekBot/GreekBot_Prune.cpp Discord/Exception.h Discord/Exception.cpp Discord/Common/Utils.h Discord/Common/Utils.cpp GreekBot/GreekBot_Ban.cpp Discord/Objects/Channel.cpp Discord/Common/Base64.cpp Discord/Objects/Embed/EmbedMedia.h Discord/Objects/Embed/EmbedAuthor.h Discord/Objects/Embed/EmbedFooter.h Discord/Objects/Emoji.cpp GreekBot/GreekBot_Clear.cpp Discord/Gateway/GuildMembersResult.h Discord/Gateway/GuildMembersResult.cpp Discord/Coroutines.h Discord/Coroutines/AsyncGenerator.h Discord/Coroutines/Generator.h Discord/Gateway/Application.h Discord/Gateway/Application.cpp Discord/Common/Ptr.h
+add_executable(GreekBot main.cpp Discord/Bot.cpp Discord/Bot.h Discord/Common/Common.h Discord/Interaction/InteractionBase.cpp Discord/Interaction/InteractionBase.h Discord/Objects/Member.cpp Discord/Objects/Member.h Discord/Objects/User.cpp Discord/Objects/User.h Discord/Objects/Component.h Discord/Objects/Emoji.h Discord/Objects/Guild.h Discord/Objects/Channel.h Discord/Objects/Message.h Database/Database.h Database/Database.cpp Discord/Objects/Embed.h Discord/Objects/Embed/Embed.cpp Discord/Objects/Role.h Discord/Objects/Role.cpp GreekBot/GreekBot.h GreekBot/GreekBot.cpp GreekBot/GreekBot_Leaderboard.cpp GreekBot/GreekBot_Avatar.cpp GreekBot/GreekBot_Role.cpp GreekBot/GreekBot_Button.cpp Discord/Objects/Message.cpp Discord/Coroutines/Task.h Discord/Gateway/Gateway.h Discord/Gateway/Gateway.cpp Discord/Gateway/GatewayCommands.cpp Discord/Gateway/GatewayEvents.cpp Discord/Common/Common.cpp Discord/Objects/Guild.cpp Discord/Gateway/GatewayImpl.h Discord/Gateway/GatewayImpl.cpp Discord/Gateway/GatewayHttp.cpp GreekBot/GreekBot_Prune.cpp Discord/Exception.h Discord/Exception.cpp Discord/Common/Utils.h Discord/Common/Utils.cpp GreekBot/GreekBot_Ban.cpp Discord/Objects/Channel.cpp Discord/Common/Base64.cpp Discord/Objects/Embed/EmbedMedia.h Discord/Objects/Embed/EmbedAuthor.h Discord/Objects/Embed/EmbedFooter.h Discord/Objects/Emoji.cpp GreekBot/GreekBot_Clear.cpp Discord/Gateway/GuildMembersResult.h Discord/Gateway/GuildMembersResult.cpp Discord/Coroutines.h Discord/Coroutines/AsyncGenerator.h Discord/Coroutines/Generator.h Discord/Gateway/Application.h Discord/Gateway/Application.cpp Discord/Common/Ptr.h
         boost/impl.cpp
         GreekBot/GreekBot_Members.cpp
         Discord/Objects/Modal.h
@@ -48,7 +48,6 @@ add_executable(GreekBot main.cpp Discord/Bot.cpp Discord/Bot.h Discord/Common/Co
 
 target_include_directories(
     GreekBot PRIVATE
-    ${PROJECT_SOURCE_DIR}/boost
     ${PROJECT_SOURCE_DIR}/Discord
     ${PROJECT_SOURCE_DIR}/Discord/Common
     ${PROJECT_SOURCE_DIR}/Discord/Objects
@@ -74,7 +73,7 @@ include_directories(SYSTEM ${Boost_INCLUDE_DIR})
 if(Boost_JSON_FOUND)
     target_link_libraries(GreekBot ${Boost_LIBRARIES})
 else()
-    target_sources(GreekBot PRIVATE boost/json.cpp)
+    target_compile_definitions(GreekBot PRIVATE BOOST_JSON_SEPARATE_COMPILATION)
 endif()
 
 # Link SQLite

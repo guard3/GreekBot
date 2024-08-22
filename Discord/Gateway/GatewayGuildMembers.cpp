@@ -119,7 +119,7 @@ cGateway::implementation::RequestGuildMembers(const cSnowflake& guild_id, std::s
 			implementation* self;
 			std::uint64_t nonce;
 			~_() try {
-				asio::defer(self->m_ws_strand, [s = self, n = nonce] { s->m_rgm_entries.erase(n); });
+				net::defer(self->m_ws_strand, [s = self, n = nonce] { s->m_rgm_entries.erase(n); });
 			} catch (...) {}
 		}; return _{ this, nonce };
 	}();

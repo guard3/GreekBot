@@ -17,9 +17,9 @@ enum eGatewayOpcode {
 /* ================================================================================================================== */
 cGateway::implementation::implementation(cGateway* p, std::string_view t, eIntent i) :
 	m_parent(p),
-	m_ctx(asio::ssl::context::tlsv13_client),
-	m_ws_strand(asio::make_strand(m_ioc)),
-	m_http_strand(asio::make_strand(m_ioc)),
+	m_ctx(net::ssl::context::tlsv13_client),
+	m_ws_strand(net::make_strand(m_ioc)),
+	m_http_strand(net::make_strand(m_ioc)),
 	m_resolver(m_http_strand),
 	m_http_auth(fmt::format("Bot {}", t)),
 	m_http_timer(m_http_strand),
@@ -31,7 +31,7 @@ cGateway::implementation::implementation(cGateway* p, std::string_view t, eInten
 	m_inflate_stream{} {
 	/* Set SSL context to verify peers */
 	m_ctx.set_default_verify_paths();
-	m_ctx.set_verify_mode(asio::ssl::verify_peer);
+	m_ctx.set_verify_mode(net::ssl::verify_peer);
 	/* Initialize zlib inflate stream */
 	switch (inflateInit(&m_inflate_stream)) {
 		case Z_OK:
@@ -52,7 +52,7 @@ cGateway::implementation::send(std::string msg) {
 	m_queue.push_back(std::move(msg));
 	/* If there's no other message in the queue, start the asynchronous send operation */
 	if (m_queue.size() == 1) {
-		m_ws->async_write(asio::buffer(m_queue.front()), [this](const beast::error_code &ec, size_t) { on_write(ec); });
+		m_ws->async_write(net::buffer(m_queue.front()), [this](const beast::error_code& ec, std::size_t) { on_write(ec); });
 		m_async_status |= ASYNC_WRITE;
 	}
 }
@@ -80,7 +80,7 @@ cGateway::implementation::on_close(bool bRestart) {
 		void operator()() {
 			/* Wait for all async operations to finish */
 			if (self.m_async_status & (ASYNC_READ | ASYNC_WRITE))
-				return asio::defer(self.m_ws_strand, *this);
+				return net::defer(self.m_ws_strand, *this);
 			/* If we have to exit, simply return and wait for the io context to run out of work */
 			if (!bRestart) return;
 			/* Reset all resources */
@@ -98,10 +98,10 @@ void
 cGateway::implementation::on_read(const beast::error_code& ec, std::size_t bytes_read) try {
 	m_async_status &= ~ASYNC_READ;
 	/* If the operation was cancelled, simply return */
-	if (m_async_status & ASYNC_CLOSE || ec == asio::error::operation_aborted)
+	if (m_async_status & ASYNC_CLOSE || ec == net::error::operation_aborted)
 		return;
 	/* If the connection was unexpectedly closed... */
-	if (ec == asio::error::eof)
+	if (ec == net::error::eof)
 		return on_close();
 	/* If the session was closed gracefully by the server... */
 	if (ec == beast::websocket::error::closed) {
@@ -113,7 +113,7 @@ cGateway::implementation::on_read(const beast::error_code& ec, std::size_t bytes
 			case 4013: // Invalid intent(s)
 			case 4014: // Disallowed intent(s)
 				/* Cancel the http timer to stop giving work to the io context */
-				asio::post(m_http_strand, [this] { m_http_timer.cancel(); });
+				net::post(m_http_strand, [this] { m_http_timer.cancel(); });
 				/* Report the close reason as the error message */
 				cUtils::PrintErr("Fatal gateway error{}{}", rsn.reason.empty() ? "." : ": ", rsn.reason.c_str());
 				/* Continue closing without creating a new session */
@@ -225,7 +225,7 @@ void
 cGateway::implementation::on_write(const beast::error_code& ec) {
 	m_async_status &= ~ASYNC_WRITE;
 	/* If the operation was canceled, simply return */
-	if (m_async_status & ASYNC_CLOSE || ec == asio::error::operation_aborted)
+	if (m_async_status & ASYNC_CLOSE || ec == net::error::operation_aborted)
 		return;
 	/* If an error occurs, close the stream */
 	if (ec) {
@@ -237,7 +237,7 @@ cGateway::implementation::on_write(const beast::error_code& ec) {
 	m_queue.pop_front();
 	/* ...and if the queue isn't empty, send the next message */
 	if (!m_queue.empty()) {
-		m_ws->async_write(asio::buffer(m_queue.front()), [this](const beast::error_code& ec, std::size_t) { on_write(ec); });
+		m_ws->async_write(net::buffer(m_queue.front()), [this](const beast::error_code& ec, std::size_t) { on_write(ec); });
 		m_async_status |= ASYNC_WRITE;
 	}
 }
@@ -280,13 +280,13 @@ cGateway::implementation::run_session() try {
 #define HANDLER_END catch (const std::exception& ex) { retry(ex.what()); } catch (...) { retry(); }}
 	/* Switch to the HTTP strand and resolve host */
 	co_await ResumeOnEventStrand();
-	m_resolver.async_resolve(host, "https", asio::bind_executor(m_ws_strand, [this, host = (std::string)host](const beast::error_code& ec, asio::ip::tcp::resolver::results_type results) mutable HANDLER_BEGIN(ec) {
+	m_resolver.async_resolve(host, "https", net::bind_executor(m_ws_strand, [this, host = (std::string)host](const beast::error_code& ec, net::ip::tcp::resolver::results_type results) mutable HANDLER_BEGIN(ec) {
 		/* Create a WebSocket stream and connect to the resolved host */
 		m_ws = std::make_unique<websocket_stream>(m_ws_strand, m_ctx);
 		beast::get_lowest_layer(*m_ws).expires_after(30s);
-		beast::get_lowest_layer(*m_ws).async_connect(results, [this, host = std::move(host)](const beast::error_code& ec, const asio::ip::tcp::endpoint& ep) HANDLER_BEGIN(ec) {
+		beast::get_lowest_layer(*m_ws).async_connect(results, [this, host = std::move(host)](const beast::error_code& ec, const net::ip::tcp::endpoint& ep) HANDLER_BEGIN(ec) {
 			/* Perform the SSL handshake */
-			m_ws->next_layer().async_handshake(asio::ssl::stream_base::client, [this, host = fmt::format("{}:{}", host, ep.port())](const beast::error_code& ec) HANDLER_BEGIN(ec) {
+			m_ws->next_layer().async_handshake(ssl_stream::client, [this, host = fmt::format("{}:{}", host, ep.port())](const beast::error_code& ec) HANDLER_BEGIN(ec) {
 				/* Use the recommended timout period for the websocket stream */
 				beast::get_lowest_layer(*m_ws).expires_never();
 				m_ws->set_option(beast::websocket::stream_base::timeout::suggested(beast::role_type::client));
@@ -305,7 +305,7 @@ cGateway::implementation::run_session() try {
 		} HANDLER_END);
 	} HANDLER_END));
 } catch (...) {
-	asio::defer(m_ws_strand, [this, ex = std::current_exception()] {
+	net::defer(m_ws_strand, [this, ex = std::current_exception()] {
 		try {
 			std::rethrow_exception(ex);
 		} catch (const std::exception& e) {
@@ -360,7 +360,7 @@ cGateway::implementation::run_context() {
 		} catch (...) {
 			cUtils::PrintErr("An unhandled exception escaped main loop.");
 		}
-		asio::dispatch(m_ws_strand, [this] {
+		net::dispatch(m_ws_strand, [this] {
 			m_ws ? close() : run_session();
 		});
 	}

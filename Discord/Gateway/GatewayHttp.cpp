@@ -4,7 +4,7 @@
 void
 cGateway::implementation::http_resolve() {
 	using namespace std::chrono_literals;
-	m_resolver.async_resolve(DISCORD_API_HOST, "https", [this](const beast::error_code& ec, const asio::ip::tcp::resolver::results_type& results) {
+	m_resolver.async_resolve(DISCORD_API_HOST, "https", [this](const beast::error_code& ec, const net::ip::tcp::resolver::results_type& results) {
 		try {
 			if (ec) throw std::system_error(ec);
 			/* Create a new http stream */
@@ -12,10 +12,10 @@ cGateway::implementation::http_resolve() {
 			m_http_stream = std::make_unique<ssl_stream>(m_http_strand, m_ctx);
 			/* Connect to one of the resolved endpoints */
 			m_http_stream->next_layer().expires_after(30s);
-			m_http_stream->next_layer().async_connect(results, [this](const beast::error_code& ec, const asio::ip::tcp::endpoint&) {
+			m_http_stream->next_layer().async_connect(results, [this](const beast::error_code& ec, const net::ip::tcp::endpoint&) {
 				try {
 					if (ec) throw std::system_error(ec);
-					m_http_stream->async_handshake(asio::ssl::stream_base::client, [this](const beast::error_code& ec) {
+					m_http_stream->async_handshake(ssl_stream::client, [this](const beast::error_code& ec) {
 						try {
 							if (ec) throw std::system_error(ec);
 							http_write();
@@ -76,7 +76,7 @@ cGateway::implementation::http_write() {
 					m_http_timer.expires_after(1min);
 					m_http_timer.async_wait([this](const boost::system::error_code &ec) {
 						/* If the timer expired and there are no pending requests, close the connection */
-						if (ec != asio::error::operation_aborted && m_request_queue.empty()) {
+						if (ec != net::error::operation_aborted && m_request_queue.empty()) {
 							auto stream = m_http_stream.get();
 							stream->next_layer().expires_after(30s);
 							stream->async_shutdown([_ = std::move(m_http_stream)](const beast::error_code &ec) {});
