@@ -27,7 +27,7 @@ cGateway::implementation::implementation(cGateway* p, std::string_view t, eInten
 	m_last_sequence(0),
 	m_heartbeat_timer(m_ws_strand),
 	m_heartbeat_ack(false),
-	m_async_status(ASYNC_CLOSE),
+	m_async_status(ASYNC_NONE),
 	m_inflate_stream{} {
 	/* Set SSL context to verify peers */
 	m_ctx.set_default_verify_paths();
@@ -48,6 +48,9 @@ cGateway::implementation::~implementation() {
 /* ================================================================================================================== */
 void
 cGateway::implementation::send(std::string msg) {
+	/* This shouldn't ever happen, but ensure that the websocket stream is not null */
+	if (m_async_status & (ASYNC_CLOSE | ASYNC_OPEN) || !m_ws)
+		return;
 	/* Push the new message at the end of the message queue */
 	m_queue.push_back(std::move(msg));
 	/* If there's no other message in the queue, start the asynchronous send operation */
@@ -58,10 +61,13 @@ cGateway::implementation::send(std::string msg) {
 }
 /* ================================================================================================================== */
 void
-cGateway::implementation::close() {
+cGateway::implementation::close() noexcept {
 	/* If we're already closing, don't do anything */
 	if (m_async_status & ASYNC_CLOSE)
 		return;
+	/* If the websocket stream is null, continue closing right away */
+	if (!m_ws)
+		return on_close();
 	/* Stop heartbeating to prevent writing further data to the stream */
 	m_heartbeat_timer.cancel();
 	/* Close the stream */
@@ -69,7 +75,7 @@ cGateway::implementation::close() {
 	m_async_status |= ASYNC_CLOSE;
 }
 void
-cGateway::implementation::on_close(bool bRestart) {
+cGateway::implementation::on_close(bool bRestart) noexcept {
 	/* Stop heartbeating to prevent writing further data to the stream */
 	if (!(m_async_status & ASYNC_CLOSE)) {
 		m_heartbeat_timer.cancel();
@@ -89,6 +95,7 @@ cGateway::implementation::on_close(bool bRestart) {
 			self.m_buffer.clear();
 			self.m_ws.reset();
 			/* Start a new session */
+			self.m_async_status = ASYNC_NONE;
 			self.run_session();
 		}
 	} _{ *this, bRestart }; _();
@@ -98,13 +105,15 @@ void
 cGateway::implementation::on_read(const beast::error_code& ec, std::size_t bytes_read) try {
 	m_async_status &= ~ASYNC_READ;
 	/* If the operation was cancelled, simply return */
-	if (m_async_status & ASYNC_CLOSE || ec == net::error::operation_aborted)
+	if (m_async_status & (ASYNC_CLOSE | ASYNC_OPEN) || ec == net::error::operation_aborted)
 		return;
 	/* If the connection was unexpectedly closed... */
 	if (ec == net::error::eof)
 		return on_close();
 	/* If the session was closed gracefully by the server... */
 	if (ec == beast::websocket::error::closed) {
+		if (!m_ws)
+			return;
 		switch (auto& rsn = m_ws->reason(); rsn.code) {
 			case 4004: // Authentication failed
 			case 4010: // Invalid shard
@@ -166,10 +175,12 @@ LABEL_PARSED:
 	m_buffer.consume(bytes_read);
 	/* Release the parsed json value */
 	const json::value v = m_parser.release();
-	/* Start the next asynchronous read operation to keep listening for more events */
-	m_ws->async_read(m_buffer, [this](const beast::error_code& ec, std::size_t size) { on_read(ec, size); });
-	m_async_status |= ASYNC_READ;
 	cUtils::PrintDbg("{}", json::serialize(v));
+	/* Start the next asynchronous read operation to keep listening for more events */
+	if (m_ws) {
+		m_ws->async_read(m_buffer, [this](const beast::error_code &ec, std::size_t size) { on_read(ec, size); });
+		m_async_status |= ASYNC_READ;
+	}
 	/* Process the event */
 	switch (v.at("op").to_number<int>()) {
 		case OP_DISPATCH:
@@ -225,7 +236,7 @@ void
 cGateway::implementation::on_write(const beast::error_code& ec) {
 	m_async_status &= ~ASYNC_WRITE;
 	/* If the operation was canceled, simply return */
-	if (m_async_status & ASYNC_CLOSE || ec == net::error::operation_aborted)
+	if (m_async_status & (ASYNC_CLOSE | ASYNC_OPEN) || ec == net::error::operation_aborted)
 		return;
 	/* If an error occurs, close the stream */
 	if (ec) {
@@ -236,7 +247,7 @@ cGateway::implementation::on_write(const beast::error_code& ec) {
 	/* If all is good, pop the message that was just sent... */
 	m_queue.pop_front();
 	/* ...and if the queue isn't empty, send the next message */
-	if (!m_queue.empty()) {
+	if (!m_queue.empty() && m_ws) {
 		m_ws->async_write(net::buffer(m_queue.front()), [this](const beast::error_code& ec, std::size_t) { on_write(ec); });
 		m_async_status |= ASYNC_WRITE;
 	}
@@ -245,7 +256,7 @@ cGateway::implementation::on_write(const beast::error_code& ec) {
 void
 cGateway::implementation::on_expire(const beast::error_code& ec) {
 	/* If the operation was canceled, simply return */
-	if (m_async_status & ASYNC_CLOSE || ec) return;
+	if (m_async_status & (ASYNC_CLOSE | ASYNC_OPEN) || ec) return;
 	/* If the last heartbeat wasn't acknowledged, close the stream */
 	if (!m_heartbeat_ack) return close();
 	/* Send a heartbeat */
@@ -256,10 +267,17 @@ cGateway::implementation::on_expire(const beast::error_code& ec) {
 }
 /* ================================================================================================================== */
 void
-cGateway::implementation::run_session() try {
+cGateway::implementation::run_session() noexcept try {
 	using namespace std::chrono_literals;
-	/* Switch to the WebSocket strand to safely access the cached urls */
 	co_await ResumeOnWebSocketStrand();
+	/* If the websocket stream is already opening, skip */
+	if (m_async_status & ASYNC_OPEN)
+		co_return;
+	/* If, for whatever reason, there are pending async operations, restart */
+	if (m_async_status != ASYNC_NONE)
+		co_return close();
+	m_async_status = ASYNC_OPEN;
+	/* Find the appropriate url to connect to */
 	std::string url;
 	if (!m_resume_gateway_url.empty()) {
 		url = m_resume_gateway_url;
@@ -271,22 +289,22 @@ cGateway::implementation::run_session() try {
 		co_await ResumeOnWebSocketStrand();
 		m_cached_gateway_url = url;
 	}
-	/* Retrieve the host from the url */
+	/* Retrieve the host from the url; TODO: use Boost/URL */
 	std::string_view host = url;
 	if (auto f = host.find("://"); f != std::string_view::npos)
 		host.remove_prefix(f + 3);
 	/* Helper macros to wrap handler bodies in a try-catch */
-#define HANDLER_BEGIN(ec) { if (ec) return retry(ec.message(m_err_msg, std::size(m_err_msg))); try
+#define HANDLER_BEGIN { if (ec == net::error::operation_aborted) return; if (ec) return retry(ec.message(m_err_msg, std::size(m_err_msg))); try
 #define HANDLER_END catch (const std::exception& ex) { retry(ex.what()); } catch (...) { retry(); }}
 	/* Switch to the HTTP strand and resolve host */
 	co_await ResumeOnEventStrand();
-	m_resolver.async_resolve(host, "https", net::bind_executor(m_ws_strand, [this, host = (std::string)host](const beast::error_code& ec, net::ip::tcp::resolver::results_type results) mutable HANDLER_BEGIN(ec) {
+	m_resolver.async_resolve(host, "https", net::bind_executor(m_ws_strand, [this, host = (std::string)host](const beast::error_code& ec, net::ip::tcp::resolver::results_type results) mutable HANDLER_BEGIN {
 		/* Create a WebSocket stream and connect to the resolved host */
 		m_ws = std::make_unique<websocket_stream>(m_ws_strand, m_ctx);
 		beast::get_lowest_layer(*m_ws).expires_after(30s);
-		beast::get_lowest_layer(*m_ws).async_connect(results, [this, host = std::move(host)](const beast::error_code& ec, const net::ip::tcp::endpoint& ep) HANDLER_BEGIN(ec) {
+		beast::get_lowest_layer(*m_ws).async_connect(results, [this, host = std::move(host)](const beast::error_code& ec, const net::ip::tcp::endpoint& ep) HANDLER_BEGIN {
 			/* Perform the SSL handshake */
-			m_ws->next_layer().async_handshake(ssl_stream::client, [this, host = fmt::format("{}:{}", host, ep.port())](const beast::error_code& ec) HANDLER_BEGIN(ec) {
+			m_ws->next_layer().async_handshake(ssl_stream::client, [this, host = fmt::format("{}:{}", host, ep.port())](const beast::error_code& ec) HANDLER_BEGIN {
 				/* Use the recommended timout period for the websocket stream */
 				beast::get_lowest_layer(*m_ws).expires_never();
 				m_ws->set_option(beast::websocket::stream_base::timeout::suggested(beast::role_type::client));
@@ -296,7 +314,7 @@ cGateway::implementation::run_session() try {
 					r.set(beast::http::field::user_agent, "GreekBot");
 				}));
 				/* Perform the WebSocket handshake */
-				m_ws->async_handshake(host, "/?v=" DISCORD_API_VERSION_STR "&encoding=json&compress=zlib-stream", [this](const beast::error_code& ec) HANDLER_BEGIN(ec) {
+				m_ws->async_handshake(host, "/?v=" DISCORD_API_VERSION_STR "&encoding=json&compress=zlib-stream", [this](const beast::error_code& ec) HANDLER_BEGIN {
 					/* Start the asynchronous read operation */
 					m_ws->async_read(m_buffer, [this](const beast::error_code& ec, std::size_t size) { on_read(ec, size); });
 					m_async_status = ASYNC_READ;
@@ -317,40 +335,44 @@ cGateway::implementation::run_session() try {
 }
 /* ================================================================================================================== */
 void
-cGateway::implementation::retry(const char* err) {
-	using namespace std::chrono_literals;
-	/* Reset the stream and the cached gateway url */
-	m_ws.reset();
+cGateway::implementation::retry(const char* err) noexcept {
+	/* Clear the cached gateway url */
 	m_cached_gateway_url.clear();
-	/* Copy the message string */
-	if (!err) {
-		std::strcpy(m_err_msg, "Connection error.");
-	} else if (err != m_err_msg) {
-		std::strncpy(m_err_msg, err, std::size(m_err_msg));
-		m_err_msg[std::size(m_err_msg) - 1] = 0;
-	}
-	struct {
-		implementation& self; int count;
+	/* Wait for 10 seconds and restart */
+	class countdown {
+		implementation& m_self;
+		int m_count;
+		char m_err[256];
+	public:
+		countdown(implementation& self, const char* err) noexcept : m_self(self), m_count(10) {
+			if (!err || *err == '\0')
+				err = "Connection error.";
+			std::strncpy(m_err, err, std::size(m_err) - 1);
+			m_err[std::size(m_err) - 1] = '\0';
+		}
 		void operator()() {
-			if (count > 0) {
-				cUtils::PrintErr<'\r'>("{} Retrying in {}s ", self.m_err_msg, count);
-				self.m_heartbeat_timer.expires_after(1s);
-				self.m_heartbeat_timer.async_wait(*this);
+			if (m_count > 0) {
+				using namespace std::chrono_literals;
+				cUtils::PrintErr<'\r'>("{} Retrying in {}s ", m_err, m_count);
+				m_self.m_heartbeat_timer.expires_after(1s);
+				m_self.m_heartbeat_timer.async_wait(*this);
 			} else {
-				cUtils::PrintErr<'\n'>("{} Retrying...     ", self.m_err_msg);
-				self.run_session();
+				cUtils::PrintErr<'\n'>("{} Retrying...     ", m_err);
+				m_self.close();
 			}
 		}
-		void operator()(const beast::error_code&) {
-			count--;
+		void operator()(const beast::error_code& ec) {
+			if (ec)
+				return;
+			m_count--;
 			(*this)();
 		}
-	} _{ *this, 10 }; _();
+	} _(*this, err); _();
 }
 /* ================================================================================================================== */
 void
-cGateway::implementation::run_context() {
-	/* In an exception somehow escapes the async loop, report and retry */
+cGateway::implementation::run_context() noexcept {
+	/* If an exception somehow escapes the async loop, report and retry */
 	for (;;) {
 		try {
 			m_ioc.run();
@@ -360,9 +382,7 @@ cGateway::implementation::run_context() {
 		} catch (...) {
 			cUtils::PrintErr("An unhandled exception escaped main loop.");
 		}
-		net::dispatch(m_ws_strand, [this] {
-			m_ws ? close() : run_session();
-		});
+		net::dispatch(m_ws_strand, [this] { close(); });
 	}
 	cUtils::PrintLog("exiting run_context()...");
 }
@@ -370,7 +390,7 @@ cGateway::implementation::run_context() {
 void
 cGateway::implementation::Run() {
 	run_session();
-	std::thread t([this] { run_context(); });
+	std::thread t(&implementation::run_context, this);
 	run_context();
 	t.join();
 }

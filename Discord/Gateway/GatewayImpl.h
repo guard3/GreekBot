@@ -109,12 +109,12 @@ private:
 	void on_read(const beast::error_code&, std::size_t);
 	void on_write(const beast::error_code&);
 	void on_expire(const beast::error_code&);
-	void on_close(bool = true);
-	void close();
-	void retry(const char* = nullptr);
+	void on_close(bool = true) noexcept;
+	void close() noexcept;
+	void retry(const char* = nullptr) noexcept;
 	/* A method that initiates the gateway connection */
-	void run_session();
-	void run_context();
+	void run_session() noexcept;
+	void run_context() noexcept;
 	/* A method that's invoked for every gateway event */
 	void process_event(const json::value&);
 	/* Http functions */
@@ -131,7 +131,8 @@ private:
 		ASYNC_NONE  = 0,
 		ASYNC_READ  = 1 << 0,
 		ASYNC_WRITE = 1 << 1,
-		ASYNC_CLOSE = 1 << 2
+		ASYNC_OPEN  = 1 << 2,
+		ASYNC_CLOSE = 1 << 3
 	};
 
 	bool await_ready() { return false; }
@@ -178,9 +179,9 @@ public:
 
 	struct strand_awaitable {
 		net::strand<net::io_context::executor_type>& strand;
-		bool await_ready() noexcept { return strand.running_in_this_thread(); }
-		void await_suspend(std::coroutine_handle<> h) { net::post(strand, [h]() { h.resume(); }); }
-		void await_resume() noexcept {}
+		bool await_ready() const noexcept { return strand.running_in_this_thread(); }
+		void await_suspend(std::coroutine_handle<> h) const noexcept { net::post(strand, h); }
+		void await_resume() const noexcept {}
 	};
 
 	strand_awaitable ResumeOnWebSocketStrand() noexcept { return { m_ws_strand }; }
