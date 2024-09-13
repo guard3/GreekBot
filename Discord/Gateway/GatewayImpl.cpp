@@ -21,13 +21,13 @@ cGateway::implementation::implementation(cGateway* p, std::string_view t, eInten
 	m_ws_strand(net::make_strand(m_ioc)),
 	m_http_strand(net::make_strand(m_ioc)),
 	m_resolver(m_http_strand),
+	m_async_status(ASYNC_NONE),
 	m_http_auth(fmt::format("Bot {}", t)),
 	m_http_timer(m_http_strand),
 	m_intents(i),
 	m_last_sequence(0),
 	m_heartbeat_timer(m_ws_strand),
 	m_heartbeat_ack(false),
-	m_async_status(ASYNC_NONE),
 	m_inflate_stream{} {
 	/* Set SSL context to verify peers */
 	m_ctx.set_default_verify_paths();
@@ -212,9 +212,9 @@ LABEL_PARSED:
 		case OP_HELLO:
 			/* Update heartbeat interval */
 			m_heartbeat_ack = true;
-			m_heartbeat_interval = chrono::milliseconds(v.at("d").at("heartbeat_interval").as_int64());
+			m_heartbeat_interval = milliseconds(v.at("d").at("heartbeat_interval").to_number<milliseconds::rep>());
 			/* Set the heartbeating to begin */
-			m_heartbeat_timer.expires_after(chrono::milliseconds(cUtils::Random(0, m_heartbeat_interval.count())));
+			m_heartbeat_timer.expires_after(milliseconds(cUtils::Random(0, m_heartbeat_interval.count())));
 			m_heartbeat_timer.async_wait([this](const beast::error_code& ec) { on_expire(ec); });
 			/* If there is an active session, try to resume, otherwise identify */
 			m_session_id.empty() ? identify() : resume();
@@ -278,46 +278,62 @@ cGateway::implementation::run_session() noexcept try {
 		co_return close();
 	m_async_status = ASYNC_OPEN;
 	/* Find the appropriate url to connect to */
-	std::string url;
+	urls::url* pUrl;
 	if (!m_resume_gateway_url.empty()) {
-		url = m_resume_gateway_url;
+		pUrl = &m_resume_gateway_url;
 	} else if (!m_cached_gateway_url.empty()) {
-		url = m_cached_gateway_url;
+		pUrl = &m_cached_gateway_url;
 	} else {
 		const json::value v = co_await DiscordGet("/gateway/bot");
-		url = json::value_to<std::string>(v.at("url"));
 		co_await ResumeOnWebSocketStrand();
-		m_cached_gateway_url = url;
+		m_cached_gateway_url = urls::parse_uri(v.at("url").as_string()).value();
+		pUrl = &m_cached_gateway_url;
 	}
-	/* Retrieve the host from the url; TODO: use Boost/URL */
-	std::string_view host = url;
-	if (auto f = host.find("://"); f != std::string_view::npos)
-		host.remove_prefix(f + 3);
+	/* Make sure that the url scheme is WSS */
+	if (pUrl->scheme_id() != urls::scheme::wss) {
+		auto msg = fmt::format("Invalid gateway URL {}", std::string_view(pUrl->data(), pUrl->size()));
+		pUrl->clear();
+		co_return retry(msg);
+	}
 	/* Helper macros to wrap handler bodies in a try-catch */
-#define HANDLER_BEGIN { if (ec == net::error::operation_aborted) return; if (ec) return retry(ec.message(m_err_msg, std::size(m_err_msg))); try
+#define HANDLER_BEGIN mutable { if (ec == net::error::operation_aborted) return; if (ec) return retry(ec.message(m_err_msg, std::size(m_err_msg))); try
 #define HANDLER_END catch (const std::exception& ex) { retry(ex.what()); } catch (...) { retry(); }}
 	/* Switch to the HTTP strand and resolve host */
+	urls::url url = *pUrl;
 	co_await ResumeOnEventStrand();
-	m_resolver.async_resolve(host, "https", net::bind_executor(m_ws_strand, [this, host = (std::string)host](const beast::error_code& ec, net::ip::tcp::resolver::results_type results) mutable HANDLER_BEGIN {
+	m_resolver.async_resolve(url.encoded_host(), url.has_port() ? url.port() : "https", net::bind_executor(m_ws_strand, [this, url](const beast::error_code& ec, net::ip::tcp::resolver::results_type results) HANDLER_BEGIN {
 		/* Create a WebSocket stream and connect to the resolved host */
 		m_ws = std::make_unique<websocket_stream>(m_ws_strand, m_ctx);
 		beast::get_lowest_layer(*m_ws).expires_after(30s);
-		beast::get_lowest_layer(*m_ws).async_connect(results, [this, host = std::move(host)](const beast::error_code& ec, const net::ip::tcp::endpoint& ep) HANDLER_BEGIN {
+		beast::get_lowest_layer(*m_ws).async_connect(results, [this, url = std::move(url)](const beast::error_code& ec, const net::ip::tcp::endpoint& ep) HANDLER_BEGIN {
+			/* Update url with the resolved port */
+			url.set_port_number(ep.port());
 			/* Perform the SSL handshake */
-			m_ws->next_layer().async_handshake(ssl_stream::client, [this, host = fmt::format("{}:{}", host, ep.port())](const beast::error_code& ec) HANDLER_BEGIN {
+			m_ws->next_layer().async_handshake(ssl_stream::client, [this, url = std::move(url)](const beast::error_code& ec) HANDLER_BEGIN {
+				/* Update url with the required parameters */
+				if (url.encoded_path().empty())
+					url.set_encoded_path("/");
+				url.encoded_params().append({
+					{ "v", DISCORD_API_VERSION_STR }, // Explicitly specify the api version
+					{ "encoding", "json"           }, // Encode payloads as json
+					{ "compress", "zlib-stream"    }  // Use zlib compression where possible
+				});
+				cUtils::PrintLog("{}", url.c_str());
 				/* Use the recommended timout period for the websocket stream */
 				beast::get_lowest_layer(*m_ws).expires_never();
 				m_ws->set_option(beast::websocket::stream_base::timeout::suggested(beast::role_type::client));
 				/* Set HTTP header fields for the handshake */
-				m_ws->set_option(beast::websocket::stream_base::decorator([&host](beast::websocket::request_type& r) {
-					r.set(beast::http::field::host, host);
+				m_ws->set_option(beast::websocket::stream_base::decorator([&url](beast::websocket::request_type& r) {
+					r.set(beast::http::field::host, url.encoded_host_and_port());
 					r.set(beast::http::field::user_agent, "GreekBot");
 				}));
 				/* Perform the WebSocket handshake */
-				m_ws->async_handshake(host, "/?v=" DISCORD_API_VERSION_STR "&encoding=json&compress=zlib-stream", [this](const beast::error_code& ec) HANDLER_BEGIN {
+				m_ws->async_handshake(url.encoded_host_and_port(), url.encoded_resource(), [this](const beast::error_code& ec) HANDLER_BEGIN {
 					/* Start the asynchronous read operation */
 					m_ws->async_read(m_buffer, [this](const beast::error_code& ec, std::size_t size) { on_read(ec, size); });
 					m_async_status = ASYNC_READ;
+					/* The stream is successfully set up, clear the error timer */
+					m_error_started_at = {};
 				} HANDLER_END);
 			} HANDLER_END);
 		} HANDLER_END);
@@ -335,29 +351,34 @@ cGateway::implementation::run_session() noexcept try {
 }
 /* ================================================================================================================== */
 void
-cGateway::implementation::retry(const char* err) noexcept {
-	/* Clear the cached gateway url */
-	m_cached_gateway_url.clear();
+cGateway::implementation::retry(std::string_view err) noexcept {
+	using namespace std::chrono_literals;
+	/* If there have been continuous errors for more than a minute, clear the offending url */
+	if (auto now = steady_clock::now(); m_error_started_at == steady_clock::time_point{}) {
+		m_error_started_at = now;
+	} else if (now - m_error_started_at > 1min) {
+		(m_resume_gateway_url.empty() ? m_cached_gateway_url : m_resume_gateway_url).clear();
+		m_error_started_at = now;
+	}
 	/* Wait for 10 seconds and restart */
 	class countdown {
 		implementation& m_self;
-		int m_count;
-		char m_err[256];
+		int             m_count;
+		std::size_t     m_len;
+		char            m_err[256];
 	public:
-		countdown(implementation& self, const char* err) noexcept : m_self(self), m_count(10) {
-			if (!err || *err == '\0')
+		countdown(implementation& self, std::string_view err) noexcept : m_self(self), m_count(10) {
+			if (err.empty())
 				err = "Connection error.";
-			std::strncpy(m_err, err, std::size(m_err) - 1);
-			m_err[std::size(m_err) - 1] = '\0';
+			m_len = err.copy(m_err, std::size(m_err));
 		}
 		void operator()() {
 			if (m_count > 0) {
-				using namespace std::chrono_literals;
-				cUtils::PrintErr<'\r'>("{} Retrying in {}s ", m_err, m_count);
+				cUtils::PrintErr<'\r'>("{} Retrying in {}s ", std::string_view(m_err, m_len), m_count);
 				m_self.m_heartbeat_timer.expires_after(1s);
 				m_self.m_heartbeat_timer.async_wait(*this);
 			} else {
-				cUtils::PrintErr<'\n'>("{} Retrying...     ", m_err);
+				cUtils::PrintErr<'\n'>("{} Retrying...     ", std::string_view(m_err, m_len));
 				m_self.close();
 			}
 		}

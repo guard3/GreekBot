@@ -10,12 +10,14 @@
 #include <boost/beast.hpp>
 #include <boost/beast/ssl.hpp>
 #include <boost/json.hpp>
+#include <boost/url.hpp>
 #include <zlib.h>
 /* ========= Namespace aliases ====================================================================================== */
 namespace beast  = boost::beast;
 namespace chrono = std::chrono;
 namespace json   = boost::json;
 namespace net    = boost::asio;
+namespace urls   = boost::urls;
 /* ========== Make void a valid coroutine return type =============================================================== */
 template<typename... Args>
 struct std::coroutine_traits<void, cGateway::implementation&, Args...> {
@@ -50,6 +52,16 @@ private:
 	/* Aliases for the stream types used for http and websocket with SSL support */
 	using ssl_stream = net::ssl::stream<beast::tcp_stream>;
 	using websocket_stream = beast::websocket::stream<ssl_stream>;
+	using steady_clock = std::chrono::steady_clock;
+	using milliseconds = std::chrono::milliseconds;
+	/* Flags to keep track of the status of async operations of the WebSocket stream */
+	enum {
+		ASYNC_NONE  = 0,
+		ASYNC_READ  = 1 << 0,
+		ASYNC_WRITE = 1 << 1,
+		ASYNC_OPEN  = 1 << 2,
+		ASYNC_CLOSE = 1 << 3
+	};
 	/* The parent gateway object through which events are handled */
 	cGateway* m_parent;
 	/* The contexts for asio */
@@ -59,12 +71,13 @@ private:
 	net::strand<net::io_context::executor_type> m_ws_strand;   // A strand for WebSocket operations
 	net::strand<net::io_context::executor_type> m_http_strand; // A strand for HTTP operations
 	/* Resolvers */
-	net::ip::tcp::resolver  m_resolver;
-	int                     m_async_status;
-	beast::flat_buffer      m_buffer;      // A buffer for reading from the websocket
-	beast::flat_buffer      m_http_buffer; // A buffer for storing http responses
-	std::deque<std::string> m_queue;       // A queue with all pending messages to be sent
-	std::unique_ptr<websocket_stream> m_ws; // The websocket stream
+	net::ip::tcp::resolver   m_resolver;
+	int                      m_async_status;     // Flags of pending operations and status of the websocket stream
+	steady_clock::time_point m_error_started_at; // The time point of the first connection error; used for retrying
+	beast::flat_buffer       m_buffer;           // A buffer for reading from the websocket
+	beast::flat_buffer       m_http_buffer;      // A buffer for storing http responses
+	std::deque<std::string>  m_queue;            // A queue with all pending messages to be sent
+	std::unique_ptr<websocket_stream> m_ws;      // The websocket stream
 	std::unique_ptr<ssl_stream> m_http_stream;
 	net::steady_timer m_http_timer;
 	std::deque<request_entry> m_request_queue;
@@ -75,14 +88,14 @@ private:
 	std::string m_http_auth; // The authorization parameter for HTTP requests 'Bot token'
 	eIntent     m_intents;   // The gateway intents
 	/* Session attributes */
-	std::string  m_cached_gateway_url; // The url used for initial connections
-	std::string  m_resume_gateway_url; // The url used for resuming connections
+	urls::url    m_cached_gateway_url; // The url used for initial connections
+	urls::url    m_resume_gateway_url; // The url used for resuming connections
 	std::string  m_session_id;         // The current session id, used for resuming; empty = no valid session
 	std::int64_t m_last_sequence;      // The last event sequence received, used for heartbeating; 0 = none received
 	/* Heartbeating */
-	net::steady_timer    m_heartbeat_timer;    // The async timer for heartbeats
-	chrono::milliseconds m_heartbeat_interval; // The interval between heartbeats
-	bool                 m_heartbeat_ack;      // Is the heartbeat acknowledged?
+	net::steady_timer m_heartbeat_timer;    // The async timer for heartbeats
+	milliseconds      m_heartbeat_interval; // The interval between heartbeats
+	bool              m_heartbeat_ack;      // Is the heartbeat acknowledged?
 	/* Json parsing for gateway events */
 	json::stream_parser m_parser; // The json parser
 	/* Zlib stuff for decompressing websocket messages */
@@ -111,7 +124,7 @@ private:
 	void on_expire(const beast::error_code&);
 	void on_close(bool = true) noexcept;
 	void close() noexcept;
-	void retry(const char* = nullptr) noexcept;
+	void retry(std::string_view = {}) noexcept;
 	/* A method that initiates the gateway connection */
 	void run_session() noexcept;
 	void run_context() noexcept;
@@ -125,15 +138,6 @@ private:
 	/* Canceling guild member requests */
 	void rgm_reset();
 	void rgm_timeout();
-
-	/* An enum to keep track of the status of async operations of the WebSocket stream */
-	enum {
-		ASYNC_NONE  = 0,
-		ASYNC_READ  = 1 << 0,
-		ASYNC_WRITE = 1 << 1,
-		ASYNC_OPEN  = 1 << 2,
-		ASYNC_CLOSE = 1 << 3
-	};
 
 	bool await_ready() { return false; }
 	void await_suspend(std::coroutine_handle<> h) {

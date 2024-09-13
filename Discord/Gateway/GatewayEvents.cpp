@@ -49,7 +49,7 @@ cGateway::implementation::process_event(const json::value& v) {
 			}	break;
 			case READY: {
 				m_session_id = json::value_to<std::string>(d.at("session_id"));
-				m_resume_gateway_url = json::value_to<std::string>(d.at("resume_gateway_url"));
+				m_resume_gateway_url = urls::parse_uri(d.at("resume_gateway_url").as_string()).value();
 				m_application.emplace(d.at("application"));
 				cUser user{ d.at("user") };
 				co_await switch_strand();
