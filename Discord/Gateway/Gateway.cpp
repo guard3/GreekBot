@@ -36,7 +36,7 @@ cGateway::DiscordPostNoRetry(std::string_view t, const json::object& o, std::spa
 cTask<>
 cGateway::ResumeOnEventStrand() { co_await m_pImpl->ResumeOnEventStrand(); }
 cTask<>
-cGateway::WaitOnEventStrand(chrono::milliseconds d) { co_await m_pImpl->WaitOnEventStrand(d); }
+cGateway::WaitOnEventStrand(std::chrono::milliseconds d) { co_await m_pImpl->WaitOnEventStrand(d); }
 /* ================================================================================================================== */
 cAsyncGenerator<cMember>
 cGateway::RequestGuildMembers(const cSnowflake& guild_id, std::string_view query) {

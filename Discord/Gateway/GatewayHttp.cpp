@@ -19,20 +19,17 @@ cGateway::implementation::http_resolve() {
 						try {
 							if (ec) throw std::system_error(ec);
 							http_write();
-						}
-						catch (...) {
+						} catch (...) {
 							m_except = std::current_exception();
 							http_shutdown();
 						}
 					});
-				}
-				catch (...) {
+				} catch (...) {
 					m_except = std::current_exception();
 					http_shutdown();
 				}
 			});
-		}
-		catch (...) {
+		} catch (...) {
 			m_except = std::current_exception();
 			http_shutdown();
 		}
@@ -57,8 +54,7 @@ cGateway::implementation::http_write() {
 				/* If there was any other error, fail */
 				try {
 					if (ec) throw std::system_error(ec);
-				}
-				catch (...) {
+				} catch (...) {
 					m_except = std::current_exception();
 					http_shutdown_ssl();
 					return;
@@ -82,18 +78,15 @@ cGateway::implementation::http_write() {
 							stream->async_shutdown([_ = std::move(m_http_stream)](const beast::error_code &ec) {});
 						}
 					});
-				}
-				catch (...) {
+				} catch (...) {
 					m_except = std::current_exception();
-				}
-				else {
+				} else {
 					/* If there are pending requests, write the next one to the stream */
 					http_write();
 				}
 				coro.resume();
 			});
-		}
-		catch (...) {
+		} catch (...) {
 			m_except = std::current_exception();
 			http_shutdown_ssl();
 		}
@@ -131,7 +124,7 @@ cGateway::implementation::http_shutdown() {
 /* ================================================================================================================== */
 cTask<json::value>
 cGateway::implementation::DiscordRequest(beast::http::verb m, std::string_view t, const json::object* o, std::span<const cHttpField> f) {
-	chrono::milliseconds retry_after;
+	milliseconds retry_after;
 	try {
 		co_return co_await DiscordRequestNoRetry(m, t, o, f);
 	}

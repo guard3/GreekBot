@@ -1,7 +1,7 @@
 #include "GatewayImpl.h"
 
 void
-cGateway::implementation::rgm_reset() {
+cGateway::implementation::rgm_reset() noexcept {
 	/* Generate an exception for canceled guild member requests */
 	try {
 		throw xGatewaySessionResetError();
@@ -14,7 +14,7 @@ cGateway::implementation::rgm_reset() {
 		m_pending.pop_front();
 	}
 	/* Cancel all ongoing requests;
-	 * Range for is safe because potential erasing of entries occurs by means of asio::defer */
+	 * Range for is safe because potential erasing of entries occurs by means of net::defer */
 	for (auto& elem : m_rgm_entries) {
 		auto& entry = elem.second;
 		entry.except = m_rgm_exception;
@@ -25,15 +25,15 @@ cGateway::implementation::rgm_reset() {
 }
 
 void
-cGateway::implementation::rgm_timeout() {
+cGateway::implementation::rgm_timeout() noexcept {
+	using namespace std::chrono_literals;
 	if (m_rgm_entries.empty())
 		return;
-	auto now = chrono::system_clock::now();
-	/* Range for is safe because potential erasing of entries occurs by means of asio::defer */
+	auto now = steady_clock::now();
+	/* Range for is safe because potential erasing of entries occurs by means of net::defer */
 	std::exception_ptr ex;
-	for (auto& elem : m_rgm_entries) {
-		auto& entry = elem.second;
-		if (entry.coro && now - entry.started_at > chrono::minutes(2)) {
+	for (auto&[_, entry] : m_rgm_entries) {
+		if (entry.coro && now - entry.started_at > 2min) {
 			if (!ex) try {
 				throw xGatewayTimeoutError();
 			} catch (...) {
@@ -84,14 +84,14 @@ cGateway::implementation::RequestGuildMembers(const cSnowflake& guild_id, std::s
 	/* Wait for the websocket stream to become available */
 	co_await [this] {
 		struct _ {
-			implementation* self;
-			bool await_ready() const noexcept { return !(self->m_async_status & ASYNC_CLOSE); }
-			void await_suspend(std::coroutine_handle<> h) const { self->m_pending.push_back(h); }
+			implementation& self;
+			bool await_ready() const noexcept { return self.m_ws && self.m_ws->is_open(); }
+			void await_suspend(std::coroutine_handle<> h) const { self.m_pending.push_back(h); }
 			void await_resume() const {
-				if (self->m_rgm_exception)
-					std::rethrow_exception(self->m_rgm_exception);
+				if (self.m_rgm_exception)
+					std::rethrow_exception(self.m_rgm_exception);
 			}
-		}; return _{ this };
+		}; return _{ *this };
 	}();
 	/* Back up the current nonce and increment the original for future use */
 	auto nonce = m_rgm_nonce++;
@@ -134,7 +134,7 @@ cGateway::implementation::RequestGuildMembers(const cSnowflake& guild_id, std::s
 				auto& entry = self->m_rgm_entries[nonce];
 				if (auto ex = entry.except)
 					std::rethrow_exception(ex);
-				entry.started_at = chrono::system_clock::now();
+				entry.started_at = steady_clock::now();
 				entry.coro = h;
 			}
 			auto& await_resume() const {

@@ -14,7 +14,6 @@
 #include <zlib.h>
 /* ========= Namespace aliases ====================================================================================== */
 namespace beast  = boost::beast;
-namespace chrono = std::chrono;
 namespace json   = boost::json;
 namespace net    = boost::asio;
 namespace urls   = boost::urls;
@@ -43,7 +42,7 @@ struct guild_members_entry {
 	std::deque<cGuildMembersChunk> chunks;
 	std::coroutine_handle<> coro;
 	std::exception_ptr except;
-	chrono::system_clock::time_point started_at;
+	std::chrono::steady_clock::time_point started_at;
 };
 
 /* Separate cGateway implementation class to avoid including boost everywhere */
@@ -54,14 +53,6 @@ private:
 	using websocket_stream = beast::websocket::stream<ssl_stream>;
 	using steady_clock = std::chrono::steady_clock;
 	using milliseconds = std::chrono::milliseconds;
-	/* Flags to keep track of the status of async operations of the WebSocket stream */
-	enum {
-		ASYNC_NONE  = 0,
-		ASYNC_READ  = 1 << 0,
-		ASYNC_WRITE = 1 << 1,
-		ASYNC_OPEN  = 1 << 2,
-		ASYNC_CLOSE = 1 << 3
-	};
 	/* The parent gateway object through which events are handled */
 	cGateway* m_parent;
 	/* The contexts for asio */
@@ -136,8 +127,8 @@ private:
 	void http_shutdown_ssl();
 	void http_shutdown();
 	/* Canceling guild member requests */
-	void rgm_reset();
-	void rgm_timeout();
+	void rgm_reset() noexcept;   // Cancel all pending requests when the session is reset
+	void rgm_timeout() noexcept; // Cancel all pending requests that haven't been completed in a long time
 
 	bool await_ready() { return false; }
 	void await_suspend(std::coroutine_handle<> h) {
