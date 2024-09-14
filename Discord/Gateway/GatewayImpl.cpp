@@ -151,34 +151,31 @@ cGateway::implementation::on_read(const beast::error_code& ec, std::size_t bytes
 		cUtils::PrintErr("An error occurred while reading from the gateway{}{}", *err ? ": " : ".", err);
 		return close();
 	}
-	/* Clear memory and reset the parser prior to parsing a new JSON */
+	/* Reset the JSON parser and feed it the received message */
 	m_parser.reset();
-	/* Check for Z_SYNC_FLUSH suffix and decompress if necessary */
 	char* in = (char*)m_buffer.data().data();
-	if (bytes_read >= 4 ) {
-		if (0 == memcmp(in + bytes_read - 4, "\x00\x00\xFF\xFF", 4)) {
-			m_inflate_stream.avail_in = bytes_read;
-			m_inflate_stream.next_in  = (Byte*)in;
-			do {
-				m_inflate_stream.avail_out = std::size(m_inflate_buffer);
-				m_inflate_stream.next_out  = m_inflate_buffer;
-				switch (inflate(&m_inflate_stream, Z_NO_FLUSH)) {
-					case Z_OK:
-					case Z_STREAM_END:
-						m_parser.write((char*)m_inflate_buffer, std::size(m_inflate_buffer) - m_inflate_stream.avail_out);
-						break;
-					case Z_MEM_ERROR:
-						throw std::bad_alloc();
-					default:
-						throw std::runtime_error(m_inflate_stream.msg);
-				}
-			} while (m_inflate_stream.avail_out == 0);
-			goto LABEL_PARSED;
-		}
+	if (bytes_read >= 4 && 0 == std::memcmp(in + bytes_read - 4, "\x00\x00\xFF\xFF", 4)) {
+		/* If the message ends in the Z_SYNC_FLUSH suffix, decompress */
+		m_inflate_stream.avail_in = bytes_read;
+		m_inflate_stream.next_in  = (Byte*)in;
+		do {
+			m_inflate_stream.avail_out = std::size(m_inflate_buffer);
+			m_inflate_stream.next_out  = m_inflate_buffer;
+			switch (inflate(&m_inflate_stream, Z_NO_FLUSH)) {
+				case Z_OK:
+				case Z_STREAM_END:
+					m_parser.write((char*)m_inflate_buffer, std::size(m_inflate_buffer) - m_inflate_stream.avail_out);
+					break;
+				case Z_MEM_ERROR:
+					throw std::bad_alloc();
+				default:
+					throw std::runtime_error(m_inflate_stream.msg ? m_inflate_stream.msg : "Zlib error");
+			}
+		} while (m_inflate_stream.avail_out == 0);
+	} else {
+		/* If the message isn't compressed, directly feed it into the json parser */
+		m_parser.write(in, bytes_read);
 	}
-	/* If the payload isn't compressed, directly feed it into the json parser */
-	m_parser.write(in, bytes_read);
-LABEL_PARSED:
 	/* Consume all read bytes from the dynamic buffer */
 	m_buffer.consume(bytes_read);
 	/* Release the parsed json value */
