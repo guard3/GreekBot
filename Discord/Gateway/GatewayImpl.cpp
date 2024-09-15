@@ -273,7 +273,6 @@ cGateway::implementation::on_expire(const beast::error_code& ec) {
 /* ================================================================================================================== */
 void
 cGateway::implementation::run_session() noexcept try {
-	using namespace std::chrono_literals;
 	co_await ResumeOnWebSocketStrand();
 	/* If the websocket stream is already opening, skip */
 	if (m_async_status & ASYNC_OPENING)
@@ -300,49 +299,48 @@ cGateway::implementation::run_session() noexcept try {
 		pUrl->clear();
 		co_return retry(msg);
 	}
-	/* Helper macros to wrap handler bodies in a try-catch */
-#define HANDLER_BEGIN mutable { if (ec == net::error::operation_aborted) return; if (ec) return retry(ec.message(m_err_msg, std::size(m_err_msg))); try
-#define HANDLER_END catch (const std::exception& ex) { retry(ex.what()); } catch (...) { retry(); }}
-	/* Switch to the HTTP strand and resolve host */
-	urls::url url = *pUrl;
-	co_await ResumeOnEventStrand();
-	m_resolver.async_resolve(url.encoded_host(), url.has_port() ? url.port() : "https", net::bind_executor(m_ws_strand, [this, url](const beast::error_code& ec, net::ip::tcp::resolver::results_type results) HANDLER_BEGIN {
-		/* Create a WebSocket stream and connect to the resolved host */
+	net::co_spawn(m_http_strand, [this, url = *pUrl]() mutable -> net::awaitable<void> {
+		using namespace std::chrono_literals;
+		/* Resolve host; The WebSocket connection starts with an HTTP request, so we must provide that as service! */
+		auto results = co_await m_resolver.async_resolve(url.encoded_host(), url.has_port() ? url.port() : "https", net::bind_executor(m_ws_strand, net::use_awaitable));
+		/* Create a WebSocket stream and connect; 30s timeout */
 		m_ws = std::make_unique<websocket_stream>(m_ws_strand, m_ctx);
+		/* Connect to the resolved host and perform the SSL handshake; 30s timeout */
 		beast::get_lowest_layer(*m_ws).expires_after(30s);
-		beast::get_lowest_layer(*m_ws).async_connect(results, [this, url = std::move(url)](const beast::error_code& ec, const net::ip::tcp::endpoint& ep) HANDLER_BEGIN {
-			/* Update url with the resolved port */
-			url.set_port_number(ep.port());
-			/* Perform the SSL handshake */
-			m_ws->next_layer().async_handshake(ssl_stream::client, [this, url = std::move(url)](const beast::error_code& ec) HANDLER_BEGIN {
-				/* Update url with the required parameters */
-				if (url.encoded_path().empty())
-					url.set_encoded_path("/");
-				url.encoded_params().append({
-					{ "v", DISCORD_API_VERSION_STR }, // Explicitly specify the api version
-					{ "encoding", "json"           }, // Encode payloads as json
-					{ "compress", "zlib-stream"    }  // Use zlib compression where possible
-				});
-				cUtils::PrintLog("{}", url.c_str());
-				/* Use the recommended timout period for the websocket stream */
-				beast::get_lowest_layer(*m_ws).expires_never();
-				m_ws->set_option(beast::websocket::stream_base::timeout::suggested(beast::role_type::client));
-				/* Set HTTP header fields for the handshake */
-				m_ws->set_option(beast::websocket::stream_base::decorator([&url](beast::websocket::request_type& r) {
-					r.set(beast::http::field::host, url.encoded_host_and_port());
-					r.set(beast::http::field::user_agent, "GreekBot");
-				}));
-				/* Perform the WebSocket handshake */
-				m_ws->async_handshake(url.encoded_host_and_port(), url.encoded_resource(), [this](const beast::error_code& ec) HANDLER_BEGIN {
-					/* Start the asynchronous read operation */
-					m_ws->async_read(m_buffer, [this](const beast::error_code& ec, std::size_t size) { on_read(ec, size); });
-					m_async_status = ASYNC_READING;
-					/* The stream is successfully set up, clear the error timer */
-					m_error_started_at = {};
-				} HANDLER_END);
-			} HANDLER_END);
-		} HANDLER_END);
-	} HANDLER_END));
+		auto endpoint = co_await beast::get_lowest_layer(*m_ws).async_connect(results, net::use_awaitable);
+		co_await m_ws->next_layer().async_handshake(ssl_stream::client, net::use_awaitable);
+		/* Use the recommended timout period for the websocket stream */
+		beast::get_lowest_layer(*m_ws).expires_never();
+		m_ws->set_option(beast::websocket::stream_base::timeout::suggested(beast::role_type::client));
+		/* Update url with the required parameters */
+		if (url.encoded_path().empty())
+			url.set_encoded_path("/");
+		url.set_port_number(endpoint.port()).encoded_params().append({
+			{ "v", DISCORD_API_VERSION_STR }, // Explicitly specify the api version
+			{ "encoding", "json"           }, // Encode payloads as json
+			{ "compress", "zlib-stream"    }  // Use zlib compression where possible
+		});
+		/* Set HTTP header fields for the handshake */
+		m_ws->set_option(beast::websocket::stream_base::decorator([&url](beast::websocket::request_type& r) {
+			r.set(beast::http::field::host, url.encoded_authority());
+			r.set(beast::http::field::user_agent, "GreekBot");
+		}));
+		/* Perform the WebSocket handshake */
+		co_await m_ws->async_handshake(url.encoded_authority(), url.encoded_resource(), net::use_awaitable);
+		/* Start the asynchronous read operation */
+		m_ws->async_read(m_buffer, [this](const beast::error_code& ec, std::size_t size) { on_read(ec, size); });
+		m_async_status = ASYNC_READING;
+		/* The stream is successfully set up, clear the error timer */
+		m_error_started_at = {};
+	}, net::bind_executor(m_ws_strand, [this](std::exception_ptr ex) {
+		if (ex) try {
+			std::rethrow_exception(ex);
+		} catch (const std::exception& e) {
+			retry(e.what());
+		} catch (...) {
+			retry();
+		}
+	}));
 } catch (...) {
 	net::defer(m_ws_strand, [this, ex = std::current_exception()] {
 		try {
