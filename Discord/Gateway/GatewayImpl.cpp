@@ -295,9 +295,14 @@ cGateway::implementation::run_session() noexcept try {
 	}
 	/* Make sure that the url scheme is WSS */
 	if (pUrl->scheme_id() != urls::scheme::wss) {
-		auto msg = fmt::format("Invalid gateway URL {}", std::string_view(pUrl->data(), pUrl->size()));
-		pUrl->clear();
-		co_return retry(msg);
+		class _ : public std::exception {
+			char m_msg[256];
+		public:
+			_(const urls::url& url) : m_msg{} {
+				fmt::format_to_n(m_msg, std::size(m_msg) - 1, "Invalid gateway URL {}", std::string_view(url.data(), url.size()));
+			}
+			const char* what() const noexcept override { return m_msg; }
+		}; throw _(*pUrl);
 	}
 	net::co_spawn(m_http_strand, [this, url = *pUrl]() mutable -> net::awaitable<void> {
 		using namespace std::chrono_literals;
@@ -332,29 +337,13 @@ cGateway::implementation::run_session() noexcept try {
 		m_async_status = ASYNC_READING;
 		/* The stream is successfully set up, clear the error timer */
 		m_error_started_at = {};
-	}, net::bind_executor(m_ws_strand, [this](std::exception_ptr ex) {
-		if (ex) try {
-			std::rethrow_exception(ex);
-		} catch (const std::exception& e) {
-			retry(e.what());
-		} catch (...) {
-			retry();
-		}
-	}));
+	}, net::bind_executor(m_ws_strand, [this](std::exception_ptr ex) { if (ex) retry(ex); }));
 } catch (...) {
-	net::defer(m_ws_strand, [this, ex = std::current_exception()] {
-		try {
-			std::rethrow_exception(ex);
-		} catch (const std::exception& e) {
-			retry(e.what());
-		} catch (...) {
-			retry();
-		}
-	});
+	net::defer(m_ws_strand, [this, ex = std::current_exception()] { retry(ex); });
 }
 /* ================================================================================================================== */
 void
-cGateway::implementation::retry(std::string_view err) noexcept {
+cGateway::implementation::retry(std::exception_ptr ex) noexcept {
 	using namespace std::chrono_literals;
 	/* If there have been continuous errors for more than a minute, clear the offending url */
 	if (auto now = steady_clock::now(); m_error_started_at == steady_clock::time_point{}) {
@@ -370,10 +359,16 @@ cGateway::implementation::retry(std::string_view err) noexcept {
 		std::size_t     m_len;
 		char            m_err[256];
 	public:
-		countdown(implementation& self, std::string_view err) noexcept : m_self(self), m_count(10) {
-			if (err.empty())
-				err = "Connection error.";
-			m_len = err.copy(m_err, std::size(m_err));
+		countdown(implementation& self, std::exception_ptr ex) noexcept : m_self(self), m_count(10) {
+			try {
+				std::rethrow_exception(ex);
+			} catch (const std::exception &e) {
+				std::string_view err = *e.what() == '\0' ? "Connection error." : e.what();
+				m_len = err.copy(m_err, std::size(m_err));
+			} catch (...) {
+				std::string_view err = "Connection error.";
+				m_len = err.copy(m_err, std::size(m_err));
+			}
 		}
 		void operator()() {
 			if (m_count > 0) {
@@ -391,7 +386,7 @@ cGateway::implementation::retry(std::string_view err) noexcept {
 			m_count--;
 			(*this)();
 		}
-	} _(*this, err); _();
+	} _(*this, ex); _();
 }
 /* ================================================================================================================== */
 void

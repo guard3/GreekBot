@@ -115,7 +115,7 @@ private:
 	void on_expire(const beast::error_code&);
 	void on_close(bool = true) noexcept;
 	void close() noexcept;
-	void retry(std::string_view = {}) noexcept;
+	void retry(std::exception_ptr) noexcept;
 	/* A method that initiates the gateway connection */
 	void run_session() noexcept;
 	void run_context() noexcept;
