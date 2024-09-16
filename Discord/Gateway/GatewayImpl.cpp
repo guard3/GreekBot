@@ -337,56 +337,48 @@ cGateway::implementation::run_session() noexcept try {
 		m_async_status = ASYNC_READING;
 		/* The stream is successfully set up, clear the error timer */
 		m_error_started_at = {};
-	}, net::bind_executor(m_ws_strand, [this](std::exception_ptr ex) { if (ex) retry(ex); }));
+	}, [this](std::exception_ptr ex) { if (ex) retry(ex); });
 } catch (...) {
-	net::defer(m_ws_strand, [this, ex = std::current_exception()] { retry(ex); });
+	retry(std::current_exception());
 }
 /* ================================================================================================================== */
 void
 cGateway::implementation::retry(std::exception_ptr ex) noexcept {
-	using namespace std::chrono_literals;
-	/* If there have been continuous errors for more than a minute, clear the offending url */
-	if (auto now = steady_clock::now(); m_error_started_at == steady_clock::time_point{}) {
-		m_error_started_at = now;
-	} else if (now - m_error_started_at > 1min) {
-		(m_resume_gateway_url.empty() ? m_cached_gateway_url : m_resume_gateway_url).clear();
-		m_error_started_at = now;
-	}
-	/* Wait for 10 seconds and restart */
-	class countdown {
-		implementation& m_self;
-		int             m_count;
-		std::size_t     m_len;
-		char            m_err[256];
-	public:
-		countdown(implementation& self, std::exception_ptr ex) noexcept : m_self(self), m_count(10) {
-			try {
-				std::rethrow_exception(ex);
-			} catch (const std::exception &e) {
-				std::string_view err = *e.what() == '\0' ? "Connection error." : e.what();
-				m_len = err.copy(m_err, std::size(m_err));
-			} catch (...) {
-				std::string_view err = "Connection error.";
-				m_len = err.copy(m_err, std::size(m_err));
-			}
+	net::co_spawn(m_ws_strand, [this, ex]() -> net::awaitable<void> {
+		using namespace std::chrono_literals;
+		/* If there have been continuous errors for more than a minute, clear the offending url */
+		if (auto now = steady_clock::now(); m_error_started_at == steady_clock::time_point{}) {
+			m_error_started_at = now;
+		} else if (now - m_error_started_at > 1min) {
+			(m_resume_gateway_url.empty() ? m_cached_gateway_url : m_resume_gateway_url).clear();
+			m_error_started_at = now;
 		}
-		void operator()() {
-			if (m_count > 0) {
-				cUtils::PrintErr<'\r'>("{} Retrying in {}s ", std::string_view(m_err, m_len), m_count);
-				m_self.m_heartbeat_timer.expires_after(1s);
-				m_self.m_heartbeat_timer.async_wait(*this);
-			} else {
-				cUtils::PrintErr<'\n'>("{} Retrying...     ", std::string_view(m_err, m_len));
-				m_self.close();
-			}
+		/* Retrieve the exception message */
+		char err[256]{};
+		try {
+			std::rethrow_exception(ex);
+		} catch (const std::exception& e) {
+			std::strncpy(err, e.what(), std::size(err) - 1);
+		} catch (...) {}
+		/* If the message is empty, use a generic one as a default */
+		if (err[0] == 0)
+			std::strcpy(err, "Connection error.");
+		/* Wait for 10 seconds and restart */
+		for (int i = 10; i > 0; --i) {
+			cUtils::PrintErr<'\r'>("{} Retrying in {}s ", err, i);
+			m_heartbeat_timer.expires_after(1s);
+			co_await m_heartbeat_timer.async_wait(net::use_awaitable);
 		}
-		void operator()(const beast::error_code& ec) {
-			if (ec)
-				return;
-			m_count--;
-			(*this)();
+		cUtils::PrintErr("{} Retrying...     ", err);
+		close();
+	}, [](std::exception_ptr ex) {
+		if (ex) try {
+			std::rethrow_exception(ex);
+		} catch (const beast::system_error& e) {
+			if (e.code() != net::error::operation_aborted)
+				throw;
 		}
-	} _(*this, ex); _();
+	});
 }
 /* ================================================================================================================== */
 void
