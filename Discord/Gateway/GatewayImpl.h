@@ -13,10 +13,11 @@
 #include <boost/url.hpp>
 #include <zlib.h>
 /* ========= Namespace aliases ====================================================================================== */
-namespace beast  = boost::beast;
-namespace json   = boost::json;
-namespace net    = boost::asio;
-namespace urls   = boost::urls;
+namespace beast = boost::beast;
+namespace json  = boost::json;
+namespace net   = boost::asio;
+namespace sys   = boost::system;
+namespace urls  = boost::urls;
 /* ========== Make void a valid coroutine return type =============================================================== */
 template<typename... Args>
 struct std::coroutine_traits<void, cGateway::implementation&, Args...> {
@@ -27,15 +28,6 @@ struct std::coroutine_traits<void, cGateway::implementation&, Args...> {
 		void return_void() noexcept {}
 		void unhandled_exception() noexcept {}
 	};
-};
-
-struct request_entry {
-	beast::http::request<beast::http::string_body> request;
-	std::coroutine_handle<> coro;
-
-	template<typename... Args>
-	request_entry(Args&&... args): request(std::forward<Args>(args)...) {}
-	request_entry(const request_entry&) = delete;
 };
 
 struct guild_members_entry {
@@ -51,6 +43,8 @@ private:
 	/* Aliases for the stream types used for http and websocket with SSL support */
 	using ssl_stream = net::ssl::stream<beast::tcp_stream>;
 	using websocket_stream = beast::websocket::stream<ssl_stream>;
+	using http_request = beast::http::request<beast::http::string_body>;
+	using http_response = beast::http::response<beast::http::string_body>;
 	using steady_clock = std::chrono::steady_clock;
 	using milliseconds = std::chrono::milliseconds;
 	/* The parent gateway object through which events are handled */
@@ -69,12 +63,16 @@ private:
 	beast::flat_buffer       m_http_buffer;      // A buffer for storing http responses
 	std::deque<std::string>  m_queue;            // A queue with all pending messages to be sent
 	std::unique_ptr<websocket_stream> m_ws;      // The websocket stream
-	std::unique_ptr<ssl_stream> m_http_stream;
-	net::steady_timer m_http_timer;
-	std::deque<request_entry> m_request_queue;
-	std::exception_ptr m_except;
-	beast::http::response<beast::http::string_body> m_response;
-
+	std::unique_ptr<ssl_stream> m_http_stream;   // The SSL stream used for HTTP
+	/* HTTP */
+	struct http_entry {
+		http_request&        request;
+		http_response&      response;
+		std::coroutine_handle<> coro;
+	};
+	std::deque<http_entry> m_http_queue;     // A queue of pending HTTP requests
+	net::steady_timer      m_http_timer;     // The timer for scheduling HTTP stream shutdown after a period of inactivity
+	std::exception_ptr     m_http_exception; // The exception to be propagated after an error during HTTP operations
 	/* Initial parameters for identifying */
 	std::string m_http_auth; // The authorization parameter for HTTP requests 'Bot token'
 	eIntent     m_intents;   // The gateway intents
@@ -122,33 +120,11 @@ private:
 	/* A method that's invoked for every gateway event */
 	void process_event(const json::value&);
 	/* Http functions */
-	void http_resolve();
-	void http_write();
-	void http_shutdown_ssl();
-	void http_shutdown();
+	void http_start();
+	net::awaitable<void> http_coro();
 	/* Canceling guild member requests */
 	void rgm_reset() noexcept;   // Cancel all pending requests when the session is reset
 	void rgm_timeout() noexcept; // Cancel all pending requests that haven't been completed in a long time
-
-	bool await_ready() { return false; }
-	void await_suspend(std::coroutine_handle<> h) {
-		/* Save the coroutine handle to the entry we just added to the queue */
-		m_request_queue.back().coro = h;
-		/* If there's more than one request in the queue, just return and let it be processed later */
-		if (m_request_queue.size() > 1)
-			return;
-		if (m_http_stream) {
-			/* If there is an http stream, attempt to start sending requests right away */
-			http_write();
-		} else {
-			/* Otherwise, start by resolving host */
-			http_resolve();
-		}
-	}
-	void await_resume() {
-		if (auto ex = std::exchange(m_except, {}))
-			std::rethrow_exception(ex);
-	}
 
 public:
 	implementation(cGateway*, std::string_view, eIntent);

@@ -1,125 +1,77 @@
 #include "Exception.h"
 #include "GatewayImpl.h"
 /* ================================================================================================================== */
-void
-cGateway::implementation::http_resolve() {
+net::awaitable<void>
+cGateway::implementation::http_coro() {
 	using namespace std::chrono_literals;
-	m_resolver.async_resolve(DISCORD_API_HOST, "https", [this](const beast::error_code& ec, const net::ip::tcp::resolver::results_type& results) {
-		try {
-			if (ec) throw std::system_error(ec);
-			/* Create a new http stream */
-			m_http_buffer.clear();
-			m_http_stream = std::make_unique<ssl_stream>(m_http_strand, m_ctx);
-			/* Connect to one of the resolved endpoints */
-			m_http_stream->next_layer().expires_after(30s);
-			m_http_stream->next_layer().async_connect(results, [this](const beast::error_code& ec, const net::ip::tcp::endpoint&) {
-				try {
-					if (ec) throw std::system_error(ec);
-					m_http_stream->async_handshake(ssl_stream::client, [this](const beast::error_code& ec) {
-						try {
-							if (ec) throw std::system_error(ec);
-							http_write();
-						} catch (...) {
-							m_except = std::current_exception();
-							http_shutdown();
-						}
-					});
-				} catch (...) {
-					m_except = std::current_exception();
-					http_shutdown();
-				}
-			});
-		} catch (...) {
-			m_except = std::current_exception();
-			http_shutdown();
-		}
-	});
-}
-void
-cGateway::implementation::http_write() {
-	using namespace std::chrono_literals;
+	/* If the HTTP stream is null, initialize a new one */
+	if (!m_http_stream) {
+		auto results = co_await m_resolver.async_resolve(DISCORD_API_HOST, "https", net::use_awaitable);
+		auto stream = std::make_unique<ssl_stream>(m_http_strand, m_ctx);
+		/* Connect and perform the SSL handshake; 30s timeout */
+		stream->next_layer().expires_after(30s);
+		co_await stream->next_layer().async_connect(results, net::use_awaitable);
+		co_await stream->async_handshake(ssl_stream::client, net::use_awaitable);
+		/* Save the stream on success */
+		m_http_stream = std::move(stream);
+	}
+	/* Since we're about to send a request, cancel the timeout timer */
+	m_http_timer.cancel();
+	/* Using the now open HTTP stream, send the first request in the queue */
 	m_http_stream->next_layer().expires_after(30s);
-	beast::http::async_write(*m_http_stream, m_request_queue.front().request, [this](const beast::error_code& ec, size_t) {
+	co_await beast::http::async_write(*m_http_stream, m_http_queue.front().request, net::use_awaitable);
+	/* Read the response */
+	m_http_buffer.clear();
+	auto[ec, _] = co_await beast::http::async_read(*m_http_stream, m_http_buffer, m_http_queue.front().response, net::as_tuple(net::use_awaitable));
+	if (ec == beast::http::error::end_of_stream) {
+		/* If the stream was unexpectedly closed, destroy it and try sending the same request again */
+		m_http_stream.reset();
+		co_return co_await http_coro();
+	} else if (ec) {
+		/* In the case of any other error, throw */
+		throw sys::system_error(ec);
+	}
+}
+void
+cGateway::implementation::http_start() {
+	net::co_spawn(m_http_strand, http_coro(), [this](std::exception_ptr ex) noexcept {
+		using namespace std::chrono_literals;
+		/* Pop the entry that was just processed */
+		auto[_, response, coro] = m_http_queue.front();
+		m_http_queue.pop_front();
+		/* Save the exception pointer, whether null or not */
+		m_http_exception = ex;
 		try {
-			if (ec) throw std::system_error(ec);
-			/* Reset the response before reading */
-			m_response = {};
-			/* Start reading the response */
-			beast::http::async_read(*m_http_stream, m_http_buffer, m_response, [this](const beast::error_code& ec, size_t) {
-				/* If connection was unexpectedly closed, retry */
-				if (ec == beast::http::error::end_of_stream) {
-					http_resolve();
-					return;
-				}
-				/* If there was any other error, fail */
-				try {
-					if (ec) throw std::system_error(ec);
-				} catch (...) {
-					m_except = std::current_exception();
-					http_shutdown_ssl();
-					return;
-				}
-				/* If the server doesn't keep the connection alive, gracefully close the connection */
-				if (!m_response.keep_alive()) {
-					http_shutdown_ssl();
-					return;
-				}
-				/* Save the coroutine handle before popping the processed request from the queue */
-				std::coroutine_handle<> coro = m_request_queue.front().coro;
-				m_request_queue.pop_front();
-				if (m_request_queue.empty()) try {
-					/* If there are no more requests, schedule the connection to close after 1 minute */
-					m_http_timer.expires_after(1min);
-					m_http_timer.async_wait([this](const boost::system::error_code &ec) {
-						/* If the timer expired and there are no pending requests, close the connection */
-						if (ec != net::error::operation_aborted && m_request_queue.empty()) {
-							auto stream = m_http_stream.get();
-							stream->next_layer().expires_after(30s);
-							stream->async_shutdown([_ = std::move(m_http_stream)](const beast::error_code &ec) {});
-						}
-					});
-				} catch (...) {
-					m_except = std::current_exception();
-				} else {
-					/* If there are pending requests, write the next one to the stream */
-					http_write();
-				}
-				coro.resume();
-			});
+			if (!ex && response.keep_alive()) {
+				/* If the response indicates Keep-Alive, schedule the stream to close */
+				m_http_timer.expires_after(1min);
+				m_http_timer.async_wait([this](const sys::error_code &ec) {
+					/* If the timer expired and there are no pending requests, destroy the stream */
+					if (auto p = m_http_stream.get(); !ec && m_http_queue.empty() && p) {
+						p->next_layer().expires_after(30s);
+						p->async_shutdown([_ = std::move(m_http_stream)](const sys::error_code&) {});
+					}
+				});
+			} else if (auto p = m_http_stream.get()) {
+				/* In any other case, we have to destroy the stream */
+				p->next_layer().expires_after(30s);
+				p->async_shutdown([_ = std::move(m_http_stream)](const sys::error_code&) {});
+			}
+			/* Start processing the next request in the queue */
+			if (!m_http_queue.empty())
+				http_start();
+			/* Resume the coroutine */
+			coro.resume();
 		} catch (...) {
-			m_except = std::current_exception();
-			http_shutdown_ssl();
+			/* Resume the coroutine with the original exception... */
+			coro.resume();
+			/* ...but then force the new exception to any pending request */
+			m_http_exception = std::current_exception();
+			for (auto[_1, _2, c] : m_http_queue)
+				c.resume();
+			m_http_queue.clear();
 		}
 	});
-}
-void
-cGateway::implementation::http_shutdown_ssl() {
-	using namespace std::chrono_literals;
-	/* Destroy the http stream */
-	auto stream = m_http_stream.get();
-	stream->next_layer().expires_after(30s);
-	stream->async_shutdown([_ = std::move(m_http_stream)](const beast::error_code&){});
-	/* Save the coroutine handle before popping the current entry from the queue */
-	auto coro = m_request_queue.front().coro;
-	m_request_queue.pop_front();
-	/* Start processing the rest of the requests in the queue */
-	if (!m_request_queue.empty())
-		http_resolve();
-	/* Resume the coroutine */
-	coro.resume();
-}
-void
-cGateway::implementation::http_shutdown() {
-	/* Destroy the http stream */
-	m_http_stream = nullptr;
-	/* Save the coroutine handle before popping the current entry from the queue */
-	std::coroutine_handle<> coro = m_request_queue.front().coro;
-	m_request_queue.pop_front();
-	/* Start processing the rest of the requests in the queue */
-	if (!m_request_queue.empty())
-		http_resolve();
-	/* Resume the coroutine */
-	coro.resume();
 }
 /* ================================================================================================================== */
 cTask<json::value>
@@ -136,16 +88,11 @@ cGateway::implementation::DiscordRequest(beast::http::verb m, std::string_view t
 }
 cTask<json::value>
 cGateway::implementation::DiscordRequestNoRetry(beast::http::verb method, std::string_view target, const json::object* obj, std::span<const cHttpField> fields) {
-	/* First make sure that we are on the http thread */
-	co_await ResumeOnEventStrand();
-	/* Since we're about to send a request, cancel the timeout timer */
-	m_http_timer.cancel();
-	/* Create a new request object and push it at the end of the queue */
-	auto &request = m_request_queue.emplace_back(method, fmt::format(DISCORD_API_ENDPOINT "{}", target), 11).request;
-	/* Set user http fields */
-	for (auto &f: fields)
+	/* Create a new request object */
+	http_request request(method, fmt::format(DISCORD_API_ENDPOINT "{}", target), 11);
+	/* Set the necessary fields */
+	for (auto& f: fields)
 		request.set(f.GetName(), f.GetValue());
-	/* Also set the required ones */
 	request.set(beast::http::field::host, DISCORD_API_HOST);
 	request.set(beast::http::field::user_agent, "GreekBot");
 	request.set(beast::http::field::authorization, m_http_auth);
@@ -156,15 +103,40 @@ cGateway::implementation::DiscordRequestNoRetry(beast::http::verb method, std::s
 	/* Request that the connection be kept alive */
 	request.keep_alive(true);
 	request.prepare_payload();
+	/* The response object; this is where the HTTP response is saved from the awaitable */
+	http_response response;
+	/* Save the request and response references to the end of the request queue */
+	co_await ResumeOnEventStrand();
+	m_http_queue.emplace_back(request, response);
 	/* Start the async operation of sending the request */
-	co_await *this;
+	co_await [this] {
+		struct _ {
+			implementation* const self;
+			constexpr bool await_ready() const noexcept { return false; }
+			void await_suspend(std::coroutine_handle<> h) const {
+				/* Save the coroutine handle to the entry we just added */
+				self->m_http_queue.back().coro = h;
+				/* If there's more than one request in the queue, just skip; it will be processed later */
+				if (self->m_http_queue.size() == 1) try {
+					self->http_start();
+				} catch (...) {
+					self->m_http_queue.pop_back();
+					throw;
+				}
+			}
+			void await_resume() const {
+				if (self->m_http_exception)
+					std::rethrow_exception(self->m_http_exception);
+			}
+		}; return _{ this };
+	}();
 	/* Process response */
-	auto status = m_response.result();
-	auto result = m_response[beast::http::field::content_type] == "application/json" ? json::parse(m_response.body()) : json::value();
+	auto status = response.result();
+	auto result = response[beast::http::field::content_type] == "application/json" ? json::parse(response.body()) : json::value();
 	if (beast::http::to_status_class(status) == beast::http::status_class::successful)
 		co_return result;
 	/* Otherwise, throw an appropriate exception */
-	detail::throw_discord_exception(m_response.result_int(), result);
+	detail::throw_discord_exception(response.result_int(), result);
 }
 /* ================================================================================================================== */
 cTask<json::value>
