@@ -63,7 +63,7 @@ cGateway::implementation::send(std::string msg) {
 	m_queue.push_back(std::move(msg));
 	/* If there's no other message in the queue, start the asynchronous send operation */
 	if (m_queue.size() == 1) {
-		m_ws->async_write(net::buffer(m_queue.front()), [this](const beast::error_code& ec, std::size_t) { on_write(ec); });
+		m_ws->async_write(net::buffer(m_queue.front()), [this](const sys::error_code& ec, std::size_t) { on_write(ec); });
 		m_async_status |= ASYNC_WRITING;
 	}
 }
@@ -110,7 +110,7 @@ cGateway::implementation::on_close(bool bRestart) noexcept {
 }
 /* ================================================================================================================== */
 void
-cGateway::implementation::on_read(const beast::error_code& ec, std::size_t bytes_read) try {
+cGateway::implementation::on_read(const sys::error_code& ec, std::size_t bytes_read) try {
 	m_async_status &= ~ASYNC_READING;
 	/* If the operation was cancelled, simply return */
 	if (m_async_status & (ASYNC_OPENING | ASYNC_CLOSING) || ec == net::error::operation_aborted)
@@ -183,7 +183,7 @@ cGateway::implementation::on_read(const beast::error_code& ec, std::size_t bytes
 	cUtils::PrintDbg("{}", json::serialize(v));
 	/* Start the next asynchronous read operation to keep listening for more events */
 	if (m_ws) {
-		m_ws->async_read(m_buffer, [this](const beast::error_code &ec, std::size_t size) { on_read(ec, size); });
+		m_ws->async_read(m_buffer, [this](const sys::error_code& ec, std::size_t size) { on_read(ec, size); });
 		m_async_status |= ASYNC_READING;
 	}
 	/* Process the event */
@@ -199,7 +199,7 @@ cGateway::implementation::on_read(const beast::error_code& ec, std::size_t bytes
 				heartbeat();
 				/* Resume heartbeating */
 				m_heartbeat_timer.expires_after(m_heartbeat_interval);
-				m_heartbeat_timer.async_wait([this](beast::error_code ec) { on_expire(ec); });
+				m_heartbeat_timer.async_wait([this](const sys::error_code& ec) { on_expire(ec); });
 			}
 			/* If cancel() returns 0, then a heartbeat is already queued to be sent, so we don't need to do anything */
 			break;
@@ -220,7 +220,7 @@ cGateway::implementation::on_read(const beast::error_code& ec, std::size_t bytes
 			m_heartbeat_interval = milliseconds(v.at("d").at("heartbeat_interval").to_number<milliseconds::rep>());
 			/* Set the heartbeating to begin */
 			m_heartbeat_timer.expires_after(milliseconds(cUtils::Random(0, m_heartbeat_interval.count())));
-			m_heartbeat_timer.async_wait([this](const beast::error_code& ec) { on_expire(ec); });
+			m_heartbeat_timer.async_wait([this](const sys::error_code& ec) { on_expire(ec); });
 			/* If there is an active session, try to resume, otherwise identify */
 			m_session_id.empty() ? identify() : resume();
 			break;
@@ -238,7 +238,7 @@ cGateway::implementation::on_read(const beast::error_code& ec, std::size_t bytes
 }
 /* ================================================================================================================== */
 void
-cGateway::implementation::on_write(const beast::error_code& ec) {
+cGateway::implementation::on_write(const sys::error_code& ec) {
 	m_async_status &= ~ASYNC_WRITING;
 	/* If the operation was canceled, simply return */
 	if (m_async_status & (ASYNC_OPENING | ASYNC_CLOSING) || ec == net::error::operation_aborted)
@@ -253,13 +253,13 @@ cGateway::implementation::on_write(const beast::error_code& ec) {
 	m_queue.pop_front();
 	/* ...and if the queue isn't empty, send the next message */
 	if (!m_queue.empty() && m_ws) {
-		m_ws->async_write(net::buffer(m_queue.front()), [this](const beast::error_code& ec, std::size_t) { on_write(ec); });
+		m_ws->async_write(net::buffer(m_queue.front()), [this](const sys::error_code& ec, std::size_t) { on_write(ec); });
 		m_async_status |= ASYNC_WRITING;
 	}
 }
 /* ================================================================================================================== */
 void
-cGateway::implementation::on_expire(const beast::error_code& ec) {
+cGateway::implementation::on_expire(const sys::error_code& ec) {
 	/* If the operation was canceled, simply return */
 	if (m_async_status & (ASYNC_OPENING | ASYNC_CLOSING) || ec) return;
 	/* If the last heartbeat wasn't acknowledged, close the stream */
@@ -268,7 +268,7 @@ cGateway::implementation::on_expire(const beast::error_code& ec) {
 	heartbeat();
 	/* Reset the timer */
 	m_heartbeat_timer.expires_after(m_heartbeat_interval);
-	m_heartbeat_timer.async_wait([this](const beast::error_code& ec) { on_expire(ec); });
+	m_heartbeat_timer.async_wait([this](const sys::error_code& ec) { on_expire(ec); });
 }
 /* ================================================================================================================== */
 void
@@ -333,7 +333,7 @@ cGateway::implementation::run_session() noexcept try {
 		/* Perform the WebSocket handshake */
 		co_await m_ws->async_handshake(url.encoded_authority(), url.encoded_resource(), net::use_awaitable);
 		/* Start the asynchronous read operation */
-		m_ws->async_read(m_buffer, [this](const beast::error_code& ec, std::size_t size) { on_read(ec, size); });
+		m_ws->async_read(m_buffer, [this](const sys::error_code& ec, std::size_t size) { on_read(ec, size); });
 		m_async_status = ASYNC_READING;
 		/* The stream is successfully set up, clear the error timer */
 		m_error_started_at = {};
@@ -367,18 +367,15 @@ cGateway::implementation::retry(std::exception_ptr ex) noexcept {
 		for (int i = 10; i > 0; --i) {
 			cUtils::PrintErr<'\r'>("{} Retrying in {}s ", err, i);
 			m_heartbeat_timer.expires_after(1s);
-			co_await m_heartbeat_timer.async_wait(net::use_awaitable);
+			auto[ec] = co_await m_heartbeat_timer.async_wait(net::as_tuple(net::use_awaitable));
+			if (ec == net::error::operation_aborted)
+				co_return;
+			else if (ec)
+				throw sys::system_error(ec);
 		}
 		cUtils::PrintErr("{} Retrying...     ", err);
 		close();
-	}, [](std::exception_ptr ex) {
-		if (ex) try {
-			std::rethrow_exception(ex);
-		} catch (const beast::system_error& e) {
-			if (e.code() != net::error::operation_aborted)
-				throw;
-		}
-	});
+	}, [](std::exception_ptr ex) { if (ex) std::rethrow_exception(ex); });
 }
 /* ================================================================================================================== */
 void

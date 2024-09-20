@@ -108,9 +108,9 @@ private:
 	/* Websocket message queuing */
 	void send(std::string);
 	/* Beast/Asio async functions */
-	void on_read(const beast::error_code&, std::size_t);
-	void on_write(const beast::error_code&);
-	void on_expire(const beast::error_code&);
+	void on_read(const sys::error_code&, std::size_t);
+	void on_write(const sys::error_code&);
+	void on_expire(const sys::error_code&);
 	void on_close(bool = true) noexcept;
 	void close() noexcept;
 	void retry(std::exception_ptr) noexcept;
@@ -163,7 +163,7 @@ public:
 			awaitable(net::strand<net::io_context::executor_type>& strand, std::chrono::milliseconds d): timer(strand, d) {}
 			bool await_ready() noexcept { return false; }
 			void await_suspend(std::coroutine_handle<> h) {
-				timer.async_wait([h](const boost::system::error_code&) { h.resume(); });
+				timer.async_wait([h](const sys::error_code&) { h.resume(); });
 			}
 			void await_resume() noexcept {}
 		};
