@@ -53,3 +53,6 @@ std::string_view
 cGateway::GetToken() const noexcept { return m_pImpl->GetToken(); }
 void
 cGateway::Run() { m_pImpl->Run(); }
+/* ================================================================================================================== */
+void
+cGateway::RequestExit() noexcept { m_pImpl->RequestExit(); }

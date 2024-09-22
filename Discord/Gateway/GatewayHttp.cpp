@@ -1,5 +1,6 @@
 #include "Exception.h"
 #include "GatewayImpl.h"
+#include "Utils.h"
 /* ================================================================================================================== */
 net::awaitable<void>
 cGateway::implementation::http_coro() {
@@ -42,7 +43,7 @@ cGateway::implementation::http_start() {
 		/* Save the exception pointer, whether null or not */
 		m_http_exception = ex;
 		try {
-			if (!ex && response.keep_alive()) {
+			if (!m_http_terminate && !ex && response.keep_alive()) {
 				/* If the response indicates Keep-Alive, schedule the stream to close */
 				m_http_timer.expires_after(1min);
 				m_http_timer.async_wait([this](const sys::error_code &ec) {
@@ -57,6 +58,9 @@ cGateway::implementation::http_start() {
 				p->next_layer().expires_after(30s);
 				p->async_shutdown([_ = std::move(m_http_stream)](const sys::error_code&) {});
 			}
+			/* If the HTTP session should terminate, fail with a session reset error */
+			if (m_http_terminate)
+				throw xGatewaySessionResetError();
 			/* Start processing the next request in the queue */
 			if (!m_http_queue.empty())
 				http_start();
@@ -105,8 +109,11 @@ cGateway::implementation::DiscordRequestNoRetry(beast::http::verb method, std::s
 	request.prepare_payload();
 	/* The response object; this is where the HTTP response is saved from the awaitable */
 	http_response response;
-	/* Save the request and response references to the end of the request queue */
+	/* Check that the current session isn't terminating */
 	co_await ResumeOnEventStrand();
+	if (m_http_terminate)
+		throw xGatewaySessionResetError();
+	/* Save the request and response references to the end of the request queue */
 	m_http_queue.emplace_back(request, response);
 	/* Start the async operation of sending the request */
 	co_await [this] {

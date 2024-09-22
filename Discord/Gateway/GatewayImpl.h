@@ -70,6 +70,7 @@ private:
 		http_response&      response;
 		std::coroutine_handle<> coro;
 	};
+	bool                   m_http_terminate; // Whether HTTP requests should be cancelled upon session termination;
 	std::deque<http_entry> m_http_queue;     // A queue of pending HTTP requests
 	net::steady_timer      m_http_timer;     // The timer for scheduling HTTP stream shutdown after a period of inactivity
 	std::exception_ptr     m_http_exception; // The exception to be propagated after an error during HTTP operations
@@ -111,7 +112,7 @@ private:
 	void on_read(const sys::error_code&, std::size_t);
 	void on_write(const sys::error_code&);
 	void on_expire(const sys::error_code&);
-	void on_close(bool = true) noexcept;
+	void on_close() noexcept;
 	void close() noexcept;
 	void retry(std::exception_ptr) noexcept;
 	/* A method that initiates the gateway connection */
@@ -175,5 +176,6 @@ public:
 	cAsyncGenerator<cMember> RequestGuildMembers(const cSnowflake&, std::string_view, std::span<const cSnowflake>);
 
 	void Run();
+	void RequestExit() noexcept;
 };
 #endif /* DISCORD_GATEWAYIMPL_H */

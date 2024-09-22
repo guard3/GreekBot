@@ -117,6 +117,8 @@ public:
 	virtual cTask<> OnMessageReactionRemoveAll(cSnowflake& channel_id, cSnowflake& message_id, hSnowflake guild_id) { co_return; }
 	virtual cTask<> OnMessageReactionRemoveEmoji(cSnowflake& channel_id, cSnowflake& message_id, hSnowflake guild_id, cEmoji&) { co_return; }
 	virtual cTask<> OnVoiceStateUpdate(cVoiceState&) { co_return; }
+	/* Gracefully close the client connection and request program exit */
+	void RequestExit() noexcept;
 };
 
 template<typename Gateway, typename... Args>

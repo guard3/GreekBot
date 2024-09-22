@@ -16,11 +16,12 @@ enum eGatewayOpcode {
 };
 /* ========== Flags to keep track of the status of async operations of the WebSocket stream ========================= */
 enum {
-	ASYNC_NONE    = 0,
-	ASYNC_READING = 1 << 0,
-	ASYNC_WRITING = 1 << 1,
-	ASYNC_OPENING = 1 << 2,
-	ASYNC_CLOSING = 1 << 3
+	ASYNC_NONE        = 0,
+	ASYNC_READING     = 1 << 0,
+	ASYNC_WRITING     = 1 << 1,
+	ASYNC_OPENING     = 1 << 2,
+	ASYNC_CLOSING     = 1 << 3,
+	ASYNC_TERMINATING = 1 << 4
 };
 /* ================================================================================================================== */
 cGateway::implementation::implementation(cGateway* p, std::string_view t, eIntent i) :
@@ -31,6 +32,7 @@ cGateway::implementation::implementation(cGateway* p, std::string_view t, eInten
 	m_resolver(m_http_strand),
 	m_async_status(ASYNC_NONE),
 	m_http_auth(fmt::format("Bot {}", t)),
+	m_http_terminate(false),
 	m_http_timer(m_http_strand),
 	m_intents(i),
 	m_last_sequence(0),
@@ -79,24 +81,30 @@ cGateway::implementation::close() noexcept {
 	/* Stop heartbeating to prevent writing further data to the stream */
 	m_heartbeat_timer.cancel();
 	/* Close the stream */
-	m_ws->async_close(beast::websocket::close_code::none, [this](auto&&) { on_close(); });
+	m_ws->async_close(beast::websocket::close_code::none, [this](const sys::error_code&) { on_close(); });
 	m_async_status |= ASYNC_CLOSING;
 }
 void
-cGateway::implementation::on_close(bool bRestart) noexcept {
+cGateway::implementation::on_close() noexcept {
 	/* Stop heartbeating to prevent writing further data to the stream */
 	if (!(m_async_status & ASYNC_CLOSING)) {
 		m_heartbeat_timer.cancel();
 		m_async_status |= ASYNC_CLOSING;
 	}
 	struct {
-		implementation& self; bool bRestart;
+		implementation& self;
 		void operator()() {
 			/* Wait for all async operations to finish */
 			if (self.m_async_status & (ASYNC_READING | ASYNC_WRITING))
 				return net::defer(self.m_ws_strand, *this);
-			/* If we have to exit, simply return and wait for the io context to run out of work */
-			if (!bRestart) return;
+			/* If we have to exit, cancel any HTTP operations and return to let the io context run out of work */
+			if (self.m_async_status & ASYNC_TERMINATING) {
+				net::post(self.m_http_strand, [&self = self] {
+					self.m_http_terminate = true;
+					self.m_http_timer.cancel();
+				});
+				return;
+			}
 			/* Reset all resources */
 			inflateReset(&self.m_inflate_stream);
 			self.m_queue.clear();
@@ -106,7 +114,7 @@ cGateway::implementation::on_close(bool bRestart) noexcept {
 			self.m_async_status = ASYNC_NONE;
 			self.run_session();
 		}
-	} _{ *this, bRestart }; _();
+	} _{ *this }; _();
 }
 /* ================================================================================================================== */
 void
@@ -129,12 +137,11 @@ cGateway::implementation::on_read(const sys::error_code& ec, std::size_t bytes_r
 			case 4012: // Invalid API version
 			case 4013: // Invalid intent(s)
 			case 4014: // Disallowed intent(s)
-				/* Cancel the http timer to stop giving work to the io context */
-				net::post(m_http_strand, [this] { m_http_timer.cancel(); });
 				/* Report the close reason as the error message */
 				cUtils::PrintErr("Fatal gateway error{}{}", rsn.reason.empty() ? "." : ": ", rsn.reason.c_str());
 				/* Continue closing without creating a new session */
-				return on_close(false);
+				m_async_status |= ASYNC_TERMINATING;
+				return on_close();
 			case 4007: // Invalid seq
 				/* Reset session */
 				m_last_sequence = 0;
@@ -401,4 +408,12 @@ cGateway::implementation::Run() {
 	std::thread t(&implementation::run_context, this);
 	run_context();
 	t.join();
+}
+/* ================================================================================================================== */
+void
+cGateway::implementation::RequestExit() noexcept {
+	net::defer(m_ws_strand, [this] {
+		m_async_status |= ASYNC_TERMINATING;
+		close();
+	});
 }
