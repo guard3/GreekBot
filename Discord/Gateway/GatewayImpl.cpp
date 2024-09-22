@@ -71,7 +71,7 @@ cGateway::implementation::send(std::string msg) {
 }
 /* ================================================================================================================== */
 void
-cGateway::implementation::close() noexcept {
+cGateway::implementation::restart() noexcept {
 	/* If we're already closing, don't do anything */
 	if (m_async_status & ASYNC_CLOSING)
 		return;
@@ -153,11 +153,8 @@ cGateway::implementation::on_read(const sys::error_code& ec, std::size_t bytes_r
 		}
 	}
 	/* If any other error occurs, report it and close the connection */
-	if (ec) {
-		const char* err = ec.message(m_err_msg, std::size(m_err_msg));
-		cUtils::PrintErr("An error occurred while reading from the gateway{}{}", *err ? ": " : ".", err);
-		return close();
-	}
+	if (ec)
+		throw sys::system_error(ec);
 	/* Reset the JSON parser and feed it the received message */
 	m_parser.reset();
 	char* in = (char*)m_buffer.data().data();
@@ -217,7 +214,7 @@ cGateway::implementation::on_read(const sys::error_code& ec, std::size_t bytes_r
 				m_session_id.clear();
 				m_resume_gateway_url.clear();
 			}
-			close();
+			restart();
 		case OP_RECONNECT:
 			/* ...and do nothing and wait for the server to close the WebSocket session */
 			break;
@@ -238,10 +235,10 @@ cGateway::implementation::on_read(const sys::error_code& ec, std::size_t bytes_r
 	}
 } catch (const std::exception& e) {
 	cUtils::PrintErr("An error occurred while reading from the gateway: {}", e.what());
-	close();
+	restart();
 } catch (...) {
 	cUtils::PrintErr("An error occurred while reading from the gateway.");
-	close();
+	restart();
 }
 /* ================================================================================================================== */
 void
@@ -252,9 +249,10 @@ cGateway::implementation::on_write(const sys::error_code& ec) {
 		return;
 	/* If an error occurs, close the stream */
 	if (ec) {
-		const char* err = ec.message(m_err_msg, std::size(m_err_msg));
+		char temp[256];
+		const char* err = ec.message(temp, std::size(temp));
 		cUtils::PrintErr("An error occurred while writing to the gateway{}{}", *err ? ": " : ".", err);
-		return close();
+		return restart();
 	}
 	/* If all is good, pop the message that was just sent... */
 	m_queue.pop_front();
@@ -270,7 +268,7 @@ cGateway::implementation::on_expire(const sys::error_code& ec) {
 	/* If the operation was canceled, simply return */
 	if (m_async_status & (ASYNC_OPENING | ASYNC_CLOSING) || ec) return;
 	/* If the last heartbeat wasn't acknowledged, close the stream */
-	if (!m_heartbeat_ack) return close();
+	if (!m_heartbeat_ack) return restart();
 	/* Send a heartbeat */
 	heartbeat();
 	/* Reset the timer */
@@ -286,7 +284,7 @@ cGateway::implementation::run_session() noexcept try {
 		co_return;
 	/* If, for whatever reason, there are pending async operations, restart */
 	if (m_async_status != ASYNC_NONE)
-		co_return close();
+		co_return restart();
 	m_async_status = ASYNC_OPENING;
 	/* Find the appropriate url to connect to */
 	urls::url* pUrl;
@@ -381,7 +379,7 @@ cGateway::implementation::retry(std::exception_ptr ex) noexcept {
 				throw sys::system_error(ec);
 		}
 		cUtils::PrintErr("{} Retrying...     ", err);
-		close();
+		restart();
 	}, [](std::exception_ptr ex) { if (ex) std::rethrow_exception(ex); });
 }
 /* ================================================================================================================== */
@@ -397,7 +395,7 @@ cGateway::implementation::run_context() noexcept {
 		} catch (...) {
 			cUtils::PrintErr("An unhandled exception escaped main loop.");
 		}
-		net::dispatch(m_ws_strand, [this] { close(); });
+		net::dispatch(m_ws_strand, [this] { restart(); });
 	}
 	cUtils::PrintLog("exiting run_context()...");
 }
@@ -414,6 +412,6 @@ void
 cGateway::implementation::RequestExit() noexcept {
 	net::defer(m_ws_strand, [this] {
 		m_async_status |= ASYNC_TERMINATING;
-		close();
+		restart();
 	});
 }

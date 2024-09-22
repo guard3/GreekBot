@@ -113,7 +113,7 @@ private:
 	void on_write(const sys::error_code&);
 	void on_expire(const sys::error_code&);
 	void on_close() noexcept;
-	void close() noexcept;
+	void restart() noexcept;
 	void retry(std::exception_ptr) noexcept;
 	/* A method that initiates the gateway connection */
 	void run_session() noexcept;
