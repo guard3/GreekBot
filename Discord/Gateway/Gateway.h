@@ -64,13 +64,6 @@ class cGateway {
 	class implementation;
 	std::unique_ptr<implementation> m_pImpl;
 
-	void Run();
-	/* Make DiscordMain invoke Run()
-	 * TODO: Upgrade to Clang 18 because 17 and newer don't recognise templated friends with concepts... YIKES!!! */
-	template<typename Gateway, typename... Args>
-	friend std::enable_if_t<std::is_base_of_v<cGateway, Gateway> && std::is_constructible_v<Gateway, Args&&...>>
-	DiscordMain(Args&&...);
-
 protected:
 	std::string_view GetHttpAuthorization() const noexcept;
 
@@ -117,14 +110,9 @@ public:
 	virtual cTask<> OnMessageReactionRemoveAll(cSnowflake& channel_id, cSnowflake& message_id, hSnowflake guild_id) { co_return; }
 	virtual cTask<> OnMessageReactionRemoveEmoji(cSnowflake& channel_id, cSnowflake& message_id, hSnowflake guild_id, cEmoji&) { co_return; }
 	virtual cTask<> OnVoiceStateUpdate(cVoiceState&) { co_return; }
+	/* Run the client loop */
+	void Run();
 	/* Gracefully close the client connection and request program exit */
 	void RequestExit() noexcept;
 };
-
-template<typename Gateway, typename... Args>
-inline std::enable_if_t<std::is_base_of_v<cGateway, Gateway> && std::is_constructible_v<Gateway, Args&&...>>
-DiscordMain(Args&&... args) {
-	Gateway client(std::forward<Args>(args)...);
-	client.Run();
-}
 #endif /* DISCORD_GATEWAY_H */

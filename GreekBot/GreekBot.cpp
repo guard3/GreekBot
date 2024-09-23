@@ -189,7 +189,4 @@ cGreekBot::process_test(cAppCmdInteraction& i) HANDLER_BEGIN {
 		return msg;
 	}();
 	co_await InteractionSendMessage(i, MESSAGE);
-	/* Test */
-	if (i.GetUser().GetId() == 338333804039110656)
-		RequestExit();
 } HANDLER_END
