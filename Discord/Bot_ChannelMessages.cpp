@@ -30,36 +30,44 @@ cBot::DeleteMessages(crefChannel channel, std::span<const cSnowflake> msg_ids, s
 	/* Start deleting messages in batched of at most 100 messages */
 	const cSnowflake* ids[100];
 	for (std::size_t ids_size; !msg_ids.empty(); msg_ids = msg_ids.subspan(ids_size)) {
-		/* Save pointers to the first 100 snowflakes, partitioning them based on their post date;
-		 * Messages older than 2 weeks are saved at the end of the array, with 'it' pointing to the first such message */
-		ids_size = std::min<std::size_t>(msg_ids.size(), 100);
-		auto it = [out_begin = ids, out_end = ids + ids_size, msg_ids]() mutable {
+		ids_size = std::min<std::size_t>(msg_ids.size(), 100); // The array size to use in this iteration
+		const auto ids_end = ids + ids_size;                   // A past-the-end pointer to the ids array
+		/* And now the fun begins!
+		 * We add pointers to the first batch of snowflakes, partitioning them based on their post date. That's needed,
+		 * because the bulk-delete endpoint can only delete messages not older than 2 weeks. At the end, 'it' will be
+		 * pointing to the first older-than-2-weeks ids like so:
+		 * [----- newer messages -----][----- older messages ----- ]
+		 * ^~~~ ids                    ^~~~ it           ids_end ~~~^
+		 */
+		auto it = [out_begin = ids, out_end = ids_end, msg_ids]() mutable {
 			using namespace std::chrono;
-			const auto num = out_end - out_begin;
-			const auto now = floor<days>(system_clock::now());
-			for (std::size_t i = 0; i < num; ++i) {
-				if (const auto pId = &msg_ids[i]; now - ceil<days>(pId->GetTimestamp()) < days(14))
-					*out_begin++ = pId;
+			const auto now = system_clock::now();
+			for (const cSnowflake& id : msg_ids.subspan(0, out_end - out_begin)) {
+				if (ceil<days>(now - id.GetTimestamp()) < days(14))
+					*out_begin++ = &id;
 				else
-					*--out_end = pId;
+					*--out_end = &id;
 			}
 			return out_end;
 		}();
-		if (const auto num = it - ids; num > 1) {
-			/* If the messages that are not older than 2 weeks are at least 2, bulk delete */
+		if (std::span newer(ids, it); newer.size() >= 2) {
+			/* If we have at least 2 messages newer than 2 weeks, bulk delete... */
 			json::object obj;
 			auto& array = obj["messages"].emplace_array();
-			array.reserve(num);
-			for (std::size_t i = 0; i < num; ++i)
-				array.emplace_back(ids[i]->ToString());
+			array.reserve(newer.size());
+			for (const cSnowflake* pId : newer)
+				array.emplace_back(pId->ToString());
 			co_await DiscordPost({ bulk_delete_begin, bulk_delete_end }, obj, fields);
-		} else if (num == 1) {
-			/* If there's only 1 message, move the iterator to point to the beginning of all messages */
+		} else {
+			/* ...if not, move the iterator to point to the beginning of all messages */
 			it = ids;
 		}
-		/* All messages older than 2 weeks need to be deleted one by one... */
-		for (const auto end = ids + ids_size; it != end; ++it)
-			co_await delete_message(channel.GetId(), **it, fields);
+		/* It's best to sort older messages from newest to oldest... */
+		std::span older(it, ids_end);
+		rng::sort(older, [](const cSnowflake* lhs, const cSnowflake* rhs) { return *lhs > *rhs; });
+		/* ...because they need to be deleted one by one */
+		for (const cSnowflake* pId : older)
+			co_await delete_message(channel.GetId(), *pId, fields);
 	}
 }
 
