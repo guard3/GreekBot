@@ -93,7 +93,7 @@ cGateway::implementation::DiscordRequest(beast::http::verb m, std::string_view t
 cTask<json::value>
 cGateway::implementation::DiscordRequestNoRetry(beast::http::verb method, std::string_view target, const json::object* obj, std::span<const cHttpField> fields) {
 	/* Create a new request object */
-	http_request request(method, fmt::format(DISCORD_API_ENDPOINT "{}", target), 11);
+	http_request request(method, std::format(DISCORD_API_ENDPOINT "{}", target), 11);
 	/* Set the necessary fields */
 	for (auto& f: fields)
 		request.set(f.GetName(), f.GetValue());

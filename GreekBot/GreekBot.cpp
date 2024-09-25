@@ -142,7 +142,7 @@ cGreekBot::process_interaction(cAppCmdInteraction& i) HANDLER_BEGIN {
 		case 1178824125192613939: // test
 			return process_test(i);
 		default:
-			throw std::runtime_error(fmt::format("Unhandled command {:?} {}", i.GetCommandName(), i.GetCommandId()));
+			throw std::runtime_error(std::format("Unhandled command \"{}\" {}", i.GetCommandName(), i.GetCommandId()));
 	}
 } HANDLER_END
 
@@ -167,7 +167,7 @@ cGreekBot::process_interaction(cMsgCompInteraction& i) HANDLER_BEGIN {
 				return process_nickname_button(i, custom_id.substr(4));
 			if (custom_id.starts_with("role:"))
 				return process_role_button(i, custom_id.substr(5));
-			throw std::runtime_error(fmt::format("Unknown component id {:?} 0x{:08X}", custom_id, hash));
+			throw std::runtime_error(std::format("Unknown component id \"{}\" 0x{:08X}", custom_id, hash));
 	}
 } HANDLER_END
 
@@ -178,7 +178,7 @@ cGreekBot::process_interaction(cModalSubmitInteraction& i) HANDLER_BEGIN {
 		return process_ban_modal(i, custom_id.substr(4));
 	if (custom_id == "NICKNAME_MODAL")
 		return process_modal(i);
-	throw std::runtime_error(fmt::format("Unknown modal id {:?} 0x{:08X}", custom_id, cUtils::CRC32(0, custom_id)));
+	throw std::runtime_error(std::format("Unknown modal id \"{}\" 0x{:08X}", custom_id, cUtils::CRC32(0, custom_id)));
 } HANDLER_END
 
 cTask<>

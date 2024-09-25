@@ -14,7 +14,7 @@ static const char* get_extension(eImageFormat img) noexcept {
 
 std::string
 cCDN::GetDefaultUserAvatar(const cSnowflake& user_id, std::uint16_t discr) {
-	return fmt::format("{}embed/avatars/{}.png", base_url, discr ? discr % 5 : (user_id.ToInt() >> 22) % 6);
+	return std::format("{}embed/avatars/{}.png", base_url, discr ? discr % 5 : (user_id.ToInt() >> 22) % 6);
 }
 std::string
 cCDN::GetDefaultUserAvatar(const cUser& user) {
@@ -28,7 +28,7 @@ std::string
 cCDN::GetUserAvatar(const cSnowflake& user_id, std::string_view hash, std::uint16_t discr, eImageFormat img, std::size_t size) {
 	if (hash.empty())
 		return GetDefaultUserAvatar(user_id, discr);
-	return fmt::format("{}avatars/{}/{}.{}?size={}", base_url, user_id, hash, hash.starts_with("a_") ? "gif" : get_extension(img), size);
+	return std::format("{}avatars/{}/{}.{}?size={}", base_url, user_id, hash, hash.starts_with("a_") ? "gif" : get_extension(img), size);
 }
 std::string
 cCDN::GetRoleIcon(const cRole& role, eImageFormat img, std::size_t size) {
@@ -36,5 +36,5 @@ cCDN::GetRoleIcon(const cRole& role, eImageFormat img, std::size_t size) {
 }
 std::string
 cCDN::GetRoleIcon(const cSnowflake& role_id, std::string_view hash, eImageFormat img, std::size_t size) {
-	return hash.empty() ? std::string() : fmt::format("{}role-icons/{}/{}.{}?size={}", base_url, role_id, hash, get_extension(img), size);
+	return hash.empty() ? std::string() : std::format("{}role-icons/{}/{}.{}?size={}", base_url, role_id, hash, get_extension(img), size);
 }

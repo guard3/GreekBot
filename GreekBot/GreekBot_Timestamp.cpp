@@ -37,12 +37,12 @@ cGreekBot::process_timestamp(cAppCmdInteraction& i) HANDLER_BEGIN {
 			try {
 				/* Create message */
 				response
-					.SetContent(fmt::format("<t:{0}:{1}>\n```<t:{0}:{1}>```", floor<seconds>(cUtils::ParseISOTimestamp(input)).time_since_epoch().count(), style))
+					.SetContent(std::format("<t:{0}:{1}>\n```<t:{0}:{1}>```", floor<seconds>(cUtils::ParseISOTimestamp(input)).time_since_epoch().count(), style))
 					.SetComponents({
 						cActionRow{
 							cButton{
 								BUTTON_STYLE_SECONDARY,
-								fmt::format("DLT#{}", i.GetUser().GetId()),
+								std::format("DLT#{}", i.GetUser().GetId()),
 								"Dismiss"
 							}
 						}
@@ -51,7 +51,7 @@ cGreekBot::process_timestamp(cAppCmdInteraction& i) HANDLER_BEGIN {
 				/* The input timestamp string was invalid */
 				response
 					.SetFlags(MESSAGE_FLAG_EPHEMERAL)
-					.SetContent(fmt::format("`{:<1}` is not a valid timestamp 💀 Try again!", input));
+					.SetContent(std::format("`{:<1}` is not a valid timestamp 💀 Try again!", input));
 			}
 			break;
 	}

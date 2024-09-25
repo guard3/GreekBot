@@ -102,7 +102,7 @@ cGreekBot::process_unban(cMsgCompInteraction& i, cSnowflake user_id) HANDLER_BEG
 		cActionRow{
 			cButton{
 				BUTTON_STYLE_SECONDARY,
-				fmt::format("DLT#{}", i.GetUser().GetId()),
+				std::format("DLT#{}", i.GetUser().GetId()),
 				"Dismiss"
 			}
 		}
@@ -133,8 +133,8 @@ cGreekBot::process_ban_ctx_menu(cAppCmdInteraction& i, std::string_view subcomma
 		display_name = user->GetUsername();
 	/* ...and then send a modal to request optional ban reason and goodbye message */
 	co_await InteractionSendModal(i, cModal{
-		fmt::format("ban:{}:{}:{}:{}", user->GetId(), user->GetAvatar(), user->GetUsername(), user->GetDiscriminator()),
-		fmt::format("Ban @{}", display_name),
+		std::format("ban:{}:{}:{}:{}", user->GetId(), user->GetAvatar(), user->GetUsername(), user->GetDiscriminator()),
+		std::format("Ban @{}", display_name),
 		{
 			cActionRow{
 				cTextInput{
@@ -190,7 +190,7 @@ cGreekBot::process_ban_modal(cModalSubmitInteraction& i, std::string_view custom
 					goodbye = text_input.GetValue();
 					break;
 				default:
-					throw std::runtime_error(fmt::format("Unexpected text input id: {}", text_input.GetCustomId()));
+					throw std::runtime_error(std::format("Unexpected text input id: \"{}\"", text_input.GetCustomId()));
 			}
 		}
 	}
@@ -233,14 +233,14 @@ cGreekBot::process_ban(cInteraction& i, std::uint32_t sc, const cSnowflake& user
 	/* Create the embed of the confirmation message */
 	cPartialMessage response;
 	cEmbed& embed = response.EmplaceEmbeds().emplace_back();
-	embed.EmplaceAuthor(fmt::format("{} was banned", username)).SetIconUrl(cCDN::GetUserAvatar(user_id, hash, discr));
+	embed.EmplaceAuthor(std::format("{} was banned", username)).SetIconUrl(cCDN::GetUserAvatar(user_id, hash, discr));
 	embed.SetColor(0xC43135);
 	auto& fields = embed.EmplaceFields();
 	fields.reserve(2);
 	fields.emplace_back("Reason", reason);
 	/* DM the goodbye message */
 	try {
-		co_await CreateDMMessage(user_id, cPartialMessage().SetContent(fmt::format("You've been banned from **{}** with reason:\n```{}```", m_guilds.at(*i.GetGuildId()).GetName(), goodbye)));
+		co_await CreateDMMessage(user_id, cPartialMessage().SetContent(std::format("You've been banned from **{}** with reason:\n```{}```", m_guilds.at(*i.GetGuildId()).GetName(), goodbye)));
 		/* Add the goodbye message field only after the DM was sent successfully */
 		if (reason != goodbye)
 			fields.emplace_back("Goodbye message", goodbye);
@@ -254,12 +254,12 @@ cGreekBot::process_ban(cInteraction& i, std::uint32_t sc, const cSnowflake& user
 		cActionRow{
 			cButton{
 				BUTTON_STYLE_DANGER,
-				fmt::format("BAN#{}", user_id),
+				std::format("BAN#{}", user_id),
 				"Revoke ban"
 			},
 			cButton{
 				BUTTON_STYLE_SECONDARY,
-				fmt::format("DLT#{}", i.GetUser().GetId()),
+				std::format("DLT#{}", i.GetUser().GetId()),
 				"Dismiss"
 			}
 		}

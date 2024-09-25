@@ -2,6 +2,7 @@
 #include "GreekBot.h"
 #include "Utils.h"
 #include <csignal>
+#include <cstdio>
 #include <thread>
 
 int main(int argc, const char** argv) {
@@ -14,7 +15,7 @@ int main(int argc, const char** argv) {
 	pthread_sigmask(SIG_BLOCK, &set, NULL);
 	/* Check arguments! */
 	if (argc != 2) {
-		fmt::print("You forgot to give me a token!\n");
+		std::puts("You forgot to give me a token!");
 		return EXIT_FAILURE;
 	}
 	/* Initialize the database and the bot client */

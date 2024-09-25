@@ -30,12 +30,12 @@ cGreekBot::process_clear(cAppCmdInteraction& i) {
 		response.SetContent("There are no messages to delete.");
 	} else {
 		co_await DeleteMessages(i.GetChannelId(), ids, "/clear command");
-		response.SetContent(fmt::format("I deleted **{}** message{}<a:mop:1255169498051379361>", ids.size(), ids.size() == 1 ? "" : "s"));
+		response.SetContent(std::format("I deleted **{}** message{}<a:mop:1255169498051379361>", ids.size(), ids.size() == 1 ? "" : "s"));
 		response.SetComponents({
 			cActionRow{
 				cButton{
 					BUTTON_STYLE_SECONDARY,
-					fmt::format("DLT#{}", i.GetUser().GetId()),
+					std::format("DLT#{}", i.GetUser().GetId()),
 					"Dismiss"
 				}
 			}

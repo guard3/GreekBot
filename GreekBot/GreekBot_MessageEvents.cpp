@@ -40,18 +40,18 @@ cGreekBot::OnMessageUpdate(cMessageUpdate& msg, hSnowflake guild_id, hPartialMem
 			cPartialMessage response;
 			cEmbed& embed = response.EmplaceEmbeds().emplace_back();
 			embed.SetColor(0x2ECD72);
-			embed.SetDescription(fmt::format("📝 Their message was **edited** https://discord.com/channels/{}/{}/{}", LMG_GUILD_ID, db_msg->channel_id, db_msg->id));
+			embed.SetDescription(std::format("📝 Their message was **edited** https://discord.com/channels/{}/{}/{}", LMG_GUILD_ID, db_msg->channel_id, db_msg->id));
 			embed.SetTimestamp(db_msg->id.GetTimestamp());
 			if (user) {
 				auto disc = user->GetDiscriminator();
-				embed.EmplaceAuthor(disc ? fmt::format("{}#{:04}", user->GetUsername(), disc) : user->MoveUsername()).SetIconUrl(cCDN::GetUserAvatar(*user));
+				embed.EmplaceAuthor(disc ? std::format("{}#{:04}", user->GetUsername(), disc) : user->MoveUsername()).SetIconUrl(cCDN::GetUserAvatar(*user));
 			} else {
 				embed.EmplaceAuthor("Deleted user").SetIconUrl(cCDN::GetDefaultUserAvatar(db_msg->author_id));
 			}
 			auto& fields = embed.EmplaceFields();
 			fields.reserve(4);
-			fields.emplace_back("Message ID", fmt::format("`{}`", db_msg->id), true);
-			fields.emplace_back("User ID", fmt::format("`{}`", db_msg->author_id), true);
+			fields.emplace_back("Message ID", std::format("`{}`", db_msg->id), true);
+			fields.emplace_back("User ID", std::format("`{}`", db_msg->author_id), true);
 			if (!db_msg->content.empty())
 				fields.emplace_back("Old content", db_msg->content);
 			fields.emplace_back(pContent->empty() ? "No new content" : "New content", *pContent);
@@ -65,16 +65,16 @@ static void
 add_message_delete_embed(std::vector<cEmbed>& embeds, const message_entry& db_msg, const cUser* pMsgAuthor) {
 	cEmbed& embed = embeds.emplace_back();
 	embed.SetColor(0xC43135);
-	embed.SetDescription(fmt::format("❌ Their message was **deleted** in <#{}>", db_msg.channel_id));
+	embed.SetDescription(std::format("❌ Their message was **deleted** in <#{}>", db_msg.channel_id));
 	embed.SetTimestamp(db_msg.id.GetTimestamp());
 	embed.SetFields({
-		{ "Message ID", fmt::format("`{}`", db_msg.id.ToString()), true },
-		{ "User ID", fmt::format("`{}`", db_msg.author_id), true },
+		{ "Message ID", std::format("`{}`", db_msg.id.ToString()), true },
+		{ "User ID", std::format("`{}`", db_msg.author_id), true },
 		{ db_msg.content.empty() ? "No content" : "Content", db_msg.content }
 	});
 	if (pMsgAuthor) {
 		auto disc = pMsgAuthor->GetDiscriminator();
-		embed.EmplaceAuthor(disc ? fmt::format("{}#{:04}", pMsgAuthor->GetUsername(), disc) : (std::string)pMsgAuthor->GetUsername()).SetIconUrl(cCDN::GetUserAvatar(*pMsgAuthor));
+		embed.EmplaceAuthor(disc ? std::format("{}#{:04}", pMsgAuthor->GetUsername(), disc) : (std::string)pMsgAuthor->GetUsername()).SetIconUrl(cCDN::GetUserAvatar(*pMsgAuthor));
 	} else {
 		embed.EmplaceAuthor("Deleted user").SetIconUrl(cCDN::GetDefaultUserAvatar(db_msg.author_id));
 	}

@@ -113,7 +113,7 @@ xAppCmdOptionTypeError::xAppCmdOptionTypeError(eAppCmdOptionType type) : std::in
 			name = "APP_CMD_OPT_NUMBER";
 			break;
 	}
-	return fmt::format("Option is not of type {}", name);
+	return std::format("Option is not of type {}", name);
 } (type)) {}
 /* ========== Value getters for all option types ==================================================================== */
 template<> std::string_view

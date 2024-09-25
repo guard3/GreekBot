@@ -4,12 +4,12 @@
 #include <chrono>
 #include <concepts>
 #include <filesystem>
+#include <format>
 #include <random>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <vector>
-#include <fmt/format.h>
 
 /* A helper class with various useful functions */
 class cUtils final {
@@ -44,28 +44,28 @@ public:
 	}
 	/* Logger functions */
 	template<char nl = '\n', typename... Args>
-	static void PrintErr(fmt::format_string<Args...> format, Args&&... args) noexcept try {
-		print_err(fmt::format(format, std::forward<Args>(args)...), nl);
+	static void PrintErr(std::format_string<Args...> format, Args&&... args) noexcept try {
+		print_err(std::format(format, std::forward<Args>(args)...), nl);
 	} catch (...) {
 		print_err(std::string(), nl);
 	}
 	template<char nl = '\n', typename... Args>
-	static void PrintLog(fmt::format_string<Args...> format, Args&&... args) noexcept try {
-		print_log(fmt::format(format, std::forward<Args>(args)...), nl);
+	static void PrintLog(std::format_string<Args...> format, Args&&... args) noexcept try {
+		print_log(std::format(format, std::forward<Args>(args)...), nl);
 	} catch (...) {
 		print_log(std::string(), nl);
 	}
 	template<char nl = '\n', typename... Args>
-	static void PrintMsg(fmt::format_string<Args...> format, Args&&... args) noexcept try {
-		print_msg(fmt::format(format, std::forward<Args>(args)...), nl);
+	static void PrintMsg(std::format_string<Args...> format, Args&&... args) noexcept try {
+		print_msg(std::format(format, std::forward<Args>(args)...), nl);
 	} catch (...) {
 		print_msg(std::string(), nl);
 	}
 	template<char nl = '\n', typename... Args>
-	static void PrintDbg(fmt::format_string<Args...> format, Args&&... args) noexcept
+	static void PrintDbg(std::format_string<Args...> format, Args&&... args) noexcept
 #ifdef DEBUG
 	try {
-		print_dbg(fmt::format(format, std::forward<Args>(args)...), nl);
+		print_dbg(std::format(format, std::forward<Args>(args)...), nl);
 	} catch (...) {
 		print_dbg(std::string(), nl);
 	}
@@ -101,9 +101,9 @@ public:
 		const year_month_day ymd{ tp_days };
 		const hh_mm_ss hms{ timepoint - tp_days };
 		if constexpr (std::floating_point<typename Duration::rep> || decltype(hms)::fractional_width > 6) {
-			return fmt::format("{:04}-{:02}-{:02}T{:02}:{:02}:{:02}.{:09}Z", (int)ymd.year(), (unsigned)ymd.month(), (unsigned)ymd.day(), hms.hours().count(), hms.minutes().count(), hms.seconds().count(), floor<nanoseconds>(hms.subseconds()).count());
+			return std::format("{:04}-{:02}-{:02}T{:02}:{:02}:{:02}.{:09}Z", (int)ymd.year(), (unsigned)ymd.month(), (unsigned)ymd.day(), hms.hours().count(), hms.minutes().count(), hms.seconds().count(), floor<nanoseconds>(hms.subseconds()).count());
 		} else {
-			return fmt::format("{:04}-{:02}-{:02}T{:02}:{:02}:{:02}.{:06}Z", (int)ymd.year(), (unsigned)ymd.month(), (unsigned)ymd.day(), hms.hours().count(), hms.minutes().count(), hms.seconds().count(), floor<microseconds>(hms.subseconds()).count());
+			return std::format("{:04}-{:02}-{:02}T{:02}:{:02}:{:02}.{:06}Z", (int)ymd.year(), (unsigned)ymd.month(), (unsigned)ymd.day(), hms.hours().count(), hms.minutes().count(), hms.seconds().count(), floor<microseconds>(hms.subseconds()).count());
 		}
 	}
 	/* Resolving the OS we're running on */

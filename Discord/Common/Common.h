@@ -4,10 +4,10 @@
 #include <chrono>
 #include <compare>
 #include <cstdint>
+#include <format>
 #include <memory>
 #include <string>
 #include <string_view>
-#include <fmt/format.h>
 
 #define DISCORD_STR_(x) #x
 #define DISCORD_STR(x) DISCORD_STR_(x)
@@ -79,14 +79,14 @@ cSnowflake
 tag_invoke(boost::json::value_to_tag<cSnowflake>, const boost::json::value&);
 void
 tag_invoke(boost::json::value_from_tag, boost::json::value&, const cSnowflake&);
-
-template<>
-struct fmt::formatter<cSnowflake> : fmt::formatter<std::string_view> {
-	auto format(const cSnowflake& sf, auto& ctx) const {
-		return fmt::formatter<std::string_view>::format(sf.ToString(), ctx);
+/* ========== Make cSnowflake formattable =========================================================================== */
+template<typename CharT>
+struct std::formatter<cSnowflake, CharT> : std::formatter<std::string_view, CharT> {
+	template<typename OutputIt>
+	OutputIt format(const cSnowflake& sf, std::basic_format_context<OutputIt, CharT>& ctx) const {
+		return std::formatter<std::string_view, CharT>::format(sf.ToString(), ctx);
 	}
 };
-
 /* ========== Color ================================================================================================= */
 class cColor final {
 	std::int32_t m_value;

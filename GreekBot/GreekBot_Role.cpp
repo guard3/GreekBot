@@ -54,18 +54,18 @@ cGreekBot::process_role_button(cMsgCompInteraction& i, cSnowflake selected_role_
 	if (selected_role_id.ToInt() == 650330610358943755) {
 		/* @Poll is only available for natives */
 		if (rng::find(member_role_ids, ROLE_ID_NATIVE, &cSnowflake::ToInt) == member_role_ids.end())
-			co_return co_await InteractionSendMessage(i, response.SetContent(fmt::format("Sorry, <@&{}> is only available for <@{}>s!", selected_role_id, (std::uint64_t)ROLE_ID_NATIVE)));
+			co_return co_await InteractionSendMessage(i, response.SetContent(std::format("Sorry, <@&{}> is only available for <@{}>s!", selected_role_id, (std::uint64_t)ROLE_ID_NATIVE)));
 	} else if (!rng::binary_search(valid_roles, selected_role_id.ToInt())) {
-		throw std::runtime_error(fmt::format("Role id {} was unexpected", selected_role_id));
+		throw std::runtime_error(std::format("Role id {} was unexpected", selected_role_id));
 	}
 	/* Give or take away the selected role */
 	co_await InteractionDefer(i);
 	if (rng::find(member_role_ids, selected_role_id) == member_role_ids.end()) {
 		co_await AddGuildMemberRole(*i.GetGuildId(), i.GetUser(), selected_role_id);
-		response.SetContent(fmt::format("I gave you the <@&{}> role!", selected_role_id));
+		response.SetContent(std::format("I gave you the <@&{}> role!", selected_role_id));
 	} else {
 		co_await RemoveGuildMemberRole(LMG_GUILD_ID, i.GetUser(), selected_role_id);
-		response.SetContent(fmt::format("I took away your <@&{}> role!", selected_role_id));
+		response.SetContent(std::format("I took away your <@&{}> role!", selected_role_id));
 	}
 	co_await InteractionSendMessage(i, response);
 } HANDLER_END
@@ -105,7 +105,7 @@ cGreekBot::process_proficiency_menu(cMsgCompInteraction& i) HANDLER_BEGIN {
 	co_await ModifyGuildMember(*i.GetGuildId(), i.GetUser().GetId(), options);
 	co_await InteractionSendMessage(i, cPartialMessage()
 		.SetFlags(MESSAGE_FLAG_EPHEMERAL)
-		.SetContent(fmt::format("I gave you the <@&{}> role!", selected_role_id))
+		.SetContent(std::format("I gave you the <@&{}> role!", selected_role_id))
 	);
 } HANDLER_END
 /* ================================================================================================================== */
@@ -153,7 +153,7 @@ cGreekBot::process_booster_menu(cMsgCompInteraction& i) HANDLER_BEGIN {
 		/* Update member and send confirmation message */
 		co_await ModifyGuildMember(LMG_GUILD_ID, i.GetUser().GetId(), options);
 		if (selected_id != 0)
-			response.SetContent(fmt::format("I gave you the <@&{}> role!", selected_id));
+			response.SetContent(std::format("I gave you the <@&{}> role!", selected_id));
 		else if (roles.size() < member_roles.size())
 			response.SetContent("I took away your color role!");
 		else co_return;

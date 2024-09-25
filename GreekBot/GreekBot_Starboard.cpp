@@ -101,7 +101,7 @@ cGreekBot::process_reaction(const cSnowflake& channel_id, const cSnowflake& mess
 			reaction = "<a:spin:1167594572050866207>";
 			break;
 	}
-	auto content = fmt::format("{} **{}** https://discord.com/channels/{}/{}/{}", reaction, num_reactions, LMG_GUILD_ID, channel_id, message_id);
+	auto content = std::format("{} **{}** https://discord.com/channels/{}/{}/{}", reaction, num_reactions, LMG_GUILD_ID, channel_id, message_id);
 	/* If there is a message id registered in the database, edit the message with the new number of reactions */
 	if (sb_msg_id) {
 		co_await EditMessage(HOLY_CHANNEL_ID, sb_msg_id, cMessageUpdate().SetContent(std::move(content)));
@@ -149,7 +149,7 @@ cGreekBot::process_reaction(const cSnowflake& channel_id, const cSnowflake& mess
 				preview.SetTitle("Video");
 				preview.SetDescription(pVideo->MoveUrl());
 			} else {
-				preview.SetDescription(fmt::format("{}\n\n**Video**\n{}", msg->GetContent(), pVideo->GetUrl()));
+				preview.SetDescription(std::format("{}\n\n**Video**\n{}", msg->GetContent(), pVideo->GetUrl()));
 			}
 			bProcessed = true;
 		}
@@ -219,7 +219,7 @@ static cEmbed make_embed(const cUser& user, const starboard_entry& e, cColor col
 
 	cEmbed embed;
 	embed.EmplaceAuthor(user.GetUsername()).SetIconUrl(cCDN::GetUserAvatar(user));
-	embed.SetTitle(fmt::format("{} Rank **#{}**", medal, e.rank));
+	embed.SetTitle(std::format("{} Rank **#{}**", medal, e.rank));
 	embed.SetColor(color);
 	embed.SetFields({
 		{ "Total <:Holy:409075809723219969>", std::to_string(e.react_total), true },
@@ -232,7 +232,7 @@ static cEmbed make_embed(const cUser& user, const starboard_entry& e, cColor col
 static cEmbed make_no_member_embed(const cUser* pUser, std::string_view guild_name, bool bAnymore) {
 	cEmbed embed;
 	embed.SetColor(0x0096FF);
-	embed.SetDescription(fmt::format("User is not a member of **{}**{}.", guild_name, bAnymore ? " anymore" : ""));
+	embed.SetDescription(std::format("User is not a member of **{}**{}.", guild_name, bAnymore ? " anymore" : ""));
 	if (pUser)
 		embed.EmplaceAuthor(pUser->GetUsername()).SetIconUrl(cCDN::GetUserAvatar(*pUser));
 	else
@@ -296,7 +296,7 @@ cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) HANDLER_BEGIN {
 			auto& embed = embeds.emplace_back();
 			embed.EmplaceAuthor(user->GetUsername()).SetIconUrl(cCDN::GetUserAvatar(*user));
 			embed.SetColor(color);
-			embed.SetDescription(fmt::format("User has no <:Holy:409075809723219969>ed messages. {}", msg));
+			embed.SetDescription(std::format("User has no <:Holy:409075809723219969>ed messages. {}", msg));
 			break;
 		}
 		case 0x1D400909: { // top10

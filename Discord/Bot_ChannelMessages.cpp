@@ -9,7 +9,7 @@ namespace json = boost::json;
 cTask<>
 cBot::delete_message(const cSnowflake& channel_id, const cSnowflake& msg_id, std::span<const cHttpField> fields) {
 	char begin[128];
-	const char* end = fmt::format_to(begin, "/channels/{}/messages/{}", channel_id, msg_id);
+	const char* end = std::format_to(begin, "/channels/{}/messages/{}", channel_id, msg_id);
 	co_await DiscordDelete({ begin, end }, fields);
 }
 
@@ -26,7 +26,7 @@ cBot::DeleteMessages(crefChannel channel, std::span<const cSnowflake> msg_ids, s
 	auto fields = reason.empty() ? std::span<cHttpField>() : std::span(&opt.emplace("X-Audit-Log-Reason", cUtils::PercentEncode(reason)), 1);
 	/* Formulate the bulk-delete endpoint path */
 	char bulk_delete_begin[64];
-	const char* bulk_delete_end = fmt::format_to(bulk_delete_begin, "/channels/{}/messages/bulk-delete", channel.GetId());
+	const char* bulk_delete_end = std::format_to(bulk_delete_begin, "/channels/{}/messages/bulk-delete", channel.GetId());
 	/* Start deleting messages in batched of at most 100 messages */
 	const cSnowflake* ids[100];
 	for (std::size_t ids_size; !msg_ids.empty(); msg_ids = msg_ids.subspan(ids_size)) {
@@ -87,7 +87,7 @@ cBot::GetChannelMessages(crefChannel channel, std::size_t limit) {
 			/* First, return the first 100 messages and save the last message id */
 			std::uint64_t last_id = 0;
 			std::size_t count = 0;
-			co_for (cMessage& msg, self.get_channel_messages(fmt::format("/channels/{}/messages?limit={}", channel_id, 100))) {
+			co_for (cMessage& msg, self.get_channel_messages(std::format("/channels/{}/messages?limit={}", channel_id, 100))) {
 				last_id = msg.GetId().ToInt();
 				++count;
 				co_yield msg;
@@ -100,7 +100,7 @@ cBot::GetChannelMessages(crefChannel channel, std::size_t limit) {
 				co_yield msg;
 		}(*this, channel.GetId(), limit);
 	} else try {
-		return get_channel_messages(fmt::format("/channels/{}/messages?limit={}", channel.GetId(), limit));
+		return get_channel_messages(std::format("/channels/{}/messages?limit={}", channel.GetId(), limit));
 	} catch (...) {
 		return [](std::exception_ptr ex) -> cAsyncGenerator<cMessage> {
 			std::rethrow_exception(ex);
@@ -120,7 +120,7 @@ cBot::GetChannelMessagesBefore(crefChannel channel, crefMessage before_this_mess
 				/* Fetch a batch of at most 100 messages */
 				count = 0;
 				limit -= 100;
-				co_for (cMessage& msg, self.get_channel_messages(fmt::format("/channels/{}/messages?before={}&limit={}", channel_id, before_this_message, 100))) {
+				co_for (cMessage& msg, self.get_channel_messages(std::format("/channels/{}/messages?before={}&limit={}", channel_id, before_this_message, 100))) {
 					++count;
 					before_this_message = msg.GetId().ToInt();
 					co_yield msg;
@@ -130,11 +130,11 @@ cBot::GetChannelMessagesBefore(crefChannel channel, crefMessage before_this_mess
 					co_return;
 			} while (limit > 100);
 			/* The limit is at most 100, so get the final batch of messages */
-			co_for (cMessage& msg, self.get_channel_messages(fmt::format("/channels/{}/messages?before={}&limit={}", channel_id, before_this_message, limit)))
+			co_for (cMessage& msg, self.get_channel_messages(std::format("/channels/{}/messages?before={}&limit={}", channel_id, before_this_message, limit)))
 				co_yield msg;
 		}(*this, channel.GetId().ToInt(), before_this_message.GetId().ToInt(), limit);
 	} else try {
-		return get_channel_messages(fmt::format("/channels/{}/messages?before={}&limit={}", channel.GetId(), before_this_message.GetId(), limit));
+		return get_channel_messages(std::format("/channels/{}/messages?before={}&limit={}", channel.GetId(), before_this_message.GetId(), limit));
 	} catch (...) {
 		return [](std::exception_ptr ex) -> cAsyncGenerator<cMessage> {
 			std::rethrow_exception(ex);

@@ -21,7 +21,7 @@ cEmoji::cEmoji(const json::object& o) :
 std::string
 cEmoji::ToString() const {
 	if (m_id.ToInt())
-		return fmt::format("<{}:{}:{}>", m_animated ? "a" : "", m_name, m_id);
+		return std::format("<{}:{}:{}>", m_animated ? "a" : "", m_name, m_id);
 	return m_name;
 }
 cEmoji

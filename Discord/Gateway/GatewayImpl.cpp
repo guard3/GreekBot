@@ -31,7 +31,7 @@ cGateway::implementation::implementation(cGateway* p, std::string_view t, eInten
 	m_http_strand(net::make_strand(m_ioc)),
 	m_resolver(m_http_strand),
 	m_async_status(ASYNC_NONE),
-	m_http_auth(fmt::format("Bot {}", t)),
+	m_http_auth(std::format("Bot {}", t)),
 	m_http_terminate(false),
 	m_http_timer(m_http_strand),
 	m_intents(i),
@@ -304,7 +304,7 @@ cGateway::implementation::run_session() noexcept try {
 			char m_msg[256];
 		public:
 			_(const urls::url& url) : m_msg{} {
-				fmt::format_to_n(m_msg, std::size(m_msg) - 1, "Invalid gateway URL {}", std::string_view(url.data(), url.size()));
+				std::format_to_n(m_msg, std::size(m_msg) - 1, "Invalid gateway URL {}", std::string_view(url.data(), url.size()));
 			}
 			const char* what() const noexcept override { return m_msg; }
 		}; throw _(*pUrl);

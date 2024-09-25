@@ -43,7 +43,7 @@ static level_info calculate_level_info(std::uint64_t xp) noexcept {
 /* ========== Helper functions that create embeds =================================================================== */
 static void insert_no_member_embed(std::vector<cEmbed>& embeds, const cUser* pUser, std::string_view guild_name, bool bAnymore) {
 	auto& embed = embeds.emplace_back();
-	embed.SetDescription(fmt::format("User is not a member of **{}**{}.", guild_name, bAnymore ? " anymore": ""));
+	embed.SetDescription(std::format("User is not a member of **{}**{}.", guild_name, bAnymore ? " anymore": ""));
 	embed.SetColor(0x0096FF);
 	if (pUser)
 		embed.EmplaceAuthor(pUser->GetUsername()).SetIconUrl(cCDN::GetUserAvatar(*pUser));
@@ -69,9 +69,9 @@ static void insert_embed(std::vector<cEmbed>& embeds, const cUser& user, cColor 
 	/* Resolve user's leaderboard level */
 	auto[level, level_xp, next_level_xp] = calculate_level_info(pLb->xp);
 	/* Create embed */
-	embed.SetTitle(fmt::format("{} Rank **#{}**\tLevel **{}**", medal, pLb->rank, level));
+	embed.SetTitle(std::format("{} Rank **#{}**\tLevel **{}**", medal, pLb->rank, level));
 	embed.SetFields({
-		{ "XP Progress", fmt::format("{}/{}", pLb->xp - level_xp, next_level_xp - level_xp), true},
+		{ "XP Progress", std::format("{}/{}", pLb->xp - level_xp, next_level_xp - level_xp), true},
 		{ "Total XP", std::to_string(pLb->xp), true },
 		{ "Messages", std::to_string(pLb->num_msg), true }
 	});

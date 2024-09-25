@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.17)
+cmake_minimum_required(VERSION 3.25)
 project(GreekBot)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -64,7 +64,6 @@ find_package(Boost 1.86.0 REQUIRED COMPONENTS url OPTIONAL_COMPONENTS json) # Bo
 find_package(OpenSSL REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(SQLite3 3.35.0 REQUIRED)
-find_package(fmt 10.0.0 REQUIRED) # Clang's libc++ doesn't support C++20 <format> yet
 
 # Configure compilation of header-only Boost libraries
 target_compile_definitions(GreekBot PRIVATE BOOST_ASIO_SEPARATE_COMPILATION BOOST_BEAST_SEPARATE_COMPILATION)
@@ -86,7 +85,6 @@ target_link_libraries(GreekBot
 	${Boost_LIBRARIES}
 	SQLite::SQLite3
 	ZLIB::ZLIB
-	fmt::fmt
 )
 
 # Prepare SQL query defines

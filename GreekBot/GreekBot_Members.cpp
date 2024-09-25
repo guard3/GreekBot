@@ -22,17 +22,17 @@ cGreekBot::OnGuildMemberUpdate(cSnowflake& guild_id, cMemberUpdate& member) {
 		const int64_t msg_id = co_await cDatabase::WC_GetMessage(member);
 		if (msg_id == 0 && member.GetNickname().empty()) {
 			cMessage msg = co_await CreateMessage(NEW_MEMBERS_CHANNEL_ID, cPartialMessage()
-				.SetContent(fmt::format("<@{}> Just got a rank!{}", member.GetUser().GetId(), member.GetFlags() & MEMBER_FLAG_DID_REJOIN ? "\n-# They rejoined the server." : ""))
+				.SetContent(std::format("<@{}> Just got a rank!{}", member.GetUser().GetId(), member.GetFlags() & MEMBER_FLAG_DID_REJOIN ? "\n-# They rejoined the server." : ""))
 				.SetComponents({
 					cActionRow{
 						cButton{
 							BUTTON_STYLE_PRIMARY,
-							fmt::format("NCK#{}", member.GetUser().GetId()), // Save the member id
+							std::format("NCK#{}", member.GetUser().GetId()), // Save the member id
 							"Assign nickname"
 						},
 						cButton{
 							BUTTON_STYLE_SECONDARY,
-							fmt::format("DLT#{}", GetUser().GetId()), // Save the GreekBot id as the author
+							std::format("DLT#{}", GetUser().GetId()), // Save the GreekBot id as the author
 							"Dismiss"
 						}
 					}
@@ -45,12 +45,12 @@ cGreekBot::OnGuildMemberUpdate(cSnowflake& guild_id, cMemberUpdate& member) {
 			 * If editing fails, in cases like where the original message is deleted, that's fine */
 			try {
 				co_await EditMessage(NEW_MEMBERS_CHANNEL_ID, msg_id, cMessageUpdate()
-					.SetContent(fmt::format("<@{}> Just got a nickname!{}", member.GetUser().GetId(), member.GetFlags() & MEMBER_FLAG_DID_REJOIN ? "\n-# They rejoined the server." : ""))
+					.SetContent(std::format("<@{}> Just got a nickname!{}", member.GetUser().GetId(), member.GetFlags() & MEMBER_FLAG_DID_REJOIN ? "\n-# They rejoined the server." : ""))
 					.SetComponents({
 						cActionRow{
 							cButton{
 								BUTTON_STYLE_SECONDARY,
-								fmt::format("DLT#{}", GetUser().GetId()), // Save the GreekBot id as the author
+								std::format("DLT#{}", GetUser().GetId()), // Save the GreekBot id as the author
 								"Dismiss"
 							}
 						}

@@ -19,7 +19,7 @@ cUser::cUser(const json::object& o):
 	std::string_view disc_str = o.at("discriminator").as_string();
 	std::string_view username = o.at("username").as_string();
 	auto disc_int = cUtils::ParseInt<std::uint16_t>(disc_str);
-	m_username = disc_int ? fmt::format("{}#{}", username, disc_str) : (std::string)username;
+	m_username = disc_int ? std::format("{}#{}", username, disc_str) : (std::string)username;
 	m_discriminator = disc_int;
 
 	const json::value* p;
