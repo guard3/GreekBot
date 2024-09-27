@@ -36,6 +36,43 @@
       "description": "A custom goodbye message to be sent in DMs independent from the ban reason"
     }]
   }, {
+    "name": "temp",
+    "type": 1,
+    "description": "Ban a user for a specific amount of time",
+    "options": [{
+      "name": "user",
+      "type": 6,
+      "description": "The user to be banned",
+      "required": true
+    }, {
+      "name": "format",
+      "type": 3,
+      "description": "For how long or until which date to ban the user",
+      "required": true
+    },  {
+      "name": "delete",
+      "type": 3,
+      "description": "How much of their recent message history to delete",
+      "choices": [{
+        "name": "Previous hour",
+        "value": "1"
+      }, {
+        "name": "Previous day",
+        "value": "24"
+      }, {
+        "name": "Previous week",
+        "value": "168"
+      }]
+    }, {
+      "name": "reason",
+      "type": 3,
+      "description": "The reason for the ban; the user will be notified in DM"
+    }, {
+      "name": "message",
+      "type": 3,
+      "description": "A custom goodbye message to be sent in DMs independent from the ban reason"
+    }]
+  }, {
     "name": "turk",
     "type": 1,
     "description": "Squish that turk amk",

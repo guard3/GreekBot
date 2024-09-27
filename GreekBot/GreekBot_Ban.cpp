@@ -52,6 +52,13 @@ cGreekBot::process_ban(cAppCmdInteraction& i) HANDLER_BEGIN {
 		co_return co_await InteractionSendMessage(i, MISSING_PERMISSION_MESSAGE);
 	/* Collect options */
 	auto& subcommand = i.GetOptions().front();
+	/* Temporary check */
+	if (subcommand.GetName() == "temp") {
+		co_return co_await InteractionSendMessage(i, cPartialMessage()
+			.SetContent("This command isn't ready yet, soldier!")
+			.SetFlags(MESSAGE_FLAG_EPHEMERAL)
+		);
+	}
 	hUser user;
 	seconds delete_messages = days(7);
 	std::string_view reason, goodbye;
@@ -68,6 +75,8 @@ cGreekBot::process_ban(cAppCmdInteraction& i) HANDLER_BEGIN {
 				break;
 			case 0xB6BD307F: // "message"
 				goodbye = opt.GetValue<APP_CMD_OPT_STRING>();
+				break;
+			case 0xDEBA72DF: // "format" TODO: find a better name for this
 			default:
 				break;
 		}
