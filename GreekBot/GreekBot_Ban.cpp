@@ -103,15 +103,6 @@ cGreekBot::process_ban(cAppCmdInteraction& i) HANDLER_BEGIN {
 		co_return co_await InteractionSendMessage(i, MISSING_PERMISSION_MESSAGE);
 	/* Collect options */
 	auto& subcommand = i.GetOptions().front();
-	/* Temporary check */
-#if 0
-	if (subcommand.GetName() == "temp") {
-		co_return co_await InteractionSendMessage(i, cPartialMessage()
-			.SetContent("This command isn't ready yet, soldier!")
-			.SetFlags(MESSAGE_FLAG_EPHEMERAL)
-		);
-	}
-#endif
 	hUser user;
 	seconds delete_messages = days(7);
 	std::string_view reason, goodbye;
@@ -177,12 +168,17 @@ cGreekBot::process_unban(cMsgCompInteraction& i, cSnowflake user_id) HANDLER_BEG
 	} catch (xDiscordError& e) {
 		/* Ban not found, but that's fine */
 	}
+	/* Also remove the ban from the database */
+	co_await cDatabase::RemoveTemporaryBan(user_id);
+	/* Send confirmation message */
 	cMessageUpdate response;
-	auto& embed = response.EmplaceEmbeds(i.GetMessage().MoveEmbeds()).front();
-	auto name = embed.GetAuthor()->GetName();
-	name.remove_suffix(11);
+	auto& embed = response.EmplaceEmbeds(i.GetMessage().MoveEmbeds()).at(0);
+	embed.SetColor(0x248046);
 	embed.ResetFields();
-	embed.SetColor(0x248046).SetDescription("User was unbanned").GetAuthor()->SetName(name);
+	embed.GetAuthor()->SetName(std::format("{}unbanned", [name = embed.GetAuthor()->GetName()] {
+		auto n = name.rfind("banned");
+		return n == std::string_view::npos ? "User was " : name.substr(0, n);
+	}()));
 	co_await InteractionEditMessage(i, response.SetComponents({
 		cActionRow{
 			cButton{
@@ -202,11 +198,11 @@ cGreekBot::process_ban_ctx_menu(cAppCmdInteraction& i, std::string_view subcomma
 	/* Retrieve the user to be banned */
 	auto[user, member] = i.GetOptions().front().GetValue<APP_CMD_OPT_USER>();
 	/* Make sure we're not banning ourselves */
-	auto sc = cUtils::CRC32(0, subcommand);
+	const auto sc = cUtils::CRC32(0, subcommand);
 	if (user->GetId() == GetUser().GetId())
 		co_return co_await InteractionSendMessage(i, get_no_ban_msg(sc));
 	/* If the subcommand is about banning trolls specifically, ban right away */
-	if (sc != SUBCMD_USER)
+	if (sc == SUBCMD_GREEK || sc == SUBCMD_TURK)
 		co_return co_await process_ban(i, sc, user->GetId(), user->GetAvatar(), user->GetUsername(), user->GetDiscriminator(), std::chrono::days(7), {}, {}, {});
 	/* Otherwise, retrieve the user's display name in the guild... */
 	std::string_view display_name;
@@ -339,9 +335,8 @@ cGreekBot::process_ban(cInteraction& i, std::uint32_t sc, const cSnowflake& user
 	}
 	/* Ban */
 	co_await CreateGuildBan(*i.GetGuildId(), user_id, delete_messages, reason);
-	/* If the ban is temporary, register it to the database */
-	if (expires_at != std::chrono::sys_days{})
-		co_await cDatabase::RegisterTemporaryBan(user_id, expires_at);
+	/* If the ban is temporary, register it to the database or delete it if it isn't temporary */
+	co_await cDatabase::RegisterTemporaryBan(user_id, expires_at);
 	/* Send confirmation message */
 	co_await InteractionSendMessage(i, response.SetComponents({
 		cActionRow{

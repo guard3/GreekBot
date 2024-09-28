@@ -596,12 +596,27 @@ cDatabase::CleanupMessages() {
 
 cTask<>
 cDatabase::RegisterTemporaryBan(crefUser user, std::chrono::sys_days expires_at) {
+	if (expires_at == std::chrono::sys_days{})
+		return RemoveTemporaryBan(user);
+	return [](crefUser user, std::chrono::sys_days expires_at) -> cTask<> {
+		co_await resume_on_db_strand();
+		auto stmt = sqlite3_prepare(QUERY_REGISTER_TEMPORARY_BAN);
+		if (stmt
+		    && SQLITE_OK == sqlite3_bind_int64(stmt, 1, user.GetId().ToInt())
+		    && SQLITE_OK == sqlite3_bind_int64(stmt, 2, expires_at.time_since_epoch().count())
+		    && SQLITE_DONE == sqlite3_step(stmt)) {
+			co_return;
+		}
+		throw xDatabaseError();
+	} (user, expires_at);
+}
+cTask<>
+cDatabase::RemoveTemporaryBan(crefUser user) {
 	co_await resume_on_db_strand();
-	auto stmt = sqlite3_prepare(QUERY_REGISTER_TEMPORARY_BAN);
-	if (   stmt
+	auto stmt = sqlite3_prepare(QUERY_REMOVE_TEMPORARY_BAN);
+	if (stmt
 	    && SQLITE_OK == sqlite3_bind_int64(stmt, 1, user.GetId().ToInt())
-		&& SQLITE_OK == sqlite3_bind_int64(stmt, 2, expires_at.time_since_epoch().count())
-		&& SQLITE_DONE == sqlite3_step(stmt)) {
+	    && SQLITE_DONE == sqlite3_step(stmt)) {
 		co_return;
 	}
 	throw xDatabaseError();

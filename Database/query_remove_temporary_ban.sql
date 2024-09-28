@@ -1,0 +1,1 @@
+DELETE FROM tempbans WHERE user_id IS ?;

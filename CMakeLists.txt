@@ -119,4 +119,5 @@ define_query(QUERY_DELETE_MESSAGE Database/query_delete_message.sql)
 define_query(QUERY_CLEANUP_MESSAGES Database/query_cleanup_messages.sql)
 
 define_query(QUERY_REGISTER_TEMPORARY_BAN Database/query_register_temporary_ban.sql)
+define_query(QUERY_REMOVE_TEMPORARY_BAN   Database/query_remove_temporary_ban.sql  )
 configure_file(Database/Queries.h.in ${PROJECT_SOURCE_DIR}/Database/Queries.h)

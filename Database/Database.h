@@ -76,5 +76,6 @@ public:
 	static cTask<> CleanupMessages();
 
 	static cTask<> RegisterTemporaryBan(crefUser user, std::chrono::sys_days expires_at);
+	static cTask<> RemoveTemporaryBan(crefUser user);
 };
 #endif /* GREEKBOT_DATABASE_H */
