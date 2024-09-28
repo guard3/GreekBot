@@ -22,3 +22,7 @@ CREATE TABLE IF NOT EXISTS messages(
     author_id INTEGER NOT NULL,
     content VARCHAR
 );
+CREATE TABLE IF NOT EXISTS tempbans(
+    user_id INTEGER PRIMARY KEY,
+    expires_at INTEGER NOT NULL
+);

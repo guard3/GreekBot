@@ -1,3 +1,4 @@
+#include "Database.h"
 #include "GreekBot.h"
 #include "Utils.h"
 #include "CDN.h"
@@ -43,6 +44,56 @@ get_no_ban_msg(std::uint32_t e) noexcept {
 		}
 	}
 }
+/* ========== A simple parser for either absolute YYYY-MM-DD dates or XXyXXmXXwXXd durations ======================== */
+static std::optional<std::chrono::sys_days>
+parse_ban_duration(std::string_view fmt) {
+	using namespace std::chrono;
+
+	const char* const fmt_begin = fmt.data();
+	const char* const fmt_end = fmt_begin + fmt.size();
+	/* We expect the format string to start with an int */
+	unsigned val = 0;
+	if (auto[ptr, ec] = std::from_chars(fmt_begin, fmt_end, val); ec == std::errc{} && ptr != fmt_end) {
+		if (*ptr == '-' && ptr - fmt_begin == 4) {
+			/* If the result pointer points to a '-', then interpret the format string as a YYYY-MM-DD date */
+			const unsigned y = val;
+			auto res = std::from_chars(++ptr, fmt_end, val);
+			if (res.ec == std::errc{} && res.ptr - ptr == 2 && res.ptr != fmt_end && *res.ptr == '-') {
+				const unsigned m = val;
+				res = std::from_chars(ptr = res.ptr + 1, fmt_end, val);
+				if (res.ec == std::errc{} && fmt_end - ptr == 2 && res.ptr == fmt_end) {
+					if (year_month_day ymd{ year(y), month(m), day(val) }; ymd.ok())
+						return ymd;
+				}
+			}
+		} else {
+			/* In this case, the format string is a duration */
+			for (unsigned y = 0, m = 0, w = 0, d = 0; val != 0;) {
+				if (*ptr == 'y' && y == 0)
+					y = val;
+				else if (*ptr == 'm' && m == 0)
+					m = val;
+				else if (*ptr == 'w' && w == 0)
+					w = val;
+				else if (*ptr == 'd' && d == 0)
+					d = val;
+				else
+					break;
+				/* If the entire string is consumed, return the final time point */
+				if (++ptr == fmt_end)
+					return ceil<days>(system_clock::now() + years(y) + months(m) + weeks(w) + days(d));
+				/* If not, read some more */
+				auto[p, e] = std::from_chars(ptr, fmt_end, val);
+				/* If any error occurred or the entire string was consumed, fail */
+				if (e != std::errc{} || p == fmt_end)
+					break;
+				ptr = p;
+			}
+		}
+	}
+	/* If all fails, return an empty optional */
+	return {};
+}
 /* ========== Process ban command =================================================================================== */
 cTask<>
 cGreekBot::process_ban(cAppCmdInteraction& i) HANDLER_BEGIN {
@@ -53,15 +104,18 @@ cGreekBot::process_ban(cAppCmdInteraction& i) HANDLER_BEGIN {
 	/* Collect options */
 	auto& subcommand = i.GetOptions().front();
 	/* Temporary check */
+#if 0
 	if (subcommand.GetName() == "temp") {
 		co_return co_await InteractionSendMessage(i, cPartialMessage()
 			.SetContent("This command isn't ready yet, soldier!")
 			.SetFlags(MESSAGE_FLAG_EPHEMERAL)
 		);
 	}
+#endif
 	hUser user;
 	seconds delete_messages = days(7);
 	std::string_view reason, goodbye;
+	sys_days expires_at;
 	for (auto& opt: subcommand.GetOptions()) {
 		switch (cUtils::CRC32(0, opt.GetName())) {
 			case 0x8D93D649: // "user"
@@ -77,16 +131,38 @@ cGreekBot::process_ban(cAppCmdInteraction& i) HANDLER_BEGIN {
 				goodbye = opt.GetValue<APP_CMD_OPT_STRING>();
 				break;
 			case 0xDEBA72DF: // "format" TODO: find a better name for this
+				if (auto tp = parse_ban_duration(opt.GetValue<APP_CMD_OPT_STRING>()); tp && *tp > system_clock::now()) {
+					/* If the format string is parsed successfully and the resulting time point is further into the future, save the parameter */
+					expires_at = *tp;
+				} else {
+					/* On error, report a help message, use an example date that's 8 months from now */
+					auto t = floor<seconds>(system_clock::now() + months(8));
+					co_return co_await InteractionSendMessage(i, cPartialMessage()
+						.SetFlags(MESSAGE_FLAG_EPHEMERAL)
+						.SetContent(std::format("Invalid format string!\n"
+						                        "To specify a ban until a specific *future* date, specify a `YYYY-MM-DD` date.\n"
+						                        "For example:\n"
+												"- `{:%F}`, for the ban to last until <t:{:%Q}:D>\n"
+						                        "To specify a ban as a duration, use any (non-zero) value combination of `y` years, `m` months, `w` weeks or `d` days.\n"
+						                        "For example:\n"
+						                        "- ` 25d`, for the ban to last for **25** days\n"
+						                        "- `3m2d`, for the ban to last for **3** months and **2** days\n"
+						                        "- `1y5w`, for the ban to last for **1** year and **5** weeks", t, t.time_since_epoch()))
+					);
+				}
 			default:
 				break;
 		}
 	}
 	/* Make sure we're not banning ourselves */
-	const auto sc = cUtils::CRC32(0, subcommand.GetName());
+	/*const*/ auto sc = cUtils::CRC32(0, subcommand.GetName());
+	/* A little hack here... TODO: fix */
+	if (subcommand.GetName() == "temp")
+		sc = SUBCMD_USER;
 	if (i.GetUser().GetId() == GetUser().GetId())
 		co_return co_await InteractionSendMessage(i, get_no_ban_msg(sc));
 	/* Ban */
-	co_await process_ban(i, sc, user->GetId(), user->GetAvatar(), user->GetUsername(), user->GetDiscriminator(), delete_messages, reason, goodbye);
+	co_await process_ban(i, sc, user->GetId(), user->GetAvatar(), user->GetUsername(), user->GetDiscriminator(), delete_messages, reason, goodbye, expires_at);
 } HANDLER_END
 /* ========== Process unban button ================================================================================== */
 cTask<>
@@ -131,7 +207,7 @@ cGreekBot::process_ban_ctx_menu(cAppCmdInteraction& i, std::string_view subcomma
 		co_return co_await InteractionSendMessage(i, get_no_ban_msg(sc));
 	/* If the subcommand is about banning trolls specifically, ban right away */
 	if (sc != SUBCMD_USER)
-		co_return co_await process_ban(i, sc, user->GetId(), user->GetAvatar(), user->GetUsername(), user->GetDiscriminator(), std::chrono::days(7), {}, {});
+		co_return co_await process_ban(i, sc, user->GetId(), user->GetAvatar(), user->GetUsername(), user->GetDiscriminator(), std::chrono::days(7), {}, {}, {});
 	/* Otherwise, retrieve the user's display name in the guild... */
 	std::string_view display_name;
 	if (member && !member->GetNick().empty())
@@ -204,11 +280,12 @@ cGreekBot::process_ban_modal(cModalSubmitInteraction& i, std::string_view custom
 		}
 	}
 	/* Ban */
-	co_await process_ban(i, SUBCMD_USER, user_id, avatar, username, disc, std::chrono::days(7), reason, goodbye);
+	co_await process_ban(i, SUBCMD_USER, user_id, avatar, username, disc, std::chrono::days(7), reason, goodbye, {});
 } HANDLER_END
 /* ========== The main ban logic ==================================================================================== */
 cTask<>
-cGreekBot::process_ban(cInteraction& i, std::uint32_t sc, const cSnowflake& user_id, std::string_view hash, std::string_view username, std::uint16_t discr, std::chrono::seconds delete_messages, std::string_view reason, std::string_view goodbye) {
+cGreekBot::process_ban(cInteraction& i, std::uint32_t sc, const cSnowflake& user_id, std::string_view hash, std::string_view username, std::uint16_t discr, std::chrono::seconds delete_messages, std::string_view reason, std::string_view goodbye, std::chrono::sys_days expires_at) {
+	using namespace std::chrono;
 	/* Acknowledge interaction */
 	co_await InteractionDefer(i, true);
 	/* Update reason and goodbye message */
@@ -239,17 +316,21 @@ cGreekBot::process_ban(cInteraction& i, std::uint32_t sc, const cSnowflake& user
 				goodbye = reason;
 			break;
 	}
+	/* Format the expiry time point into a string */
+	const auto expires_at_str = expires_at == sys_days{} ? std::string() : std::format("<t:{:%Q}:D>", floor<seconds>(expires_at).time_since_epoch());
 	/* Create the embed of the confirmation message */
 	cPartialMessage response;
 	cEmbed& embed = response.EmplaceEmbeds().emplace_back();
-	embed.EmplaceAuthor(std::format("{} was banned", username)).SetIconUrl(cCDN::GetUserAvatar(user_id, hash, discr));
+	embed.EmplaceAuthor(std::format("{} was banned{}", username, expires_at_str.empty() ? "" : " temporarily")).SetIconUrl(cCDN::GetUserAvatar(user_id, hash, discr));
 	embed.SetColor(0xC43135);
 	auto& fields = embed.EmplaceFields();
-	fields.reserve(2);
+	fields.reserve(3);
+	if (!expires_at_str.empty())
+		fields.emplace_back("Until", expires_at_str);
 	fields.emplace_back("Reason", reason);
 	/* DM the goodbye message */
 	try {
-		co_await CreateDMMessage(user_id, cPartialMessage().SetContent(std::format("You've been banned from **{}** with reason:\n```{}```", m_guilds.at(*i.GetGuildId()).GetName(), goodbye)));
+		co_await CreateDMMessage(user_id, cPartialMessage().SetContent(std::format("You've been banned from **{}**{}{} with reason:\n```{}```", m_guilds.at(*i.GetGuildId()).GetName(), expires_at_str.empty() ? "" : " until ", expires_at_str, goodbye)));
 		/* Add the goodbye message field only after the DM was sent successfully */
 		if (reason != goodbye)
 			fields.emplace_back("Goodbye message", goodbye);
@@ -258,6 +339,9 @@ cGreekBot::process_ban(cInteraction& i, std::uint32_t sc, const cSnowflake& user
 	}
 	/* Ban */
 	co_await CreateGuildBan(*i.GetGuildId(), user_id, delete_messages, reason);
+	/* If the ban is temporary, register it to the database */
+	if (expires_at != std::chrono::sys_days{})
+		co_await cDatabase::RegisterTemporaryBan(user_id, expires_at);
 	/* Send confirmation message */
 	co_await InteractionSendMessage(i, response.SetComponents({
 		cActionRow{
