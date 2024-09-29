@@ -92,6 +92,7 @@ public:
 	cAsyncGenerator<cMember> RequestGuildMembers(const cSnowflake& guild_id, std::span<const cSnowflake> user_ids);
 
 	virtual cTask<> OnReady(cUser&) { co_return; }
+	virtual cTask<> OnHeartbeat() { co_return; }
 	virtual cTask<> OnUserUpdate(cUser&) { co_return; }
 	virtual cTask<> OnGuildCreate(cGuild&, cGuildCreate&) { co_return; }
 	virtual cTask<> OnGuildRoleCreate(cSnowflake& guild_id, cRole& role) { co_return; }

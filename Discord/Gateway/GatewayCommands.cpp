@@ -24,3 +24,18 @@ cGateway::implementation::heartbeat() {
 	/* Cancel any stuck guild member requests */
 	rgm_timeout();
 }
+
+void
+cGateway::implementation::on_heartbeat() try {
+	co_await ResumeOnEventStrand();
+	co_await m_parent->OnHeartbeat();
+} catch (...) {
+	try {
+		throw;
+	} catch (const std::exception& e) {
+		cUtils::PrintErr("An unhandled exception escaped the heartbeat handler: {}", e.what());
+	} catch (...) {
+		cUtils::PrintErr("An unhandled exception escaped the heartbeat handler.");
+	}
+	net::post(m_http_strand, [ex = std::current_exception()] { std::rethrow_exception(ex); });
+}

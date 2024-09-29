@@ -231,6 +231,7 @@ cGateway::implementation::on_read(const sys::error_code& ec, std::size_t bytes_r
 		case OP_HEARTBEAT_ACK:
 			/* Acknowledge heartbeat */
 			m_heartbeat_ack = true;
+			on_heartbeat();
 			break;
 	}
 } catch (const std::exception& e) {

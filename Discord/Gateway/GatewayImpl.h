@@ -106,6 +106,7 @@ private:
 	void resume();
 	void identify();
 	void heartbeat();
+	void on_heartbeat();
 	/* Websocket message queuing */
 	void send(std::string);
 	/* Beast/Asio async functions */

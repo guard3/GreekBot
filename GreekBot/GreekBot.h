@@ -38,7 +38,7 @@ private:
 
 	cColor get_lmg_member_color(const cPartialMember&);
 
-	std::chrono::steady_clock::time_point m_before;
+	std::chrono::steady_clock::time_point m_before = std::chrono::steady_clock::now();
 
 	std::vector<cVoiceState> m_lmg_voice_states;
 
@@ -72,6 +72,7 @@ private:
 
 	cTask<> process_leaderboard_new_message(cMessage& msg, cPartialMember& member);
 
+	cTask<> OnHeartbeat() override;
 	cTask<> OnGuildCreate(cGuild& guild, cGuildCreate& guild_create) override;
 	cTask<> OnGuildRoleCreate(cSnowflake& guild_id, cRole& role) override;
 	cTask<> OnGuildRoleUpdate(cSnowflake& guild_id, cRole& role) override;

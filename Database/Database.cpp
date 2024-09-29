@@ -610,6 +610,28 @@ cDatabase::RegisterTemporaryBan(crefUser user, std::chrono::sys_days expires_at)
 		throw xDatabaseError();
 	} (user, expires_at);
 }
+cTask<std::vector<cSnowflake>>
+cDatabase::GetExpiredTemporaryBans() {
+	using namespace std::chrono;
+	co_await resume_on_db_strand();
+	auto stmt = sqlite3_prepare("SELECT user_id FROM tempbans WHERE ? >= expires_at;");
+	if (stmt && SQLITE_OK == sqlite3_bind_int64(stmt, 1, floor<days>(system_clock::now()).time_since_epoch().count())) {
+		for (std::vector<cSnowflake> result;;) {
+			switch (sqlite3_step(stmt)) {
+				case SQLITE_ROW:
+					result.emplace_back(sqlite3_column_int64(stmt, 0));
+					continue;
+				case SQLITE_DONE:
+					co_return result;
+				default:
+					break;
+			}
+			break;
+		}
+	}
+	[[unlikely]]
+	throw xDatabaseError();
+}
 cTask<>
 cDatabase::RemoveTemporaryBan(crefUser user) {
 	co_await resume_on_db_strand();
@@ -619,5 +641,26 @@ cDatabase::RemoveTemporaryBan(crefUser user) {
 	    && SQLITE_DONE == sqlite3_step(stmt)) {
 		co_return;
 	}
+	throw xDatabaseError();
+}
+cTask<>
+cDatabase::RemoveTemporaryBans(std::span<const cSnowflake> user_ids) {
+	if (user_ids.empty())
+		co_return;
+	co_await resume_on_db_strand();
+	std::string query = "DELETE FROM tempbans WHERE user_id IN (?";
+	for (std::size_t i = 1; i < user_ids.size(); ++i)
+		query += ",?";
+	query += ");";
+	auto stmt = sqlite3_prepare(query);
+	if (stmt) {
+		for (std::size_t i = 0; i < user_ids.size(); ++i) {
+			if (SQLITE_OK != sqlite3_bind_int64(stmt, i + 1, user_ids[i].ToInt())) [[unlikely]]
+				throw xDatabaseError();
+		}
+		if (SQLITE_DONE == sqlite3_step(stmt))
+			co_return;
+	}
+	[[unlikely]]
 	throw xDatabaseError();
 }

@@ -76,6 +76,8 @@ public:
 	static cTask<> CleanupMessages();
 
 	static cTask<> RegisterTemporaryBan(crefUser user, std::chrono::sys_days expires_at);
+	static cTask<std::vector<cSnowflake>> GetExpiredTemporaryBans();
 	static cTask<> RemoveTemporaryBan(crefUser user);
+	static cTask<> RemoveTemporaryBans(std::span<const cSnowflake> user_ids);
 };
 #endif /* GREEKBOT_DATABASE_H */

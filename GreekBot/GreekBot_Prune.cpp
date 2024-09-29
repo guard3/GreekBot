@@ -1,5 +1,12 @@
 #include "GreekBot.h"
 
+const auto DEPRECATED_MSG = [] {
+	cPartialMessage msg;
+	msg.SetFlags(MESSAGE_FLAG_EPHEMERAL);
+	msg.SetContent("I can prune members automatically now, so this command is deprecated and will soon be removed.");
+	return msg;
+} ();
+
 cTask<>
 cGreekBot::process_prune(cAppCmdInteraction& i) HANDLER_BEGIN {
 	cPartialMessage response;
@@ -30,6 +37,7 @@ cGreekBot::process_prune(cAppCmdInteraction& i) HANDLER_BEGIN {
 			}
 		}
 	}));
+	co_await InteractionSendMessage(i, DEPRECATED_MSG);
 } HANDLER_END
 
 cTask<>
@@ -103,4 +111,5 @@ cGreekBot::process_prune_lmg(cAppCmdInteraction& i) HANDLER_BEGIN {
 			}
 		})
 	);
+	co_await InteractionSendMessage(i, DEPRECATED_MSG);
 } HANDLER_END
