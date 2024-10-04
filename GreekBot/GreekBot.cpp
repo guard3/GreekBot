@@ -123,8 +123,6 @@ cGreekBot::process_interaction(cAppCmdInteraction& i) HANDLER_BEGIN {
 			return process_rank(i);
 		case 938863857466757131: // top
 			return process_top(i);
-		case 1020026874119864381: // prune
-			return *i.GetGuildId() == LMG_GUILD_ID ? process_prune_lmg(i) : process_prune(i);
 		case 1031907652541890621: // ban
 			return process_ban(i);
 		case 904462004071313448: // holy

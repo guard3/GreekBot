@@ -45,8 +45,6 @@ private:
 	cTask<> process_avatar(cAppCmdInteraction&);
 	cTask<> process_rank(cAppCmdInteraction&);
 	cTask<> process_top(cAppCmdInteraction&);
-	cTask<> process_prune(cAppCmdInteraction&);
-	cTask<> process_prune_lmg(cAppCmdInteraction&);
 	cTask<> process_ban(cAppCmdInteraction&);
 	cTask<> process_ban_ctx_menu(cAppCmdInteraction&, std::string_view);
 	cTask<> process_ban_modal(cModalSubmitInteraction&, std::string_view);
