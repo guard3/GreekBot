@@ -18,28 +18,8 @@ namespace json  = boost::json;
 namespace net   = boost::asio;
 namespace sys   = boost::system;
 namespace urls  = boost::urls;
-/* ========== Make void a valid coroutine return type =============================================================== */
-template<typename... Args>
-struct std::coroutine_traits<void, cGateway::implementation&, Args...> {
-	struct promise_type {
-		void get_return_object() noexcept {}
-		std::suspend_never initial_suspend() noexcept { return {}; }
-		std::suspend_never final_suspend() noexcept { return {}; }
-		void return_void() noexcept {}
-		void unhandled_exception() noexcept {}
-	};
-};
-
-struct guild_members_entry {
-	std::deque<cGuildMembersChunk> chunks;
-	std::coroutine_handle<> coro;
-	std::exception_ptr except;
-	std::chrono::steady_clock::time_point started_at;
-};
-
-/* Separate cGateway implementation class to avoid including boost everywhere */
-class cGateway::implementation final {
-private:
+/* ========== Separate cGateway implementation class to avoid including boost everywhere ============================ */
+struct cGateway::implementation final {
 	/* Aliases for the stream types used for http and websocket with SSL support */
 	using ssl_stream = net::ssl::stream<beast::tcp_stream>;
 	using websocket_stream = beast::websocket::stream<ssl_stream>;
@@ -47,6 +27,12 @@ private:
 	using http_response = beast::http::response<beast::http::string_body>;
 	using steady_clock = std::chrono::steady_clock;
 	using milliseconds = std::chrono::milliseconds;
+	/* Constructors */
+	implementation(cGateway*, std::string_view, eIntent);
+	implementation(const implementation&) = delete;
+	~implementation();
+	/* Assignment */
+	implementation& operator=(const implementation&) = delete;
 	/* The parent gateway object through which events are handled */
 	cGateway* m_parent;
 	/* The contexts for asio */
@@ -92,6 +78,12 @@ private:
 	z_stream m_inflate_stream;
 	Byte     m_inflate_buffer[4096];
 	/* Request Guild Members stuff */
+	struct guild_members_entry {
+		std::deque<cGuildMembersChunk> chunks;
+		std::coroutine_handle<> coro;
+		std::exception_ptr except;
+		std::chrono::steady_clock::time_point started_at;
+	};
 	std::uint64_t                 m_rgm_nonce = 0; // The nonce of the payload
 	std::exception_ptr            m_rgm_exception; // An exception in case all pending requests need to be canceled
 	std::deque<std::coroutine_handle<>> m_pending; // The queue of pending requests for when the gateway is unavailable
@@ -127,13 +119,6 @@ private:
 	/* Canceling guild member requests */
 	void rgm_reset() noexcept;   // Cancel all pending requests when the session is reset
 	void rgm_timeout() noexcept; // Cancel all pending requests that haven't been completed in a long time
-
-public:
-	implementation(cGateway*, std::string_view, eIntent);
-	implementation(const implementation&) = delete;
-	~implementation();
-
-	implementation& operator=(const implementation&) = delete;
 
 	cTask<json::value> DiscordRequest(beast::http::verb method, std::string_view target, const json::object* obj, std::span<const cHttpField> fields);
 	cTask<json::value> DiscordRequestNoRetry(beast::http::verb method, std::string_view target, const json::object* obj, std::span<const cHttpField> fields);
@@ -179,4 +164,23 @@ public:
 	void Run();
 	void RequestExit() noexcept;
 };
+/* ========== Make void a valid coroutine return type for cGateway::implementation member functions ================= */
+template<typename... Args>
+struct coroutine_traits_base {
+	struct promise_type {
+		cGateway::implementation& self;
+		promise_type(cGateway::implementation& self, Args...) noexcept : self(self) {}
+
+		constexpr void get_return_object() const noexcept {}
+		constexpr auto initial_suspend() const noexcept { return std::suspend_never{}; }
+		constexpr auto final_suspend() const noexcept { return std::suspend_never{}; }
+		constexpr void return_void() const noexcept {}
+
+		void unhandled_exception() const noexcept {
+			net::post(self.m_ioc, [ex = std::current_exception()] { std::rethrow_exception(ex); });
+		}
+	};
+};
+template<typename... Args>
+struct std::coroutine_traits<void, cGateway::implementation&, Args...> : coroutine_traits_base<Args...> {};
 #endif /* DISCORD_GATEWAYIMPL_H */

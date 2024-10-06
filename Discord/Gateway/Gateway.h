@@ -61,8 +61,11 @@ public:
 typedef std::vector<cHttpField> tHttpFields;
 
 class cGateway {
-	class implementation;
+	struct implementation;
 	std::unique_ptr<implementation> m_pImpl;
+	/* A coroutine traits base type for void functions */
+	template<typename...>
+	friend struct coroutine_traits_base;
 
 protected:
 	std::string_view GetHttpAuthorization() const noexcept;
