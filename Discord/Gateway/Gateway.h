@@ -50,15 +50,9 @@ struct xGatewayPrivilegedIntentsError : xGatewayError {
 	xGatewayPrivilegedIntentsError() : xGatewayError("The request can't be fulfilled because you are missing privileged intents.") {}
 };
 
-class cHttpField final {
-private:
-	std::string m_name, m_value;
-public:
-	cHttpField(std::string n, std::string v) : m_name(std::move(n)), m_value(std::move(v)) {}
-	std::string_view GetName()  const noexcept { return m_name;  }
-	std::string_view GetValue() const noexcept { return m_value; }
+struct cHttpField {
+	std::string name, value;
 };
-typedef std::vector<cHttpField> tHttpFields;
 
 class cGateway {
 	struct implementation;
@@ -66,9 +60,6 @@ class cGateway {
 	/* A coroutine traits base type for void functions */
 	template<typename...>
 	friend struct coroutine_traits_base;
-
-protected:
-	std::string_view GetHttpAuthorization() const noexcept;
 
 public:
 	cGateway(std::string_view token, eIntent intents);

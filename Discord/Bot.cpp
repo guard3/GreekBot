@@ -50,9 +50,8 @@ cBot::ModifyGuildMember(const cSnowflake& guild_id, const cSnowflake& user_id, c
 
 cTask<int>
 cBot::BeginGuildPrune(const cSnowflake &id, int days, std::string_view reason) {
-	tHttpFields fields;
-	if (!reason.empty())
-		fields.emplace_back("X-Audit-Log-Reason", cUtils::PercentEncode(reason));
+	std::optional<cHttpField> opt;
+	auto fields = reason.empty() ? std::span<cHttpField>() : std::span{ &opt.emplace("X-Audit-Log-Reason", cUtils::PercentEncode(reason)), 1 };
 	auto response = co_await DiscordPostNoRetry(std::format("/guilds/{}/prune", id), {{ "days", days }}, fields);
 	co_return response.at("pruned").to_number<int>();
 }
@@ -92,24 +91,21 @@ cBot::GetChannelMessage(const cSnowflake& channel_id, const cSnowflake& msg_id) 
 
 cTask<>
 cBot::RemoveGuildMember(const cSnowflake& guild_id, const cSnowflake& user_id, std::string_view reason) {
-	tHttpFields fields;
-	if (!reason.empty())
-		fields.emplace_back("X-Audit-Log-Reason", cUtils::PercentEncode(reason));
+	std::optional<cHttpField> opt;
+	auto fields = reason.empty() ? std::span<cHttpField>() : std::span{ &opt.emplace("X-Audit-Log-Reason", cUtils::PercentEncode(reason)), 1 };
 	co_await DiscordDelete(std::format("/guilds/{}/members/{}", guild_id, user_id), fields);
 }
 
 cTask<>
 cBot::CreateGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, std::chrono::seconds delete_message_seconds, std::string_view reason) {
-	tHttpFields fields;
-	if (!reason.empty())
-		fields.emplace_back("X-Audit-Log-Reason", cUtils::PercentEncode(reason));
+	std::optional<cHttpField> opt;
+	auto fields = reason.empty() ? std::span<cHttpField>() : std::span{ &opt.emplace("X-Audit-Log-Reason", cUtils::PercentEncode(reason)), 1 };
 	co_await DiscordPut(std::format("/guilds/{}/bans/{}", guild_id, user_id), {{ "delete_message_seconds", delete_message_seconds.count() }}, fields);
 }
 
 cTask<>
 cBot::RemoveGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, std::string_view reason) {
-	tHttpFields fields;
-	if (!reason.empty())
-		fields.emplace_back("X-Audit-Log-Reason", cUtils::PercentEncode(reason));
+	std::optional<cHttpField> opt;
+	auto fields = reason.empty() ? std::span<cHttpField>() : std::span{ &opt.emplace("X-Audit-Log-Reason", cUtils::PercentEncode(reason)), 1 };
 	co_await DiscordDelete(std::format("/guilds/{}/bans/{}", guild_id, user_id), fields);
 }

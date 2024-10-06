@@ -48,8 +48,6 @@ cGateway::RequestGuildMembers(const cSnowflake& guild_id, std::span<const cSnowf
 }
 /* ================================================================================================================== */
 std::string_view
-cGateway::GetHttpAuthorization() const noexcept { return m_pImpl->GetHttpAuthorization(); }
-std::string_view
 cGateway::GetToken() const noexcept { return m_pImpl->GetToken(); }
 void
 cGateway::Run() { m_pImpl->Run(); }

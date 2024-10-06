@@ -95,8 +95,8 @@ cGateway::implementation::DiscordRequestNoRetry(beast::http::verb method, std::s
 	/* Create a new request object */
 	http_request request(method, std::format(DISCORD_API_ENDPOINT "{}", target), 11);
 	/* Set the necessary fields */
-	for (auto& f: fields)
-		request.set(f.GetName(), f.GetValue());
+	for (auto&[name, value] : fields)
+		request.set(name, value);
 	request.set(beast::http::field::host, DISCORD_API_HOST);
 	request.set(beast::http::field::user_agent, "GreekBot");
 	request.set(beast::http::field::authorization, m_http_auth);
