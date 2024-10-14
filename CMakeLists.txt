@@ -46,6 +46,7 @@ add_executable(GreekBot main.cpp Discord/Bot.cpp Discord/Bot.h Discord/Common/Co
 	GreekBot/GreekBot_Voice.cpp
 	Discord/Bot_ChannelMessages.cpp
 	GreekBot/GreekBot_TimedActions.cpp
+		Discord/Common/Visitor.h
 )
 
 target_include_directories(

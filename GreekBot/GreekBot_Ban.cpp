@@ -1,7 +1,8 @@
+#include "CDN.h"
 #include "Database.h"
 #include "GreekBot.h"
 #include "Utils.h"
-#include "CDN.h"
+#include "Visitor.h"
 /* ========== Subcommand name hashes for easy switching ============================================================= */
 enum : std::uint32_t {
 	SUBCMD_USER  = 0x8D93D649, // "user"
@@ -144,13 +145,12 @@ cGreekBot::process_unban(cInteraction& i, cSnowflake user_id) HANDLER_BEGIN {
 	/* Acknowledge interaction */
 	co_await InteractionDefer(i);
 	/* Create the response and update user id if necessary */
-	struct visitor {
-		cSnowflake& user_id;
-		cMessageUpdate operator()(cAppCmdInteraction& i) {
+	auto msg = i.Visit(cVisitor{
+		[&user_id](cAppCmdInteraction& i) {
 			/* Retrieve the user to be unbanned */
 			auto options = i.GetOptions();
 			if (options.size() != 1) [[unlikely]]
-				throw std::runtime_error("meow");
+						throw std::runtime_error("meow");
 			auto[user, _] = options.front().GetValue<APP_CMD_OPT_USER>();
 			/* Create the response */
 			cMessageUpdate msg;
@@ -160,8 +160,8 @@ cGreekBot::process_unban(cInteraction& i, cSnowflake user_id) HANDLER_BEGIN {
 			/* Also update the user id */
 			user_id = user->GetId();
 			return msg;
-		}
-		cMessageUpdate operator()(cMsgCompInteraction& i) {
+		},
+		[](cMsgCompInteraction& i) {
 			cMessageUpdate msg;
 			auto& embed = msg.EmplaceEmbeds(i.GetMessage().MoveEmbeds()).at(0);
 			embed.SetColor(0x248046);
@@ -171,13 +171,12 @@ cGreekBot::process_unban(cInteraction& i, cSnowflake user_id) HANDLER_BEGIN {
 				return n == std::string_view::npos ? "User was " : name.substr(0, n);
 			}()));
 			return msg;
+		},
+		[](cModalSubmitInteraction&) -> cMessageUpdate {
+			[[unlikely]]
+			throw std::runtime_error("");
 		}
-		[[noreturn]]
-		cMessageUpdate operator()(cModalSubmitInteraction&) {
-			throw std::runtime_error("Unexpected interaction type");
-		}
-	};
-	auto msg = i.Visit(visitor(user_id));
+	});
 	/* Unban the user */
 	try {
 		co_await RemoveGuildBan(*i.GetGuildId(), user_id, std::format("{} used the /unban command", i.GetUser().GetUsername()));

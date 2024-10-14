@@ -1,13 +1,8 @@
 #include "Bot.h"
+#include "Visitor.h"
 #include <boost/json.hpp>
 
 namespace json = boost::json;
-
-template<typename... Ts>
-struct visitor : Ts... { using Ts::operator()...; };
-
-template<class... Ts>
-visitor(Ts...) -> visitor<Ts...>;
 
 enum {
 	PONG                        = 1,         // ACK a Ping
@@ -91,7 +86,7 @@ cBot::InteractionSendModal(const cMsgCompInteraction& i, const cModal& modal) {
 }
 cTask<>
 cBot::InteractionSendModal(const cInteraction& i, const cModal& modal) {
-	return i.Visit(visitor{
+	return i.Visit(cVisitor{
 		[](const cModalSubmitInteraction&) -> cTask<> {
 			throw xInvalidFormBodyError();
 			co_return;
