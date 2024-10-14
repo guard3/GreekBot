@@ -135,32 +135,59 @@ cGreekBot::process_ban(cAppCmdInteraction& i) HANDLER_BEGIN {
 	/* Ban */
 	co_await process_ban(i, sc, user->GetId(), user->GetAvatar(), user->GetUsername(), user->GetDiscriminator(), delete_messages, reason, goodbye, expiry_fmt);
 } HANDLER_END
-/* ========== Process unban command ================================================================================= */
+/* ========== Process unban ========================================================================================= */
 cTask<>
-cGreekBot::process_unban(cAppCmdInteraction& i) HANDLER_BEGIN {
+cGreekBot::process_unban(cInteraction& i, cSnowflake user_id) HANDLER_BEGIN {
 	/* Make sure that the invoking user has the appropriate permissions */
 	if (!(i.GetMember()->GetPermissions() & PERM_BAN_MEMBERS)) [[unlikely]]
 		co_return co_await InteractionSendMessage(i, MISSING_PERMISSION_MESSAGE);
-	/* Unban user */
+	/* Acknowledge interaction */
 	co_await InteractionDefer(i);
-	/* Retrieve the user to be unbanned */
-	auto options = i.GetOptions();
-	if (options.size() != 1) [[unlikely]]
-		throw std::runtime_error("meow");
-	auto[user, member] = options.front().GetValue<APP_CMD_OPT_USER>();
+	/* Create the response and update user id if necessary */
+	struct visitor {
+		cSnowflake& user_id;
+		cMessageUpdate operator()(cAppCmdInteraction& i) {
+			/* Retrieve the user to be unbanned */
+			auto options = i.GetOptions();
+			if (options.size() != 1) [[unlikely]]
+				throw std::runtime_error("meow");
+			auto[user, _] = options.front().GetValue<APP_CMD_OPT_USER>();
+			/* Create the response */
+			cMessageUpdate msg;
+			auto& embed = msg.EmplaceEmbeds().emplace_back();
+			embed.SetColor(0x248046);
+			embed.EmplaceAuthor(std::format("{} was unbanned", user->GetUsername())).SetIconUrl(cCDN::GetUserAvatar(*user));
+			/* Also update the user id */
+			user_id = user->GetId();
+			return msg;
+		}
+		cMessageUpdate operator()(cMsgCompInteraction& i) {
+			cMessageUpdate msg;
+			auto& embed = msg.EmplaceEmbeds(i.GetMessage().MoveEmbeds()).at(0);
+			embed.SetColor(0x248046);
+			embed.ResetFields();
+			embed.GetAuthor()->SetName(std::format("{}unbanned", [name = embed.GetAuthor()->GetName()] {
+				auto n = name.rfind("banned");
+				return n == std::string_view::npos ? "User was " : name.substr(0, n);
+			}()));
+			return msg;
+		}
+		[[noreturn]]
+		cMessageUpdate operator()(cModalSubmitInteraction&) {
+			throw std::runtime_error("Unexpected interaction type");
+		}
+	};
+	auto msg = i.Visit(visitor(user_id));
+	/* Unban the user */
 	try {
-		co_await RemoveGuildBan(*i.GetGuildId(), user->GetId());
-	} catch (xDiscordError& e) {
+		co_await RemoveGuildBan(*i.GetGuildId(), user_id, std::format("{} used the /unban command", i.GetUser().GetUsername()));
+	} catch (xDiscordError&) {
 		/* Ban not found, but that's fine */
 	}
 	/* Also remove the ban from the database */
-	co_await cDatabase::RemoveTemporaryBan(*user);
-	/* Send confirmation message */
-	cPartialMessage msg;
-	auto& embed = msg.EmplaceEmbeds().emplace_back();
-	embed.SetColor(0x248046);
-	embed.EmplaceAuthor(std::format("{} was unbanned", user->GetUsername())).SetIconUrl(cCDN::GetUserAvatar(*user));
-	co_await InteractionSendMessage(i, msg.SetComponents({
+	co_await cDatabase::RemoveTemporaryBan(user_id);
+	/* Send confirmation */
+	co_await InteractionEditMessage(i, msg.SetComponents({
 		cActionRow{
 			cButton{
 				BUTTON_STYLE_SECONDARY,
@@ -169,40 +196,7 @@ cGreekBot::process_unban(cAppCmdInteraction& i) HANDLER_BEGIN {
 			}
 		}
 	}));
-} HANDLER_END
-/* ========== Process unban button ================================================================================== */
-cTask<>
-cGreekBot::process_unban(cMsgCompInteraction& i, cSnowflake user_id) HANDLER_BEGIN {
-	/* Make sure that the invoking user has the appropriate permissions */
-	if (!(i.GetMember()->GetPermissions() & PERM_BAN_MEMBERS))
-		co_return co_await InteractionSendMessage(i, MISSING_PERMISSION_MESSAGE);
-	/* Unban user */
-	co_await InteractionDefer(i);
-	try {
-		co_await RemoveGuildBan(*i.GetGuildId(), user_id);
-	} catch (xDiscordError& e) {
-		/* Ban not found, but that's fine */
-	}
-	/* Also remove the ban from the database */
-	co_await cDatabase::RemoveTemporaryBan(user_id);
-	/* Send confirmation message */
-	cMessageUpdate response;
-	auto& embed = response.EmplaceEmbeds(i.GetMessage().MoveEmbeds()).at(0);
-	embed.SetColor(0x248046);
-	embed.ResetFields();
-	embed.GetAuthor()->SetName(std::format("{}unbanned", [name = embed.GetAuthor()->GetName()] {
-		auto n = name.rfind("banned");
-		return n == std::string_view::npos ? "User was " : name.substr(0, n);
-	}()));
-	co_await InteractionEditMessage(i, response.SetComponents({
-		cActionRow{
-			cButton{
-				BUTTON_STYLE_SECONDARY,
-				std::format("DLT#{}", i.GetUser().GetId()),
-				"Dismiss"
-			}
-		}
-	}), i.GetMessage());
+	co_return;
 } HANDLER_END
 /* ========== Process ban context menu ============================================================================== */
 cTask<>
