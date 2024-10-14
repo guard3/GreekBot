@@ -135,6 +135,41 @@ cGreekBot::process_ban(cAppCmdInteraction& i) HANDLER_BEGIN {
 	/* Ban */
 	co_await process_ban(i, sc, user->GetId(), user->GetAvatar(), user->GetUsername(), user->GetDiscriminator(), delete_messages, reason, goodbye, expiry_fmt);
 } HANDLER_END
+/* ========== Process unban command ================================================================================= */
+cTask<>
+cGreekBot::process_unban(cAppCmdInteraction& i) HANDLER_BEGIN {
+	/* Make sure that the invoking user has the appropriate permissions */
+	if (!(i.GetMember()->GetPermissions() & PERM_BAN_MEMBERS)) [[unlikely]]
+		co_return co_await InteractionSendMessage(i, MISSING_PERMISSION_MESSAGE);
+	/* Unban user */
+	co_await InteractionDefer(i);
+	/* Retrieve the user to be unbanned */
+	auto options = i.GetOptions();
+	if (options.size() != 1) [[unlikely]]
+		throw std::runtime_error("meow");
+	auto[user, member] = options.front().GetValue<APP_CMD_OPT_USER>();
+	try {
+		co_await RemoveGuildBan(*i.GetGuildId(), user->GetId());
+	} catch (xDiscordError& e) {
+		/* Ban not found, but that's fine */
+	}
+	/* Also remove the ban from the database */
+	co_await cDatabase::RemoveTemporaryBan(*user);
+	/* Send confirmation message */
+	cPartialMessage msg;
+	auto& embed = msg.EmplaceEmbeds().emplace_back();
+	embed.SetColor(0x248046);
+	embed.EmplaceAuthor(std::format("{} was unbanned", user->GetUsername())).SetIconUrl(cCDN::GetUserAvatar(*user));
+	co_await InteractionSendMessage(i, msg.SetComponents({
+		cActionRow{
+			cButton{
+				BUTTON_STYLE_SECONDARY,
+				std::format("DLT#{}", i.GetUser().GetId()),
+				"Dismiss"
+			}
+		}
+	}));
+} HANDLER_END
 /* ========== Process unban button ================================================================================== */
 cTask<>
 cGreekBot::process_unban(cMsgCompInteraction& i, cSnowflake user_id) HANDLER_BEGIN {
