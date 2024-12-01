@@ -3,7 +3,7 @@
 #include "User.h"
 #include "Role.h"
 
-enum class eImageFormat : unsigned {
+enum class eImageFormat {
 	PNG,
 	JPG,
 	JPEG,

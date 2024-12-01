@@ -33,4 +33,13 @@ template<typename T> // unique handle
 using  uhHandle = std::unique_ptr<T>;
 template<typename T> // unique const handle
 using uchHandle = std::unique_ptr<const T>;
+/* ========== Helper macro for forward declarations of types and their pointer aliases ============================== */
+#define DISCORD_FWDDECL(kw, name)    \
+kw c##name;                          \
+using   h##name =  hHandle<c##name>; \
+using  ch##name =  chHandle<c##name>;\
+using  uh##name =  uhHandle<c##name>;\
+using uch##name = uchHandle<c##name>
+#define DISCORD_FWDDECL_CLASS(name) DISCORD_FWDDECL(class, name)
+#define DISCORD_FWDDECL_STRUCT(name) DISCORD_FWDDECL(struct, name)
 #endif /* DISCORD_COMMON_H */

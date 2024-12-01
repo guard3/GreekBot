@@ -6,7 +6,7 @@ static const char* get_extension(eImageFormat img) noexcept {
 	/* The file types */
 	static const char types[4][5]{ "png", "jpg", "jpeg", "webp" };
 	/* Return appropriate string with bounds checking */
-	auto i = static_cast<unsigned>(img);
+	auto i = static_cast<std::size_t>(img);
 	if (i >= std::size(types))
 		i = 0;
 	return types[i];
