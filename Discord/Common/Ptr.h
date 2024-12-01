@@ -1,6 +1,7 @@
 #ifndef GREEKBOT_PTR_H
 #define GREEKBOT_PTR_H
 #include <compare>
+#include <concepts>
 #include <stdexcept>
 
 class xNullPtrError : public std::exception {
@@ -16,9 +17,9 @@ private:
 public:
 	cPtr() noexcept : m_ptr(nullptr) {}
 	cPtr(T* p) noexcept : m_ptr(p) {}
-	template<typename U> requires std::is_constructible_v<T*, U*>
+	template<typename U> requires std::constructible_from<T*, U*>
 	cPtr(U* p) noexcept : m_ptr(p) {}
-	template<typename U> requires std::is_constructible_v<T*, U*>
+	template<typename U> requires std::constructible_from<T*, U*>
 	cPtr(const cPtr<U>& p) noexcept : m_ptr(p.Get()) {}
 
 	T* Get() const noexcept { return m_ptr; }

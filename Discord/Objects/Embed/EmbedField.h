@@ -1,6 +1,6 @@
 #ifndef DISCORD_EMBEDFIELD_H
 #define DISCORD_EMBEDFIELD_H
-#include "Common.h"
+#include "Base.h"
 
 class cEmbedField final {
 	std::string m_name, m_value;

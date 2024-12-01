@@ -4,6 +4,7 @@
 #include "Embed/EmbedField.h"
 #include "Embed/EmbedFooter.h"
 #include "Embed/EmbedMedia.h"
+#include <chrono>
 #include <optional>
 #include <span>
 #include <vector>

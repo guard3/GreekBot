@@ -1,6 +1,6 @@
 #ifndef GREEKBOT_ATTACHMENT_H
 #define GREEKBOT_ATTACHMENT_H
-#include "Common.h"
+#include "Base.h"
 
 class cAttachment final {
 private:

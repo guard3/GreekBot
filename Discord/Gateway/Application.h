@@ -1,6 +1,6 @@
 #ifndef GREEKBOT_APPLICATION_H
 #define GREEKBOT_APPLICATION_H
-#include "Common.h"
+#include "Base.h"
 
 enum eApplicationFlag {
 	APP_FLAG_GATEWAY_PRESENCE                 = 1 << 12, // Intent required for bots in 100 or more servers to receive presence_update events

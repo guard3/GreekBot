@@ -1,6 +1,6 @@
 #ifndef DISCORD_EMBEDAUTHOR_H
 #define DISCORD_EMBEDAUTHOR_H
-#include "Common.h"
+#include "Base.h"
 
 class cEmbedAuthor final {
 	std::string m_name, m_url, m_icon_url, m_proxy_icon_url;

@@ -1,6 +1,6 @@
 #ifndef GREEKBOT_USER_H
 #define GREEKBOT_USER_H
-#include "Common.h"
+#include "Base.h"
 
 class cUser final {
 private:

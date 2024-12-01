@@ -2,7 +2,7 @@
 #include "Database.h"
 #include "Utils.h"
 #include "CDN.h"
-#include <ranges>
+#include <algorithm>
 
 namespace rng = std::ranges;
 

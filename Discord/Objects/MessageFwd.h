@@ -1,6 +1,6 @@
 #ifndef DISCORD_MESSAGEFWD_H
 #define DISCORD_MESSAGEFWD_H
-#include "Common.h"
+#include "BaseFwd.h"
 /* ================================================================================================================== */
 class cMessageUpdate;
 using   hMessageUpdate =   hHandle<cMessageUpdate>;

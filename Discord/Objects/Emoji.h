@@ -1,5 +1,6 @@
 #ifndef DISCORD_EMOJI_H
 #define DISCORD_EMOJI_H
+#include "Base.h"
 #include "EmojiFwd.h"
 
 class cEmoji final {

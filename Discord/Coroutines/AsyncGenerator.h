@@ -1,6 +1,7 @@
 #ifndef DISCORD_ASYNCGENERATOR_H
 #define DISCORD_ASYNCGENERATOR_H
 #include "Task.h"
+#include <iterator>
 /* ========== An exception thrown when a generator is empty ========================================================= */
 class xGeneratorError : public std::exception {
 public:

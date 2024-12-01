@@ -1,6 +1,7 @@
 #ifndef GREEKBOT_GENERATOR_H
 #define GREEKBOT_GENERATOR_H
 #include "Task.h"
+#include <stdexcept>
 // TODO: make a generator specific exception
 template<typename T>
 class cGenerator {

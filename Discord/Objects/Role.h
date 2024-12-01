@@ -1,6 +1,6 @@
 #ifndef GREEKBOT_ROLE_H
 #define GREEKBOT_ROLE_H
-#include "Common.h"
+#include "Base.h"
 #include <optional>
 
 enum ePermission : std::uint64_t {

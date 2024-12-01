@@ -1,6 +1,6 @@
 #ifndef DISCORD_TEXTINPUT_H
 #define DISCORD_TEXTINPUT_H
-#include "Common.h"
+#include "Base.h"
 
 enum eTextInputStyle : std::uint8_t {
 	TEXT_INPUT_SHORT = 1,

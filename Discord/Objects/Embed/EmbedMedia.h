@@ -1,6 +1,6 @@
 #ifndef DISCORD_EMBEDMEDIA_H
 #define DISCORD_EMBEDMEDIA_H
-#include "Common.h"
+#include "Base.h"
 
 class cEmbedMedia final {
 	std::string m_url;       // The source url of the image or video

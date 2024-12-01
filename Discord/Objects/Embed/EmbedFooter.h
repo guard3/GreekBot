@@ -1,6 +1,6 @@
 #ifndef DISCORD_EMBEDFOOTER_H
 #define DISCORD_EMBEDFOOTER_H
-#include "Common.h"
+#include "Base.h"
 
 class cEmbedFooter final {
 	std::string m_text, m_icon_url, m_proxy_icon_url;
