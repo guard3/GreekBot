@@ -1,6 +1,7 @@
-#ifndef GREEKBOT_CHANNEL_H
-#define GREEKBOT_CHANNEL_H
+#ifndef DISCORD_CHANNEL_H
+#define DISCORD_CHANNEL_H
 #include "Base.h"
+#include "ChannelFwd.h"
 
 enum eChannelType {
 	CHANNEL_GUILD_TEXT,
@@ -36,12 +37,5 @@ typedef  chHandle<cChannel>  chChannel;
 typedef  uhHandle<cChannel>  uhChannel;
 typedef uchHandle<cChannel> uchChannel;
 
-class crefChannel final {
-	const cSnowflake& m_id;
-public:
-	crefChannel(const cSnowflake& id) noexcept : m_id(id) {}
-	crefChannel(const cChannel& channel) noexcept : m_id(channel.GetId()) {}
-
-	const cSnowflake& GetId() const noexcept { return m_id; }
-};
-#endif /* GREEKBOT_CHANNEL_H */
+inline crefChannel::crefChannel(const cChannel& channel) noexcept : m_id(channel.GetId()) {}
+#endif /* DISCORD_CHANNEL_H */

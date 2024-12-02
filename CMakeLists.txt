@@ -53,6 +53,12 @@ add_executable(GreekBot main.cpp Discord/Bot.cpp Discord/Bot.h Discord/Common/Co
 	Discord/BaseFwd.h
 	Discord/Base/Color.h
 	Discord/Base/ColorFwd.h
+		Discord/Objects/RoleFwd.h
+		Discord/Objects/UserFwd.h
+		Discord/Objects/ChannelFwd.h
+		Discord/Objects/EmbedFwd.h
+		Discord/Objects/GuildFwd.h
+		Discord/Objects/MemberFwd.h
 )
 
 target_include_directories(

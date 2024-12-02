@@ -70,10 +70,6 @@ public:
 	cEmbedField&& SetValue(Arg&& arg) && { return std::move(SetValue(std::forward<Arg>(arg))); }
 	cEmbedField&& SetInline(bool inline_) && { return std::move(SetInline(inline_)); }
 };
-typedef   hHandle<cEmbedField>   hEmbedField;
-typedef  chHandle<cEmbedField>  chEmbedField;
-typedef  uhHandle<cEmbedField>  uhEmbedField;
-typedef uchHandle<cEmbedField> uchEmbedField;
 
 cEmbedField
 tag_invoke(boost::json::value_to_tag<cEmbedField>, const boost::json::value&);

@@ -4,6 +4,7 @@
 #include "Embed/EmbedField.h"
 #include "Embed/EmbedFooter.h"
 #include "Embed/EmbedMedia.h"
+#include "EmbedFwd.h"
 #include <chrono>
 #include <optional>
 #include <span>
@@ -219,10 +220,6 @@ public:
 	cEmbed&& SetFields(Arg&& arg) && { return std::move(SetFields(std::forward<Arg>(arg))); }
 	cEmbed&& SetTimestamp(std::chrono::sys_time<std::chrono::milliseconds> arg) && { return std::move(SetTimestamp(arg)); }
 };
-typedef   hHandle<cEmbed>   hEmbed;
-typedef  chHandle<cEmbed>  chEmbed;
-typedef  uhHandle<cEmbed>  uhEmbed;
-typedef uchHandle<cEmbed> uchEmbed;
 
 template<>
 inline std::chrono::sys_time<std::chrono::milliseconds> cEmbed::GetTimestamp() const noexcept {

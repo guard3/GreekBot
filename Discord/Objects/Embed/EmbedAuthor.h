@@ -81,10 +81,6 @@ public:
 	template<typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
 	cEmbedAuthor&& SetIconUrl(Arg&& arg) && { return std::move(SetIconUrl(std::forward<Arg>(arg))); }
 };
-using   hEmbedAuthor =   hHandle<cEmbedAuthor>;
-using  chEmbedAuthor =  chHandle<cEmbedAuthor>;
-using  uhEmbedAuthor =  uhHandle<cEmbedAuthor>;
-using uchEmbedAuthor = uchHandle<cEmbedAuthor>;
 
 cEmbedAuthor
 tag_invoke(boost::json::value_to_tag<cEmbedAuthor>, const boost::json::value&);

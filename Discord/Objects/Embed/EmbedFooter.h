@@ -62,10 +62,6 @@ public:
 	template<typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
 	cEmbedFooter&& SetIconUrl(Arg&& arg) && { return std::move(std::forward<Arg>(arg)); }
 };
-typedef   hHandle<cEmbedFooter>   hEmbedFooter;
-typedef  chHandle<cEmbedFooter>  chEmbedFooter;
-typedef  uhHandle<cEmbedFooter>  uhEmbedFooter;
-typedef uchHandle<cEmbedFooter> uchEmbedFooter;
 
 cEmbedFooter
 tag_invoke(boost::json::value_to_tag<cEmbedFooter>, const boost::json::value&);

@@ -1,6 +1,7 @@
-#ifndef GREEKBOT_ROLE_H
-#define GREEKBOT_ROLE_H
+#ifndef DISCORD_ROLE_H
+#define DISCORD_ROLE_H
 #include "Base.h"
+#include "RoleFwd.h"
 #include <optional>
 
 enum ePermission : std::uint64_t {
@@ -64,10 +65,6 @@ public:
 	chSnowflake         GetBotId() const noexcept { return         bot_id.ToInt() ?         &bot_id : nullptr; }
 	chSnowflake GetIntegrationId() const noexcept { return integration_id.ToInt() ? &integration_id : nullptr; }
 };
-typedef   hHandle<cRoleTags>   hRoleTags;
-typedef  chHandle<cRoleTags>  chRoleTags;
-typedef  uhHandle<cRoleTags>  uhRoleTags;
-typedef uchHandle<cRoleTags> uchRoleTags;
 
 class cRole final {
 	cSnowflake  m_id;
@@ -99,10 +96,6 @@ public:
 	bool     IsManaged() const noexcept { return m_managed;     }
 	bool IsMentionable() const noexcept { return m_mentionable; }
 };
-typedef   hHandle<cRole>   hRole;
-typedef  chHandle<cRole>  chRole;
-typedef  uhHandle<cRole>  uhRole;
-typedef uchHandle<cRole> uchRole;
 
 cRole tag_invoke(boost::json::value_to_tag<cRole>, const boost::json::value&);
-#endif /* GREEKBOT_ROLE_H */
+#endif /* DISCORD_ROLE_H */

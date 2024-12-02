@@ -1,5 +1,6 @@
-#ifndef GREEKBOT_GUILD_H
-#define GREEKBOT_GUILD_H
+#ifndef DISCORD_GUILD_H
+#define DISCORD_GUILD_H
+#include "GuildFwd.h"
 #include "Role.h"
 #include "VoiceState.h"
 #include <vector>
@@ -15,10 +16,6 @@ public:
 	std::span<const cVoiceState> GetVoiceStates() const noexcept { return m_voice_states; }
 	std::vector<cVoiceState> MoveVoiceStates() noexcept { return std::move(m_voice_states); }
 };
-using   hGuildCreate =   hHandle<cGuildCreate>;
-using  chGuildCreate =  chHandle<cGuildCreate>;
-using  uhGuildCreate =  uhHandle<cGuildCreate>;
-using uchGuildCreate = uchHandle<cGuildCreate>;
 
 cGuildCreate
 tag_invoke(boost::json::value_to_tag<cGuildCreate>, const boost::json::value&);
@@ -39,11 +36,7 @@ public:
 
 	std::vector<cRole> MoveRoles() noexcept { return std::move(roles); }
 };
-typedef   hHandle<cGuild>   hGuild;
-typedef  chHandle<cGuild>  chGuild;
-typedef  uhHandle<cGuild>  uhGuild;
-typedef uchHandle<cGuild> uchGuild;
 
 cGuild
 tag_invoke(boost::json::value_to_tag<cGuild>, const boost::json::value&);
-#endif /* GREEKBOT_GUILD_H */
+#endif /* DISCORD_GUILD_H */

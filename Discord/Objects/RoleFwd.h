@@ -1,0 +1,6 @@
+#ifndef DISCORD_ROLEFWD_H
+#define DISCORD_ROLEFWD_H
+#include "BaseFwd.h"
+DISCORD_FWDDECL_CLASS(Role);
+DISCORD_FWDDECL_CLASS(RoleTags);
+#endif /* DISCORD_ROLEFWD_H */

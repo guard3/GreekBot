@@ -1,5 +1,6 @@
-#ifndef GREEKBOT_MEMBER_H
-#define GREEKBOT_MEMBER_H
+#ifndef DISCORD_MEMBER_H
+#define DISCORD_MEMBER_H
+#include "MemberFwd.h"
 #include "User.h"
 #include "Role.h"
 #include <vector>
@@ -99,12 +100,8 @@ private:
 	ePermission m_permissions;
 	std::vector<cSnowflake> m_roles;
 };
-typedef   hHandle<cPartialMember>   hPartialMember;
-typedef  chHandle<cPartialMember>  chPartialMember;
-typedef  uhHandle<cPartialMember>  uhPartialMember;
-typedef uchHandle<cPartialMember> uchPartialMember;
-
-cPartialMember tag_invoke(boost::json::value_to_tag<cPartialMember>, const boost::json::value&);
+cPartialMember
+tag_invoke(boost::json::value_to_tag<cPartialMember>, const boost::json::value&);
 
 class cMember final : public cPartialMember {
 private:
@@ -117,10 +114,6 @@ public:
 	chUser GetUser() const noexcept { return m_user ? &*m_user : nullptr; }
 	hUser  GetUser()       noexcept { return m_user ? &*m_user : nullptr; }
 };
-typedef   hHandle<cMember>   hMember;
-typedef  chHandle<cMember>  chMember;
-typedef  uhHandle<cMember>  uhMember;
-typedef uchHandle<cMember> uchMember;
-
-cMember tag_invoke(boost::json::value_to_tag<cMember>, const boost::json::value&);
-#endif //GREEKBOT_MEMBER_H
+cMember
+tag_invoke(boost::json::value_to_tag<cMember>, const boost::json::value&);
+#endif /* DISCORD_MEMBER_H */

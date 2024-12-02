@@ -1,4 +1,6 @@
 #include "CDN.h"
+#include "Role.h"
+#include "User.h"
 
 static constexpr auto base_url = "https://cdn.discordapp.com/";
 

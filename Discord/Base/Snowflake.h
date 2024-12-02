@@ -55,6 +55,13 @@ cSnowflake
 tag_invoke(boost::json::value_to_tag<cSnowflake>, const boost::json::value&);
 void
 tag_invoke(boost::json::value_from_tag, boost::json::value&, const cSnowflake&);
+/* ========== Make cSnowflake hashable ============================================================================== */
+template<>
+struct std::hash<cSnowflake> : std::hash<std::uint64_t> {
+	std::size_t operator()(const cSnowflake& snowflake) const noexcept {
+		return static_cast<const std::hash<std::uint64_t>&>(*this)(snowflake.ToInt());
+	}
+};
 /* ========== Make cSnowflake formattable =========================================================================== */
 template<typename CharT>
 struct std::formatter<cSnowflake, CharT> : std::formatter<std::string_view, CharT> {

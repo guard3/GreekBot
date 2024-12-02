@@ -1,7 +1,8 @@
-#ifndef GREEKBOT_CDN_H
-#define GREEKBOT_CDN_H
-#include "User.h"
-#include "Role.h"
+#ifndef DISCORD_CDN_H
+#define DISCORD_CDN_H
+#include "Base.h"
+#include "RoleFwd.h"
+#include "UserFwd.h"
 
 enum class eImageFormat {
 	PNG,
@@ -21,4 +22,4 @@ public:
 	static std::string GetRoleIcon(const cRole& role, eImageFormat img = eImageFormat::PNG, std::size_t size = 4096);
 	static std::string GetRoleIcon(const cSnowflake& role_id, std::string_view hash = {}, eImageFormat img = eImageFormat::PNG, std::size_t size = 4096);
 };
-#endif /* GREEKBOT_CDN_H */
+#endif /* DISCORD_CDN_H */
