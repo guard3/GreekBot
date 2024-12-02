@@ -35,13 +35,11 @@ public:
 			return m_url = std::string(std::forward<Arg>(arg), std::forward<Args>(args)...);
 	}
 	/* Setters */
-	template<typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
-	cEmbedMedia& SetUrl(Arg&& arg) & {
-		EmplaceUrl(std::forward<Arg>(arg));
-		return *this;
+	template<typename Self, typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
+	Self&& SetUrl(this Self&& self, Arg&& arg)  {
+		self.EmplaceUrl(std::forward<Arg>(arg));
+		return std::forward<Self>(self);
 	}
-	template<typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
-	cEmbedMedia&& SetUrl(Arg&& arg) && { return std::move(SetUrl(std::forward<Arg>(arg))); }
 };
 
 cEmbedMedia

@@ -50,25 +50,21 @@ public:
 			return m_name = std::string(std::forward<Arg>(arg), std::forward<Args>(args)...);
 	}
 	/* Setters */
-	template<typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
-	cEmbedField& SetName(Arg&& arg) & {
-		EmplaceName(std::forward<Arg>(arg));
-		return *this;
+	template<typename Self, typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
+	Self&& SetName(this Self&& self, Arg&& arg) {
+		self.EmplaceName(std::forward<Arg>(arg));
+		return std::forward<Self>(self);
 	}
-	template<typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
-	cEmbedField& SetValue(Arg&& arg) & {
-		EmplaceValue(std::forward<Arg>(arg));
-		return *this;
+	template<typename Self, typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
+	Self&& SetValue(this Self&& self, Arg&& arg) {
+		self.EmplaceValue(std::forward<Arg>(arg));
+		return std::forward<Self>(self);
 	}
-	cEmbedField& SetInline(bool inline_) & {
-		m_inline = inline_;
-		return *this;
+	template<typename Self>
+	Self&& SetInline(this Self&& self, bool inline_) noexcept {
+		self.m_inline = inline_;
+		return std::forward<Self>(self);
 	}
-	template<typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
-	cEmbedField&& SetName(Arg&& arg) && { return std::move(SetName(std::forward<Arg>(arg))); }
-	template<typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
-	cEmbedField&& SetValue(Arg&& arg) && { return std::move(SetValue(std::forward<Arg>(arg))); }
-	cEmbedField&& SetInline(bool inline_) && { return std::move(SetInline(inline_)); }
 };
 
 cEmbedField

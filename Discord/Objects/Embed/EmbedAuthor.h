@@ -59,27 +59,21 @@ public:
 			return m_icon_url = std::string(std::forward<Arg>(arg), std::forward<Args>(args)...);
 	}
 	/* Setters */
-	template<typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
-	cEmbedAuthor& SetName(Arg&& arg) & {
-		EmplaceName(std::forward<Arg>(arg));
-		return *this;
+	template<typename Self, typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
+	Self&& SetName(this Self&& self, Arg&& arg) {
+		self.EmplaceName(std::forward<Arg>(arg));
+		return std::forward<Self>(self);
 	}
-	template<typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
-	cEmbedAuthor& SetUrl(Arg&& arg) & {
-		EmplaceUrl(std::forward<Arg>(arg));
-		return *this;
+	template<typename Self, typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
+	Self&& SetUrl(this Self&& self, Arg&& arg) {
+		self.EmplaceUrl(std::forward<Arg>(arg));
+		return std::forward<Self>(self);
 	}
-	template<typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
-	cEmbedAuthor& SetIconUrl(Arg&& arg) & {
-		EmplaceIconUrl(std::forward<Arg>(arg));
-		return *this;
+	template<typename Self, typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
+	Self&& SetIconUrl(this Self&& self, Arg&& arg) {
+		self.EmplaceIconUrl(std::forward<Arg>(arg));
+		return std::forward<Self>(self);
 	}
-	template<typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
-	cEmbedAuthor&& SetName(Arg&& arg) && { return std::move(SetName(std::forward<Arg>(arg))); }
-	template<typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
-	cEmbedAuthor&& SetUrl(Arg&& arg) && { return std::move(SetUrl(std::forward<Arg>(arg))); }
-	template<typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
-	cEmbedAuthor&& SetIconUrl(Arg&& arg) && { return std::move(SetIconUrl(std::forward<Arg>(arg))); }
 };
 
 cEmbedAuthor

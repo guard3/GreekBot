@@ -32,6 +32,7 @@ public:
 	std::string_view       GetTitle() const noexcept { return m_title;       }
 	std::string_view GetDescription() const noexcept { return m_description; }
 	std::string_view         GetUrl() const noexcept { return m_url;         }
+	auto               GetTimestamp() const noexcept { return m_timestamp;   }
 	chEmbedMedia       GetThumbnail() const noexcept { return m_thumbnail ? m_thumbnail.operator->() : nullptr; }
 	 hEmbedMedia       GetThumbnail()       noexcept { return m_thumbnail ? m_thumbnail.operator->() : nullptr; }
 	chEmbedMedia           GetImage() const noexcept { return m_image     ?     m_image.operator->() : nullptr; }
@@ -44,10 +45,6 @@ public:
 	 hEmbedAuthor         GetAuthor()       noexcept { return m_author    ?    m_author.operator->() : nullptr; }
 	std::span<const cEmbedField> GetFields() const noexcept { return m_fields; }
 	std::span<      cEmbedField> GetFields()       noexcept { return m_fields; }
-	template<typename Duration = std::chrono::milliseconds>
-	std::chrono::sys_time<Duration> GetTimestamp() const noexcept {
-		return std::chrono::floor<Duration>(m_timestamp);
-	}
 	/* Movers */
 	std::string                    MoveTitle() noexcept { return std::move(m_title);       }
 	std::string              MoveDescription() noexcept { return std::move(m_description); }
@@ -153,79 +150,58 @@ public:
 			return m_fields = std::vector<cEmbedField>(std::forward<Arg>(arg), std::forward<Args>(args)...);
 	}
 	/* Setters */
-	cEmbed& SetColor(cColor c) & {
-		m_color = c;
-		return *this;
+	template<typename Self>
+	Self&& SetColor(this Self&& self, cColor c) noexcept {
+		self.m_color = c;
+		return std::forward<Self>(self);
 	}
-	template<typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
-	cEmbed& SetTitle(Arg&& arg) & {
-		EmplaceTitle(std::forward<Arg>(arg));
-		return *this;
+	template<typename Self, typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
+	Self&& SetTitle(this Self&& self, Arg&& arg) {
+		self.EmplaceTitle(std::forward<Arg>(arg));
+		return std::forward<Self>(self);
 	}
-	template<typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
-	cEmbed& SetDescription(Arg&& arg) & {
-		EmplaceDescription(std::forward<Arg>(arg));
-		return *this;
+	template<typename Self, typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
+	Self&& SetDescription(this Self&& self, Arg&& arg) {
+		self.EmplaceDescription(std::forward<Arg>(arg));
+		return std::forward<Self>(self);
 	}
-	template<typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
-	cEmbed& SetUrl(Arg&& arg) & {
-		EmplaceUrl(std::forward<Arg>(arg));
-		return *this;
+	template<typename Self, typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
+	Self&& SetUrl(this Self&& self, Arg&& arg) {
+		self.EmplaceUrl(std::forward<Arg>(arg));
+		return std::forward<Self>(self);
 	}
-	template<typename Arg = cEmbedMedia> requires std::constructible_from<cEmbedMedia, Arg&&>
-	cEmbed& SetThumbnail(Arg&& arg) & {
-		EmplaceThumbnail(std::forward<Arg>(arg));
-		return *this;
+	template<typename Self, typename Arg = cEmbedMedia> requires std::constructible_from<cEmbedMedia, Arg&&>
+	Self&& SetThumbnail(this Self&& self, Arg&& arg) {
+		self.EmplaceThumbnail(std::forward<Arg>(arg));
+		return std::forward<Self>(self);
 	}
-	template<typename Arg = cEmbedMedia> requires std::constructible_from<cEmbedMedia, Arg&&>
-	cEmbed& SetImage(Arg&& arg) & {
-		EmplaceImage(std::forward<Arg>(arg));
-		return *this;
+	template<typename Self, typename Arg = cEmbedMedia> requires std::constructible_from<cEmbedMedia, Arg&&>
+	Self&& SetImage(this Self&& self, Arg&& arg) {
+		self.EmplaceImage(std::forward<Arg>(arg));
+		return std::forward<Self>(self);
 	}
-	template<typename Arg = cEmbedFooter> requires std::constructible_from<cEmbedFooter, Arg&&>
-	cEmbed& SetFooter(Arg&& arg) & {
-		EmplaceFooter(std::forward<Arg>(arg));
-		return *this;
+	template<typename Self, typename Arg = cEmbedFooter> requires std::constructible_from<cEmbedFooter, Arg&&>
+	Self&& SetFooter(this Self&& self, Arg&& arg) {
+		self.EmplaceFooter(std::forward<Arg>(arg));
+		return std::forward<Self>(self);
 	}
-	template<typename Arg = cEmbedAuthor> requires std::constructible_from<cEmbedAuthor, Arg&&>
-	cEmbed& SetAuthor(Arg&& arg) & {
-		EmplaceAuthor(std::forward<Arg>(arg));
-		return *this;
+	template<typename Self, typename Arg = cEmbedAuthor> requires std::constructible_from<cEmbedAuthor, Arg&&>
+	Self&& SetAuthor(this Self&& self, Arg&& arg) {
+		self.EmplaceAuthor(std::forward<Arg>(arg));
+		return std::forward<Self>(self);
 	}
-	template<typename Arg = std::vector<cEmbedField>> requires std::constructible_from<std::vector<cEmbedField>, Arg&&>
-	cEmbed& SetFields(Arg&& arg) & {
-		EmplaceFields(std::forward<Arg>(arg));
-		return *this;
+	template<typename Self, typename Arg = std::vector<cEmbedField>> requires std::constructible_from<std::vector<cEmbedField>, Arg&&>
+	Self&& SetFields(this Self&& self, Arg&& arg) {
+		self.EmplaceFields(std::forward<Arg>(arg));
+		return std::forward<Self>(self);
 	}
-	cEmbed& SetTimestamp(std::chrono::sys_time<std::chrono::milliseconds> arg) & {
-		m_timestamp = arg;
-		return *this;
+	template<typename Self>
+	Self&& SetTimestamp(this Self&& self, std::chrono::sys_time<std::chrono::milliseconds> arg) noexcept {
+		self.m_timestamp = arg;
+		return std::forward<Self>(self);
 	}
-	cEmbed&& SetColor(cColor c) && { return std::move(SetColor(c)); }
-	template<typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
-	cEmbed&& SetTitle(Arg&& arg) && { return std::move(SetTitle(std::forward<Arg>(arg))); }
-	template<typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
-	cEmbed&& SetDescription(Arg&& arg) && { return std::move(SetDescription(std::forward<Arg>(arg))); }
-	template<typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
-	cEmbed&& SetUrl(Arg&& arg) && { return std::move(SetUrl(std::forward<Arg>(arg))); }
-	template<typename Arg = cEmbedMedia> requires std::constructible_from<cEmbedMedia, Arg&&>
-	cEmbed&& SetThumbnail(Arg&& arg) && { return std::move(SetThumbnail(std::forward<Arg>(arg))); }
-	template<typename Arg = cEmbedMedia> requires std::constructible_from<cEmbedMedia, Arg&&>
-	cEmbed&& SetImage(Arg&& arg) && { return std::move(SetImage(std::forward<Arg>(arg))); }
-	template<typename Arg = cEmbedFooter> requires std::constructible_from<cEmbedFooter, Arg&&>
-	cEmbed&& SetFooter(Arg&& arg) && { return std::move(SetFooter(std::forward<Arg>(arg))); }
-	template<typename Arg = cEmbedAuthor> requires std::constructible_from<cEmbedAuthor, Arg&&>
-	cEmbed&& SetAuthor(Arg&& arg) && { return std::move(SetAuthor(std::forward<Arg>(arg))); }
-	template<typename Arg = std::vector<cEmbedField>> requires std::constructible_from<std::vector<cEmbedField>, Arg&&>
-	cEmbed&& SetFields(Arg&& arg) && { return std::move(SetFields(std::forward<Arg>(arg))); }
-	cEmbed&& SetTimestamp(std::chrono::sys_time<std::chrono::milliseconds> arg) && { return std::move(SetTimestamp(arg)); }
 };
-
-template<>
-inline std::chrono::sys_time<std::chrono::milliseconds> cEmbed::GetTimestamp() const noexcept {
-	return m_timestamp;
-}
-
+/* ================================================================================================================== */
 cEmbed
 tag_invoke(boost::json::value_to_tag<cEmbed>, const boost::json::value&);
 void

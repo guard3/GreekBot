@@ -6,17 +6,19 @@ class cColor final {
 	std::int32_t m_value;
 
 public:
-	constexpr cColor() noexcept : m_value(0) {}
+	constexpr cColor() noexcept : m_value{} {}
 	constexpr cColor(std::int32_t v) noexcept : m_value(v) {}
+	constexpr cColor(std::uint8_t r, std::uint8_t g, std::uint8_t b) noexcept : m_value((r << 16) | (g << 8) | b) {}
 
-	std::uint8_t GetRed()   const noexcept { return (m_value >> 16) & 0xFF; }
-	std::uint8_t GetGreen() const noexcept { return (m_value >>  8) & 0xFF; }
-	std::uint8_t GetBlue()  const noexcept { return  m_value        & 0xFF; }
+	constexpr std::uint8_t   GetRed(this cColor self) noexcept { return (self.m_value >> 16) & 0xFF; }
+	constexpr std::uint8_t GetGreen(this cColor self) noexcept { return (self.m_value >>  8) & 0xFF; }
+	constexpr std::uint8_t  GetBlue(this cColor self) noexcept { return (self.m_value      ) & 0xFF; }
 
-	std::int32_t ToInt() const noexcept { return m_value; }
-	operator int() const noexcept { return m_value; }
-	operator bool() const noexcept { return m_value; }
-	bool operator!() const noexcept { return !m_value; }
+	constexpr bool operator!(this cColor self) noexcept { return !self.m_value; }
+	constexpr bool operator==(this cColor lhs, cColor rhs) noexcept { return lhs.m_value == rhs.m_value; }
+
+	constexpr std::int32_t ToInt(this cColor self) noexcept { return self.m_value; }
+	constexpr operator std::int32_t(this cColor self) noexcept { return self.ToInt(); }
 };
 cColor
 tag_invoke(boost::json::value_to_tag<cColor>, const boost::json::value&);
