@@ -36,7 +36,7 @@ enum eMessageType {
 };
 eMessageType tag_invoke(boost::json::value_to_tag<eMessageType>, const boost::json::value&);
 
-enum eMessageFlag : std::uint32_t {
+enum eMessageFlag {
 	MESSAGE_FLAG_NONE                                   = 0,
 	MESSAGE_FLAG_CROSSPOSTED                            = 1 << 0,  // this message has been published to subscribed channels (via Channel Following)
 	MESSAGE_FLAG_IS_CROSSPOST                           = 1 << 1,  // this message originated from a message in another channel (via Channel Following)
@@ -53,11 +53,10 @@ enum eMessageFlag : std::uint32_t {
 	MESSAGE_FLAG_TTS              = 1 << 15, // this is a TTS message
 	MESSAGE_FLAG_MENTION_EVERYONE = 1 << 16  // this message mentions everyone
 };
-inline eMessageFlag operator|(eMessageFlag a, eMessageFlag b) { return (eMessageFlag)((int)a | (int)b); }
-inline eMessageFlag operator&(eMessageFlag a, eMessageFlag b) { return (eMessageFlag)((int)a & (int)b); }
+inline constexpr eMessageFlag operator|(eMessageFlag lhs, eMessageFlag rhs) { return static_cast<eMessageFlag>(std::to_underlying(lhs) | std::to_underlying(rhs)); }
+inline constexpr eMessageFlag operator&(eMessageFlag lhs, eMessageFlag rhs) { return static_cast<eMessageFlag>(std::to_underlying(lhs) & std::to_underlying(rhs)); }
 
 class cMessageUpdate final {
-private:
 	cSnowflake m_id;
 	cSnowflake m_channel_id;
 	std::optional<std::string> m_content;
@@ -68,42 +67,30 @@ public:
 	explicit cMessageUpdate(const boost::json::object&);
 	explicit cMessageUpdate(const boost::json::value&);
 
-	const cSnowflake& GetId() const noexcept { return m_id; }
-	const cSnowflake& GetChannelId() const noexcept { return m_channel_id; }
-	cPtr<const std::string> GetContent() const noexcept {
-		return m_content ? m_content.operator->() : nullptr;
-	}
-	cPtr<const std::vector<cActionRow>> GetComponents() const noexcept {
-		return m_components ? m_components.operator->() : nullptr;
-	}
-	cPtr<const std::vector<cEmbed>> GetEmbeds() const noexcept {
-		return m_embeds ? m_embeds.operator->() : nullptr;
-	}
+	auto&&        GetId(this auto&& self) noexcept { return std::forward<decltype(self)>(self).m_id;         }
+	auto&& GetChannelId(this auto&& self) noexcept { return std::forward<decltype(self)>(self).m_channel_id; }
+	auto     GetContent(this auto&  self) noexcept { return cPtr(self.m_content    ? self.m_content.operator->()    : nullptr); }
+	auto  GetComponents(this auto&  self) noexcept { return cPtr(self.m_components ? self.m_components.operator->() : nullptr); }
+	auto      GetEmbeds(this auto&  self) noexcept { return cPtr(self.m_embeds     ? self.m_embeds.operator->()     : nullptr); }
 	/* Resetters */
-	void ResetContent() noexcept {
-		m_content.reset();
-	}
-	void ResetComponents() noexcept {
-		m_components.reset();
-	}
-	void ResetEmbeds() noexcept {
-		m_embeds.reset();
-	}
+	void    ResetContent() noexcept { m_content.reset();    }
+	void ResetComponents() noexcept { m_components.reset(); }
+	void     ResetEmbeds() noexcept { m_embeds.reset();	    }
 	/* Setters */
-	template<typename T = decltype(m_content)::value_type, typename Arg = T> requires std::constructible_from<T, Arg&&>
-	cMessageUpdate& SetContent(Arg&& arg) {
-		m_content.emplace(std::forward<Arg>(arg));
-		return *this;
+	template<typename Self, typename T = decltype(m_content)::value_type, typename Arg = T> requires std::constructible_from<T, Arg&&>
+	Self&& SetContent(this Self&& self, Arg&& arg) {
+		self.m_content.emplace(std::forward<Arg>(arg));
+		return std::forward<Self>(self);
 	}
-	template<typename T = decltype(m_components)::value_type, typename Arg = T> requires std::constructible_from<T, Arg&&>
-	cMessageUpdate& SetComponents(Arg&& arg) {
-		m_components.emplace(std::forward<Arg>(arg));
-		return *this;
+	template<typename Self, typename T = decltype(m_components)::value_type, typename Arg = T> requires std::constructible_from<T, Arg&&>
+	Self&& SetComponents(this Self&& self, Arg&& arg) {
+		self.m_components.emplace(std::forward<Arg>(arg));
+		return std::forward<Self>(self);
 	}
-	template<typename T = decltype(m_embeds)::value_type, typename Arg = T> requires std::constructible_from<T, Arg&&>
-	cMessageUpdate& SetEmbeds(Arg&& arg) {
-		m_embeds.emplace(std::forward<Arg>(arg));
-		return *this;
+	template<typename Self, typename T = decltype(m_embeds)::value_type, typename Arg = T> requires std::constructible_from<T, Arg&&>
+	Self&& SetEmbeds(this Self&& self, Arg&& arg) {
+		self.m_embeds.emplace(std::forward<Arg>(arg));
+		return std::forward<Self>(self);
 	}
 	/* Emplacers */
 	template<typename T = decltype(m_embeds)::value_type, typename... Args> requires std::constructible_from<T, Args&&...>
@@ -137,16 +124,14 @@ protected:
 	cMessageBase() noexcept : m_flags{ MESSAGE_FLAG_NONE } {}
 public:
 	/* Getters */
-	eMessageFlag                     GetFlags() const noexcept { return m_flags;      }
-	std::string_view               GetContent() const noexcept { return m_content;    }
-	std::span<const cActionRow> GetComponents() const noexcept { return m_components; }
-	std::span<      cActionRow> GetComponents()       noexcept { return m_components; }
-	std::span<const cEmbed>         GetEmbeds() const noexcept { return m_embeds;     }
-	std::span<      cEmbed>         GetEmbeds()       noexcept { return m_embeds;     }
+	eMessageFlag       GetFlags() const noexcept { return m_flags;   }
+	std::string_view GetContent() const noexcept { return m_content; }
+	auto GetComponents(this auto& self) noexcept { return std::span(self.m_components); }
+	auto     GetEmbeds(this auto& self) noexcept { return std::span(self.m_embeds);     }
 	/* Movers */
-	std::string                MoveContent() noexcept { return std::move(m_content);    }
-	std::vector<cActionRow> MoveComponents() noexcept { return std::move(m_components); }
-	std::vector<cEmbed>         MoveEmbeds() noexcept { return std::move(m_embeds);     }
+	auto    MoveContent() noexcept { return std::move(m_content);    }
+	auto MoveComponents() noexcept { return std::move(m_components); }
+	auto     MoveEmbeds() noexcept { return std::move(m_embeds);     }
 	/* Resetters */
 	void      ResetFlags() noexcept { m_flags = MESSAGE_FLAG_NONE; }
 	void    ResetContent() noexcept { m_content.clear();           }
@@ -189,42 +174,35 @@ public:
 		else
 			return m_embeds = T(std::forward<Arg>(arg), std::forward<Args>(args)...);
 	}
+	/* Setters */
+	template<typename Self>
+	Self&& SetFlags(this Self&& self, eMessageFlag flags) noexcept {
+		self.m_flags = flags;
+		return std::forward<Self>(self);
+	}
+	template<typename Self, typename T = decltype(m_content), typename Arg = T> requires std::constructible_from<T, Arg&&>
+	Self&& SetContent(this Self&& self, Arg&& arg) {
+		self.EmplaceContent(std::forward<Arg>(arg));
+		return std::forward<Self>(self);
+	}
+	template<typename Self, typename T = decltype(m_components), typename Arg = T> requires std::constructible_from<T, Arg&&>
+	Self&& SetComponents(this Self&& self, Arg&& arg) {
+		self.EmplaceComponents(std::forward<Arg>(arg));
+		return std::forward<Self>(self);
+	}
+	template<typename Self, typename T = decltype(m_embeds), typename Arg = T> requires std::constructible_from<T, Arg&&>
+	Self&& SetEmbeds(this Self&& self, Arg&& arg) {
+		self.EmplaceEmbeds(std::forward<Arg>(arg));
+		return std::forward<Self>(self);
+	}
 };
 /* ========== JSON conversion ======================================================================================= */
 void
 tag_invoke(boost::json::value_from_tag, boost::json::value& v, const cMessageBase&);
-/* ========== A CRTP class for base message, used for returning the right reference type in setters ================= */
-template<typename Derived>
-class cMessageCRTP : public cMessageBase {
-protected:
-	cMessageCRTP() noexcept : cMessageBase() {}
-	template<typename Json>
-	explicit cMessageCRTP(const Json& o) : cMessageBase(o) {}
-public:
-	/* L-value Setters */
-	auto& SetFlags(eMessageFlag flags) & noexcept { m_flags = flags; return static_cast<Derived&>(*this); }
-	template<typename T = decltype(m_content), typename Arg = T> requires std::constructible_from<T, Arg&&>
-	auto& SetContent(Arg&& arg) & { EmplaceContent(std::forward<Arg>(arg)); return static_cast<Derived&>(*this); }
-	template<typename T = decltype(m_components), typename Arg = T> requires std::constructible_from<T, Arg&&>
-	auto& SetComponents(Arg&& arg) & { EmplaceComponents(std::forward<Arg>(arg)); return static_cast<Derived&>(*this); }
-	template<typename T = decltype(m_embeds), typename Arg = T> requires std::constructible_from<T, Arg&&>
-	auto& SetEmbeds(Arg&& arg) & { EmplaceEmbeds(std::forward<Arg>(arg)); return static_cast<Derived&>(*this); }
-	/* R-value Setters */
-	auto&& SetFlags(eMessageFlag flags) && noexcept { return std::move(SetFlags(flags)); }
-	template<typename T = decltype(m_content), typename Arg = T> requires std::constructible_from<T, Arg&&>
-	auto&& SetContent(Arg&& arg) && { return std::move(SetContent(std::forward<Arg>(arg))); }
-	template<typename T = decltype(m_components), typename Arg = T> requires std::constructible_from<T, Arg&&>
-	auto&& SetComponents(Arg&& arg) && { return std::move(SetComponents(std::forward<Arg>(arg))); }
-	template<typename T = decltype(m_embeds), typename Arg = T> requires std::constructible_from<T, Arg&&>
-	auto&& SetEmbeds(Arg&& arg) && { return std::move(SetEmbeds(std::forward<Arg>(arg))); }
-};
 /* ========== A partial message, used for sending new messages ====================================================== */
-class cPartialMessage final : public cMessageCRTP<cPartialMessage> {
-public:
-	cPartialMessage() noexcept : cMessageCRTP<cPartialMessage>() {}
-};
+class cPartialMessage final : public cMessageBase {};
 /* ========== The main message class ================================================================================ */
-class cMessage final : public cMessageCRTP<cMessage> {
+class cMessage final : public cMessageBase {
 	cSnowflake  id;
 	cSnowflake  channel_id;
 	cUser       author;
@@ -239,20 +217,16 @@ public:
 	explicit cMessage(const boost::json::object&);
 	explicit cMessage(const boost::json::value&);
 	/* Getters */
-	const cSnowflake&        GetId() const noexcept { return id;               }
-	      cSnowflake&        GetId()       noexcept { return id;               }
-	const cSnowflake& GetChannelId() const noexcept { return channel_id;       }
-	      cSnowflake& GetChannelId()       noexcept { return channel_id;       }
-	const cUser&         GetAuthor() const noexcept { return author;           }
-	      cUser&         GetAuthor()       noexcept { return author;           }
-	eMessageType           GetType() const noexcept { return type;             }
-	auto              GetTimestamp() const noexcept { return timestamp;        }
-	auto        GetEditedTimestamp() const noexcept { return edited_timestamp; }
-	std::span<const cAttachment> GetAttachments() const noexcept { return attachments; }
-	std::span<      cAttachment> GetAttachments()       noexcept { return attachments; }
+	auto            GetType() const noexcept { return type;             }
+	auto       GetTimestamp() const noexcept { return timestamp;        }
+	auto GetEditedTimestamp() const noexcept { return edited_timestamp; }
+	auto&&        GetId(this auto&& self) noexcept { return std::forward<decltype(self)>(self).id;         }
+	auto&& GetChannelId(this auto&& self) noexcept { return std::forward<decltype(self)>(self).channel_id; }
+	auto&&    GetAuthor(this auto&& self) noexcept { return std::forward<decltype(self)>(self).author;     }
+	auto GetAttachments(this auto&  self) noexcept { return std::span(self.attachments);                   }
 	/* Movers */
-	cUser MoveAuthor() noexcept { return std::move(author); }
-	std::vector<cAttachment> MoveAttachments() noexcept { return std::move(attachments); }
+	auto      MoveAuthor() noexcept { return std::move(author);      }
+	auto MoveAttachments() noexcept { return std::move(attachments); }
 };
 /* ========== JSON conversion ======================================================================================= */
 cMessage

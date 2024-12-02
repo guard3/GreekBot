@@ -6,13 +6,13 @@ namespace json = boost::json;
 /* ================================================================================================================== */
 eMessageType
 tag_invoke(json::value_to_tag<eMessageType>, const json::value& v) {
-	return static_cast<eMessageType>(v.to_number<int>());
+	return static_cast<eMessageType>(v.to_number<std::underlying_type_t<eMessageType>>());
 }
 /* ================================================================================================================== */
 cMessageUpdate::cMessageUpdate(const json::value& v) : cMessageUpdate(v.as_object()) {}
 cMessageUpdate::cMessageUpdate(const json::object& o) :
-	m_id(json::value_to<std::string_view>(o.at("id"))),
-	m_channel_id(json::value_to<cSnowflake>(o.at("channel_id"))) {
+	m_id(o.at("id").as_string()),
+	m_channel_id(o.at("channel_id").as_string()) {
 	if (auto p = o.if_contains("content"))
 		m_content.emplace(json::value_to<std::string>(*p));
 	if (auto p = o.if_contains("components"))
@@ -73,9 +73,9 @@ tag_invoke(json::value_from_tag, json::value& v, const cMessageBase& m) {
 /* ================================================================================================================== */
 cMessage::cMessage(const json::value&  v) : cMessage(v.as_object()) {}
 cMessage::cMessage(const json::object& o) :
-	cMessageCRTP<cMessage>(o),
-	id(json::value_to<cSnowflake>(o.at("id"))),
-	channel_id(json::value_to<cSnowflake>(o.at("channel_id"))),
+	cMessageBase(o),
+	id(o.at("id").as_string()),
+	channel_id(o.at("channel_id").as_string()),
 	author(o.at("author")),
 	timestamp(cUtils::ParseISOTimestamp(o.at("timestamp").as_string())),
 	type(json::value_to<eMessageType>(o.at("type"))),
