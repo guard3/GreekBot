@@ -2,7 +2,6 @@
 #include "Database.h"
 #include "GreekBot.h"
 #include "Utils.h"
-#include "Visitor.h"
 /* ========== Subcommand name hashes for easy switching ============================================================= */
 enum : std::uint32_t {
 	SUBCMD_USER  = 0x8D93D649, // "user"

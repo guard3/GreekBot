@@ -1,5 +1,4 @@
 #include "Bot.h"
-#include "Visitor.h"
 #include <boost/json.hpp>
 
 namespace json = boost::json;

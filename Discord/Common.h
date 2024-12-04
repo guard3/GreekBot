@@ -1,6 +1,8 @@
 #ifndef DISCORD_COMMON_H
 #define DISCORD_COMMON_H
-#include "Ptr.h"
+#include "Common/Concepts.h"
+#include "Common/Ptr.h"
+#include "Common/Visitor.h"
 #include <cstdint>
 #include <memory>
 
@@ -36,7 +38,7 @@ using uchHandle = std::unique_ptr<const T>;
 /* ========== Helper macro for forward declarations of types and their pointer aliases ============================== */
 #define DISCORD_FWDDECL(kw, name)    \
 kw c##name;                          \
-using   h##name =  hHandle<c##name>; \
+using   h##name =   hHandle<c##name>;\
 using  ch##name =  chHandle<c##name>;\
 using  uh##name =  uhHandle<c##name>;\
 using uch##name = uchHandle<c##name>

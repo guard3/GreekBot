@@ -1,5 +1,5 @@
-#ifndef GREEKBOT_UTILS_H
-#define GREEKBOT_UTILS_H
+#ifndef DISCORD_UTILS_H
+#define DISCORD_UTILS_H
 #include <charconv>
 #include <chrono>
 #include <concepts>
@@ -111,4 +111,4 @@ public:
 	/* Get a fully qualified path to the running executable */
 	static std::filesystem::path GetExecutablePath();
 };
-#endif //GREEKBOT_UTILS_H
+#endif /* DISCORD_UTILS_H */

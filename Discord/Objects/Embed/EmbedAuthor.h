@@ -1,7 +1,7 @@
 #ifndef DISCORD_EMBEDAUTHOR_H
 #define DISCORD_EMBEDAUTHOR_H
 #include "Base.h"
-
+/* ================================================================================================================== */
 class cEmbedAuthor final {
 	std::string m_name, m_url, m_icon_url, m_proxy_icon_url;
 
@@ -9,7 +9,7 @@ public:
 	explicit cEmbedAuthor(const boost::json::value&);
 	explicit cEmbedAuthor(const boost::json::object&);
 	/* Constructor */
-	template<typename Str = std::string> requires std::constructible_from<std::string, Str&&>
+	template<iExplicitlyConvertibleTo<std::string> Str = std::string>
 	explicit cEmbedAuthor(Str&& name) : m_name(std::forward<Str>(name)) {}
 	/* Getters */
 	std::string_view         GetName() const noexcept { return m_name;           }
@@ -59,23 +59,23 @@ public:
 			return m_icon_url = std::string(std::forward<Arg>(arg), std::forward<Args>(args)...);
 	}
 	/* Setters */
-	template<typename Self, typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
+	template<iMutable Self, iExplicitlyConvertibleTo<std::string> Arg = std::string>
 	Self&& SetName(this Self&& self, Arg&& arg) {
 		self.EmplaceName(std::forward<Arg>(arg));
 		return std::forward<Self>(self);
 	}
-	template<typename Self, typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
+	template<iMutable Self, iExplicitlyConvertibleTo<std::string> Arg = std::string>
 	Self&& SetUrl(this Self&& self, Arg&& arg) {
 		self.EmplaceUrl(std::forward<Arg>(arg));
 		return std::forward<Self>(self);
 	}
-	template<typename Self, typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
+	template<iMutable Self, iExplicitlyConvertibleTo<std::string> Arg = std::string>
 	Self&& SetIconUrl(this Self&& self, Arg&& arg) {
 		self.EmplaceIconUrl(std::forward<Arg>(arg));
 		return std::forward<Self>(self);
 	}
 };
-
+/* ================================================================================================================== */
 cEmbedAuthor
 tag_invoke(boost::json::value_to_tag<cEmbedAuthor>, const boost::json::value&);
 void

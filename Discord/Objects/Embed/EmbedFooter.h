@@ -1,7 +1,7 @@
 #ifndef DISCORD_EMBEDFOOTER_H
 #define DISCORD_EMBEDFOOTER_H
 #include "Base.h"
-
+/* ================================================================================================================== */
 class cEmbedFooter final {
 	std::string m_text, m_icon_url, m_proxy_icon_url;
 
@@ -9,10 +9,8 @@ public:
 	explicit cEmbedFooter(const boost::json::value&);
 	explicit cEmbedFooter(const boost::json::object&);
 
-	template<typename Str1 = std::string, typename Str2 = std::string> requires requires {
-		requires std::constructible_from<std::string, Str1&&>;
-		requires std::constructible_from<std::string, Str2&&>;
-	} explicit cEmbedFooter(Str1&& text, Str2&& icon_url = {}) : m_text(std::forward<Str1>(text)), m_icon_url(std::forward<Str2>(icon_url)) {}
+	template<iExplicitlyConvertibleTo<std::string> Str1 = std::string, iExplicitlyConvertibleTo<std::string> Str2 = std::string>
+	explicit cEmbedFooter(Str1&& text, Str2&& icon_url = {}) : m_text(std::forward<Str1>(text)), m_icon_url(std::forward<Str2>(icon_url)) {}
 	/* Getters */
 	std::string_view         GetText() const noexcept { return m_text;           }
 	std::string_view      GetIconUrl() const noexcept { return m_icon_url;       }
@@ -47,18 +45,18 @@ public:
 			return m_icon_url = std::string(std::forward<Arg>(arg), std::forward<Args>(args)...);
 	}
 	/* Setters */
-	template<typename Self, typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
+	template<iMutable Self, iExplicitlyConvertibleTo<std::string> Arg = std::string>
 	Self&& SetText(this Self&& self, Arg&& arg) {
 		self.EmplaceText(std::forward<Arg>(arg));
 		return std::forward<Self>(self);
 	}
-	template<typename Self, typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
+	template<iMutable Self, iExplicitlyConvertibleTo<std::string> Arg = std::string>
 	Self&& SetIconUrl(this Self&& self, Arg&& arg) {
 		self.EmplaceIconUrl(std::forward<Arg>(arg));
 		return std::forward<Self>(self);
 	}
 };
-
+/* ================================================================================================================== */
 cEmbedFooter
 tag_invoke(boost::json::value_to_tag<cEmbedFooter>, const boost::json::value&);
 void

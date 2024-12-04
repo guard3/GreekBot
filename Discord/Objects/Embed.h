@@ -24,27 +24,21 @@ class cEmbed final {
 	std::optional<cEmbedAuthor> m_author;
 
 public:
+	cEmbed() = default;
 	explicit cEmbed(const boost::json::value&);
 	explicit cEmbed(const boost::json::object&);
-	cEmbed() = default;
 	/* Getters */
 	cColor                 GetColor() const noexcept { return m_color;       }
 	std::string_view       GetTitle() const noexcept { return m_title;       }
 	std::string_view GetDescription() const noexcept { return m_description; }
 	std::string_view         GetUrl() const noexcept { return m_url;         }
 	auto               GetTimestamp() const noexcept { return m_timestamp;   }
-	chEmbedMedia       GetThumbnail() const noexcept { return m_thumbnail ? m_thumbnail.operator->() : nullptr; }
-	 hEmbedMedia       GetThumbnail()       noexcept { return m_thumbnail ? m_thumbnail.operator->() : nullptr; }
-	chEmbedMedia           GetImage() const noexcept { return m_image     ?     m_image.operator->() : nullptr; }
-	 hEmbedMedia           GetImage()       noexcept { return m_image     ?     m_image.operator->() : nullptr; }
-	chEmbedMedia           GetVideo() const noexcept { return m_video     ?     m_video.operator->() : nullptr; }
-	 hEmbedMedia           GetVideo()       noexcept { return m_video     ?     m_video.operator->() : nullptr; }
-	chEmbedFooter         GetFooter() const noexcept { return m_footer    ?    m_footer.operator->() : nullptr; }
-	 hEmbedFooter         GetFooter()       noexcept { return m_footer    ?    m_footer.operator->() : nullptr; }
-	chEmbedAuthor         GetAuthor() const noexcept { return m_author    ?    m_author.operator->() : nullptr; }
-	 hEmbedAuthor         GetAuthor()       noexcept { return m_author    ?    m_author.operator->() : nullptr; }
-	std::span<const cEmbedField> GetFields() const noexcept { return m_fields; }
-	std::span<      cEmbedField> GetFields()       noexcept { return m_fields; }
+	auto    GetFields(this auto& self) noexcept { return std::span(self.m_fields); }
+	auto GetThumbnail(this auto& self) noexcept { return cPtr(self.m_thumbnail ? self.m_thumbnail.operator->() : nullptr); }
+	auto     GetImage(this auto& self) noexcept { return cPtr(self.m_image     ? self.m_image.operator->()     : nullptr); }
+	auto     GetVideo(this auto& self) noexcept { return cPtr(self.m_video     ? self.m_video.operator->()     : nullptr); }
+	auto    GetFooter(this auto& self) noexcept { return cPtr(self.m_footer    ? self.m_footer.operator->()    : nullptr); }
+	auto    GetAuthor(this auto& self) noexcept { return cPtr(self.m_author    ? self.m_author.operator->()    : nullptr); }
 	/* Movers */
 	std::string                    MoveTitle() noexcept { return std::move(m_title);       }
 	std::string              MoveDescription() noexcept { return std::move(m_description); }
@@ -150,52 +144,52 @@ public:
 			return m_fields = std::vector<cEmbedField>(std::forward<Arg>(arg), std::forward<Args>(args)...);
 	}
 	/* Setters */
-	template<typename Self>
+	template<iMutable Self>
 	Self&& SetColor(this Self&& self, cColor c) noexcept {
 		self.m_color = c;
 		return std::forward<Self>(self);
 	}
-	template<typename Self, typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
+	template<iMutable Self, iExplicitlyConvertibleTo<std::string> Arg = std::string>
 	Self&& SetTitle(this Self&& self, Arg&& arg) {
 		self.EmplaceTitle(std::forward<Arg>(arg));
 		return std::forward<Self>(self);
 	}
-	template<typename Self, typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
+	template<iMutable Self, iExplicitlyConvertibleTo<std::string> Arg = std::string>
 	Self&& SetDescription(this Self&& self, Arg&& arg) {
 		self.EmplaceDescription(std::forward<Arg>(arg));
 		return std::forward<Self>(self);
 	}
-	template<typename Self, typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
+	template<iMutable Self, iExplicitlyConvertibleTo<std::string> Arg = std::string>
 	Self&& SetUrl(this Self&& self, Arg&& arg) {
 		self.EmplaceUrl(std::forward<Arg>(arg));
 		return std::forward<Self>(self);
 	}
-	template<typename Self, typename Arg = cEmbedMedia> requires std::constructible_from<cEmbedMedia, Arg&&>
+	template<iMutable Self, iExplicitlyConvertibleTo<cEmbedMedia> Arg = cEmbedMedia>
 	Self&& SetThumbnail(this Self&& self, Arg&& arg) {
 		self.EmplaceThumbnail(std::forward<Arg>(arg));
 		return std::forward<Self>(self);
 	}
-	template<typename Self, typename Arg = cEmbedMedia> requires std::constructible_from<cEmbedMedia, Arg&&>
+	template<iMutable Self, iExplicitlyConvertibleTo<cEmbedMedia> Arg = cEmbedMedia>
 	Self&& SetImage(this Self&& self, Arg&& arg) {
 		self.EmplaceImage(std::forward<Arg>(arg));
 		return std::forward<Self>(self);
 	}
-	template<typename Self, typename Arg = cEmbedFooter> requires std::constructible_from<cEmbedFooter, Arg&&>
+	template<iMutable Self, iExplicitlyConvertibleTo<cEmbedFooter> Arg = cEmbedFooter>
 	Self&& SetFooter(this Self&& self, Arg&& arg) {
 		self.EmplaceFooter(std::forward<Arg>(arg));
 		return std::forward<Self>(self);
 	}
-	template<typename Self, typename Arg = cEmbedAuthor> requires std::constructible_from<cEmbedAuthor, Arg&&>
+	template<iMutable Self, iExplicitlyConvertibleTo<cEmbedAuthor> Arg = cEmbedAuthor>
 	Self&& SetAuthor(this Self&& self, Arg&& arg) {
 		self.EmplaceAuthor(std::forward<Arg>(arg));
 		return std::forward<Self>(self);
 	}
-	template<typename Self, typename Arg = std::vector<cEmbedField>> requires std::constructible_from<std::vector<cEmbedField>, Arg&&>
+	template<iMutable Self, iExplicitlyConvertibleTo<std::vector<cEmbedField>> Arg = std::vector<cEmbedField>>
 	Self&& SetFields(this Self&& self, Arg&& arg) {
 		self.EmplaceFields(std::forward<Arg>(arg));
 		return std::forward<Self>(self);
 	}
-	template<typename Self>
+	template<iMutable Self>
 	Self&& SetTimestamp(this Self&& self, std::chrono::sys_time<std::chrono::milliseconds> arg) noexcept {
 		self.m_timestamp = arg;
 		return std::forward<Self>(self);
