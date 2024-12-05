@@ -1,6 +1,8 @@
 #include "GatewayImpl.h"
+#include "Guild.h"
 #include "Interaction.h"
 #include "Utils.h"
+#include "VoiceState.h"
 /* ========== Event type enum ======================================================================================= */
 enum : std::uint32_t {
 	RESUMED                       = 0x712ED6EE,

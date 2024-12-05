@@ -1,11 +1,10 @@
 #include "GreekBot.h"
-#include "Utils.h"
 #include "CDN.h"
 #include <algorithm>
 
 namespace rng = std::ranges;
 
-const cSnowflake VOICE_LOG_CHANNEL_ID = 672924470750478338;
+static constexpr cSnowflake VOICE_LOG_CHANNEL_ID = 672924470750478338;
 
 cTask<>
 cGreekBot::OnVoiceStateUpdate(cVoiceState& voice_state) {
@@ -14,7 +13,7 @@ cGreekBot::OnVoiceStateUpdate(cVoiceState& voice_state) {
 	if (!voice_state.GetGuildId() || *voice_state.GetGuildId() != LMG_GUILD_ID)
 		co_return;
 	/* Find the voice state in the list, if it exists */
-	auto it = rng::find(m_lmg_voice_states, voice_state.GetUserId(), &cVoiceState::GetUserId);
+	auto it = rng::find_if(m_lmg_voice_states, [&voice_state](const cVoiceState& vs) { return voice_state.GetUserId() == vs.GetUserId(); });
 	/* Prepare the log message */
 	auto& user = *voice_state.GetMember()->GetUser();
 	cPartialMessage msg;
@@ -30,6 +29,7 @@ cGreekBot::OnVoiceStateUpdate(cVoiceState& voice_state) {
 		embed.SetColor(0xE91D63);
 		if (it == m_lmg_voice_states.end()) {
 			/* This shouldn't ever be true, but we check just for good measure */
+			[[unlikely]]
 			embed.SetDescription(std::format("<:vc_leave:1253820278816112720> Left a voice channel"));
 		} else {
 			embed.SetDescription(std::format("<:vc_leave:1253820278816112720> Left <#{}>", *it->GetChannelId()));
