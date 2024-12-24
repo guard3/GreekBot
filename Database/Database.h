@@ -5,14 +5,6 @@
 #include <stdexcept>
 #include <vector>
 /* ================================================================================================================== */
-class xDatabaseError : public std::runtime_error {
-private:
-	int m_code;
-public:
-	xDatabaseError();
-	int code() const noexcept { return m_code; }
-};
-/* ================================================================================================================== */
 struct leaderboard_entry {
 	cSnowflake    user_id;
 	std::uint64_t rank;
@@ -38,16 +30,13 @@ struct message_entry {
 };
 /* ================================================================================================================== */
 class cDatabase final {
-private:
-	static cDatabase ms_instance;
-	cDatabase() = default;
 public:
+	cDatabase() = delete;
 	cDatabase(const cDatabase&) = delete;
-	~cDatabase();
 
 	cDatabase& operator=(const cDatabase&) = delete;
 
-	static void Initialize();
+	static void Initialize() noexcept;
 
 	static cTask<std::uint64_t> UpdateLeaderboard(const cMessage&);
 	static cTask<std::optional<leaderboard_entry>> GetUserRank(const cUser&);

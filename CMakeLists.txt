@@ -60,8 +60,10 @@ add_executable(GreekBot main.cpp Discord/Bot.cpp Discord/Bot.h Discord/Common.h 
 	Discord/Objects/GuildFwd.h
 	Discord/Objects/MemberFwd.h
 	Discord/Common/Concepts.h
-		Discord/VoiceStateFwd.h
-		Discord/Gateway/GatewayIntents.h
+	Discord/VoiceStateFwd.h
+	Discord/Gateway/GatewayIntents.h
+	Database/SQLite.h
+	Database/SQLite.cpp
 )
 
 target_include_directories(
