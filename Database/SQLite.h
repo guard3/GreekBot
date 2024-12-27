@@ -71,6 +71,16 @@ namespace sqlite {
 			if (self.bind(index, std::forward<T>(value), ec); ec)
 				throw std::system_error(ec, self.db_handle().errmsg());
 		}
+		/* Get the results of the prepared statement
+		 * Ideally, I would use a variant-like value object to add type safety.
+		 * However, SQLite docs reserve this idiom for specific use cases...
+		 * So, simple wrappers of existing API functions will have to suffice */
+		std::int64_t column_int(this statement_ref self, int index) noexcept {
+			return sqlite3_column_int64(self, static_cast<int>(index));
+		}
+		const char* column_text(this statement_ref self, int index) noexcept {
+			return reinterpret_cast<const char*>(sqlite3_column_text(self, index));
+		}
 
 		bool step(this statement_ref, std::error_code& ec) noexcept;
 		bool step(this statement_ref);

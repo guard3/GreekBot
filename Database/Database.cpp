@@ -66,7 +66,7 @@ cDatabase::UpdateLeaderboard(const cMessage& msg) {
 	auto[stmt, _] = g_db.prepare(QUERY_UPDATE_LB);
 	stmt.bind(1, msg.GetAuthor().GetId());
 	stmt.bind(2, floor<seconds>(msg.GetTimestamp()).time_since_epoch().count());
-	co_return stmt.step() ? sqlite3_column_int64(stmt, 0) : 0;
+	co_return stmt.step() ? stmt.column_int(0) : 0;
 }
 cTask<uint64_t>
 cDatabase::WC_RegisterMember(const cMember& member) {
@@ -78,7 +78,7 @@ cDatabase::WC_RegisterMember(const cMember& member) {
 	/* Make sure the statement returns at least one row */
 	if (!stmt.step())
 		throw std::system_error(SQLITE_INTERNAL, sqlite::error_category());
-	co_return static_cast<uint64_t>(sqlite3_column_int64(stmt, 0));
+	co_return static_cast<uint64_t>(stmt.column_int(0));
 }
 cTask<int64_t>
 cDatabase::WC_GetMessage(const cMemberUpdate& member) {
@@ -87,7 +87,7 @@ cDatabase::WC_GetMessage(const cMemberUpdate& member) {
 	auto[stmt, _] = g_db.prepare(QUERY_WC_GET_MSG);
 	stmt.bind(1, member.GetUser().GetId());
 
-	co_return stmt.step() ? sqlite3_column_int64(stmt, 0) : -1;
+	co_return stmt.step() ? stmt.column_int(0) : -1;
 }
 cTask<>
 cDatabase::WC_EditMessage(int64_t msg_id) {
@@ -105,7 +105,7 @@ cDatabase::WC_DeleteMember(const cUser& user) {
 	auto[stmt, _] = g_db.prepare(QUERY_WC_DEL_MBR);
 	stmt.bind(1, user.GetId());
 
-	co_return stmt.step() ? static_cast<uint64_t>(sqlite3_column_int64(stmt, 0)) : 0;
+	co_return stmt.step() ? static_cast<uint64_t>(stmt.column_int(0)) : 0;
 }
 cTask<>
 cDatabase::WC_UpdateMessage(const cUser& user, const cMessage& msg) {
@@ -124,7 +124,7 @@ cDatabase::SB_GetMessageAuthor(const cSnowflake& msg_id) {
 	auto[stmt, _] = g_db.prepare(QUERY_SB_GET_MESSAGE_AUTHOR);
 	stmt.bind(1, msg_id);
 
-	co_return stmt.step() ? sqlite3_column_int64(stmt, 0) : 0;
+	co_return stmt.step() ? stmt.column_int(0) : 0;
 }
 cTask<std::pair<int64_t, int64_t>>
 cDatabase::SB_RegisterReaction(const cSnowflake& msg_id, const cSnowflake& author_id) {
@@ -136,7 +136,7 @@ cDatabase::SB_RegisterReaction(const cSnowflake& msg_id, const cSnowflake& autho
 	/* Make sure the statement returns at least one row */
 	if (!stmt.step())
 		throw std::system_error(SQLITE_INTERNAL, sqlite::error_category());
-	co_return { sqlite3_column_int64(stmt, 0), sqlite3_column_int64(stmt, 1) };
+	co_return { stmt.column_int(0), stmt.column_int(1) };
 }
 cTask<>
 cDatabase::SB_RegisterMessage(const cSnowflake& msg_id, const cSnowflake& sb_msg_id) {
@@ -151,7 +151,7 @@ cDatabase::SB_RemoveReaction(const cSnowflake& msg_id) {
 	co_await resume_on_db_strand();
 	auto[stmt, _] = g_db.prepare(QUERY_SB_REMOVE_REACTION);
 	stmt.bind(1, msg_id);
-	co_return stmt.step() ? std::pair<int64_t, int64_t>{ sqlite3_column_int64(stmt, 0), sqlite3_column_int64(stmt, 1) } :
+	co_return stmt.step() ? std::pair<int64_t, int64_t>{ stmt.column_int(0), stmt.column_int(1) } :
 	                        std::pair<int64_t, int64_t>{};
 }
 cTask<>
@@ -166,7 +166,7 @@ cDatabase::SB_RemoveAll(const cSnowflake& msg_id) {
 	co_await resume_on_db_strand();
 	auto[stmt, _] = g_db.prepare(QUERY_SB_REMOVE_ALL);
 	stmt.bind(1, msg_id);
-	co_return stmt.step() ? sqlite3_column_int64(stmt, 0) : 0;
+	co_return stmt.step() ? stmt.column_int(0) : 0;
 }
 cTask<std::vector<starboard_entry>>
 cDatabase::SB_GetTop10(int threshold) {
@@ -177,10 +177,10 @@ cDatabase::SB_GetTop10(int threshold) {
 	result.reserve(10);
 	for (int64_t rank = 1; stmt.step(); ++rank) {
 		result.emplace_back(
-			sqlite3_column_int64(stmt, 0),
-			sqlite3_column_int64(stmt, 1),
-			sqlite3_column_int64(stmt, 2),
-			sqlite3_column_int64(stmt, 3),
+			stmt.column_int(0),
+			stmt.column_int(1),
+			stmt.column_int(2),
+			stmt.column_int(3),
 			rank
 		);
 	}
@@ -197,11 +197,11 @@ cDatabase::SB_GetRank(const cUser& user, int threshold) {
 	std::vector<starboard_entry> result;
 	if (stmt.step()) {
 		result.emplace_back(
-			sqlite3_column_int64(stmt, 0),
-			sqlite3_column_int64(stmt, 1),
-			sqlite3_column_int64(stmt, 2),
-			sqlite3_column_int64(stmt, 3),
-			sqlite3_column_int64(stmt, 4)
+			stmt.column_int(0),
+			stmt.column_int(1),
+			stmt.column_int(2),
+			stmt.column_int(3),
+			stmt.column_int(4)
 		);
 	}
 	co_return result;
@@ -217,9 +217,9 @@ cDatabase::GetUserRank(const cUser& user) {
 	if (stmt.step()) {
 		result.emplace(
 			user.GetId(),
-			sqlite3_column_int64(stmt, 0),
-			sqlite3_column_int64(stmt, 1),
-			sqlite3_column_int64(stmt, 2)
+			stmt.column_int(0),
+			stmt.column_int(1),
+			stmt.column_int(2)
 		);
 	}
 	co_return result;
@@ -231,10 +231,10 @@ cDatabase::GetTop10() {
 	std::vector<leaderboard_entry> result;
 	for (result.reserve(10); stmt.step();) {
 		result.emplace_back(
-			sqlite3_column_int64(stmt, 0),
-			sqlite3_column_int64(stmt, 1),
-			sqlite3_column_int64(stmt, 2),
-			sqlite3_column_int64(stmt, 3)
+			stmt.column_int(0),
+			stmt.column_int(1),
+			stmt.column_int(2),
+			stmt.column_int(3)
 		);
 	}
 	co_return result;
@@ -259,11 +259,11 @@ cDatabase::GetMessage(const cSnowflake& id) {
 	if (stmt.step()) {
 		auto& msg = result.emplace(
 			id,
-			sqlite3_column_int64(stmt, 0),
-			sqlite3_column_int64(stmt, 1)
+			stmt.column_int(0),
+			stmt.column_int(1)
 		);
-		if (auto text = sqlite3_column_text(stmt, 2))
-			msg.content = reinterpret_cast<const char*>(text);
+		if (auto text = stmt.column_text(2))
+			msg.content = text;
 	}
 	co_return result;
 }
@@ -287,11 +287,11 @@ cDatabase::DeleteMessage(const cSnowflake& id) {
 	if (stmt.step()) {
 		result.emplace(
 			id,
-			sqlite3_column_int64(stmt, 0),
-			sqlite3_column_int64(stmt, 1)
+			stmt.column_int(0),
+			stmt.column_int(1)
 		);
-		if (auto text = sqlite3_column_text(stmt, 2))
-			result->content = reinterpret_cast<const char*>(text);
+		if (auto text = stmt.column_text(2))
+			result->content = text;
 	}
 	co_return result;
 }
@@ -313,12 +313,12 @@ cDatabase::DeleteMessages(std::span<const cSnowflake> ids) {
 	std::vector<message_entry> result;
 	for (result.reserve(ids.size()); stmt.step();) {
 		auto& entry = result.emplace_back(
-			sqlite3_column_int64(stmt, 0),
-			sqlite3_column_int64(stmt, 1),
-			sqlite3_column_int64(stmt, 2)
+			stmt.column_int(0),
+			stmt.column_int(1),
+			stmt.column_int(2)
 		);
-		if (auto text = sqlite3_column_text(stmt, 3))
-			entry.content = reinterpret_cast<const char*>(text);
+		if (auto text = stmt.column_text(3))
+			entry.content = text;
 	}
 	co_return result;
 }
@@ -352,7 +352,7 @@ cDatabase::GetExpiredTemporaryBans() {
 	stmt.bind(1, floor<days>(system_clock::now()).time_since_epoch().count());
 	std::vector<cSnowflake> result;
 	while (stmt.step())
-		result.emplace_back(sqlite3_column_int64(stmt, 0));
+		result.emplace_back(stmt.column_int(0));
 	co_return result;
 }
 cTask<>
