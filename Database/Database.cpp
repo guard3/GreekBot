@@ -154,28 +154,10 @@ cDatabase::SB_RegisterMessage(const cSnowflake& msg_id, const cSnowflake& sb_msg
 cTask<std::pair<int64_t, int64_t>>
 cDatabase::SB_RemoveReaction(const cSnowflake& msg_id) {
 	co_await resume_on_db_strand();
-
-	std::pair<int64_t, int64_t> result;
-
-	// TODO: wtf is going on here??
-	sqlite3_stmt* stmt = nullptr;
-	for (const char* query = QUERY_SB_REMOVE_REACTION, *end; SQLITE_OK == sqlite3_prepare_v2(g_db, query, -1, &stmt, &end); query = end) {
-		if (!stmt)
-			co_return result;
-		if (SQLITE_OK != sqlite3_bind_int64(stmt, 1, msg_id.ToInt()))
-			break;
-		switch (sqlite3_step(stmt)) {
-			case SQLITE_ROW:
-				result = {sqlite3_column_int64(stmt, 0), sqlite3_column_int64(stmt, 1)};
-			case SQLITE_OK:
-				sqlite3_finalize(stmt);
-				co_return result;
-			default:
-				break;
-		}
-	}
-	sqlite3_finalize(stmt);
-	throw_database_error();
+	auto[stmt, _] = g_db.prepare(QUERY_SB_REMOVE_REACTION);
+	stmt.bind(1, msg_id);
+	co_return stmt.step() ? std::pair<int64_t, int64_t>{ sqlite3_column_int64(stmt, 0), sqlite3_column_int64(stmt, 1) } :
+	                        std::pair<int64_t, int64_t>{};
 }
 cTask<>
 cDatabase::SB_RemoveMessage(const cSnowflake& msg_id) {
