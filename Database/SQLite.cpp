@@ -91,8 +91,16 @@ namespace sqlite {
 		return prepare_impl(self, sql);
 	}
 
+	void binder<std::nullptr_t>::bind(sqlite::statement_ref stmt, int index, std::nullptr_t, std::error_code& ec) noexcept {
+		int rc = sqlite3_bind_null(stmt, index);
+		rc == SQLITE_OK ? ec.clear() : ec.assign(rc, error_category());
+	}
 	void binder_base::bind_impl(sqlite3_stmt* stmt, int index, sqlite3_int64 value, std::error_code& ec) noexcept {
 		int rc = sqlite3_bind_int64(stmt, index, value);
+		rc == SQLITE_OK ? ec.clear() : ec.assign(rc, error_category());
+	}
+	void binder_base::bind_impl(sqlite3_stmt* stmt, int index, std::string_view value, std::error_code& ec) noexcept {
+		int rc = sqlite3_bind_text64(stmt, index, value.data(), value.size(), SQLITE_STATIC, SQLITE_UTF8);
 		rc == SQLITE_OK ? ec.clear() : ec.assign(rc, error_category());
 	}
 

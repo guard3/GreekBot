@@ -7,11 +7,6 @@
 #include <boost/asio/io_context.hpp>
 /* ========== The global sqlite connection ========================================================================== */
 static sqlite::connection g_db;
-/* ========== The database exception which uses the global sqlite connection's error message and error code ========= */
-[[noreturn]]
-static void throw_database_error() {
-	throw std::system_error(sqlite3_extended_errcode(g_db), sqlite::error_category(), g_db.errmsg());
-}
 /* ========== Make cSnowflake bindable to prepared statements as an int ============================================= */
 template<>
 struct sqlite::binder<cSnowflake> {
@@ -252,8 +247,7 @@ cDatabase::RegisterMessage(const cMessage& msg) {
 	stmt.bind(2, msg.GetChannelId());
 	stmt.bind(3, msg.GetAuthor().GetId());
 	auto content = msg.GetContent();
-	if (SQLITE_OK != (content.empty() ? sqlite3_bind_null(stmt, 4) : sqlite3_bind_text64(stmt, 4, content.data(), content.size(), SQLITE_STATIC, SQLITE_UTF8)))
-		throw_database_error();
+	content.empty() ? stmt.bind(4, nullptr) : stmt.bind(4, content);
 	stmt.step();
 }
 cTask<std::optional<message_entry>>
@@ -279,8 +273,7 @@ cDatabase::UpdateMessage(const cSnowflake& id, std::string_view content) {
 	if (!result)
 		co_return result;
 	auto[stmt, _] = g_db.prepare("UPDATE messages SET content=? WHERE id IS ?;");
-	if (SQLITE_OK != (content.empty() ? sqlite3_bind_null(stmt, 1) : sqlite3_bind_text64(stmt, 1, content.data(), content.size(), SQLITE_STATIC, SQLITE_UTF8)))
-		throw_database_error();
+	content.empty() ? stmt.bind(1, nullptr) : stmt.bind(1, content);
 	stmt.bind(2, id);
 	stmt.step();
 	co_return result;

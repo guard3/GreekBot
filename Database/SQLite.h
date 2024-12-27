@@ -75,15 +75,28 @@ namespace sqlite {
 		bool step(this statement_ref, std::error_code& ec) noexcept;
 		bool step(this statement_ref);
 	};
+	/* Specialize for NULL */
+	template<>
+	struct binder<std::nullptr_t> {
+		static void bind(statement_ref stmt, int, std::nullptr_t, std::error_code& ec) noexcept;
+	};
 	/* Predefine some defaults for ints and strings */
 	struct binder_base {
 		static void bind_impl(sqlite3_stmt*, int, sqlite3_int64, std::error_code&) noexcept;
+		static void bind_impl(sqlite3_stmt*, int, std::string_view, std::error_code&) noexcept;
 	};
 	/* Specialize for integers */
 	template<std::integral T>
 	struct binder<T> : binder_base {
 		static void bind(statement_ref stmt, int index, T value, std::error_code& ec) noexcept {
 			bind_impl(stmt, index, static_cast<sqlite3_int64>(value), ec);
+		}
+	};
+	/* Specialize for strings */
+	template<std::convertible_to<std::string_view> T>
+	struct binder<T> : binder_base {
+		static void bind(statement_ref stmt, int index, std::string_view value, std::error_code& ec) noexcept {
+			bind_impl(stmt, index, value, ec);
 		}
 	};
 
