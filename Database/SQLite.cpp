@@ -91,6 +91,11 @@ namespace sqlite {
 		return prepare_impl(self, sql);
 	}
 
+	void binder_base::bind_impl(sqlite3_stmt* stmt, int index, sqlite3_int64 value, std::error_code& ec) noexcept {
+		int rc = sqlite3_bind_int64(stmt, index, value);
+		rc == SQLITE_OK ? ec.clear() : ec.assign(rc, error_category());
+	}
+
 	bool statement_ref::step(this statement_ref self, std::error_code& ec) noexcept {
 		int rc = sqlite3_step(self.m_pStmt);
 		bool ret = rc == SQLITE_ROW;

@@ -1,8 +1,9 @@
 #ifndef GREEKBOT_SQLITE_H
 #define GREEKBOT_SQLITE_H
-#include <utility>
 #include <filesystem>
 #include <system_error>
+#include <type_traits>
+#include <utility>
 #include <sqlite3.h>
 
 namespace sqlite {
@@ -38,6 +39,9 @@ namespace sqlite {
 	[[nodiscard]] connection_ref open(const std::filesystem::path&, int, std::error_code&);
 	[[nodiscard]] connection_ref open(const std::filesystem::path&, int);
 
+	/* This is a customization point to allow for custom types to be bound to a prepared statement */
+	template<typename>
+	struct binder;
 	/* A non owning reference of a prepared statement */
 	class statement_ref {
 		sqlite3_stmt* m_pStmt;
@@ -56,8 +60,31 @@ namespace sqlite {
 			return sqlite3_db_handle(self.m_pStmt);
 		}
 
+		/* A function to bind a value to a prepared statement */
+		template<typename T>
+		void bind(this statement_ref self, int index, T&& value, std::error_code& ec) {
+			binder<std::remove_cvref_t<T>>::bind(self, index, std::forward<T>(value), ec);
+		}
+		template<typename T>
+		void bind(this statement_ref self, int index, T&& value) {
+			std::error_code ec;
+			if (self.bind(index, std::forward<T>(value), ec); ec)
+				throw std::system_error(ec, self.db_handle().errmsg());
+		}
+
 		bool step(this statement_ref, std::error_code& ec) noexcept;
 		bool step(this statement_ref);
+	};
+	/* Predefine some defaults for ints and strings */
+	struct binder_base {
+		static void bind_impl(sqlite3_stmt*, int, sqlite3_int64, std::error_code&) noexcept;
+	};
+	/* Specialize for integers */
+	template<std::integral T>
+	struct binder<T> : binder_base {
+		static void bind(statement_ref stmt, int index, T value, std::error_code& ec) noexcept {
+			bind_impl(stmt, index, static_cast<sqlite3_int64>(value), ec);
+		}
 	};
 
 	class connection : public connection_ref {
