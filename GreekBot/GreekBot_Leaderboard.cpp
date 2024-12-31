@@ -44,7 +44,7 @@ static level_info calculate_level_info(std::uint64_t xp) noexcept {
 static void insert_no_member_embed(std::vector<cEmbed>& embeds, const cUser* pUser, std::string_view guild_name, bool bAnymore) {
 	auto& embed = embeds.emplace_back();
 	embed.SetDescription(std::format("User is not a member of **{}**{}.", guild_name, bAnymore ? " anymore": ""));
-	embed.SetColor(0x0096FF);
+	embed.SetColor(LMG_COLOR_BLUE);
 	if (pUser)
 		embed.EmplaceAuthor(pUser->GetUsername()).SetIconUrl(cCDN::GetUserAvatar(*pUser));
 	else

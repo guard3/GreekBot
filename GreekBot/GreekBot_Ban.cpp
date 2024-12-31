@@ -154,7 +154,7 @@ cGreekBot::process_unban(cInteraction& i, cSnowflake user_id) HANDLER_BEGIN {
 			/* Create the response */
 			cMessageUpdate msg;
 			auto& embed = msg.EmplaceEmbeds().emplace_back();
-			embed.SetColor(0x248046);
+			embed.SetColor(LMG_COLOR_GREEN);
 			embed.EmplaceAuthor(std::format("{} was unbanned", user->GetUsername())).SetIconUrl(cCDN::GetUserAvatar(*user));
 			/* Also update the user id */
 			user_id = user->GetId();
@@ -163,7 +163,7 @@ cGreekBot::process_unban(cInteraction& i, cSnowflake user_id) HANDLER_BEGIN {
 		[](cMsgCompInteraction& i) {
 			cMessageUpdate msg;
 			auto& embed = msg.EmplaceEmbeds(i.GetMessage().MoveEmbeds()).at(0);
-			embed.SetColor(0x248046);
+			embed.SetColor(LMG_COLOR_GREEN);
 			embed.ResetFields();
 			embed.GetAuthor()->SetName(std::format("{}unbanned", [name = embed.GetAuthor()->GetName()] {
 				auto n = name.rfind("banned");
@@ -361,7 +361,7 @@ cGreekBot::process_ban(cInteraction& i, std::uint32_t sc, const cSnowflake& user
 	cPartialMessage response;
 	cEmbed& embed = response.EmplaceEmbeds().emplace_back();
 	embed.EmplaceAuthor(std::format("{} was banned{}", username, expiry_str.empty() ? "" : " temporarily")).SetIconUrl(cCDN::GetUserAvatar(user_id, hash, discr));
-	embed.SetColor(0xC43135);
+	embed.SetColor(LMG_COLOR_RED);
 	auto& fields = embed.EmplaceFields();
 	fields.reserve(3);
 	if (!expiry_str.empty())

@@ -2,8 +2,6 @@
 #include "GreekBot.h"
 #include "Utils.h"
 
-const cSnowflake USER_LOG_CHANNEL_ID = 469274019565142017;
-
 cTask<>
 cGreekBot::OnHeartbeat() try {
 	using namespace std::chrono;
@@ -22,7 +20,7 @@ cGreekBot::OnHeartbeat() try {
 		for (const cSnowflake& user_id : expired) try {
 			co_await RemoveGuildBan(LMG_GUILD_ID, user_id, "Temporary ban expired");
 			unbanned.push_back(user_id);
-			co_await CreateMessage(USER_LOG_CHANNEL_ID, msg.SetContent(std::format("<@{}>'s ban expired", user_id)));
+			co_await CreateMessage(LMG_CHANNEL_USER_LOG, msg.SetContent(std::format("<@{}>'s ban expired", user_id)));
 		} catch (const xDiscordError&) {
 			/* Ban not found but that's fine! */
 		}
@@ -62,7 +60,7 @@ cGreekBot::OnHeartbeat() try {
 		/* Report how many members were pruned */
 		if (total_pruned) {
 			cUtils::PrintLog("Pruned {} member{}", total_pruned, total_pruned == 1 ? "" : "s");
-			co_await CreateMessage(USER_LOG_CHANNEL_ID, msg.SetContent(std::format("Pruned **{}** member{}", total_pruned, total_pruned == 1 ? "" : "s")));
+			co_await CreateMessage(LMG_CHANNEL_USER_LOG, msg.SetContent(std::format("Pruned **{}** member{}", total_pruned, total_pruned == 1 ? "" : "s")));
 		}
 	}
 } catch (const std::exception& e) {

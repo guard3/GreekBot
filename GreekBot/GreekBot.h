@@ -1,12 +1,9 @@
 #ifndef GREEKBOT_GREEKBOT_H
 #define GREEKBOT_GREEKBOT_H
 #include "Bot.h"
+#include "LearningGreek.h"
 #include <unordered_map>
 #include <span>
-
-inline const cSnowflake LMG_GUILD_ID = 350234668680871946;
-inline const cSnowflake HOLY_EMOJI_ID = 409075809723219969;
-inline const cSnowflake HOLY_CHANNEL_ID = 978993330694266920;
 
 /* Handling exceptions when they escape the current interaction process function */
 struct unhandled_exception_t {

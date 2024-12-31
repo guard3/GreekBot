@@ -1,5 +1,6 @@
 #include "GreekBot.h"
 #include "Database.h"
+#include "LearningGreek.h"
 #include "Utils.h"
 #include <algorithm>
 

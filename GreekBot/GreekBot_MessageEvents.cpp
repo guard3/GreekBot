@@ -57,7 +57,7 @@ cGreekBot::OnMessageUpdate(cMessageUpdate& msg, hSnowflake guild_id, hPartialMem
 static void
 add_message_delete_embed(std::vector<cEmbed>& embeds, const message_entry& db_msg, const cUser* pMsgAuthor) {
 	cEmbed& embed = embeds.emplace_back();
-	embed.SetColor(0xC43135);
+	embed.SetColor(LMG_COLOR_RED);
 	embed.SetDescription(std::format("❌ Their message was **deleted** in <#{}>", db_msg.channel_id));
 	embed.SetTimestamp(db_msg.id.GetTimestamp());
 	embed.SetFields({
@@ -91,7 +91,7 @@ cGreekBot::OnMessageDelete(cSnowflake& message_id, cSnowflake& channel_id, hSnow
 		} catch (...) {}
 		/* Delete the starboard message from the channel and the database (if found) */
 		if (int64_t sb_msg_id = co_await cDatabase::SB_RemoveAll(message_id))
-			co_await DeleteMessage(HOLY_CHANNEL_ID, sb_msg_id);
+			co_await DeleteMessage(LMG_CHANNEL_STARBOARD, sb_msg_id);
 	}
 }
 cTask<>
@@ -153,7 +153,7 @@ cGreekBot::OnMessageDeleteBulk(std::span<cSnowflake> ids, cSnowflake& channel_id
 		/* Delete the starboard messages from the channel and the database (if found) */
 		for (cSnowflake& id : ids) {
 			if (int64_t sb_msg_id = co_await cDatabase::SB_RemoveAll(id)) try {
-				co_await DeleteMessage(HOLY_CHANNEL_ID, sb_msg_id);
+				co_await DeleteMessage(LMG_CHANNEL_STARBOARD, sb_msg_id);
 			} catch (...) {}
 		}
 	}

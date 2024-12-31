@@ -40,7 +40,7 @@ cGreekBot::OnMessageReactionAdd(cSnowflake& user_id, cSnowflake& channel_id, cSn
 	/* Make sure that we're in Learning Greek and that the emoji is :Holy: */
 	if (!guild_id || !emoji.GetId())
 		co_return;
-	if (*guild_id != LMG_GUILD_ID || *emoji.GetId() != HOLY_EMOJI_ID)
+	if (*guild_id != LMG_GUILD_ID || *emoji.GetId() != LMG_EMOJI_HOLY)
 		co_return;
 	/* Also make sure that we're not in an excluded channel */
 	if (rng::binary_search(excluded_channels, channel_id.ToInt()))
@@ -63,7 +63,7 @@ cTask<>
 cGreekBot::OnMessageReactionRemove(cSnowflake& user_id, cSnowflake& channel_id, cSnowflake& message_id, hSnowflake guild_id, cEmoji& emoji) {
 	/* Make sure that we're in Learning Greek and that the emoji is :Holy: */
 	if (!guild_id || !emoji.GetId()) co_return;
-	if (*guild_id != LMG_GUILD_ID || *emoji.GetId() != HOLY_EMOJI_ID) co_return;
+	if (*guild_id != LMG_GUILD_ID || *emoji.GetId() != LMG_EMOJI_HOLY) co_return;
 	/* Also make sure that we're not in an excluded channel */
 	if (rng::binary_search(excluded_channels, channel_id.ToInt()))
 		co_return;
@@ -82,7 +82,7 @@ cGreekBot::process_reaction(const cSnowflake& channel_id, const cSnowflake& mess
 	/* If the number of reactions is less than the threshold, delete the starboard message if it was posted before */
 	if (num_reactions < REACTION_THRESHOLD) {
 		if (sb_msg_id) {
-			co_await DeleteMessage(HOLY_CHANNEL_ID, sb_msg_id);
+			co_await DeleteMessage(LMG_CHANNEL_STARBOARD, sb_msg_id);
 			co_await cDatabase::SB_RemoveMessage(message_id);
 		}
 		co_return;
@@ -104,7 +104,7 @@ cGreekBot::process_reaction(const cSnowflake& channel_id, const cSnowflake& mess
 	auto content = std::format("{} **{}** https://discord.com/channels/{}/{}/{}", reaction, num_reactions, LMG_GUILD_ID, channel_id, message_id);
 	/* If there is a message id registered in the database, edit the message with the new number of reactions */
 	if (sb_msg_id) {
-		co_await EditMessage(HOLY_CHANNEL_ID, sb_msg_id, cMessageUpdate().SetContent(std::move(content)));
+		co_await EditMessage(LMG_CHANNEL_STARBOARD, sb_msg_id, cMessageUpdate().SetContent(std::move(content)));
 		co_return;
 	}
 	/* Make sure that we have the message object available */
@@ -185,7 +185,7 @@ cGreekBot::process_reaction(const cSnowflake& channel_id, const cSnowflake& mess
 	if (!bProcessed)
 		preview.SetDescription(msg->MoveContent());
 	/* Send the starboard message and save it in the database */
-	cMessage sb_msg = co_await CreateMessage(HOLY_CHANNEL_ID, response.SetContent(std::move(content)));
+	cMessage sb_msg = co_await CreateMessage(LMG_CHANNEL_STARBOARD, response.SetContent(std::move(content)));
 	co_await cDatabase::SB_RegisterMessage(message_id, sb_msg.GetId());
 }
 /* ========== Delete messages when all reactions are removed or when the original message is deleted ================ */
@@ -196,16 +196,16 @@ cGreekBot::OnMessageReactionRemoveAll(cSnowflake& channel_id, cSnowflake& messag
 		co_return;
 	/* Delete the message from the channel and the database (if found) */
 	if (int64_t sb_msg_id = co_await cDatabase::SB_RemoveAll(message_id))
-		co_await DeleteMessage(HOLY_CHANNEL_ID, sb_msg_id);
+		co_await DeleteMessage(LMG_CHANNEL_STARBOARD, sb_msg_id);
 }
 cTask<>
 cGreekBot::OnMessageReactionRemoveEmoji(cSnowflake& channel_id, cSnowflake& message_id, hSnowflake guild_id, cEmoji& emoji) {
 	/* Make sure we're in Learning Greek and that the emoji is :Holy: */
-	if (!guild_id || *guild_id != LMG_GUILD_ID || !emoji.GetId() || *emoji.GetId() != HOLY_EMOJI_ID)
+	if (!guild_id || *guild_id != LMG_GUILD_ID || !emoji.GetId() || *emoji.GetId() != LMG_EMOJI_HOLY)
 		co_return;
 	/* Delete the message from the channel and the database (if found) */
 	if (int64_t sb_msg_id = co_await cDatabase::SB_RemoveAll(message_id))
-		co_await DeleteMessage(HOLY_CHANNEL_ID, sb_msg_id);
+		co_await DeleteMessage(LMG_CHANNEL_STARBOARD, sb_msg_id);
 }
 
 static cEmbed make_embed(const cUser& user, const starboard_entry& e, cColor color) {
@@ -231,7 +231,7 @@ static cEmbed make_embed(const cUser& user, const starboard_entry& e, cColor col
 
 static cEmbed make_no_member_embed(const cUser* pUser, std::string_view guild_name, bool bAnymore) {
 	cEmbed embed;
-	embed.SetColor(0x0096FF);
+	embed.SetColor(LMG_COLOR_BLUE);
 	embed.SetDescription(std::format("User is not a member of **{}**{}.", guild_name, bAnymore ? " anymore" : ""));
 	if (pUser)
 		embed.EmplaceAuthor(pUser->GetUsername()).SetIconUrl(cCDN::GetUserAvatar(*pUser));
