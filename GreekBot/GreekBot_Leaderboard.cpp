@@ -94,7 +94,7 @@ cGreekBot::process_leaderboard_new_message(cMessage& msg, cPartialMember& member
 	auto db = co_await BorrowDatabase();
 	auto xp = cLeaderboardDAO(db).Update(msg);
 	co_await ReturnDatabase(std::move(db));
-	/* TODO: this returns 0 unexpectedly! */
+	/* 0 XP means no changes where made to the database */
 	if (xp == 0)
 		co_return;
 	/* Calculate member level from xp */
