@@ -2,16 +2,17 @@
 #define GREEKBOT_DATABASE_H
 #include "Coroutines.h"
 #include "Message.h"
+#include "SQLite.h"
 #include <stdexcept>
 #include <vector>
-/* ================================================================================================================== */
-struct leaderboard_entry {
-	cSnowflake    user_id;
-	std::uint64_t rank;
-	std::uint64_t xp;
-	std::uint64_t num_msg;
+/* ========== Make cSnowflake bindable to prepared statements as an int ============================================= */
+template<>
+struct sqlite::binder<cSnowflake> {
+	static void bind(statement_ref stmt, int index, const cSnowflake& id, std::error_code& ec) noexcept {
+		stmt.bind(index, id.ToInt(), ec);
+	}
 };
-
+/* ================================================================================================================== */
 struct starboard_entry {
 	cSnowflake author_id;
 	int64_t num_msg;
@@ -38,9 +39,9 @@ public:
 
 	static void Initialize() noexcept;
 
-	static cTask<std::uint64_t> UpdateLeaderboard(const cMessage&);
-	static cTask<std::optional<leaderboard_entry>> GetUserRank(const cUser&);
-	static cTask<std::vector<leaderboard_entry>> GetTop10();
+	/* Expose some internals while refactoring takes place - TODO: remove or make private */
+	static sqlite::connection CreateInstance();
+	static cTask<> ResumeOnDatabaseStrand();
 
 	static cTask<uint64_t> WC_RegisterMember(const cMember&);
 	static cTask<> WC_UpdateMessage(const cUser&, const cMessage&);

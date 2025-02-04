@@ -1,0 +1,3 @@
+#cmakedefine QUERY_LB_UPDATE @QUERY_LB_UPDATE@
+#cmakedefine QUERY_LB_RANK @QUERY_LB_RANK@
+#cmakedefine QUERY_LB_TOP @QUERY_LB_TOP@

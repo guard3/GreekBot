@@ -7,21 +7,21 @@
 #include <boost/asio/io_context.hpp>
 /* ========== The global sqlite connection ========================================================================== */
 static sqlite::connection g_db;
-/* ========== Make cSnowflake bindable to prepared statements as an int ============================================= */
-template<>
-struct sqlite::binder<cSnowflake> {
-	static void bind(statement_ref stmt, int index, const cSnowflake& id, std::error_code& ec) noexcept {
-		stmt.bind(index, id.ToInt(), ec);
-	}
-};
+/* ================================================================================================================== */
+sqlite::connection
+cDatabase::CreateInstance() {
+	/* Open the database connection; NOMUTEX since we make sure to use the connection in a strand */
+	sqlite::connection conn(cUtils::GetExecutablePath().replace_filename("database.db"), SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX);
+	/* Execute the init statements */
+	for (auto ret = conn.prepare(QUERY_INIT); ret.stmt; ret = conn.prepare(ret.tail))
+		while(ret.stmt.step());
+	return conn;
+}
 /* ========== The database instance constructor which initializes the global sqlite connection ====================== */
 void cDatabase::Initialize() noexcept {
 	try {
 		/* Open the database connection; NOMUTEX since we make sure to use the connection in a strand */
-		g_db.open(cUtils::GetExecutablePath().replace_filename("database.db"), SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX);
-		/* Execute the init statements */
-		for (auto ret = g_db.prepare(QUERY_INIT); ret.stmt; ret = g_db.prepare(ret.tail))
-			while(ret.stmt.step());
+		g_db = CreateInstance();
 		/* Print confirmation message */
 		cUtils::PrintDbg("Database initialized successfully");
 		return;
@@ -58,16 +58,12 @@ public:
 	}
 	void await_resume() const {}
 };
-/* ================================================================================================================== */
-cTask<std::uint64_t>
-cDatabase::UpdateLeaderboard(const cMessage& msg) {
-	using namespace std::chrono;
+
+cTask<>
+cDatabase::ResumeOnDatabaseStrand() {
 	co_await resume_on_db_strand();
-	auto[stmt, _] = g_db.prepare(QUERY_UPDATE_LB);
-	stmt.bind(1, msg.GetAuthor().GetId());
-	stmt.bind(2, floor<seconds>(msg.GetTimestamp()).time_since_epoch().count());
-	co_return stmt.step() ? stmt.column_int(0) : 0;
 }
+/* ================================================================================================================== */
 cTask<uint64_t>
 cDatabase::WC_RegisterMember(const cMember& member) {
 	co_await resume_on_db_strand();
@@ -202,39 +198,6 @@ cDatabase::SB_GetRank(const cUser& user, int threshold) {
 			stmt.column_int(2),
 			stmt.column_int(3),
 			stmt.column_int(4)
-		);
-	}
-	co_return result;
-}
-cTask<std::optional<leaderboard_entry>>
-cDatabase::GetUserRank(const cUser& user) {
-	co_await resume_on_db_strand();
-
-	auto[stmt, _] = g_db.prepare(QUERY_GET_RANK);
-	stmt.bind(1, user.GetId());
-
-	std::optional<leaderboard_entry> result;
-	if (stmt.step()) {
-		result.emplace(
-			user.GetId(),
-			stmt.column_int(0),
-			stmt.column_int(1),
-			stmt.column_int(2)
-		);
-	}
-	co_return result;
-}
-cTask<std::vector<leaderboard_entry>>
-cDatabase::GetTop10() {
-	co_await resume_on_db_strand();
-	auto[stmt, _] = g_db.prepare(QUERY_GET_TOP_10);
-	std::vector<leaderboard_entry> result;
-	for (result.reserve(10); stmt.step();) {
-		result.emplace_back(
-			stmt.column_int(0),
-			stmt.column_int(1),
-			stmt.column_int(2),
-			stmt.column_int(3)
 		);
 	}
 	co_return result;

@@ -1,5 +1,5 @@
 #include "GreekBot.h"
-#include "Database.h"
+#include "DBLeaderboard.h"
 #include "CDN.h"
 #include "Utils.h"
 #include <algorithm>
@@ -93,9 +93,9 @@ cGreekBot::process_leaderboard_new_message(cMessage& msg, cPartialMember& member
 	};
 	static_assert(rng::is_sorted(rank_role_ids), "Must be sorted for binary search");
 	/* Update leaderboard and retrieve the author's total xp */
-	std::uint64_t xp = co_await cDatabase::UpdateLeaderboard(msg);
-	if (xp == 0)
-		co_return;
+	auto db = co_await BorrowDatabase();
+	auto xp = cLeaderboardDAO(db).Update(msg);
+	co_await ReturnDatabase(std::move(db));
 	/* Calculate member level from xp */
 	auto[level, level_xp, next_level_xp] = calculate_level_info(xp);
 	/* Get the appropriate rank role for the current level, or 0 for no role */
@@ -185,7 +185,9 @@ cGreekBot::process_rank(cAppCmdInteraction& i) HANDLER_BEGIN {
 	/* Acknowledge interaction while we're looking through the database */
 	co_await InteractionDefer(i, true);
 	/* Get user's ranking info from the database */
-	auto db_result = co_await cDatabase::GetUserRank(*user);
+	auto db = co_await BorrowDatabase();
+	auto db_result = cLeaderboardDAO(db).GetEntryByUser(*user);
+	co_await ReturnDatabase(std::move(db));
 	co_await ResumeOnEventStrand();
 	/* Make sure that the selected user is a member of Learning Greek */
 	auto& embeds = response.EmplaceEmbeds();
@@ -211,7 +213,9 @@ cGreekBot::process_top(cAppCmdInteraction& i) HANDLER_BEGIN {
 	/* Acknowledge interaction */
 	co_await InteractionDefer(i);
 	/* Get data from the database */
-	auto db_result = co_await cDatabase::GetTop10();
+	auto db = co_await BorrowDatabase();
+	auto db_result = cLeaderboardDAO(db).GetTop10Entries();
+	co_await ReturnDatabase(std::move(db));
 	if (db_result.empty())
 		co_return co_await InteractionSendMessage(i, response.SetContent("I don't have any data yet. Start talking!"));
 	/* Members generator */
@@ -223,7 +227,7 @@ cGreekBot::process_top(cAppCmdInteraction& i) HANDLER_BEGIN {
 			user_ids.push_back(entry.user_id);
 		std::vector<cMember> members;
 		members.reserve(size);
-		co_for(auto& mem, RequestGuildMembers(*i.GetGuildId(), user_ids))
+		co_for (auto& mem, RequestGuildMembers(*i.GetGuildId(), user_ids))
 			members.push_back(std::move(mem));
 		co_await ResumeOnEventStrand();
 		co_return members;

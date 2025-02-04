@@ -65,6 +65,10 @@ add_executable(GreekBot main.cpp Discord/Bot.cpp Discord/Bot.h Discord/Common.h 
 	Database/SQLite.h
 	Database/SQLite.cpp
 	GreekBot/LearningGreek.h
+	GreekBot/GreekBot_Database.cpp
+	Database/Leaderboard/Leaderboard.h
+	Database/Leaderboard/Leaderboard.cpp
+	GreekBot/DBLeaderboard.h
 )
 
 target_include_directories(
@@ -113,10 +117,12 @@ function(define_query VAR_NAME FILE_NAME)
     set(${VAR_NAME} ${CONTENT} PARENT_SCOPE)
 endfunction()
 
-define_query(QUERY_GET_RANK   Database/query_get_rank.sql  )
+define_query(QUERY_LB_UPDATE  Database/Leaderboard/query_lb_update.sql)
+define_query(QUERY_LB_RANK    Database/Leaderboard/query_lb_rank.sql  )
+define_query(QUERY_LB_TOP     Database/Leaderboard/query_lb_top.sql   )
+configure_file(Database/Leaderboard/LeaderboardQueries.h.in LeaderboardQueries.h)
+
 define_query(QUERY_INIT       Database/query_init.sql      )
-define_query(QUERY_UPDATE_LB  Database/query_update_lb.sql )
-define_query(QUERY_GET_TOP_10 Database/query_get_top_10.sql)
 define_query(QUERY_WC_REG_MBR Database/query_wc_reg_mbr.sql)
 define_query(QUERY_WC_UPD_MSG Database/query_wc_upd_msg.sql)
 define_query(QUERY_WC_GET_MSG Database/query_wc_get_msg.sql)
@@ -139,4 +145,7 @@ define_query(QUERY_CLEANUP_MESSAGES Database/query_cleanup_messages.sql)
 
 define_query(QUERY_REGISTER_TEMPORARY_BAN Database/query_register_temporary_ban.sql)
 define_query(QUERY_REMOVE_TEMPORARY_BAN   Database/query_remove_temporary_ban.sql  )
-configure_file(Database/Queries.h.in ${PROJECT_SOURCE_DIR}/Database/Queries.h)
+configure_file(Database/Queries.h.in Queries.h)
+
+# Add the binary directory to the include directories, since that's where the header files are generated
+target_include_directories(GreekBot PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
