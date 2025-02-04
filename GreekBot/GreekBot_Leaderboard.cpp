@@ -41,8 +41,7 @@ static level_info calculate_level_info(std::uint64_t xp) noexcept {
 	return result;
 }
 /* ========== Helper functions that create embeds =================================================================== */
-static void insert_no_member_embed(std::vector<cEmbed>& embeds, const cUser* pUser, std::string_view guild_name, bool bAnymore) {
-	auto& embed = embeds.emplace_back();
+static void make_no_member_embed(cEmbed& embed, const cUser* pUser, std::string_view guild_name, bool bAnymore) {
 	embed.SetDescription(std::format("User is not a member of **{}**{}.", guild_name, bAnymore ? " anymore": ""));
 	embed.SetColor(LMG_COLOR_BLUE);
 	if (pUser)
@@ -50,8 +49,7 @@ static void insert_no_member_embed(std::vector<cEmbed>& embeds, const cUser* pUs
 	else
 		embed.EmplaceAuthor("Deleted user").SetIconUrl(cCDN::GetDefaultUserAvatar(cSnowflake{}));
 }
-static void insert_embed(std::vector<cEmbed>& embeds, const cUser& user, cColor c, const leaderboard_entry* pLb) {
-	auto& embed = embeds.emplace_back();
+static void make_embed(cEmbed& embed, const cUser& user, cColor c, const leaderboard_entry* pLb) {
 	embed.EmplaceAuthor(user.GetUsername()).SetIconUrl(cCDN::GetUserAvatar(user));
 	embed.SetColor(c);
 	if (!pLb) {
@@ -96,6 +94,9 @@ cGreekBot::process_leaderboard_new_message(cMessage& msg, cPartialMember& member
 	auto db = co_await BorrowDatabase();
 	auto xp = cLeaderboardDAO(db).Update(msg);
 	co_await ReturnDatabase(std::move(db));
+	/* TODO: this returns 0 unexpectedly! */
+	if (xp == 0)
+		co_return;
 	/* Calculate member level from xp */
 	auto[level, level_xp, next_level_xp] = calculate_level_info(xp);
 	/* Get the appropriate rank role for the current level, or 0 for no role */
@@ -191,10 +192,10 @@ cGreekBot::process_rank(cAppCmdInteraction& i) HANDLER_BEGIN {
 	co_await ResumeOnEventStrand();
 	/* Make sure that the selected user is a member of Learning Greek */
 	auto& embeds = response.EmplaceEmbeds();
-	if (member)
-		insert_embed(embeds, *user, get_lmg_member_color(*member), db_result ? &*db_result : nullptr);
+	if (cEmbed& embed = embeds.emplace_back(); member)
+		make_embed(embed, *user, get_lmg_member_color(*member), db_result ? &*db_result : nullptr);
 	else
-		insert_no_member_embed(embeds, user.Get(), m_guilds.at(LMG_GUILD_ID).GetName(), db_result.has_value());
+		make_no_member_embed(embed, user.Get(), m_guilds.at(LMG_GUILD_ID).GetName(), db_result.has_value());
 	co_await InteractionSendMessage(i, response.SetComponents({
 		cActionRow{
 			cButton{
@@ -208,50 +209,51 @@ cGreekBot::process_rank(cAppCmdInteraction& i) HANDLER_BEGIN {
 
 cTask<>
 cGreekBot::process_top(cAppCmdInteraction& i) HANDLER_BEGIN {
-	/* Prepare the response */
-	cPartialMessage response;
-	/* Acknowledge interaction */
+	/* Acknowledge interaction; accessing the database may be slow */
 	co_await InteractionDefer(i);
+
 	/* Get data from the database */
 	auto db = co_await BorrowDatabase();
-	auto db_result = cLeaderboardDAO(db).GetTop10Entries();
+	std::vector lb_entries = cLeaderboardDAO(db).GetTop10Entries();
 	co_await ReturnDatabase(std::move(db));
-	if (db_result.empty())
+
+	cPartialMessage response;
+	if (lb_entries.empty())
 		co_return co_await InteractionSendMessage(i, response.SetContent("I don't have any data yet. Start talking!"));
-	/* Members generator */
-	const auto members = co_await [this, &i, &db_result]() -> cTask<std::vector<cMember>> {
-		const auto size = db_result.size();
-		std::vector<cSnowflake> user_ids;
-		user_ids.reserve(size);
-		for (auto& entry : db_result)
-			user_ids.push_back(entry.user_id);
-		std::vector<cMember> members;
-		members.reserve(size);
-		co_for (auto& mem, RequestGuildMembers(*i.GetGuildId(), user_ids))
+
+	/* Collect members from the leaderboard entries */
+	std::vector<cMember> members; {
+		members.reserve(lb_entries.size());
+		std::vector member_ids = lb_entries | std::views::transform(&leaderboard_entry::user_id) | std::ranges::to<std::vector>();
+		co_for (cMember& mem, RequestGuildMembers(*i.GetGuildId(), member_ids))
 			members.push_back(std::move(mem));
-		co_await ResumeOnEventStrand();
-		co_return members;
-	}();
+	}
+
 	/* Prepare embeds */
 	auto& embeds = response.EmplaceEmbeds();
-	embeds.reserve(db_result.size());
-	for (auto& lb: db_result) {
-		if (auto it = rng::find(members, lb.user_id, [](const cMember& m) -> const cSnowflake& { return m.GetUser()->GetId(); }); it != end(members)) {
+	embeds.reserve(lb_entries.size());
+	co_await ResumeOnEventStrand();
+
+	/* Create embeds for every leaderboard entry */
+	for (auto& lb_entry: lb_entries) {
+		cEmbed& embed = embeds.emplace_back();
+		if (auto it = rng::find(members, lb_entry.user_id, [](const cMember& m) -> const cSnowflake& { return m.GetUser()->GetId(); }); it != end(members)) {
 			/* If the user is a member of Learning Greek, make a regular embed */
-			insert_embed(embeds, *it->GetUser(), get_lmg_member_color(*it), &lb);
+			make_embed(embed, *it->GetUser(), get_lmg_member_color(*it), &lb_entry);
 		} else {
 			/* Otherwise, make a no-member embed */
 			std::optional<cUser> opt;
 			cUser *pUser = nullptr;
 			try {
-				pUser = &opt.emplace(co_await GetUser(lb.user_id));
+				pUser = &opt.emplace(co_await GetUser(lb_entry.user_id));
 			} catch (const xDiscordError&) {
 				/* User object couldn't be retrieved, likely deleted */
 			}
-			insert_no_member_embed(embeds, pUser, m_guilds.at(LMG_GUILD_ID).GetName(), true);
+			make_no_member_embed(embed, pUser, m_guilds.at(*i.GetGuildId()).GetName(), true);
 		}
 	}
-	/* Respond to interaction */
+
+	/* Send final message */
 	co_await InteractionSendMessage(i, response.SetComponents({
 		cActionRow{
 			cButton{

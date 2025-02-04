@@ -1,6 +1,7 @@
 #ifndef GREEKBOT_LEARNINGGREEK_H
 #define GREEKBOT_LEARNINGGREEK_H
 #include "Base.h"
+#include <algorithm>
 /* ========== The id of Learning Greek ============================================================================== */
 inline constexpr cSnowflake LMG_GUILD_ID = 350234668680871946;
 /* ========== Learning Greek channels =============================================================================== */
