@@ -68,7 +68,7 @@ add_executable(GreekBot main.cpp Discord/Bot.cpp Discord/Bot.h Discord/Common.h 
 	GreekBot/GreekBot_Database.cpp
 	Database/Leaderboard/Leaderboard.h
 	Database/Leaderboard/Leaderboard.cpp
-	GreekBot/DBLeaderboard.h
+	Database/DBLeaderboard.h
 )
 
 target_include_directories(
