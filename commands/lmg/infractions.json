@@ -1,0 +1,9 @@
+{
+  "name": "infractions",
+  "description": "Retrieve a list of a user's infractions",
+  "options": [{
+    "type": 6,
+    "name": "user",
+    "description": "The user to retrieve infractions for"
+  }]
+}

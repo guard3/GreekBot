@@ -69,6 +69,10 @@ add_executable(GreekBot main.cpp Discord/Bot.cpp Discord/Bot.h Discord/Common.h 
 	Database/Leaderboard/Leaderboard.h
 	Database/Leaderboard/Leaderboard.cpp
 	Database/DBLeaderboard.h
+		GreekBot/GreekBot_Infractions.cpp
+		Database/Infractions/Infractions.h
+		Database/Infractions/Infractions.cpp
+		Database/DBInfractions.h
 )
 
 target_include_directories(
@@ -121,6 +125,10 @@ define_query(QUERY_LB_UPDATE  Database/Leaderboard/query_lb_update.sql)
 define_query(QUERY_LB_RANK    Database/Leaderboard/query_lb_rank.sql  )
 define_query(QUERY_LB_TOP     Database/Leaderboard/query_lb_top.sql   )
 configure_file(Database/Leaderboard/LeaderboardQueries.h.in LeaderboardQueries.h)
+
+define_query(QUERY_WARN_REGISTER Database/Infractions/query_warn_register.sql)
+define_query(QUERY_WARN_GET      Database/Infractions/query_warn_get.sql)
+configure_file(Database/Infractions/InfractionsQueries.h.in InfractionsQueries.h)
 
 define_query(QUERY_INIT       Database/query_init.sql      )
 define_query(QUERY_WC_REG_MBR Database/query_wc_reg_mbr.sql)

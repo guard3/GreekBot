@@ -1,0 +1,15 @@
+{
+  "name": "warn",
+  "description": "Give a warning",
+  "default_member_permissions": "1099511627776",
+  "options": [{
+    "type": 6,
+    "name": "user",
+    "description": "The user to receive the warning",
+    "required": true
+  }, {
+    "type": 3,
+    "name": "reason",
+    "description": "The reason for the warning"
+  }]
+}

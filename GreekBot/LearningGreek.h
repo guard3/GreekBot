@@ -38,4 +38,5 @@ inline constexpr cSnowflake LMG_EMOJI_HOLY = 409075809723219969;
 inline constexpr cColor LMG_COLOR_RED = 0xC43135;
 inline constexpr cColor LMG_COLOR_GREEN = 0x248046;
 inline constexpr cColor LMG_COLOR_BLUE = 0x0096FF;
+inline constexpr cColor LMG_COLOR_YELLOW = 0xFFCC4C;
 #endif //GREEKBOT_LEARNINGGREEK_H

@@ -26,3 +26,11 @@ CREATE TABLE IF NOT EXISTS tempbans(
     user_id INTEGER PRIMARY KEY,
     expires_at INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS infractions(
+    user_id INTEGER NOT NULL,
+    timestamp INTEGER NOT NULL,
+    timed_out INTEGER NOT NULL,
+    reason VARCHAR,
+
+    PRIMARY KEY (user_id, timestamp)
+);

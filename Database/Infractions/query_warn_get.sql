@@ -1,0 +1,1 @@
+SELECT timestamp, reason FROM infractions WHERE user_id IS ? ORDER BY timestamp DESC;

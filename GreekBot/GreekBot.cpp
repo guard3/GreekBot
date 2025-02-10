@@ -138,13 +138,17 @@ cGreekBot::process_interaction(cAppCmdInteraction& i) HANDLER_BEGIN {
 			return process_ban_ctx_menu(i, "greek");
 		case 1254933366562754591: // clear
 			return process_clear(i);
+		case 1336758756062527581:
+			return process_warn(i);
+		case 1336832339753570386:
+			return process_infractions(i);
 		case 1178824125192613939: // test
 			return process_test(i);
 		/* ========== Learning Greek specific commands ========== */
 		case 1294358361248370698: // unban
 			return process_unban(i);
 		default:
-			throw std::runtime_error(std::format("Unhandled command \"{}\" {}", i.GetCommandName(), i.GetCommandId()));
+			throw std::runtime_error(std::format("Unhandled command {:?} {}", i.GetCommandName(), i.GetCommandId()));
 	}
 } HANDLER_END
 
