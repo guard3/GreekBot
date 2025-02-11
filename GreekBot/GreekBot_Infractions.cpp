@@ -74,12 +74,12 @@ cGreekBot::process_infractions(cAppCmdInteraction& i) HANDLER_BEGIN {
 		);
 	}
 
-	std::vector<infraction_entry> entries;
+	infraction_result infs;
 	/* If the target member has no immunity, retrieve infractions from the database */
 	if (!pUser->IsBotUser() && !pUser->IsSystemUser() && !(pMember->GetPermissions() & PERM_MODERATE_MEMBERS)) {
 		co_await InteractionDefer(i, true);
 		auto db = co_await BorrowDatabase();
-		entries = cInfractionsDAO(db).GetEntriesByUser(*pUser);
+		infs = cInfractionsDAO(db).GetStatsByUser(*pUser, i.GetId().GetTimestamp());
 		co_await ReturnDatabase(std::move(db));
 	}
 
@@ -89,20 +89,20 @@ cGreekBot::process_infractions(cAppCmdInteraction& i) HANDLER_BEGIN {
 	embed.SetTimestamp(i.GetId().GetTimestamp());
 
 	/* Fill the embed with infraction info */
-	if (entries.empty()) {
+	if (infs.entries.empty()) {
 		embed.SetDescription("✅ No infractions found");
 	} else {
+		auto stat_to_str = [](std::int64_t num) { return std::format("{} infraction{}", num, num == 1 ? "" : "s"); };
 		embed.SetDescription("⚠️");
 		embed.SetFields({
-			// TODO: Access statistics from the database
-	        { "Today", "TBA", true },
-	        { "This week", "TBA", true },
-	        { "Total", "TBA", true },
-	        { "Latest infractions", [&] {
-				auto it = begin(entries);
-				std::string str = std::format("1. {} - <t:{}:R>", it->reason, floor<std::chrono::seconds>(it->timestamp).time_since_epoch().count());
-				for (std::size_t n = 2; ++it != end(entries); ++n)
-					std::format_to(back_inserter(str), "\n{}. {} - <t:{}:R>", n, it->reason, floor<std::chrono::seconds>(it->timestamp).time_since_epoch().count());
+	        { "Today",     stat_to_str(infs.stats_today),     true },
+	        { "This week", stat_to_str(infs.stats_this_week), true },
+	        { "Total",     stat_to_str(infs.stats_total),     true },
+	        { "Latest infractions", [&entries = infs.entries] {
+				auto it = entries.begin(), end = entries.end();
+				std::string str = std::format("1. {} • <t:{}:R>", it->reason, floor<std::chrono::seconds>(it->timestamp).time_since_epoch().count());
+				for (std::size_t n = 2; ++it != end; ++n)
+					std::format_to(back_inserter(str), "\n{}. {} • <t:{}:R>", n, it->reason, floor<std::chrono::seconds>(it->timestamp).time_since_epoch().count());
 				return str;
 			} ()}
 		});

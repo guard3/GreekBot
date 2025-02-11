@@ -25,3 +25,32 @@ cInfractionsDAO::GetEntriesByUser(crefUser user) {
 	}
 	return result;
 }
+
+infraction_result
+cInfractionsDAO::GetStatsByUser(crefUser user, std::chrono::sys_time<std::chrono::milliseconds> now) {
+	using namespace std::chrono;
+	auto[stmt, _] = m_conn.prepare(QUERY_WARN_STATS);
+	stmt.bind(1, user.GetId());
+	stmt.bind(2, now.time_since_epoch().count());
+	stmt.bind(3, floor<milliseconds>(days(1)).count());
+	stmt.bind(4, floor<milliseconds>(weeks(1)).count());
+
+	infraction_result result;
+	if (stmt.step()) {
+		result.stats_today = stmt.column_int(0);
+		if (stmt.step()) {
+			result.stats_this_week = stmt.column_int(0);
+			if (stmt.step()) {
+				result.stats_total = stmt.column_int(0);
+				result.entries.reserve(10);
+				while (stmt.step()) {
+					auto& entry = result.entries.emplace_back(sys_time(milliseconds(stmt.column_int(0))));
+					if (const char* str = stmt.column_text(1))
+						entry.reason = str;
+				}
+				return result;
+			}
+		}
+	}
+	throw std::system_error(SQLITE_INTERNAL, sqlite::error_category());
+}

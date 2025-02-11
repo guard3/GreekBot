@@ -128,6 +128,7 @@ configure_file(Database/Leaderboard/LeaderboardQueries.h.in LeaderboardQueries.h
 
 define_query(QUERY_WARN_REGISTER Database/Infractions/query_warn_register.sql)
 define_query(QUERY_WARN_GET      Database/Infractions/query_warn_get.sql)
+define_query(QUERY_WARN_STATS    Database/Infractions/query_warn_stats.sql)
 configure_file(Database/Infractions/InfractionsQueries.h.in InfractionsQueries.h)
 
 define_query(QUERY_INIT       Database/query_init.sql      )
