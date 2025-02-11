@@ -1,6 +1,13 @@
 #include "CDN.h"
 #include "DBInfractions.h"
 #include "GreekBot.h"
+#include "Utils.h"
+
+static const auto NO_PERM_MSG = [] {
+	cPartialMessage response;
+	response.SetFlags(MESSAGE_FLAG_EPHEMERAL).SetContent("You can't do that! You're missing the `MODERATE_MEMBERS` permission.");
+	return response;
+} ();
 
 cTask<>
 cGreekBot::process_warn(cAppCmdInteraction& i) HANDLER_BEGIN {
@@ -106,6 +113,58 @@ cGreekBot::process_infractions(cAppCmdInteraction& i) HANDLER_BEGIN {
 				return str;
 			} ()}
 		});
+		/* Add buttons for removing infractions */
+		response.SetComponents({
+			cActionRow{
+				cButton{
+					BUTTON_STYLE_SECONDARY,
+					std::format("unwarn:{}:{}", pUser->GetId(), i.GetId().GetTimestamp().time_since_epoch().count()),
+					"Remove an infraction"
+				},
+				cButton{
+					BUTTON_STYLE_DANGER,
+					std::format("unwarn:{}", pUser->GetId()),
+					"Remove all infractions"
+				}
+			}
+		});
+	}
+
+	co_await InteractionSendMessage(i, response);
+} HANDLER_END
+
+cTask<>
+cGreekBot::process_infractions_remove(cMsgCompInteraction& i, std::string_view fmt) HANDLER_BEGIN {
+	using namespace std::chrono;
+	/* First of all, check the invoking member's permissions */
+	if (!(i.GetMember()->GetPermissions() & PERM_MODERATE_MEMBERS))
+		co_return co_await InteractionSendMessage(i, NO_PERM_MSG);
+
+	/* Collect parameters from button string */
+	cSnowflake user_id;
+	sys_time<milliseconds> timestamp;
+	if (auto n = fmt.find(':'); n == std::string_view::npos) {
+		user_id = fmt;
+	} else {
+		user_id = fmt.substr(0, n);
+		timestamp = sys_time(milliseconds(cUtils::ParseInt<milliseconds::rep>(fmt.substr(n + 1))));
+	}
+
+	co_await InteractionDefer(i, true);
+	cPartialMessage response;
+	/* If no timestamp was specified, all infractions are to be removed... */
+	if (timestamp == sys_time<milliseconds>{}) {
+		// TODO: use a transaction!
+		auto db = co_await BorrowDatabase();
+		cInfractionsDAO(db).DeleteAll(user_id);
+		co_await ReturnDatabase(std::move(db));
+		/* Update response */
+		response.EmplaceEmbeds(i.GetMessage().MoveEmbeds()).at(0).SetDescription("✅ All infractions removed").ResetFields();
+	}
+	/* ...otherwise, if a timestamp was specified, collect all infractions up until that timestamp */
+	else {
+		// collect 10 infractions
+		response.SetContent("TBA");
 	}
 
 	co_await InteractionSendMessage(i, response);

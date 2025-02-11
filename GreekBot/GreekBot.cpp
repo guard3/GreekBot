@@ -173,7 +173,9 @@ cGreekBot::process_interaction(cMsgCompInteraction& i) HANDLER_BEGIN {
 				return process_nickname_button(i, custom_id.substr(4));
 			if (custom_id.starts_with("role:"))
 				return process_role_button(i, custom_id.substr(5));
-			throw std::runtime_error(std::format("Unknown component id \"{}\" 0x{:08X}", custom_id, hash));
+			if (custom_id.starts_with("unwarn:"))
+				return process_infractions_remove(i, custom_id.substr(7));
+			throw std::runtime_error(std::format("Unknown component id {:?} 0x{:08X}", custom_id, hash));
 	}
 } HANDLER_END
 

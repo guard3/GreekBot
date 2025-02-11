@@ -54,3 +54,10 @@ cInfractionsDAO::GetStatsByUser(crefUser user, std::chrono::sys_time<std::chrono
 	}
 	throw std::system_error(SQLITE_INTERNAL, sqlite::error_category());
 }
+
+void
+cInfractionsDAO::DeleteAll(crefUser user) {
+	auto[stmt, _] = m_conn.prepare(QUERY_WARN_DELETE_ALL);
+	stmt.bind(1, user.GetId());
+	while (stmt.step());
+}

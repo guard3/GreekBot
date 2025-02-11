@@ -22,5 +22,6 @@ public:
 	std::int64_t Register(crefUser user, std::chrono::sys_time<std::chrono::milliseconds> timepoint, std::string_view reason);
 	std::vector<infraction_entry> GetEntriesByUser(crefUser user);
 	infraction_result GetStatsByUser(crefUser user, std::chrono::sys_time<std::chrono::milliseconds> now);
+	void DeleteAll(crefUser);
 };
 #endif /* GREEKBOT_INFRACTIONS_H */

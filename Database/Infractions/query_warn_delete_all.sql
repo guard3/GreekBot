@@ -1,0 +1,1 @@
+DELETE FROM infractions WHERE user_id IS ?;
