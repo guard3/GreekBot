@@ -20,7 +20,7 @@ public:
 
 	/* Given user, timepoint and content, register a new infraction and return the number of most recent infractions within timeout_period */
 	std::int64_t Register(crefUser user, std::chrono::sys_time<std::chrono::milliseconds> timepoint, std::string_view reason);
-	std::vector<infraction_entry> GetEntriesByUser(crefUser user);
+	std::vector<infraction_entry> GetEntriesByUser(crefUser user, std::chrono::sys_time<std::chrono::milliseconds> before);
 	infraction_result GetStatsByUser(crefUser user, std::chrono::sys_time<std::chrono::milliseconds> now);
 	void DeleteAll(crefUser);
 };

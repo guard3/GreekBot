@@ -2,6 +2,7 @@
 #include "DBInfractions.h"
 #include "GreekBot.h"
 #include "Utils.h"
+#include <ranges>
 
 static const auto NO_PERM_MSG = [] {
 	cPartialMessage response;
@@ -105,11 +106,13 @@ cGreekBot::process_infractions(cAppCmdInteraction& i) HANDLER_BEGIN {
 	        { "Today",     stat_to_str(infs.stats_today),     true },
 	        { "This week", stat_to_str(infs.stats_this_week), true },
 	        { "Total",     stat_to_str(infs.stats_total),     true },
-	        { "Latest infractions", [&entries = infs.entries] {
-				auto it = entries.begin(), end = entries.end();
-				std::string str = std::format("1. {} • <t:{}:R>", it->reason, floor<std::chrono::seconds>(it->timestamp).time_since_epoch().count());
-				for (std::size_t n = 2; ++it != end; ++n)
-					std::format_to(back_inserter(str), "\n{}. {} • <t:{}:R>", n, it->reason, floor<std::chrono::seconds>(it->timestamp).time_since_epoch().count());
+	        { "Latest infractions", [&] {
+				std::string str;
+				str.reserve(1024);
+				std::size_t n = 0;
+				for (auto& [timestamp, reason] : infs.entries)
+					std::format_to(back_inserter(str), "{}. {} • <t:{}:R>\n", ++n, reason.empty() ? "`Unspecified`" : reason, floor<std::chrono::seconds>(timestamp).time_since_epoch().count());
+				str.pop_back();
 				return str;
 			} ()}
 		});
@@ -150,11 +153,11 @@ cGreekBot::process_infractions_remove(cMsgCompInteraction& i, std::string_view f
 		timestamp = sys_time(milliseconds(cUtils::ParseInt<milliseconds::rep>(fmt.substr(n + 1))));
 	}
 
-	co_await InteractionDefer(i, true);
 	cPartialMessage response;
 	/* If no timestamp was specified, all infractions are to be removed... */
 	if (timestamp == sys_time<milliseconds>{}) {
 		// TODO: use a transaction!
+		co_await InteractionDefer(i, true);
 		auto db = co_await BorrowDatabase();
 		cInfractionsDAO(db).DeleteAll(user_id);
 		co_await ReturnDatabase(std::move(db));
@@ -163,9 +166,37 @@ cGreekBot::process_infractions_remove(cMsgCompInteraction& i, std::string_view f
 	}
 	/* ...otherwise, if a timestamp was specified, collect all infractions up until that timestamp */
 	else {
-		// collect 10 infractions
-		response.SetContent("TBA");
+		/* Collect at most 10 infractions before the timestamp */
+		co_await InteractionDefer(i, false);
+		auto db = co_await BorrowDatabase();
+		auto entries = cInfractionsDAO(db).GetEntriesByUser(user_id, timestamp);
+		co_await ReturnDatabase(std::move(db));
+
+		/* Update response with a select menu for each infraction found */
+		response.SetFlags(MESSAGE_FLAG_EPHEMERAL);
+		if (entries.empty()) {
+			response.SetContent("No infractions to remove");
+		} else {
+			response.SetComponents({
+				cActionRow{
+					cSelectMenu{
+						"INFRACTION_MENU",
+						entries | std::views::transform([](infraction_entry& e) {
+							return cSelectOption{
+								e.reason.empty() ? "No reason" : std::move(e.reason),
+								std::to_string(e.timestamp.time_since_epoch().count())
+							};
+						}) | std::ranges::to<std::vector>()
+					}
+				}
+			});
+		}
 	}
 
 	co_await InteractionSendMessage(i, response);
+} HANDLER_END
+
+cTask<>
+cGreekBot::process_infraction_menu(cMsgCompInteraction& i) HANDLER_BEGIN {
+	co_await InteractionSendMessage(i, cPartialMessage().SetFlags(MESSAGE_FLAG_EPHEMERAL).SetContent("TBA"));
 } HANDLER_END

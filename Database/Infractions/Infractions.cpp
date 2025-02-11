@@ -13,10 +13,11 @@ cInfractionsDAO::Register(crefUser user, std::chrono::sys_time<std::chrono::mill
 }
 
 std::vector<infraction_entry>
-cInfractionsDAO::GetEntriesByUser(crefUser user) {
+cInfractionsDAO::GetEntriesByUser(crefUser user, std::chrono::sys_time<std::chrono::milliseconds> before) {
 	using namespace std::chrono;
 	auto[stmt, _] = m_conn.prepare(QUERY_WARN_GET);
 	stmt.bind(1, user.GetId());
+	stmt.bind(2, before.time_since_epoch().count());
 	std::vector<infraction_entry> result;
 	while (stmt.step()) {
 		auto& entry = result.emplace_back(sys_time(milliseconds(stmt.column_int(0))));
