@@ -177,6 +177,7 @@ cGreekBot::process_infractions_remove(cMsgCompInteraction& i, std::string_view f
 		if (entries.empty()) {
 			response.SetContent("No infractions to remove");
 		} else {
+			response.SetContent("Select an infraction to remove.");
 			response.SetComponents({
 				cActionRow{
 					cSelectMenu{
@@ -198,5 +199,27 @@ cGreekBot::process_infractions_remove(cMsgCompInteraction& i, std::string_view f
 
 cTask<>
 cGreekBot::process_infraction_menu(cMsgCompInteraction& i) HANDLER_BEGIN {
-	co_await InteractionSendMessage(i, cPartialMessage().SetFlags(MESSAGE_FLAG_EPHEMERAL).SetContent("TBA"));
+	/* Check permissions */
+	if (!(i.GetMember()->GetPermissions() & PERM_MODERATE_MEMBERS))
+		co_return co_await InteractionSendMessage(i, NO_PERM_MSG);
+
+	/* Delete infraction */
+	using namespace std::chrono;
+	co_await InteractionDefer(i, true);
+	auto db = co_await BorrowDatabase();
+	cInfractionsDAO(db).Delete(sys_time(milliseconds(cUtils::ParseInt<milliseconds::rep>(i.GetValues().front()))));
+	co_await ReturnDatabase(std::move(db));
+
+	co_await InteractionSendMessage(i, cPartialMessage()
+		.SetContent("Infraction removed.")
+		.SetComponents({
+			cActionRow{
+				cButton{
+					BUTTON_STYLE_SECONDARY,
+					std::format("DLT#{}", i.GetUser().GetId()),
+					"Dismiss"
+				}
+			}
+		})
+	);
 } HANDLER_END
