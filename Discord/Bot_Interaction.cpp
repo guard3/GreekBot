@@ -97,10 +97,38 @@ cBot::InteractionSendModal(const cInteraction& i, const cModal& modal) {
 }
 
 cTask<cMessage>
-cBot::InteractionEditMessage(const cInteraction& i, const cMessageUpdate& params, crefMessage msg) {
+cBot::InteractionEditMessageImpl(const cInteraction& i, const cMessageUpdate& params, crefMessage msg) {
 	auto& msg_id = msg.GetId();
-	json::value result = co_await DiscordPatch(std::format("/webhooks/{}/{}/messages/{}", i.GetApplicationId(), i.GetToken(), msg_id.ToInt() ? msg_id.ToString() : "@original"), json::value_from(params).get_object());
-	co_return cMessage{ result };
+	co_return co_await DiscordPatch(std::format("/webhooks/{}/{}/messages/{}", i.GetApplicationId(), i.GetToken(), msg_id.ToInt() ? msg_id.ToString() : "@original"), json::value_from(params).get_object());
+}
+
+cTask<cMessage>
+cBot::InteractionEditMessage(const cMsgCompInteraction& i, const cMessageUpdate& params, crefMessage msg) {
+	using namespace detail;
+	/* If the interaction hasn't been acknowledged before and the message id is the default, send initial response */
+	if (!get_interaction_ack(i) && (msg.GetId() == cSnowflake{} || msg.GetId() == i.GetMessage().GetId())) {
+		json::object obj{{ "type", UPDATE_MESSAGE }};
+		json::value_from(params, obj["data"]);
+		auto result = co_await DiscordPost(std::format("/interactions/{}/{}/callback?with_response=1", i.GetId(), i.GetToken()), obj);
+		/* Don't forget to mark the interaction as acknowledged */
+		set_interaction_ack(i);
+		/* Retrieve the edited message; TODO: Make this optional to avoid unnecessary parsing */
+		co_return result.at("resource").at("message");
+	}
+	/* Otherwise just do a generic edit */
+	co_return co_await InteractionEditMessageImpl(i, params, msg);
+}
+
+cTask<cMessage>
+cBot::InteractionEditMessage(const cInteraction& i, const cMessageUpdate& params, crefMessage msg) {
+	return i.Visit(cVisitor{
+		[this, &params, msg](const cMsgCompInteraction& i) {
+			return InteractionEditMessage(i, params, msg);
+		},
+		[this, &params, msg](auto& i) -> cTask<cMessage> {
+			return InteractionEditMessageImpl(i, params, msg);
+		}
+	});
 }
 cTask<cMessage>
 cBot::InteractionGetMessage(const cInteraction& i, crefMessage msg) {

@@ -23,6 +23,8 @@ private:
 	cAsyncGenerator<cMessage> get_channel_messages(std::string);
 	cTask<> delete_message(const cSnowflake& channel_id, const cSnowflake& msg_id, std::span<const cHttpField> fields);
 
+	cTask<cMessage> InteractionEditMessageImpl(const cInteraction&, const cMessageUpdate&, crefMessage);
+
 protected:
 	using cGateway::OnInteractionCreate;
 	using cGateway::OnGuildCreate;
@@ -56,6 +58,7 @@ public:
 	cTask<> InteractionSendModal(const cMsgCompInteraction&, const cModal&);
 	cTask<> InteractionSendModal(const cInteraction&, const cModal&);
 	/* Interactions - Extra functions */
+	cTask<cMessage> InteractionEditMessage(const cMsgCompInteraction&, const cMessageUpdate&, crefMessage = cSnowflake());
 	cTask<cMessage> InteractionEditMessage(const cInteraction&, const cMessageUpdate&, crefMessage = cSnowflake());
 	cTask<cMessage> InteractionGetMessage(const cInteraction&, crefMessage = cSnowflake());
 	cTask<>         InteractionDeleteMessage(const cInteraction&, crefMessage = cSnowflake());

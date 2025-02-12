@@ -148,7 +148,7 @@ cGreekBot::process_infractions_remove(cMsgCompInteraction& i, std::string_view f
 	sys_time<milliseconds> timestamp;
 	/* If the button clicked is 'Cancel', restore the 'Remove an infraction' button */
 	if (fmt.starts_with("cancel:")) {
-		co_await InteractionDefer(i, false);
+		//co_await InteractionDefer(i, false);
 		cMessageUpdate upt;
 		auto& comps = upt.EmplaceComponents(i.GetMessage().MoveComponents());
 		get<cButton>(comps.at(0).GetComponents().front()).SetLabel("Remove an infraction").SetCustomId(std::format("unwarn:{}", fmt.substr(7)));
