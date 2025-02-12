@@ -146,6 +146,17 @@ cGreekBot::process_infractions_remove(cMsgCompInteraction& i, std::string_view f
 	/* Collect parameters from button string */
 	cSnowflake user_id;
 	sys_time<milliseconds> timestamp;
+	/* If the button clicked is 'Cancel', restore the 'Remove an infraction' button */
+	if (fmt.starts_with("cancel:")) {
+		co_await InteractionDefer(i, false);
+		cMessageUpdate upt;
+		auto& comps = upt.EmplaceComponents(i.GetMessage().MoveComponents());
+		get<cButton>(comps.at(0).GetComponents().front()).SetLabel("Remove an infraction").SetCustomId(std::format("unwarn:{}", fmt.substr(7)));
+		comps.erase(comps.begin() + 1, comps.end());
+		co_await InteractionEditMessage(i, upt);
+		co_return;
+	}
+
 	if (auto n = fmt.find(':'); n == std::string_view::npos) {
 		user_id = fmt;
 	} else {
@@ -175,27 +186,29 @@ cGreekBot::process_infractions_remove(cMsgCompInteraction& i, std::string_view f
 		co_await ReturnDatabase(std::move(db));
 
 		/* Update response with a select menu for each infraction found */
-		cPartialMessage response;
-		response.SetFlags(MESSAGE_FLAG_EPHEMERAL);
+		cMessageUpdate upt;
 		if (entries.empty()) {
-			response.SetContent("No infractions to remove");
+			/* If no infractions are found, just confirm */
+			upt.EmplaceEmbeds(i.GetMessage().MoveEmbeds()).at(0).SetDescription("✅ No infractions to remove").SetTimestamp(i.GetId().GetTimestamp()).ResetFields();
+			upt.EmplaceComponents();
 		} else {
-			response.SetContent("Select an infraction to remove.");
-			response.SetComponents({
-				cActionRow{
-					cSelectMenu{
-						"INFRACTION_MENU",
-						entries | std::views::transform([](infraction_entry& e) {
-							return cSelectOption{
-								e.reason.empty() ? "No reason" : std::move(e.reason),
-								std::to_string(e.timestamp.time_since_epoch().count())
-							};
-						}) | std::ranges::to<std::vector>()
-					}
-				}
+			// TODO: Get stats and update the original message to the most current state
+			auto& comps = upt.EmplaceComponents(i.GetMessage().MoveComponents());
+			/* Change 'Remove an infraction' to 'Cancel' */
+			get<cButton>(comps.at(0).GetComponents().front()).SetLabel("Cancel").SetCustomId(std::format("unwarn:cancel:{}", fmt));
+			/* Add a select menu */
+			comps.emplace_back(cSelectMenu{
+				"INFRACTION_MENU",
+				entries | std::views::transform([](infraction_entry& e) {
+					return cSelectOption{
+							e.reason.empty() ? "No reason" : std::move(e.reason),
+							std::to_string(e.timestamp.time_since_epoch().count())
+					};
+				}) | std::ranges::to<std::vector>(),
+				"Choose which infraction to remove"
 			});
 		}
-		co_await InteractionSendMessage(i, response);
+		co_await InteractionEditMessage(i, upt);
 	}
 } HANDLER_END
 
