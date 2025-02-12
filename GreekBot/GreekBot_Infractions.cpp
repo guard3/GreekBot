@@ -153,16 +153,18 @@ cGreekBot::process_infractions_remove(cMsgCompInteraction& i, std::string_view f
 		timestamp = sys_time(milliseconds(cUtils::ParseInt<milliseconds::rep>(fmt.substr(n + 1))));
 	}
 
-	cPartialMessage response;
 	/* If no timestamp was specified, all infractions are to be removed... */
 	if (timestamp == sys_time<milliseconds>{}) {
 		// TODO: use a transaction!
-		co_await InteractionDefer(i, true);
+		co_await InteractionDefer(i, false);
 		auto db = co_await BorrowDatabase();
 		cInfractionsDAO(db).DeleteAll(user_id);
 		co_await ReturnDatabase(std::move(db));
-		/* Update response */
-		response.EmplaceEmbeds(i.GetMessage().MoveEmbeds()).at(0).SetDescription("✅ All infractions removed").ResetFields();
+		/* Update response; Change embed message and remove all buttons */
+		cMessageUpdate upt;
+		upt.EmplaceEmbeds(i.GetMessage().MoveEmbeds()).at(0).SetDescription("✅ All infractions removed").SetTimestamp(i.GetId().GetTimestamp()).ResetFields();
+		upt.EmplaceComponents();
+		co_await InteractionEditMessage(i, upt);
 	}
 	/* ...otherwise, if a timestamp was specified, collect all infractions up until that timestamp */
 	else {
@@ -173,6 +175,7 @@ cGreekBot::process_infractions_remove(cMsgCompInteraction& i, std::string_view f
 		co_await ReturnDatabase(std::move(db));
 
 		/* Update response with a select menu for each infraction found */
+		cPartialMessage response;
 		response.SetFlags(MESSAGE_FLAG_EPHEMERAL);
 		if (entries.empty()) {
 			response.SetContent("No infractions to remove");
@@ -192,9 +195,8 @@ cGreekBot::process_infractions_remove(cMsgCompInteraction& i, std::string_view f
 				}
 			});
 		}
+		co_await InteractionSendMessage(i, response);
 	}
-
-	co_await InteractionSendMessage(i, response);
 } HANDLER_END
 
 cTask<>
