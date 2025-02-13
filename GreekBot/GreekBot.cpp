@@ -16,7 +16,6 @@ enum : uint32_t {
 	CMP_ID_STARBOARD_HELP   = 0x33330ADE,
 	CMP_ID_PROFICIENCY_MENU = 0xAE90F56B,
 	CMP_ID_BOOSTER_MENU     = 0x90DD7D88,
-	CMP_ID_INFRACTION_MENU  = 0x00F1CAFC,
 
 	MODAL_NICKNAME = 0x41732EB9,
 	MODAL_BAN      = 0x9839CB2A
@@ -165,8 +164,6 @@ cGreekBot::process_interaction(cMsgCompInteraction& i) HANDLER_BEGIN {
 			return process_proficiency_menu(i);
 		case CMP_ID_BOOSTER_MENU:
 			return process_booster_menu(i);
-		case CMP_ID_INFRACTION_MENU:
-			return process_infraction_menu(i);
 		default:
 			if (custom_id.starts_with("BAN#"))
 				return process_unban(i, custom_id.substr(4));

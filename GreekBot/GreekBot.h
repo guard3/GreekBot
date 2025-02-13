@@ -58,7 +58,6 @@ private:
 	cTask<> process_warn(cAppCmdInteraction&);
 	cTask<> process_infractions(cAppCmdInteraction&);
 	cTask<> process_infractions_remove(cMsgCompInteraction&, std::string_view);
-	cTask<> process_infraction_menu(cMsgCompInteraction&);
 	cTask<> process_test(cAppCmdInteraction&);
 
 	cTask<> process_interaction(cAppCmdInteraction&);

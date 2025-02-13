@@ -153,8 +153,35 @@ cGreekBot::process_infractions_remove(cMsgCompInteraction& i, std::string_view f
 		get<cButton>(comps.at(0).GetComponents().front()).SetLabel("Remove an infraction").SetCustomId(std::format("unwarn:{}", fmt.substr(7)));
 		comps.erase(comps.begin() + 1, comps.end());
 	}
+	/* ...otherwise, if an infraction was selected... */
+	else if (auto n = fmt.find_last_of(':'); fmt.starts_with("menu:") && n > 4) {
+		using namespace std::chrono;
+		/* Collect fmt parameters; fmt starts with "menu:" so n != std::string_view::npos always */
+		cSnowflake user_id = fmt.substr(5, n - 5);
+		auto now = sys_time(milliseconds(cUtils::ParseInt<milliseconds::rep>(fmt.substr(n + 1))));
+		/* Delete selected infraction and retrieve new user stats; TODO: make this a single query */
+		co_await InteractionDefer(i, false);
+		auto db = co_await BorrowDatabase();
+		auto infs = [&] {
+			cInfractionsDAO dao(db);
+			dao.Delete(sys_time(milliseconds(cUtils::ParseInt<milliseconds::rep>(i.GetValues().front()))));
+			return dao.GetStatsByUser(user_id, now);
+		} ();
+		co_await ReturnDatabase(std::move(db));
+
+		auto& embed = response.EmplaceEmbeds(i.GetMessage().MoveEmbeds()).at(0).SetTimestamp(i.GetId().GetTimestamp());
+		if (infs.entries.empty()) {
+			embed.SetDescription("✅ All infractions removed").ResetFields();
+			response.EmplaceComponents();
+		} else {
+			make_stats(embed, infs);
+			auto& comps = response.EmplaceComponents(i.GetMessage().MoveComponents());
+			get<cButton>(comps.at(0).GetComponents().front()).SetLabel("Remove an infraction").SetCustomId(std::format("unwarn:{}", fmt.substr(5)));
+			comps.erase(comps.begin() + 1, comps.end());
+		}
+	}
 	/* ...otherwise, if the 'Remove an infraction' button was clicked... */
-	else if (auto n = fmt.find(':'); n != std::string_view::npos) {
+	else if (n != std::string_view::npos) {
 		using namespace std::chrono;
 		/* Collect button id parameters */
 		cSnowflake user_id = fmt.substr(0, n);
@@ -180,7 +207,7 @@ cGreekBot::process_infractions_remove(cMsgCompInteraction& i, std::string_view f
 			get<cButton>(comps.at(0).GetComponents().front()).SetLabel("Cancel").SetCustomId(std::format("unwarn:cancel:{}", fmt));
 			/* Add a select menu */
 			comps.emplace_back(cSelectMenu{
-				"INFRACTION_MENU",
+				std::format("unwarn:menu:{}", fmt),
 				infs.entries | std::views::transform([](infraction_entry& e) {
 					return cSelectOption{
 						e.reason.empty() ? "Unspecified" : std::move(e.reason),
@@ -205,31 +232,4 @@ cGreekBot::process_infractions_remove(cMsgCompInteraction& i, std::string_view f
 	}
 
 	co_await InteractionEditMessage(i, response);
-} HANDLER_END
-
-cTask<>
-cGreekBot::process_infraction_menu(cMsgCompInteraction& i) HANDLER_BEGIN {
-	/* Check permissions */
-	if (!(i.GetMember()->GetPermissions() & PERM_MODERATE_MEMBERS))
-		co_return co_await InteractionSendMessage(i, NO_PERM_MSG);
-
-	/* Delete infraction */
-	using namespace std::chrono;
-	co_await InteractionDefer(i, true);
-	auto db = co_await BorrowDatabase();
-	cInfractionsDAO(db).Delete(sys_time(milliseconds(cUtils::ParseInt<milliseconds::rep>(i.GetValues().front()))));
-	co_await ReturnDatabase(std::move(db));
-
-	co_await InteractionSendMessage(i, cPartialMessage()
-		.SetContent("Infraction removed.")
-		.SetComponents({
-			cActionRow{
-				cButton{
-					BUTTON_STYLE_SECONDARY,
-					std::format("DLT#{}", i.GetUser().GetId()),
-					"Dismiss"
-				}
-			}
-		})
-	);
 } HANDLER_END
