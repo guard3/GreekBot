@@ -13,5 +13,5 @@ SELECT timestamp, reason FROM (
     UNION ALL
     SELECT 2 AS i, total     AS timestamp, NULL AS reason FROM stats
     UNION ALL
-    SELECT 3 AS i, timestamp, reason FROM infractions WHERE user_id IS ?1
+    SELECT 3 AS i, timestamp, reason FROM infractions WHERE user_id IS ?1 AND timestamp <= ?2
 ) ORDER BY i, timestamp DESC LIMIT 13;

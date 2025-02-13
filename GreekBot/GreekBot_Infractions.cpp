@@ -58,6 +58,24 @@ cGreekBot::process_warn(cAppCmdInteraction& i) HANDLER_BEGIN {
 	co_await InteractionSendMessage(i, response);
 } HANDLER_END
 
+static void make_stats(cEmbed& embed, const infraction_result& res) {
+	auto stat_to_str = [](std::int64_t num) { return std::format("{} infraction{}", num, num == 1 ? "" : "s"); };
+	embed.SetDescription("⚠️");
+	embed.SetFields({
+		{ "Today",     stat_to_str(res.stats_today),     true },
+		{ "This week", stat_to_str(res.stats_this_week), true },
+		{ "Total",     stat_to_str(res.stats_total),     true },
+		{ "Latest infractions", [&] {
+			std::string str;
+			str.reserve(1024);
+			std::size_t n = 0;
+			for (auto&[timestamp, reason] : res.entries)
+				std::format_to(back_inserter(str), "{}. {} • <t:{}:R>\n", ++n, reason.empty() ? "`Unspecified`" : reason, floor<std::chrono::seconds>(timestamp).time_since_epoch().count());
+			return str;
+		} ()}
+	});
+}
+
 cTask<>
 cGreekBot::process_infractions(cAppCmdInteraction& i) HANDLER_BEGIN {
 	/* The response */
@@ -100,22 +118,8 @@ cGreekBot::process_infractions(cAppCmdInteraction& i) HANDLER_BEGIN {
 	if (infs.entries.empty()) {
 		embed.SetDescription("✅ No infractions found");
 	} else {
-		auto stat_to_str = [](std::int64_t num) { return std::format("{} infraction{}", num, num == 1 ? "" : "s"); };
-		embed.SetDescription("⚠️");
-		embed.SetFields({
-	        { "Today",     stat_to_str(infs.stats_today),     true },
-	        { "This week", stat_to_str(infs.stats_this_week), true },
-	        { "Total",     stat_to_str(infs.stats_total),     true },
-	        { "Latest infractions", [&] {
-				std::string str;
-				str.reserve(1024);
-				std::size_t n = 0;
-				for (auto& [timestamp, reason] : infs.entries)
-					std::format_to(back_inserter(str), "{}. {} • <t:{}:R>\n", ++n, reason.empty() ? "`Unspecified`" : reason, floor<std::chrono::seconds>(timestamp).time_since_epoch().count());
-				str.pop_back();
-				return str;
-			} ()}
-		});
+		/* Update embed to include stats */
+		make_stats(embed, infs);
 		/* Add buttons for removing infractions */
 		response.SetComponents({
 			cActionRow{
@@ -159,23 +163,25 @@ cGreekBot::process_infractions_remove(cMsgCompInteraction& i, std::string_view f
 		/* Collect at most 10 infractions before the timestamp */
 		co_await InteractionDefer(i, false);
 		auto db = co_await BorrowDatabase();
-		auto entries = cInfractionsDAO(db).GetEntriesByUser(user_id, timestamp);
+		auto infs = cInfractionsDAO(db).GetStatsByUser(user_id, timestamp);
 		co_await ReturnDatabase(std::move(db));
 
 		/* Update response with a select menu for each infraction found */
-		if (entries.empty()) {
+		if (infs.entries.empty()) {
 			/* If no infractions are found, update embed and remove all buttons */
 			response.EmplaceEmbeds(i.GetMessage().MoveEmbeds()).at(0).SetDescription("✅ No infractions to remove").SetTimestamp(i.GetId().GetTimestamp()).ResetFields();
 			response.EmplaceComponents();
 		} else {
-			// TODO: Get stats and update the original message to the most current state
+			/* Update embed stats */
+			auto& embed = response.EmplaceEmbeds(i.GetMessage().MoveEmbeds()).at(0);
+			make_stats(embed, infs);
+			/* Change the 'Remove an infraction' button to 'Cancel' */
 			auto& comps = response.EmplaceComponents(i.GetMessage().MoveComponents());
-			/* Change 'Remove an infraction' to 'Cancel' */
 			get<cButton>(comps.at(0).GetComponents().front()).SetLabel("Cancel").SetCustomId(std::format("unwarn:cancel:{}", fmt));
 			/* Add a select menu */
 			comps.emplace_back(cSelectMenu{
 				"INFRACTION_MENU",
-				entries | std::views::transform([](infraction_entry& e) {
+				infs.entries | std::views::transform([](infraction_entry& e) {
 					return cSelectOption{
 						e.reason.empty() ? "Unspecified" : std::move(e.reason),
 						std::to_string(e.timestamp.time_since_epoch().count())
