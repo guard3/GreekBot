@@ -152,7 +152,8 @@ cGreekBot::process_infractions_remove(cMsgCompInteraction& i, std::string_view f
 	/* If the 'Cancel' button was clicked... */
 	if (fmt.starts_with("cancel:")) {
 		auto& comps = response.EmplaceComponents(i.GetMessage().MoveComponents());
-		get<cButton>(comps.at(0).GetComponents().front()).SetLabel("Remove an infraction").SetCustomId(std::format("unwarn:{}", fmt.substr(7)));
+		get<cButton>(comps.at(1).GetComponents().front()).SetLabel("Remove an infraction").SetCustomId(std::format("unwarn:{}", fmt.substr(7)));
+		comps.front() = std::move(comps[1]);
 		comps.erase(comps.begin() + 1, comps.end());
 	}
 	/* ...otherwise, if an infraction was selected... */
@@ -176,7 +177,8 @@ cGreekBot::process_infractions_remove(cMsgCompInteraction& i, std::string_view f
 		} else {
 			make_stats(embed, infs);
 			auto& comps = response.EmplaceComponents(i.GetMessage().MoveComponents());
-			get<cButton>(comps.at(0).GetComponents().front()).SetLabel("Remove an infraction").SetCustomId(std::format("unwarn:{}", user_id));
+			get<cButton>(comps.at(1).GetComponents().front()).SetLabel("Remove an infraction").SetCustomId(std::format("unwarn:{}", user_id));
+			comps.front() = std::move(comps[1]);
 			comps.erase(comps.begin() + 1, comps.end());
 		}
 	}
@@ -217,7 +219,7 @@ cGreekBot::process_infractions_remove(cMsgCompInteraction& i, std::string_view f
 			auto& comps = response.EmplaceComponents(i.GetMessage().MoveComponents());
 			get<cButton>(comps.at(0).GetComponents().front()).SetLabel("Cancel").SetCustomId(std::format("unwarn:cancel:{}", user_id));
 			/* Add a select menu */
-			comps.emplace_back(cSelectMenu{
+			comps.emplace(comps.begin(), cSelectMenu{
 				std::format("unwarn:menu:{}", user_id),
 				infs.entries | std::views::transform([](infraction_entry& e) {
 					return cSelectOption{
