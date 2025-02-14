@@ -57,9 +57,10 @@ cInfractionsDAO::GetStatsByUser(crefUser user, std::chrono::sys_time<std::chrono
 }
 
 void
-cInfractionsDAO::Delete(std::chrono::sys_time<std::chrono::milliseconds> timestamp) {
+cInfractionsDAO::Delete(crefUser user, std::chrono::sys_time<std::chrono::milliseconds> timestamp) {
 	auto[stmt, _] = m_conn.prepare(QUERY_WARN_DELETE);
-	stmt.bind(1, timestamp.time_since_epoch().count());
+	stmt.bind(1, user.GetId());
+	stmt.bind(2, timestamp.time_since_epoch().count());
 	while (stmt.step());
 }
 

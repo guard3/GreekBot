@@ -46,13 +46,35 @@ cGreekBot::process_warn(cAppCmdInteraction& i) HANDLER_BEGIN {
 	}
 	/* All clear, register the infraction in the database; */
 	else [[likely]] {
+		const auto now = i.GetId().GetTimestamp();
+
 		co_await InteractionDefer(i, true);
 		auto db = co_await BorrowDatabase();
-		auto num_infractions = cInfractionsDAO(db).Register(*pUser, i.GetId().GetTimestamp(), reason);
+		/*auto num_infractions =*/ cInfractionsDAO(db).Register(*pUser, now, reason);
 		co_await ReturnDatabase(std::move(db));
 
-		// TODO: Send a proper embed and timeout user
-		response.SetContent(std::format("Number of infractions in the last 2 weeks: {}", num_infractions));
+		auto& embed = response.EmplaceEmbeds().emplace_back();
+		embed.EmplaceAuthor(std::format("{} was warned ⚠️", pUser->GetUsername())).SetIconUrl(cCDN::GetUserAvatar(*pUser));
+		embed.SetColor(LMG_COLOR_YELLOW);
+		embed.SetTimestamp(now);
+		embed.EmplaceFields().emplace_back("Reason", reason.empty() ? "`Unspecified`" : reason);
+
+		// TODO: Change db Register() result to how many days passed between most recent warns and timeout user
+		response.SetComponents({
+			cActionRow{
+				cButton{
+					BUTTON_STYLE_SECONDARY,
+					"?",
+					"View all infractions",
+					true // Temporarily disable this button; TODO: implement
+				},
+				cButton{
+					BUTTON_STYLE_DANGER,
+					std::format("unwarn:undo:{}:{}", pUser->GetId(), now.time_since_epoch().count()),
+					"Undo"
+				}
+			}
+		});
 	}
 	/* Send final confirmation message */
 	co_await InteractionSendMessage(i, response);
@@ -165,7 +187,7 @@ cGreekBot::process_infractions_remove(cMsgCompInteraction& i, std::string_view f
 		auto db = co_await BorrowDatabase();
 		auto infs = [&] {
 			cInfractionsDAO dao(db);
-			dao.Delete(sys_time(milliseconds(cUtils::ParseInt<milliseconds::rep>(i.GetValues().front()))));
+			dao.Delete(user_id, sys_time(milliseconds(cUtils::ParseInt<milliseconds::rep>(i.GetValues().front()))));
 			return dao.GetStatsByUser(user_id, now);
 		} ();
 		co_await ReturnDatabase(std::move(db));
@@ -192,6 +214,24 @@ cGreekBot::process_infractions_remove(cMsgCompInteraction& i, std::string_view f
 		co_await ReturnDatabase(std::move(db));
 		/* Update response; Change embed message and remove all buttons */
 		response.EmplaceEmbeds(i.GetMessage().MoveEmbeds()).at(0).SetDescription("✅ All infractions removed").SetTimestamp(now).ResetFields();
+		response.EmplaceComponents();
+	}
+	/* ...otherwise, if the 'Undo' button was clicked... */
+	else if (auto n = fmt.starts_with("undo:") ? fmt.find(':', 5) : std::string_view::npos; n != std::string_view::npos) {
+		using namespace std::chrono;
+		cSnowflake user_id = fmt.substr(5, n - 5);
+		auto timestamp = sys_time(milliseconds(cUtils::ParseInt<milliseconds::rep>(fmt.substr(n + 1))));
+
+		co_await InteractionDefer(i, false);
+		auto db = co_await BorrowDatabase();
+		cInfractionsDAO(db).Delete(user_id, timestamp);
+		co_await ReturnDatabase(std::move(db));
+
+		auto& embed = response.EmplaceEmbeds(i.GetMessage().MoveEmbeds()).at(0);
+		auto& author = *embed.SetDescription("✅ Infraction removed").SetTimestamp(now).GetAuthor();
+		auto  name = author.GetName();
+		author.SetName(name.substr(0, name.rfind(" was")));
+		embed.ResetFields();
 		response.EmplaceComponents();
 	}
 	/* ...otherwise, if the 'Remove an infraction' button was clicked... */

@@ -1,1 +1,1 @@
-DELETE FROM infractions WHERE timestamp IS ?;
+DELETE FROM infractions WHERE user_id IS ? AND timestamp IS ?;
