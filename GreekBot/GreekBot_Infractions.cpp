@@ -64,9 +64,8 @@ cGreekBot::process_warn(cAppCmdInteraction& i) HANDLER_BEGIN {
 			cActionRow{
 				cButton{
 					BUTTON_STYLE_SECONDARY,
-					"?",
-					"View all infractions",
-					true // Temporarily disable this button; TODO: implement
+					std::format("infractions:{}", pUser->GetId()),
+					"View all infractions"
 				},
 				cButton{
 					BUTTON_STYLE_DANGER,
@@ -118,7 +117,7 @@ cGreekBot::process_infractions(cAppCmdInteraction& i) HANDLER_BEGIN {
 	else if (!(i.GetMember()->GetPermissions() & PERM_MODERATE_MEMBERS)) {
 		co_return co_await InteractionSendMessage(i, response
 			.SetFlags(MESSAGE_FLAG_EPHEMERAL)
-			.SetContent("You can't do that! You are only allowed to view your infractions.")
+			.SetContent("You can't do that! You are only allowed to view your own infractions.")
 		);
 	}
 
@@ -161,6 +160,51 @@ cGreekBot::process_infractions(cAppCmdInteraction& i) HANDLER_BEGIN {
 	}
 
 	co_await InteractionSendMessage(i, response);
+} HANDLER_END
+
+cTask<>
+cGreekBot::process_infractions_button(cMsgCompInteraction& i, cSnowflake user_id) HANDLER_BEGIN {
+	/* We only allow a moderator or the offending user to view infractions */
+	if (i.GetUser().GetId() != user_id && !(i.GetMember()->GetPermissions() & PERM_MODERATE_MEMBERS)) {
+		co_return co_await InteractionSendMessage(i, cPartialMessage()
+			.SetFlags(MESSAGE_FLAG_EPHEMERAL)
+			.SetContent("You can't do that! You are only allowed to view your own infractions.")
+		);
+	}
+	const auto now = i.GetId().GetTimestamp();
+	/* Get user stats from the database */
+	co_await InteractionDefer(i);
+	auto db = co_await BorrowDatabase();
+	auto infs = cInfractionsDAO(db).GetStatsByUser(user_id, now);
+	co_await ReturnDatabase(std::move(db));
+
+	/* Prepare a response by keeping just the author's username and removing all buttons */
+	cMessageUpdate response;
+	auto& comps = response.EmplaceComponents();
+	auto& embed = response.EmplaceEmbeds(i.GetMessage().MoveEmbeds()).at(0).SetTimestamp(now);
+	auto& author = *embed.GetAuthor();
+	auto name = author.GetName();
+	author.SetName(name.substr(0, name.rfind(" was")));
+
+	if (infs.entries.empty()) {
+		/* Simple confirmation message if no infractions found */
+		embed.SetDescription("✅ No infractions found").ResetFields();
+	} else {
+		/* Write stats to the embed */
+		make_stats(embed, infs);
+		/* Add 'Remove an infraction' and 'Remove all infractions' buttons */
+		comps.emplace_back(cButton{
+			BUTTON_STYLE_SECONDARY,
+			std::format("unwarn:{}", user_id),
+			"Remove an infraction"
+		}, cButton {
+			BUTTON_STYLE_DANGER,
+			std::format("unwarn:all:{}", user_id),
+			"Remove all infractions"
+		});
+	}
+	/* Update original message */
+	co_await InteractionEditMessage(i, response);
 } HANDLER_END
 
 cTask<>
