@@ -14,26 +14,34 @@ cTask<>
 cGreekBot::process_warn(cAppCmdInteraction& i) HANDLER_BEGIN {
 	cPartialMessage response;
 	/* First, make sure that the invoking user has the appropriate permissions, just for good measure */
-	if (!(i.GetMember()->GetPermissions() & PERM_MODERATE_MEMBERS)) {
-		co_return co_await InteractionSendMessage(i, response
-			.SetFlags(MESSAGE_FLAG_EPHEMERAL)
-			.SetContent("You can't do that! You're missing the `MODERATE_MEMBERS` permission.")
-		);
-	}
+	if (!(i.GetMember()->GetPermissions() & PERM_MODERATE_MEMBERS))
+		co_return co_await InteractionSendMessage(i, NO_PERM_MSG);
 
 	/* Collect parameters */
 	hUser pUser;
 	hPartialMember pMember;
 	std::string_view reason;
-	for (auto& option : i.GetOptions()) {
-		if (option.GetName() == "user")
-			std::tie(pUser, pMember) = option.GetValue<APP_CMD_OPT_USER>();
-		else if (option.GetName() == "reason")
-			reason = option.GetValue<APP_CMD_OPT_STRING>();
+	if (i.GetCommandType() == APP_CMD_USER) {
+		/* If the command was invoked through the context menu, there's only one option: the target user */
+		std::tie(pUser, pMember) = i.GetOptions().front().GetValue<APP_CMD_OPT_USER>();
+	} else {
+		/* Otherwise, go through every option */
+		for (auto &option: i.GetOptions()) {
+			if (auto name = option.GetName(); name == "user")
+				std::tie(pUser, pMember) = option.GetValue<APP_CMD_OPT_USER>();
+			else if (name == "reason")
+				reason = option.GetValue<APP_CMD_OPT_STRING>();
+			else
+				throw std::runtime_error(std::format("Unexpected option: {:?}", name));
+		}
 	}
 
+	/* Check that the target user is still a member */
+	if (!pMember) {
+		response.SetFlags(MESSAGE_FLAG_EPHEMERAL).SetContent("Warning non-members is kinda pointless, innit?");
+	}
 	/* Special message for when anyone tries to warn this bot */
-	if (pUser->GetId() == GetUser().GetId()) {
+	else if (pUser->GetId() == GetUser().GetId()) {
 		response.SetFlags(MESSAGE_FLAG_EPHEMERAL).SetContent("Πριτς");
 	}
 	/* Check for target bot */
@@ -43,6 +51,30 @@ cGreekBot::process_warn(cAppCmdInteraction& i) HANDLER_BEGIN {
 	/* Check for target moderator */
 	else if (pMember->GetPermissions() & PERM_MODERATE_MEMBERS) {
 		response.SetFlags(MESSAGE_FLAG_EPHEMERAL).SetContent("You can't warn a fellow moderator!");
+	}
+	/* If the command was invoked through a context menu, send a modal to request a warn reason */
+	else if (i.GetCommandType() == APP_CMD_USER) {
+		co_return co_await InteractionSendModal(i, cModal{
+			std::format("warn:{}:{}:{}:{}", pUser->GetId(), pUser->GetUsername(), pUser->GetAvatar(), pUser->GetDiscriminator()),
+			std::format("Warn @{}", [pUser, pMember] {
+				if (auto name = pMember->GetNick(); !name.empty())
+					return name;
+				else if (name = pUser->GetGlobalName(); !name.empty())
+					return name;
+				else
+					return pUser->GetUsername();
+			} ()),
+			{
+				cActionRow{
+					cTextInput{
+						TEXT_INPUT_SHORT,
+						{}, // We don't need a custom id since this is the only component of the modal
+						"Reason",
+						false
+					}
+				}
+			}
+		});
 	}
 	/* All clear, register the infraction in the database; */
 	else [[likely]] {
@@ -78,6 +110,19 @@ cGreekBot::process_warn(cAppCmdInteraction& i) HANDLER_BEGIN {
 	/* Send final confirmation message */
 	co_await InteractionSendMessage(i, response);
 } HANDLER_END
+
+cTask<>
+cGreekBot::process_warn(cModalSubmitInteraction& i, std::string_view fmt) {
+	/* Check permissions */
+	if (!(i.GetMember()->GetPermissions() & PERM_MODERATE_MEMBERS))
+		co_return co_await InteractionSendMessage(i, NO_PERM_MSG);
+
+	// TODO
+	co_await InteractionSendMessage(i, cPartialMessage()
+		.SetFlags(MESSAGE_FLAG_EPHEMERAL)
+		.SetContent("TBA")
+	);
+}
 
 static void make_stats(cEmbed& embed, const infraction_result& res) {
 	auto stat_to_str = [](std::int64_t num) { return std::format("{} infraction{}", num, num == 1 ? "" : "s"); };

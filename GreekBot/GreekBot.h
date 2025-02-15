@@ -56,6 +56,7 @@ private:
 	cTask<> process_timestamp(cAppCmdInteraction&);
 	cTask<> process_clear(cAppCmdInteraction&);
 	cTask<> process_warn(cAppCmdInteraction&);
+	cTask<> process_warn(cModalSubmitInteraction&, std::string_view);
 	cTask<> process_infractions(cAppCmdInteraction&);
 	cTask<> process_infractions_button(cMsgCompInteraction&, cSnowflake);
 	cTask<> process_infractions_remove(cMsgCompInteraction&, std::string_view);

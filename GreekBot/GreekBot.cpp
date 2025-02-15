@@ -138,7 +138,8 @@ cGreekBot::process_interaction(cAppCmdInteraction& i) HANDLER_BEGIN {
 			return process_ban_ctx_menu(i, "greek");
 		case 1254933366562754591: // clear
 			return process_clear(i);
-		case 1336758756062527581:
+		case 1336758756062527581: // /warn
+		case 1340296154868613231: // Apps > Warn
 			return process_warn(i);
 		case 1336832339753570386:
 			return process_infractions(i);
@@ -186,9 +187,11 @@ cGreekBot::process_interaction(cModalSubmitInteraction& i) HANDLER_BEGIN {
 	const auto custom_id = i.GetCustomId();
 	if (custom_id.starts_with("ban:"))
 		return process_ban_modal(i, custom_id.substr(4));
+	if (custom_id.starts_with("warn:"))
+		return process_warn(i, custom_id.substr(5));
 	if (custom_id == "NICKNAME_MODAL")
 		return process_modal(i);
-	throw std::runtime_error(std::format("Unknown modal id \"{}\" 0x{:08X}", custom_id, cUtils::CRC32(0, custom_id)));
+	throw std::runtime_error(std::format("Unknown modal id {:?} 0x{:08X}", custom_id, cUtils::CRC32(0, custom_id)));
 } HANDLER_END
 
 cTask<>
