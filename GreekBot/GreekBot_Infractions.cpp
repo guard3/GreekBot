@@ -12,7 +12,6 @@ static const auto NO_PERM_MSG = [] {
 
 cTask<>
 cGreekBot::process_warn(cAppCmdInteraction& i) HANDLER_BEGIN {
-	cPartialMessage response;
 	/* First, make sure that the invoking user has the appropriate permissions, just for good measure */
 	if (!(i.GetMember()->GetPermissions() & PERM_MODERATE_MEMBERS))
 		co_return co_await InteractionSendMessage(i, NO_PERM_MSG);
@@ -36,24 +35,29 @@ cGreekBot::process_warn(cAppCmdInteraction& i) HANDLER_BEGIN {
 		}
 	}
 
-	/* Check that the target user is still a member */
-	if (!pMember) {
-		response.SetFlags(MESSAGE_FLAG_EPHEMERAL).SetContent("Warning non-members is kinda pointless, innit?");
-	}
-	/* Special message for when anyone tries to warn this bot */
-	else if (pUser->GetId() == GetUser().GetId()) {
-		response.SetFlags(MESSAGE_FLAG_EPHEMERAL).SetContent("Πριτς");
-	}
-	/* Check for target bot */
-	else if (pUser->IsBotUser() || pUser->IsSystemUser()) {
-		response.SetFlags(MESSAGE_FLAG_EPHEMERAL).SetContent("You can't warn bots! Bots ενωμένα ποτέ νικημένα!");
-	}
-	/* Check for target moderator */
-	else if (pMember->GetPermissions() & PERM_MODERATE_MEMBERS) {
-		response.SetFlags(MESSAGE_FLAG_EPHEMERAL).SetContent("You can't warn a fellow moderator!");
-	}
+	/* Test for error conditions */
+	if (auto error_msg = [&] -> const char* {
+		/* Check that the target user is actually a member */
+		if (!pMember)
+			return "Warning non-members is kinda pointless, innit?";
+		/* Don't warn this bot */
+		if (pUser->GetId() == GetUser().GetId())
+			return "Πριτς";
+		/* Don't let the invoking user warn themselves */
+		if (pUser->GetId() == i.GetUser().GetId())
+			return "You want to warn yourself? Very humble of you 🤣";
+		/* Check for target bot */
+		if (pUser->IsBotUser() || pUser->IsSystemUser())
+			return "You can't warn bots! Bots ενωμένα ποτέ νικημένα! 🤖";
+		/* Check for target moderator */
+		if (pMember->GetPermissions() & PERM_MODERATE_MEMBERS)
+			return "You can't warn a fellow moderator!";
+		/* No error condition, yay! */
+		return nullptr;
+	} ()) co_return co_await InteractionSendMessage(i, cPartialMessage().SetFlags(MESSAGE_FLAG_EPHEMERAL).SetContent(error_msg));
+
 	/* If the command was invoked through a context menu, send a modal to request a warn reason */
-	else if (i.GetCommandType() == APP_CMD_USER) {
+	if (i.GetCommandType() == APP_CMD_USER) {
 		co_return co_await InteractionSendModal(i, cModal{
 			std::format("warn:{}:{}:{}:{}", pUser->GetId(), pUser->GetUsername(), pUser->GetAvatar(), pUser->GetDiscriminator()),
 			std::format("Warn @{}", [pUser, pMember] {
@@ -76,52 +80,80 @@ cGreekBot::process_warn(cAppCmdInteraction& i) HANDLER_BEGIN {
 			}
 		});
 	}
-	/* All clear, register the infraction in the database; */
-	else [[likely]] {
-		const auto now = i.GetId().GetTimestamp();
 
-		co_await InteractionDefer(i, true);
-		auto db = co_await BorrowDatabase();
-		/*auto num_infractions =*/ cInfractionsDAO(db).Register(*pUser, now, reason);
-		co_await ReturnDatabase(std::move(db));
-
-		auto& embed = response.EmplaceEmbeds().emplace_back();
-		embed.EmplaceAuthor(std::format("{} was warned ⚠️", pUser->GetUsername())).SetIconUrl(cCDN::GetUserAvatar(*pUser));
-		embed.SetColor(LMG_COLOR_YELLOW);
-		embed.SetTimestamp(now);
-		embed.EmplaceFields().emplace_back("Reason", reason.empty() ? "`Unspecified`" : reason);
-
-		// TODO: Change db Register() result to how many days passed between most recent warns and timeout user
-		response.SetComponents({
-			cActionRow{
-				cButton{
-					BUTTON_STYLE_SECONDARY,
-					std::format("infractions:{}", pUser->GetId()),
-					"View all infractions"
-				},
-				cButton{
-					BUTTON_STYLE_DANGER,
-					std::format("unwarn:undo:{}:{}", pUser->GetId(), now.time_since_epoch().count()),
-					"Undo"
-				}
-			}
-		});
-	}
-	/* Send final confirmation message */
-	co_await InteractionSendMessage(i, response);
+	/* Proceed with the regular implementation */
+	co_await process_warn_impl(i, pUser->GetId(), pUser->GetUsername(), pUser->GetAvatar(), pUser->GetDiscriminator(), reason);
 } HANDLER_END
 
 cTask<>
-cGreekBot::process_warn(cModalSubmitInteraction& i, std::string_view fmt) {
+cGreekBot::process_warn(cModalSubmitInteraction& i, std::string_view fmt) HANDLER_BEGIN {
 	/* Check permissions */
 	if (!(i.GetMember()->GetPermissions() & PERM_MODERATE_MEMBERS))
 		co_return co_await InteractionSendMessage(i, NO_PERM_MSG);
 
-	// TODO
-	co_await InteractionSendMessage(i, cPartialMessage()
-		.SetFlags(MESSAGE_FLAG_EPHEMERAL)
-		.SetContent("TBA")
-	);
+	/* A simple exception for when the fmt (for whatever reason) is invalid */
+	auto invalid_fmt = [fmt] [[noreturn]] { throw std::runtime_error(std::format("Invalid warn modal custom id: {:?}", fmt)); };
+	/* Collect parameters from the format string */
+	std::size_t p{}, q{};
+	if (q = fmt.find(':', p); q == std::string_view::npos) invalid_fmt();
+	cSnowflake user_id = fmt.substr(p, q++ - p);
+	if (p = fmt.find(':', q); p == std::string_view::npos) invalid_fmt();
+	auto username = fmt.substr(q, p++ - q);
+	if (q = fmt.find(':', p); q == std::string_view::npos) invalid_fmt();
+	auto avatar = fmt.substr(p, q++ - p);
+	auto discriminator = cUtils::ParseInt<std::uint16_t>(fmt.substr(q));
+
+	/* Test for error conditions */
+	if (auto error_msg = [&] -> const char* {
+		/* Make sure we're not warning this bot */
+		if (user_id == GetUser().GetId())
+			return "Πριτς";
+		/* Also make sure that the invoking user isn't warning themselves */
+		if (user_id == i.GetUser().GetId())
+			return "You want to warn yourself? Very humble of you 🤣";
+		/* No error condition, yay! */
+		return nullptr;
+	} ()) co_return co_await InteractionSendMessage(i, cPartialMessage().SetFlags(MESSAGE_FLAG_EPHEMERAL).SetContent(error_msg));
+
+	/* Proceed with the regular implementation */
+	std::string_view reason = get<cTextInput>(i.GetComponents().front().GetComponents().front()).GetValue();
+	co_await process_warn_impl(i, user_id, username, avatar, discriminator, reason);
+} HANDLER_END
+
+cTask<>
+cGreekBot::process_warn_impl(cInteraction& i, const cSnowflake &user_id, std::string_view username, std::string_view avatar, std::uint16_t discriminator, std::string_view reason) {
+	const auto now = i.GetId().GetTimestamp();
+	cPartialMessage response;
+
+	co_await InteractionDefer(i, true);
+	auto db = co_await BorrowDatabase();
+	/*auto num_infractions =*/ cInfractionsDAO(db).Register(user_id, now, reason);
+	co_await ReturnDatabase(std::move(db));
+
+	auto& embed = response.EmplaceEmbeds().emplace_back();
+	embed.EmplaceAuthor(std::format("{} was warned ⚠️", username)).SetIconUrl(cCDN::GetUserAvatar(user_id, avatar, discriminator));
+	embed.SetColor(LMG_COLOR_YELLOW);
+	embed.SetTimestamp(now);
+	embed.EmplaceFields().emplace_back("Reason", reason.empty() ? "`Unspecified`" : reason);
+
+	// TODO: Change db Register() result to how many days passed between most recent warns and timeout user
+	response.SetComponents({
+		cActionRow{
+			cButton{
+				BUTTON_STYLE_SECONDARY,
+				std::format("infractions:{}", user_id),
+				"View all infractions"
+			},
+			cButton{
+				BUTTON_STYLE_DANGER,
+				std::format("unwarn:undo:{}:{}", user_id, now.time_since_epoch().count()),
+				"Undo"
+			}
+		}
+	});
+
+	/* Send confirmation message */
+	co_await InteractionSendMessage(i, response);
 }
 
 static void make_stats(cEmbed& embed, const infraction_result& res) {

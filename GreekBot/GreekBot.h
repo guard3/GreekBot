@@ -57,6 +57,7 @@ private:
 	cTask<> process_clear(cAppCmdInteraction&);
 	cTask<> process_warn(cAppCmdInteraction&);
 	cTask<> process_warn(cModalSubmitInteraction&, std::string_view);
+	cTask<> process_warn_impl(cInteraction&, const cSnowflake& user_id, std::string_view username, std::string_view avatar, std::uint16_t discriminator, std::string_view reason);
 	cTask<> process_infractions(cAppCmdInteraction&);
 	cTask<> process_infractions_button(cMsgCompInteraction&, cSnowflake);
 	cTask<> process_infractions_remove(cMsgCompInteraction&, std::string_view);
