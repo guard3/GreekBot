@@ -199,22 +199,24 @@ cGreekBot::process_infractions(cAppCmdInteraction& i) HANDLER_BEGIN {
 	}
 
 	const auto now = i.GetId().GetTimestamp();
-	infraction_result infs;
-	/* If the target member has no immunity, retrieve infractions from the database */
-	if (!pUser->IsBotUser() && !pUser->IsSystemUser() && !(pMember->GetPermissions() & PERM_MODERATE_MEMBERS)) {
-		co_await InteractionDefer(i, true);
-		auto db = co_await BorrowDatabase();
-		infs = cInfractionsDAO(db).GetStatsByUser(*pUser, now);
-		co_await ReturnDatabase(std::move(db));
-	}
+	/* Retrieve infraction stats from the database */
+	co_await InteractionDefer(i, true);
+	auto db = co_await BorrowDatabase();
+	auto infs = cInfractionsDAO(db).GetStatsByUser(*pUser, now);
+	co_await ReturnDatabase(std::move(db));
 
 	auto& embed = response.EmplaceEmbeds().emplace_back();
 	embed.EmplaceAuthor(pUser->GetUsername()).SetIconUrl(cCDN::GetUserAvatar(*pUser));
 	embed.SetColor(LMG_COLOR_YELLOW);
 	embed.SetTimestamp(now);
 
+	/* Check that the user is a member of Learning Greek */
+	if (!pMember) {
+		co_await ResumeOnEventStrand();
+		embed.SetDescription(std::format("User is not a member of **{}**{}", m_guilds.at(*i.GetGuildId()).GetName(), infs.entries.empty() ? "" : " anymore"));
+	}
 	/* Fill the embed with infraction info */
-	if (infs.entries.empty()) {
+	else if (infs.entries.empty()) {
 		embed.SetDescription("✅ No infractions found");
 	} else {
 		/* Update embed to include stats */
