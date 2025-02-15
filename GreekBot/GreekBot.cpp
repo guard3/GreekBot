@@ -141,7 +141,8 @@ cGreekBot::process_interaction(cAppCmdInteraction& i) HANDLER_BEGIN {
 		case 1336758756062527581: // /warn
 		case 1340296154868613231: // Apps > Warn
 			return process_warn(i);
-		case 1336832339753570386:
+		case 1336832339753570386: // /infractions
+		case 1340461497221910568: // Apps > View infractions
 			return process_infractions(i);
 		case 1178824125192613939: // test
 			return process_test(i);

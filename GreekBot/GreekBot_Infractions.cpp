@@ -181,9 +181,13 @@ cGreekBot::process_infractions(cAppCmdInteraction& i) HANDLER_BEGIN {
 	/* Collect parameters */
 	hUser pUser;
 	hPartialMember pMember;
-	for (auto& option : i.GetOptions()) {
-		if (option.GetName() == "user")
-			std::tie(pUser, pMember) = option.GetValue<APP_CMD_OPT_USER>();
+	if (i.GetCommandType() == APP_CMD_USER) {
+		std::tie(pUser, pMember) = i.GetOptions().front().GetValue<APP_CMD_OPT_USER>();
+	} else {
+		for (auto &option: i.GetOptions()) {
+			if (option.GetName() == "user")
+				std::tie(pUser, pMember) = option.GetValue<APP_CMD_OPT_USER>();
+		}
 	}
 	/* If no user parameter is specified, we allow the invoking user to view their infractions... */
 	if (!pUser) {
