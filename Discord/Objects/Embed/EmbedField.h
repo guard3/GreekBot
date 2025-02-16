@@ -43,9 +43,9 @@ public:
 	template<typename Arg = std::string, typename... Args> requires std::constructible_from<std::string, Arg&&, Args&&...>
 	std::string& EmplaceValue(Arg&& arg, Args&&... args) {
 		if constexpr (std::assignable_from<std::string&, Arg&&> && sizeof...(args) == 0)
-			return m_name = std::forward<Arg>(arg);
+			return m_value = std::forward<Arg>(arg);
 		else
-			return m_name = std::string(std::forward<Arg>(arg), std::forward<Args>(args)...);
+			return m_value = std::string(std::forward<Arg>(arg), std::forward<Args>(args)...);
 	}
 	/* Setters */
 	template<iMutable Self, iExplicitlyConvertibleTo<std::string> Arg = std::string>
