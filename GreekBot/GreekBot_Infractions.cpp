@@ -182,9 +182,8 @@ cGreekBot::process_warn_impl(cInteraction& i, const cSnowflake &user_id, std::st
 			cActionRow{
 				cButton{
 					BUTTON_STYLE_DANGER,
-					"?", // TODO: implement
-					"Remove timeout",
-					true
+					std::format("timeout:{}", user_id),
+					"Remove timeout"
 				}
 			}
 		});
@@ -442,5 +441,19 @@ cGreekBot::process_infractions_remove(cMsgCompInteraction& i, std::string_view f
 		}
 	}
 
+	co_await InteractionEditMessage(i, response);
+} HANDLER_END
+
+cTask<>
+cGreekBot::process_timeout_remove(cMsgCompInteraction& i, cSnowflake user_id) HANDLER_BEGIN {
+	/* Check permissions */
+	if (!(i.GetMember()->GetPermissions() & PERM_MODERATE_MEMBERS))
+		co_return co_await InteractionSendMessage(i, NO_PERM_MSG);
+
+	cMessageUpdate response;
+	response.EmplaceEmbeds(i.GetMessage().MoveEmbeds()).at(0).SetDescription("✅ Timeout removed").SetTimestamp(i.GetId().GetTimestamp()).ResetFields();
+	response.EmplaceComponents();
+
+	co_await ModifyGuildMember(*i.GetGuildId(), user_id, cMemberOptions().SetCommunicationsDisabledUntil({}));
 	co_await InteractionEditMessage(i, response);
 } HANDLER_END
