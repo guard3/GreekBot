@@ -125,18 +125,18 @@ cGreekBot::process_warn_impl(cInteraction& i, const cSnowflake &user_id, std::st
 	const auto now = i.GetId().GetTimestamp();
 	cPartialMessage response;
 
+	/* Register new infraction and calculate the delta between the 2 most recent infractions */
 	co_await InteractionDefer(i, true);
 	auto db = co_await BorrowDatabase();
-	/*auto num_infractions =*/ cInfractionsDAO(db).Register(user_id, now, reason);
+	auto dt = cInfractionsDAO(db).Register(user_id, now, reason);
 	co_await ReturnDatabase(std::move(db));
 
 	auto& embed = response.EmplaceEmbeds().emplace_back();
-	embed.EmplaceAuthor(std::format("{} was warned ⚠️", username)).SetIconUrl(cCDN::GetUserAvatar(user_id, avatar, discriminator));
-	embed.SetColor(LMG_COLOR_YELLOW);
 	embed.SetTimestamp(now);
-	embed.EmplaceFields().emplace_back("Reason", reason.empty() ? "`Unspecified`" : reason);
+	embed.SetColor(LMG_COLOR_YELLOW);
+	auto& author = embed.EmplaceAuthor(std::format("{} was warned ⚠️", username)).SetIconUrl(cCDN::GetUserAvatar(user_id, avatar, discriminator));
+	auto& field = embed.EmplaceFields().emplace_back("Reason", reason.empty() ? "`Unspecified`" : reason);
 
-	// TODO: Change db Register() result to how many days passed between most recent warns and timeout user
 	response.SetComponents({
 		cActionRow{
 			cButton{
@@ -154,6 +154,45 @@ cGreekBot::process_warn_impl(cInteraction& i, const cSnowflake &user_id, std::st
 
 	/* Send confirmation message */
 	co_await InteractionSendMessage(i, response);
+
+	/* Check if we need to time out the user */
+	using namespace std::chrono;
+	if (dt != milliseconds{}) { // TODO: if long enough time passes be generous and let them free?
+		/* How long to time out for? */
+		int timeout_days;
+		if (dt < days(3))
+			timeout_days = 7;
+		else if (dt < weeks(1))
+			timeout_days = 5;
+		else if (dt < weeks(2))
+			timeout_days = 3;
+		else
+			timeout_days = 1;
+
+		/* Edit response to reflect timeout reason */
+		embed.SetDescription(std::format("User timed out for **{}** day{}", timeout_days, timeout_days == 1 ? "" : "s"));
+		author.SetName(username);
+		if (std::string& rsn = field.EmplaceValue("Was warned multiple times"); dt <= days(1))
+			rsn += " in a day";
+		else if (dt < months(1))
+			std::format_to(back_inserter(rsn), " within {} days", ceil<days>(dt).count());
+
+		/* Add a button to remove timeout */
+		response.SetComponents({
+			cActionRow{
+				cButton{
+					BUTTON_STYLE_DANGER,
+					"?", // TODO: implement
+					"Remove timeout",
+					true
+				}
+			}
+		});
+
+		// TODO: mark these infractions as completed in the database
+		co_await ModifyGuildMember(*i.GetGuildId(), user_id, cMemberOptions().SetCommunicationsDisabledUntil(now + days(timeout_days)));
+		co_await InteractionSendMessage(i, response);
+	}
 }
 
 static void make_stats(cEmbed& embed, const infraction_result& res) {

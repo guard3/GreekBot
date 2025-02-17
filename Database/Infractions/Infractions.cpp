@@ -1,15 +1,14 @@
 #include "Infractions.h"
 #include "InfractionsQueries.h"
 
-std::int64_t
+std::chrono::milliseconds
 cInfractionsDAO::Register(crefUser user, std::chrono::sys_time<std::chrono::milliseconds> timepoint, std::string_view reason) {
 	using namespace std::chrono;
 	auto[stmt, _] = m_conn.prepare(QUERY_WARN_REGISTER);
 	stmt.bind(1, user.GetId());
 	stmt.bind(2, timepoint.time_since_epoch().count());
 	reason.empty() ? stmt.bind(3, nullptr) : stmt.bind(3, reason);
-	stmt.bind(4, floor<milliseconds>(days(15)).count());
-	return stmt.step() ? stmt.column_int(0) : 0;
+	return milliseconds(stmt.step() ? stmt.column_int(0) : 0);
 }
 
 std::vector<infraction_entry>

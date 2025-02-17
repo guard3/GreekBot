@@ -79,8 +79,14 @@ tag_invoke(json::value_to_tag<cMember>, const json::value& v) {
 void
 tag_invoke(json::value_from_tag, json::value& v, const cMemberOptions& m) {
 	json::object& obj = v.emplace_object();
+	obj.reserve(3);
 	if (m.m_nick)
 		obj.emplace("nick", *m.m_nick);
 	if (m.m_roles)
 		json::value_from(*m.m_roles, obj["roles"]);
+	if (m.m_communications_disabled_until) {
+		auto& cdu = obj["communication_disabled_until"];
+		if (*m.m_communications_disabled_until != std::chrono::sys_time<std::chrono::milliseconds>{})
+			cdu = cUtils::FormatISOTimestamp(*m.m_communications_disabled_until);
+	}
 }

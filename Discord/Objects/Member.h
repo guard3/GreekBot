@@ -11,6 +11,7 @@
 class cMemberOptions {
 	std::optional<std::string> m_nick;
 	std::optional<std::vector<cSnowflake>> m_roles;
+	std::optional<std::chrono::sys_time<std::chrono::milliseconds>> m_communications_disabled_until;
 
 public:
 	template<typename T = decltype(m_nick)::value_type, typename Arg = T> requires std::constructible_from<T, Arg&&>
@@ -21,6 +22,10 @@ public:
 	template<typename T = decltype(m_roles)::value_type, typename Arg = T> requires std::constructible_from<T, Arg&&>
 	cMemberOptions& SetRoles(Arg&& arg) {
 		m_roles.emplace(std::forward<Arg>(arg));
+		return *this;
+	}
+	cMemberOptions& SetCommunicationsDisabledUntil(std::chrono::sys_time<std::chrono::milliseconds> timestamp) {
+		m_communications_disabled_until = timestamp;
 		return *this;
 	}
 	template<typename T = decltype(m_roles)::value_type, typename... Args> requires std::constructible_from<T, Args&&...>
