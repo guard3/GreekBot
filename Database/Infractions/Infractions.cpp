@@ -69,3 +69,11 @@ cInfractionsDAO::DeleteAll(crefUser user) {
 	stmt.bind(1, user.GetId());
 	while (stmt.step());
 }
+
+void
+cInfractionsDAO::TimeOut(crefUser user, std::chrono::sys_time<std::chrono::milliseconds> now) {
+	auto[stmt, _] = m_conn.prepare(QUERY_WARN_TIMEOUT);
+	stmt.bind(1, user.GetId());
+	stmt.bind(2, now.time_since_epoch().count());
+	while (stmt.step());
+}

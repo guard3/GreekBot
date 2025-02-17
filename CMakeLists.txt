@@ -131,6 +131,7 @@ define_query(QUERY_WARN_GET        Database/Infractions/query_warn_get.sql)
 define_query(QUERY_WARN_STATS      Database/Infractions/query_warn_stats.sql)
 define_query(QUERY_WARN_DELETE     Database/Infractions/query_warn_delete.sql)
 define_query(QUERY_WARN_DELETE_ALL Database/Infractions/query_warn_delete_all.sql)
+define_query(QUERY_WARN_TIMEOUT    Database/Infractions/query_warn_timeout.sql)
 configure_file(Database/Infractions/InfractionsQueries.h.in InfractionsQueries.h)
 
 define_query(QUERY_INIT       Database/query_init.sql      )

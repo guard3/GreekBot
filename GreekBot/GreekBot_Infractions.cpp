@@ -128,8 +128,8 @@ cGreekBot::process_warn_impl(cInteraction& i, const cSnowflake &user_id, std::st
 	/* Register new infraction and calculate the delta between the 2 most recent infractions */
 	co_await InteractionDefer(i, true);
 	auto db = co_await BorrowDatabase();
-	auto dt = cInfractionsDAO(db).Register(user_id, now, reason);
-	co_await ReturnDatabase(std::move(db));
+	cInfractionsDAO dao(db);
+	auto dt = dao.Register(user_id, now, reason);
 
 	auto& embed = response.EmplaceEmbeds().emplace_back();
 	embed.SetTimestamp(now);
@@ -189,10 +189,14 @@ cGreekBot::process_warn_impl(cInteraction& i, const cSnowflake &user_id, std::st
 			}
 		});
 
-		// TODO: mark these infractions as completed in the database
+		/* Timeout user */
+		dao.TimeOut(user_id, now);
 		co_await ModifyGuildMember(*i.GetGuildId(), user_id, cMemberOptions().SetCommunicationsDisabledUntil(now + days(timeout_days)));
+
+		/* Send confirmation message */
 		co_await InteractionSendMessage(i, response);
 	}
+	co_await ReturnDatabase(std::move(db));
 }
 
 static void make_stats(cEmbed& embed, const infraction_result& res) {

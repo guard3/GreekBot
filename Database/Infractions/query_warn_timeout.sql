@@ -1,0 +1,1 @@
+UPDATE infractions SET timed_out = 1 WHERE user_id IS ? AND timestamp <= ?;

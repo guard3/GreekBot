@@ -24,5 +24,6 @@ public:
 	infraction_result GetStatsByUser(crefUser user, std::chrono::sys_time<std::chrono::milliseconds> now);
 	void Delete(crefUser user, std::chrono::sys_time<std::chrono::milliseconds> timestamp);
 	void DeleteAll(crefUser);
+	void TimeOut(crefUser user, std::chrono::sys_time<std::chrono::milliseconds> now);
 };
 #endif /* GREEKBOT_INFRACTIONS_H */
