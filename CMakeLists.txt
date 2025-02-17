@@ -127,7 +127,6 @@ define_query(QUERY_LB_TOP     Database/Leaderboard/query_lb_top.sql   )
 configure_file(Database/Leaderboard/LeaderboardQueries.h.in LeaderboardQueries.h)
 
 define_query(QUERY_WARN_REGISTER   Database/Infractions/query_warn_register.sql)
-define_query(QUERY_WARN_GET        Database/Infractions/query_warn_get.sql)
 define_query(QUERY_WARN_STATS      Database/Infractions/query_warn_stats.sql)
 define_query(QUERY_WARN_DELETE     Database/Infractions/query_warn_delete.sql)
 define_query(QUERY_WARN_DELETE_ALL Database/Infractions/query_warn_delete_all.sql)
