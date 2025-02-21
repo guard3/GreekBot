@@ -2,6 +2,7 @@
 #include "DBInfractions.h"
 #include "GreekBot.h"
 #include "Utils.h"
+#include "Transaction.h"
 #include <ranges>
 
 static const auto NO_PERM_MSG = [] {
@@ -127,8 +128,9 @@ cGreekBot::process_warn_impl(cInteraction& i, const cSnowflake &user_id, std::st
 
 	/* Register new infraction and calculate the delta between the 2 most recent infractions */
 	co_await InteractionDefer(i, true);
-	auto db = co_await BorrowDatabase();
-	cInfractionsDAO dao(db);
+	cTransaction txn(co_await BorrowDatabase());
+	cInfractionsDAO dao(txn.GetConnection());
+	txn.Begin();
 	auto dt = dao.Register(user_id, now, reason);
 
 	auto& embed = response.EmplaceEmbeds().emplace_back();
@@ -154,6 +156,7 @@ cGreekBot::process_warn_impl(cInteraction& i, const cSnowflake &user_id, std::st
 
 	/* Send confirmation message */
 	co_await InteractionSendMessage(i, response);
+	txn.Commit();
 
 	/* Check if we need to time out the user */
 	using namespace std::chrono;
@@ -189,13 +192,15 @@ cGreekBot::process_warn_impl(cInteraction& i, const cSnowflake &user_id, std::st
 		});
 
 		/* Timeout user */
+		txn.Begin();
 		dao.TimeOut(user_id, now);
 		co_await ModifyGuildMember(*i.GetGuildId(), user_id, cMemberOptions().SetCommunicationsDisabledUntil(now + days(timeout_days)));
+		txn.Commit();
 
 		/* Send confirmation message */
 		co_await InteractionSendMessage(i, response);
 	}
-	co_await ReturnDatabase(std::move(db));
+	co_await ReturnDatabase(txn.ReleaseConnection());
 }
 
 static void make_stats(cEmbed& embed, const infraction_result& res) {
