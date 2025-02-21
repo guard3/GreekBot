@@ -123,22 +123,16 @@ cGreekBot::process_warn(cModalSubmitInteraction& i, std::string_view fmt) HANDLE
 
 cTask<>
 cGreekBot::process_warn_impl(cInteraction& i, const cSnowflake &user_id, std::string_view username, std::string_view avatar, std::uint16_t discriminator, std::string_view reason) {
+	/* Consider 'now' to be when the current interaction was created */
 	const auto now = i.GetId().GetTimestamp();
+
+	/* Prepare the interaction message response */
 	cPartialMessage response;
-
-	/* Register new infraction and calculate the delta between the 2 most recent infractions */
-	co_await InteractionDefer(i, true);
-	cTransaction txn(co_await BorrowDatabase());
-	cInfractionsDAO dao(txn.GetConnection());
-	txn.Begin();
-	auto dt = dao.Register(user_id, now, reason);
-
-	auto& embed = response.EmplaceEmbeds().emplace_back();
-	embed.SetTimestamp(now);
-	embed.SetColor(LMG_COLOR_YELLOW);
+	/* Format the embed of the response */
+	auto& embed = response.EmplaceEmbeds().emplace_back().SetTimestamp(now).SetColor(LMG_COLOR_YELLOW);
 	auto& author = embed.EmplaceAuthor(std::format("{} was warned ⚠️", username)).SetIconUrl(cCDN::GetUserAvatar(user_id, avatar, discriminator));
 	auto& field = embed.EmplaceFields().emplace_back("Reason", reason.empty() ? "`Unspecified`" : reason);
-
+	/* Add 'View all infractions' and 'Undo' buttons */
 	response.SetComponents({
 		cActionRow{
 			cButton{
@@ -154,13 +148,21 @@ cGreekBot::process_warn_impl(cInteraction& i, const cSnowflake &user_id, std::st
 		}
 	});
 
+	/* Acknowledge interaction since accessing the database may be slow */
+	co_await InteractionDefer(i, true);
+	auto txn = co_await BorrowDatabaseTxn();
+	cInfractionsDAO dao(txn);
+
+	/* Register new infraction and calculate the delta between the 2 most recent infractions */
+	txn.Begin();
+	auto dt = dao.Register(user_id, now, reason);
 	/* Send confirmation message */
 	co_await InteractionSendMessage(i, response);
 	txn.Commit();
 
-	/* Check if we need to time out the user */
+	/* Time out the user if the 2 most recent infractions were added in less than 3 months */
 	using namespace std::chrono;
-	if (dt != milliseconds{}) { // TODO: if long enough time passes be generous and let them free?
+	if (dt > milliseconds(0) && dt < months(3)) {
 		/* How long to time out for? */
 		int timeout_days;
 		if (dt < days(3))
@@ -177,8 +179,10 @@ cGreekBot::process_warn_impl(cInteraction& i, const cSnowflake &user_id, std::st
 		author.SetName(username);
 		if (std::string& rsn = field.EmplaceValue("Was warned multiple times"); dt <= days(1))
 			rsn += " in a day";
-		else if (dt < months(1))
+		else if (dt <= months(1))
 			std::format_to(back_inserter(rsn), " within {} days", ceil<days>(dt).count());
+		else
+			std::format_to(back_inserter(rsn), " within {} months", ceil<months>(dt).count());
 
 		/* Add a button to remove timeout */
 		response.SetComponents({
@@ -191,16 +195,16 @@ cGreekBot::process_warn_impl(cInteraction& i, const cSnowflake &user_id, std::st
 			}
 		});
 
-		/* Timeout user */
+		/* Register timeout in the database */
 		txn.Begin();
 		dao.TimeOut(user_id, now);
+		/* Timeout member */
 		co_await ModifyGuildMember(*i.GetGuildId(), user_id, cMemberOptions().SetCommunicationsDisabledUntil(now + days(timeout_days)));
 		txn.Commit();
-
 		/* Send confirmation message */
 		co_await InteractionSendMessage(i, response);
 	}
-	co_await ReturnDatabase(txn.ReleaseConnection());
+	co_await ReturnDatabaseTxn(std::move(txn));
 }
 
 static void make_stats(cEmbed& embed, const infraction_result& res) {

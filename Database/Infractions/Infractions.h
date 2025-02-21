@@ -1,6 +1,7 @@
 #ifndef GREEKBOT_INFRACTIONS_H
 #define GREEKBOT_INFRACTIONS_H
 #include "Database.h"
+#include "Transaction.h"
 
 struct infraction_entry {
 	std::chrono::sys_time<std::chrono::milliseconds> timestamp;
@@ -16,13 +17,16 @@ class cInfractionsDAO {
 	sqlite::connection_ref m_conn;
 
 public:
-	explicit cInfractionsDAO(sqlite::connection_ref conn) noexcept : m_conn(conn) {}
+	using sys_milliseconds = std::chrono::sys_time<std::chrono::milliseconds>;
 
-	/* Given user, timepoint and content, register a new infraction and return the delta between the 2 most recent infractions */
-	std::chrono::milliseconds Register(crefUser user, std::chrono::sys_time<std::chrono::milliseconds> timepoint, std::string_view reason);
-	infraction_result GetStatsByUser(crefUser user, std::chrono::sys_time<std::chrono::milliseconds> now);
-	void Delete(crefUser user, std::chrono::sys_time<std::chrono::milliseconds> timestamp);
+	explicit cInfractionsDAO(sqlite::connection_ref conn) noexcept : m_conn(conn) {}
+	explicit cInfractionsDAO(cTransaction& txn) noexcept : m_conn(txn.GetConnection()) {}
+
+	/* Given user, timepoint and reason, register a new infraction and return the delta between the 2 most recent infractions */
+	std::chrono::milliseconds Register(crefUser user, sys_milliseconds timepoint, std::string_view reason);
+	infraction_result GetStatsByUser(crefUser user, sys_milliseconds now);
+	void Delete(crefUser user, sys_milliseconds timestamp);
 	void DeleteAll(crefUser);
-	void TimeOut(crefUser user, std::chrono::sys_time<std::chrono::milliseconds> now);
+	void TimeOut(crefUser user, sys_milliseconds now);
 };
 #endif /* GREEKBOT_INFRACTIONS_H */

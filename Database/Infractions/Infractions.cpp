@@ -2,7 +2,7 @@
 #include "InfractionsQueries.h"
 
 std::chrono::milliseconds
-cInfractionsDAO::Register(crefUser user, std::chrono::sys_time<std::chrono::milliseconds> timepoint, std::string_view reason) {
+cInfractionsDAO::Register(crefUser user, sys_milliseconds timepoint, std::string_view reason) {
 	using namespace std::chrono;
 	auto[stmt, _] = m_conn.prepare(QUERY_WARN_REGISTER);
 	stmt.bind(1, user.GetId());
@@ -12,7 +12,7 @@ cInfractionsDAO::Register(crefUser user, std::chrono::sys_time<std::chrono::mill
 }
 
 infraction_result
-cInfractionsDAO::GetStatsByUser(crefUser user, std::chrono::sys_time<std::chrono::milliseconds> now) {
+cInfractionsDAO::GetStatsByUser(crefUser user, sys_milliseconds now) {
 	using namespace std::chrono;
 	auto[stmt, _] = m_conn.prepare(QUERY_WARN_STATS);
 	stmt.bind(1, user.GetId());
@@ -41,7 +41,7 @@ cInfractionsDAO::GetStatsByUser(crefUser user, std::chrono::sys_time<std::chrono
 }
 
 void
-cInfractionsDAO::Delete(crefUser user, std::chrono::sys_time<std::chrono::milliseconds> timestamp) {
+cInfractionsDAO::Delete(crefUser user, sys_milliseconds timestamp) {
 	auto[stmt, _] = m_conn.prepare(QUERY_WARN_DELETE);
 	stmt.bind(1, user.GetId());
 	stmt.bind(2, timestamp.time_since_epoch().count());
@@ -56,7 +56,7 @@ cInfractionsDAO::DeleteAll(crefUser user) {
 }
 
 void
-cInfractionsDAO::TimeOut(crefUser user, std::chrono::sys_time<std::chrono::milliseconds> now) {
+cInfractionsDAO::TimeOut(crefUser user, sys_milliseconds now) {
 	auto[stmt, _] = m_conn.prepare(QUERY_WARN_TIMEOUT);
 	stmt.bind(1, user.GetId());
 	stmt.bind(2, now.time_since_epoch().count());

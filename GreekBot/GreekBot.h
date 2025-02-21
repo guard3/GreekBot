@@ -2,7 +2,7 @@
 #define GREEKBOT_GREEKBOT_H
 #include "Bot.h"
 #include "LearningGreek.h"
-#include "SQLite.h"
+#include "Transaction.h"
 #include <unordered_map>
 #include <span>
 
@@ -32,8 +32,13 @@ private:
 	std::vector<cVoiceState> m_lmg_voice_states;
 
 	/* TODO: put these in cDatabase after refactoring */
+	[[deprecated("Use transactions")]]
 	static cTask<sqlite::connection> BorrowDatabase();
+	[[deprecated("Use transactions")]]
 	static cTask<> ReturnDatabase(sqlite::connection);
+	/* Similar like above but using a transaction object instead of a db connection */
+	static cTask<cTransaction> BorrowDatabaseTxn();
+	static cTask<> ReturnDatabaseTxn(cTransaction);
 
 	cTask<> process_avatar(cAppCmdInteraction&);
 	cTask<> process_rank(cAppCmdInteraction&);
