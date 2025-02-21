@@ -341,6 +341,7 @@ cGreekBot::process_infractions_button(cMsgCompInteraction& i, cSnowflake user_id
 
 cTask<>
 cGreekBot::process_infractions_remove(cMsgCompInteraction& i, std::string_view fmt) HANDLER_BEGIN {
+	using namespace std::chrono;
 	/* First of all, check the invoking member's permissions */
 	if (!(i.GetMember()->GetPermissions() & PERM_MODERATE_MEMBERS))
 		co_return co_await InteractionSendMessage(i, NO_PERM_MSG);
@@ -353,27 +354,31 @@ cGreekBot::process_infractions_remove(cMsgCompInteraction& i, std::string_view f
 		get<cButton>(comps.at(1).GetComponents().front()).SetLabel("Remove an infraction").SetCustomId(std::format("unwarn:{}", fmt.substr(7)));
 		comps.front() = std::move(comps[1]);
 		comps.erase(comps.begin() + 1, comps.end());
-	}
-	/* ...otherwise, if an infraction was selected... */
-	else if (fmt.starts_with("menu:")) {
-		using namespace std::chrono;
-		cSnowflake user_id = fmt.substr(5);
-		/* Delete selected infraction and retrieve new user stats; TODO: make this a single query */
-		co_await InteractionDefer(i, false);
-		auto db = co_await BorrowDatabase();
-		auto infs = [&] {
-			cInfractionsDAO dao(db);
-			dao.Delete(user_id, sys_time(milliseconds(cUtils::ParseInt<milliseconds::rep>(i.GetValues().front()))));
-			return dao.GetStatsByUser(user_id, now);
-		} ();
-		co_await ReturnDatabase(std::move(db));
 
+		co_await InteractionEditMessage(i, response);
+		co_return;
+	}
+
+	/* In all other cases, accessing the database is required */
+	co_await InteractionDefer(i, false);
+	cTransaction txn = co_await BorrowDatabaseTxn();
+	cInfractionsDAO dao(txn);
+	txn.Begin();
+
+	/* If an infraction was selected to be removed... */
+	if (fmt.starts_with("menu:")) {
+		/* Collect parameters */
+		cSnowflake user_id = fmt.substr(5);
+		/* Delete selected infraction and retrieve updated user stats */
+		dao.Delete(user_id, sys_time(milliseconds(cUtils::ParseInt<milliseconds::rep>(i.GetValues().front()))));
+		auto stats = dao.GetStatsByUser(user_id, now);
+		/* Update embed and buttons */
 		auto& embed = response.EmplaceEmbeds(i.GetMessage().MoveEmbeds()).at(0).SetTimestamp(now);
-		if (infs.entries.empty()) {
+		if (stats.entries.empty()) {
 			embed.SetDescription("✅ All infractions removed").ResetFields();
 			response.EmplaceComponents();
 		} else {
-			make_stats(embed, infs);
+			make_stats(embed, stats);
 			auto& comps = response.EmplaceComponents(i.GetMessage().MoveComponents());
 			get<cButton>(comps.at(1).GetComponents().front()).SetLabel("Remove an infraction").SetCustomId(std::format("unwarn:{}", user_id));
 			comps.front() = std::move(comps[1]);
@@ -382,27 +387,22 @@ cGreekBot::process_infractions_remove(cMsgCompInteraction& i, std::string_view f
 	}
 	/* ...otherwise, if the 'Remove all infractions' button was clicked... */
 	else if (fmt.starts_with("all:")) {
+		/* Collect parameters */
 		cSnowflake user_id = fmt.substr(4);
-		// TODO: use a transaction!
-		co_await InteractionDefer(i, false);
-		auto db = co_await BorrowDatabase();
-		cInfractionsDAO(db).DeleteAll(user_id);
-		co_await ReturnDatabase(std::move(db));
+		/* Delete all infractions of the user */
+		dao.DeleteAll(user_id);
 		/* Update response; Change embed message and remove all buttons */
 		response.EmplaceEmbeds(i.GetMessage().MoveEmbeds()).at(0).SetDescription("✅ All infractions removed").SetTimestamp(now).ResetFields();
 		response.EmplaceComponents();
 	}
 	/* ...otherwise, if the 'Undo' button was clicked... */
 	else if (auto n = fmt.starts_with("undo:") ? fmt.find(':', 5) : std::string_view::npos; n != std::string_view::npos) {
-		using namespace std::chrono;
+		/* Collect parameters */
 		cSnowflake user_id = fmt.substr(5, n - 5);
 		auto timestamp = sys_time(milliseconds(cUtils::ParseInt<milliseconds::rep>(fmt.substr(n + 1))));
-
-		co_await InteractionDefer(i, false);
-		auto db = co_await BorrowDatabase();
-		cInfractionsDAO(db).Delete(user_id, timestamp);
-		co_await ReturnDatabase(std::move(db));
-
+		/* Delete the selected infraction */
+		dao.Delete(user_id, timestamp);
+		/* Update response; Change embed message and remove all buttons */
 		auto& embed = response.EmplaceEmbeds(i.GetMessage().MoveEmbeds()).at(0);
 		auto& author = *embed.SetDescription("✅ Infraction removed").SetTimestamp(now).GetAuthor();
 		auto  name = author.GetName();
@@ -412,32 +412,26 @@ cGreekBot::process_infractions_remove(cMsgCompInteraction& i, std::string_view f
 	}
 	/* ...otherwise, if the 'Remove an infraction' button was clicked... */
 	else {
-		using namespace std::chrono;
-		/* Collect button id parameters */
+		/* Collect parameters */
 		cSnowflake user_id = fmt;
-
-		/* Collect at most 10 infractions before the timestamp */
-		co_await InteractionDefer(i, false);
-		auto db = co_await BorrowDatabase();
-		auto infs = cInfractionsDAO(db).GetStatsByUser(user_id, now);
-		co_await ReturnDatabase(std::move(db));
-
+		/* Retrieve the 10 most recent infractions of the user */
+		auto stats = dao.GetStatsByUser(user_id, now);
 		/* Update response with a select menu for each infraction found */
 		auto& embed = response.EmplaceEmbeds(i.GetMessage().MoveEmbeds()).at(0).SetTimestamp(now);
-		if (infs.entries.empty()) {
+		if (stats.entries.empty()) {
 			/* If no infractions are found, update embed and remove all buttons */
 			embed.SetDescription("✅ No infractions to remove").ResetFields();
 			response.EmplaceComponents();
 		} else {
 			/* Update embed stats */
-			make_stats(embed, infs);
+			make_stats(embed, stats);
 			/* Change the 'Remove an infraction' button to 'Cancel' */
 			auto& comps = response.EmplaceComponents(i.GetMessage().MoveComponents());
 			get<cButton>(comps.at(0).GetComponents().front()).SetLabel("Cancel").SetCustomId(std::format("unwarn:cancel:{}", user_id));
 			/* Add a select menu */
 			comps.emplace(comps.begin(), cSelectMenu{
 				std::format("unwarn:menu:{}", user_id),
-				infs.entries | std::views::transform([](infraction_entry& e) {
+				stats.entries | std::views::transform([](infraction_entry& e) {
 					return cSelectOption{
 						e.reason.empty() ? "Unspecified" : std::move(e.reason),
 						std::to_string(e.timestamp.time_since_epoch().count())
@@ -447,8 +441,10 @@ cGreekBot::process_infractions_remove(cMsgCompInteraction& i, std::string_view f
 			});
 		}
 	}
-
+	/* Update original message and do database cleanup */
 	co_await InteractionEditMessage(i, response);
+	txn.Commit();
+	co_await ReturnDatabaseTxn(std::move(txn));
 } HANDLER_END
 
 cTask<>
