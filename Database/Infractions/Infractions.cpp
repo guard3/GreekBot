@@ -1,14 +1,22 @@
 #include "Infractions.h"
 #include "InfractionsQueries.h"
 
-std::chrono::milliseconds
+using namespace std::chrono;
+
+void
 cInfractionsDAO::Register(crefUser user, sys_milliseconds timepoint, std::string_view reason) {
-	using namespace std::chrono;
 	auto[stmt, _] = m_conn.prepare(QUERY_WARN_REGISTER);
 	stmt.bind(1, user.GetId());
 	stmt.bind(2, timepoint.time_since_epoch().count());
 	reason.empty() ? stmt.bind(3, nullptr) : stmt.bind(3, reason);
-	return milliseconds(stmt.step() ? stmt.column_int(0) : 0);
+	while (stmt.step());
+}
+
+std::chrono::milliseconds
+cInfractionsDAO::GetRecentDeltaTime(crefUser user) {
+	auto[stmt, _] = m_conn.prepare(QUERY_WARN_DELTA);
+	stmt.bind(1, user.GetId());
+	return stmt.step() ? milliseconds(stmt.column_int(0)) : milliseconds::max();
 }
 
 infraction_result

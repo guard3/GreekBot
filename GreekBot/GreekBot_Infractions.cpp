@@ -155,24 +155,22 @@ cGreekBot::process_warn_impl(cInteraction& i, const cSnowflake &user_id, std::st
 
 	/* Register new infraction and calculate the delta between the 2 most recent infractions */
 	txn.Begin();
-	auto dt = dao.Register(user_id, now, reason);
+	dao.Register(user_id, now, reason);
+	auto dt = dao.GetRecentDeltaTime(user_id);
 	/* Send confirmation message */
 	co_await InteractionSendMessage(i, response);
 	txn.Commit();
 
 	/* Time out the user if the 2 most recent infractions were added in less than 3 months */
 	using namespace std::chrono;
-	if (dt > milliseconds(0) && dt < months(3)) {
+	if (dt < months(3)) {
 		/* How long to time out for? */
-		int timeout_days;
-		if (dt < days(3))
-			timeout_days = 7;
-		else if (dt < weeks(1))
-			timeout_days = 5;
-		else if (dt < weeks(2))
-			timeout_days = 3;
-		else
-			timeout_days = 1;
+		int timeout_days = [dt] {
+			if (dt < days( 3)) return 7;
+			if (dt < days( 5)) return 5;
+			if (dt < days(15)) return 3;
+			return 1;
+		} ();
 
 		/* Edit response to reflect timeout reason */
 		embed.SetDescription(std::format("User timed out for **{}** day{}", timeout_days, timeout_days == 1 ? "" : "s"));

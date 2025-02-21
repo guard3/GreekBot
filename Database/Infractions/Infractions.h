@@ -23,7 +23,8 @@ public:
 	explicit cInfractionsDAO(cTransaction& txn) noexcept : m_conn(txn.GetConnection()) {}
 
 	/* Given user, timepoint and reason, register a new infraction and return the delta between the 2 most recent infractions */
-	std::chrono::milliseconds Register(crefUser user, sys_milliseconds timepoint, std::string_view reason);
+	void Register(crefUser user, sys_milliseconds timepoint, std::string_view reason);
+	std::chrono::milliseconds GetRecentDeltaTime(crefUser user);
 	infraction_result GetStatsByUser(crefUser user, sys_milliseconds now);
 	void Delete(crefUser user, sys_milliseconds timestamp);
 	void DeleteAll(crefUser);
