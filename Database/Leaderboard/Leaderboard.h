@@ -1,6 +1,7 @@
 #ifndef GREEKBOT_LEADERBOARD_H
 #define GREEKBOT_LEADERBOARD_H
 #include "Database.h"
+#include "Transaction.h"
 
 struct leaderboard_entry {
 	cSnowflake   user_id;
@@ -13,7 +14,7 @@ class cLeaderboardDAO {
 	sqlite::connection_ref m_conn;
 
 public:
-	explicit cLeaderboardDAO(sqlite::connection_ref conn) noexcept : m_conn(conn) {}
+	explicit cLeaderboardDAO(cTransaction& txn) noexcept : m_conn(txn.GetConnection()) {}
 
 	/* Update based on a message and return the new XP of the author */
 	std::int64_t Update(const cMessage&);

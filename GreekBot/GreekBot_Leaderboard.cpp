@@ -63,9 +63,9 @@ static void make_embed(cEmbed& embed, const cUser& user, cColor c, const leaderb
 cTask<>
 cGreekBot::process_leaderboard_new_message(cMessage& msg, cPartialMember& member) LEADERBOARD_HANDLER_BEGIN {
 	/* Update leaderboard and retrieve the author's total xp */
-	auto db = co_await BorrowDatabase();
-	auto xp = cLeaderboardDAO(db).Update(msg);
-	co_await ReturnDatabase(std::move(db));
+	auto txn = co_await BorrowDatabase();
+	auto xp = cLeaderboardDAO(txn).Update(msg);
+	co_await ReturnDatabase(std::move(txn));
 	/* 0 XP means no changes where made to the database */
 	if (xp == 0)
 		co_return;
@@ -146,9 +146,9 @@ cGreekBot::process_rank(cAppCmdInteraction& i) HANDLER_BEGIN {
 	/* Acknowledge interaction while we're looking through the database */
 	co_await InteractionDefer(i, true);
 	/* Get user's ranking info from the database */
-	auto db = co_await BorrowDatabase();
-	auto db_result = cLeaderboardDAO(db).GetEntryByUser(*user);
-	co_await ReturnDatabase(std::move(db));
+	auto txn = co_await BorrowDatabase();
+	auto db_result = cLeaderboardDAO(txn).GetEntryByUser(*user);
+	co_await ReturnDatabase(std::move(txn));
 	co_await ResumeOnEventStrand();
 	/* Make sure that the selected user is a member of Learning Greek */
 	auto& embeds = response.EmplaceEmbeds();
@@ -173,9 +173,9 @@ cGreekBot::process_top(cAppCmdInteraction& i) HANDLER_BEGIN {
 	co_await InteractionDefer(i);
 
 	/* Get data from the database */
-	auto db = co_await BorrowDatabase();
-	std::vector lb_entries = cLeaderboardDAO(db).GetTop10Entries();
-	co_await ReturnDatabase(std::move(db));
+	auto txn = co_await BorrowDatabase();
+	std::vector lb_entries = cLeaderboardDAO(txn).GetTop10Entries();
+	co_await ReturnDatabase(std::move(txn));
 
 	cPartialMessage response;
 	if (lb_entries.empty())

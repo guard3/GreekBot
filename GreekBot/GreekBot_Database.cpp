@@ -3,24 +3,14 @@
 
 static sqlite::connection g_db;
 
-cTask<sqlite::connection>
+cTask<cTransaction>
 cGreekBot::BorrowDatabase() {
 	co_await cDatabase::ResumeOnDatabaseStrand();
-	co_return g_db ? std::move(g_db) : cDatabase::CreateInstance();
+	co_return cTransaction(g_db ? std::move(g_db) : cDatabase::CreateInstance());
 }
 
 cTask<>
-cGreekBot::ReturnDatabase(sqlite::connection conn) {
+cGreekBot::ReturnDatabase(cTransaction txn) {
 	co_await cDatabase::ResumeOnDatabaseStrand();
-	g_db = std::move(conn);
-}
-
-cTask<cTransaction>
-cGreekBot::BorrowDatabaseTxn() {
-	co_return cTransaction(co_await BorrowDatabase());
-}
-
-cTask<>
-cGreekBot::ReturnDatabaseTxn(cTransaction txn) {
-	co_await ReturnDatabase(txn.ReleaseConnection());
+	g_db = txn.ReleaseConnection();
 }

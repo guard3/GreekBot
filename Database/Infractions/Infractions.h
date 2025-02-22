@@ -19,7 +19,6 @@ class cInfractionsDAO {
 public:
 	using sys_milliseconds = std::chrono::sys_time<std::chrono::milliseconds>;
 
-	explicit cInfractionsDAO(sqlite::connection_ref conn) noexcept : m_conn(conn) {}
 	explicit cInfractionsDAO(cTransaction& txn) noexcept : m_conn(txn.GetConnection()) {}
 
 	/* Given user, timepoint and reason, register a new infraction and return the delta between the 2 most recent infractions */
