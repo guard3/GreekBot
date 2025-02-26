@@ -68,8 +68,7 @@ add_message_delete_embed(std::vector<cEmbed>& embeds, const message_entry& db_ms
 		{ db_msg.content.empty() ? "No content" : "Content", db_msg.content }
 	});
 	if (pMsgAuthor) {
-		auto disc = pMsgAuthor->GetDiscriminator();
-		embed.EmplaceAuthor(disc ? std::format("{}#{:04}", pMsgAuthor->GetUsername(), disc) : (std::string)pMsgAuthor->GetUsername()).SetIconUrl(cCDN::GetUserAvatar(*pMsgAuthor));
+		embed.EmplaceAuthor(pMsgAuthor->GetUsername()).SetIconUrl(cCDN::GetUserAvatar(*pMsgAuthor));
 	} else {
 		embed.EmplaceAuthor("Deleted user").SetIconUrl(cCDN::GetDefaultUserAvatar(db_msg.author_id));
 	}
