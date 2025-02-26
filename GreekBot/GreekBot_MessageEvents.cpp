@@ -13,20 +13,14 @@ cTask<>
 cGreekBot::OnMessageCreate(cMessage& msg, hSnowflake guild_id, hPartialMember member) {
 	/* Make sure we're in Learning Greek and that the message author is a real user */
 	if (cUser& author = msg.GetAuthor(); guild_id && *guild_id == LMG_GUILD_ID && !author.IsBotUser() && !author.IsSystemUser()) {
-		cTask<> tasks[] {
+		HANDLER_TRY {
 			/* Register message for logging purposes */
-			process_msglog_new_message(msg),
+			co_await process_msglog_new_message(msg);
+		} HANDLER_CATCH
+		HANDLER_TRY {
 			/* Register message for the leaderboard */
-			process_leaderboard_new_message(msg, *member)
-		};
-		/* Await tasks and report any exceptions that may occur */
-		for (auto& task : tasks) try {
-			co_await task;
-		} catch (const unhandled_exception_t& e) {
-			report_exceptions(e);
-		} catch (...) {
-			report_exceptions({ __func__, std::current_exception() });
-		}
+			co_await process_leaderboard_new_message(msg, *member);
+		} HANDLER_CATCH
 	}
 }
 cTask<>

@@ -6,18 +6,19 @@
 #include <unordered_map>
 #include <span>
 
-/* Handling exceptions when they escape the current interaction process function */
-struct unhandled_exception_t {
-	const char* name;
-	std::exception_ptr except;
-};
-[[noreturn]]
-void unhandled_exception(const char*);
-/* Used for reporting unhandled exceptions */
-void report_exceptions(const unhandled_exception_t& ex) noexcept;
-/* Helper macros */
+/* Used for reporting exceptions that escape HANDLER_BEGIN/END functions; see below */
+namespace detail {
+	void report_exceptions(const char*, std::exception_ptr) noexcept;
+	/* Throw a pair of current exception and caller function name; used to suppress warnings about not throwing a std::exception derived type */
+	[[noreturn]]
+	void unhandled_exception(const char*);
+}
+/* HANDLER_BEGIN/END: wrap expressions and rethrow any exceptions with the caller function name */
 #define HANDLER_BEGIN try
-#define HANDLER_END catch (...) { unhandled_exception(__func__); }
+#define HANDLER_END catch (...) { detail::unhandled_exception(__func__); }
+/* HANDLER_TRY/CATCH: wrap expressions and report exceptions, including the original caller function name */
+#define HANDLER_TRY try
+#define HANDLER_CATCH catch (const std::pair<const char*, std::exception_ptr>& pair) { detail::report_exceptions(pair.first, pair.second); } catch (...) { detail::report_exceptions(__func__, std::current_exception()); }
 
 class cGreekBot final : public cBot {
 private:

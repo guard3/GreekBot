@@ -4,12 +4,6 @@
 #include "Utils.h"
 #include <algorithm>
 #include <ranges>
-/* ========== Helper macros to catch and report errors ============================================================== */
-#define LEADERBOARD_HANDLER_BEGIN try
-#define LEADERBOARD_HANDLER_END catch (const xDiscordError& e) {        \
-    cUtils::PrintErr("An error occurred in {}: {}", __func__, e.what());\
-    cUtils::PrintErr("Error details: {}", e.errors());                  \
-}
 /* ========== Helper function to calculate a member's level info based on their XP count ============================ */
 struct level_info {
 	std::int64_t level;         // The current level
@@ -61,7 +55,7 @@ static void make_embed(cEmbed& embed, const cUser& user, cColor c, const leaderb
 }
 
 cTask<>
-cGreekBot::process_leaderboard_new_message(cMessage& msg, cPartialMember& member) LEADERBOARD_HANDLER_BEGIN {
+cGreekBot::process_leaderboard_new_message(cMessage& msg, cPartialMember& member) HANDLER_BEGIN {
 	/* Update leaderboard and retrieve the author's total xp */
 	auto txn = co_await BorrowDatabase();
 	auto xp = cLeaderboardDAO(txn).Update(msg);
@@ -121,7 +115,7 @@ cGreekBot::process_leaderboard_new_message(cMessage& msg, cPartialMember& member
 		}	break;
 	}
 	co_await ModifyGuildMember(LMG_GUILD_ID, msg.GetAuthor().GetId(), options);
-} LEADERBOARD_HANDLER_END
+} HANDLER_END
 
 cTask<>
 cGreekBot::process_rank(cAppCmdInteraction& i) HANDLER_BEGIN {

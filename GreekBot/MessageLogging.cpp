@@ -1,7 +1,7 @@
 #include "GreekBot.h"
 #include "DBMessageLog.h"
 
-/* ========== Register when a new message is received ===============================================================x */
+/* ========== Register when a new message is received =============================================================== */
 cTask<>
 cGreekBot::process_msglog_new_message(const cMessage& msg) HANDLER_BEGIN {
 	/* Save message for logging purposes */

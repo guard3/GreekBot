@@ -6,33 +6,6 @@
 
 namespace rng = std::ranges;
 
-[[noreturn]]
-void unhandled_exception(const char* name) {
-	throw unhandled_exception_t{ name, std::current_exception() };
-}
-
-// TODO: more detailed report for xDiscordError
-static void report_exceptions_impl(const char* func, std::size_t level, const std::exception* pEx) noexcept {
-	cUtils::PrintErr("{}: {:>{}}{}", func, level == 0 ? "" : "╰╴", level, pEx ? pEx->what() : "An error occurred");
-	if (pEx) try {
-		std::rethrow_if_nested(*pEx);
-	} catch (const std::exception& nested) {
-		report_exceptions_impl(func, level + 2, &nested);
-	} catch (...) {
-		report_exceptions_impl(func, level + 2, nullptr);
-	}
-}
-
-void report_exceptions(const unhandled_exception_t& ex) noexcept {
-	try {
-		std::rethrow_exception(ex.except);
-	} catch (const std::exception& e) {
-		report_exceptions_impl(ex.name, 0, &e);
-	} catch (...) {
-		report_exceptions_impl(ex.name, 0, nullptr);
-	}
-}
-
 enum : uint32_t {
 	CMP_ID_LEADERBOARD_HELP = 0x4ECEBDEC,
 	CMP_ID_STARBOARD_HELP   = 0x33330ADE,
@@ -115,15 +88,11 @@ cGreekBot::OnGuildRoleDelete(cSnowflake& guild_id, cSnowflake& role_id) {
 
 cTask<>
 cGreekBot::OnInteractionCreate(cInteraction& i) {
-	try {
+	HANDLER_TRY {
 		/* Delegate interaction to the appropriate handler */
-		co_return co_await i.Visit([this](auto& i) { return process_interaction(i); });
-	} catch (const unhandled_exception_t& u) {
-		report_exceptions(u);
-	} catch (...) {
-		report_exceptions({ __func__, std::current_exception() });
-	}
-	/* ...and send error message to the user */
+		co_return co_await i.Visit([this](auto &i) { return process_interaction(i); });
+	} HANDLER_CATCH
+	/* If any error occurs, send an error message to the user */
 	static const auto FAIL_MESSAGE = []{
 		cPartialMessage result;
 		result.SetFlags(MESSAGE_FLAG_EPHEMERAL).SetContent("An unexpected error has occurred. Try again later.");

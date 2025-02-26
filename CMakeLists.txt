@@ -79,6 +79,7 @@ add_executable(GreekBot main.cpp Discord/Bot.cpp Discord/Bot.h Discord/Common.h 
 		Database/MessageLog/MessageLog.cpp
 		Database/DBMessageLog.h
 		GreekBot/MessageLogging.cpp
+		GreekBot/ExceptionReporting.cpp
 )
 
 target_include_directories(
