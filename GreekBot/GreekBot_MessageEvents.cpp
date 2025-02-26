@@ -7,7 +7,6 @@
 #include <variant>
 
 namespace rng = std::ranges;
-static const cSnowflake MESSAGE_LOG_CHANNEL_ID = 539521989061378048;
 
 cTask<>
 cGreekBot::OnMessageCreate(cMessage& msg, hSnowflake guild_id, hPartialMember member) {
@@ -25,35 +24,10 @@ cGreekBot::OnMessageCreate(cMessage& msg, hSnowflake guild_id, hPartialMember me
 }
 cTask<>
 cGreekBot::OnMessageUpdate(cMessageUpdate& msg, hSnowflake guild_id, hPartialMember member) {
-	if (auto pContent = msg.GetContent(); guild_id && *guild_id == LMG_GUILD_ID && pContent) {
-		if (auto db_msg = co_await cDatabase::UpdateMessage(msg.GetId(), *pContent)) {
-			std::optional<cUser> user;
-			try {
-				user.emplace(co_await GetUser(db_msg->author_id));
-			} catch (...) {}
-
-			cPartialMessage response;
-			cEmbed& embed = response.EmplaceEmbeds().emplace_back();
-			embed.SetColor(0x2ECD72);
-			embed.SetDescription(std::format("📝 Their message was **edited** https://discord.com/channels/{}/{}/{}", LMG_GUILD_ID, db_msg->channel_id, db_msg->id));
-			embed.SetTimestamp(db_msg->id.GetTimestamp());
-			if (user) {
-				auto disc = user->GetDiscriminator();
-				embed.EmplaceAuthor(disc ? std::format("{}#{:04}", user->GetUsername(), disc) : user->MoveUsername()).SetIconUrl(cCDN::GetUserAvatar(*user));
-			} else {
-				embed.EmplaceAuthor("Deleted user").SetIconUrl(cCDN::GetDefaultUserAvatar(db_msg->author_id));
-			}
-			auto& fields = embed.EmplaceFields();
-			fields.reserve(4);
-			fields.emplace_back("Message ID", std::format("`{}`", db_msg->id), true);
-			fields.emplace_back("User ID", std::format("`{}`", db_msg->author_id), true);
-			if (!db_msg->content.empty())
-				fields.emplace_back("Old content", db_msg->content);
-			fields.emplace_back(pContent->empty() ? "No new content" : "New content", *pContent);
-
-			co_await CreateMessage(MESSAGE_LOG_CHANNEL_ID, response);
-		}
-	}
+	if (auto pContent = msg.GetContent(); guild_id && *guild_id == LMG_GUILD_ID && pContent) HANDLER_TRY {
+		/* Update the logged message content */
+		co_await process_msglog_message_update(msg);
+	} HANDLER_CATCH
 }
 
 static void
@@ -88,7 +62,7 @@ cGreekBot::OnMessageDelete(cSnowflake& message_id, cSnowflake& channel_id, hSnow
 
 			cPartialMessage response;
 			add_message_delete_embed(response.EmplaceEmbeds(), *db_msg, pUser);
-			co_await CreateMessage(MESSAGE_LOG_CHANNEL_ID, response);
+			co_await CreateMessage(LMG_CHANNEL_MESSAGE_LOG, response);
 		} catch (...) {}
 		/* Delete the starboard message from the channel and the database (if found) */
 		if (int64_t sb_msg_id = co_await cDatabase::SB_RemoveAll(message_id))
@@ -141,13 +115,13 @@ cGreekBot::OnMessageDeleteBulk(std::span<cSnowflake> ids, cSnowflake& channel_id
 				add_message_delete_embed(embeds, db_msg, pUser);
 				/* If we reach the maximum amount of embeds supported per message, send them */
 				if (embeds.size() == 10) {
-					co_await CreateMessage(MESSAGE_LOG_CHANNEL_ID, response);
+					co_await CreateMessage(LMG_CHANNEL_MESSAGE_LOG, response);
 					embeds.clear();
 				}
 			}
 			/* Send any remaining embeds */
 			if (!embeds.empty())
-				co_await CreateMessage(MESSAGE_LOG_CHANNEL_ID, response);
+				co_await CreateMessage(LMG_CHANNEL_MESSAGE_LOG, response);
 		} catch (const std::exception& e) {
 			cUtils::PrintErr("An error occurred while reporting deleted messages: {}", e.what());
 		}

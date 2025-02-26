@@ -5,8 +5,9 @@
 /* ========== The id of Learning Greek ============================================================================== */
 inline constexpr cSnowflake LMG_GUILD_ID = 350234668680871946;
 /* ========== Learning Greek channels =============================================================================== */
-inline constexpr cSnowflake LMG_CHANNEL_USER_LOG = 469274019565142017;
-inline constexpr cSnowflake LMG_CHANNEL_STARBOARD = 978993330694266920;
+inline constexpr cSnowflake LMG_CHANNEL_USER_LOG    = 469274019565142017;
+inline constexpr cSnowflake LMG_CHANNEL_MESSAGE_LOG = 539521989061378048;
+inline constexpr cSnowflake LMG_CHANNEL_STARBOARD   = 978993330694266920;
 /* ========== Learning Greek roles ================================================================================== */
 inline constexpr cSnowflake LMG_ROLE_ACTIVE_USER          = 352009155864821760; // @Active User
 inline constexpr cSnowflake LMG_ROLE_MEMBER               = 350264923806367754; // @Member
@@ -35,8 +36,9 @@ static_assert(std::ranges::is_sorted(LMG_RANK_ROLES), "Must be sorted for binary
 /* ========== Emojis ================================================================================================ */
 inline constexpr cSnowflake LMG_EMOJI_HOLY = 409075809723219969;
 /* ========== Common colors ========================================================================================= */
-inline constexpr cColor LMG_COLOR_RED = 0xC43135;
-inline constexpr cColor LMG_COLOR_GREEN = 0x248046;
-inline constexpr cColor LMG_COLOR_BLUE = 0x0096FF;
-inline constexpr cColor LMG_COLOR_YELLOW = 0xFFCC4C;
+inline constexpr cColor LMG_COLOR_RED         = 0xC43135;
+inline constexpr cColor LMG_COLOR_GREEN       = 0x248046;
+inline constexpr cColor LMG_COLOR_BLUE        = 0x0096FF;
+inline constexpr cColor LMG_COLOR_YELLOW      = 0xFFCC4C;
+inline constexpr cColor LMG_COLOR_LIGHT_GREEN = 0x2ECD72;
 #endif //GREEKBOT_LEARNINGGREEK_H

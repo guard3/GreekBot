@@ -72,6 +72,7 @@ private:
 	cTask<> process_interaction(cModalSubmitInteraction&);
 
 	cTask<> process_msglog_new_message(const cMessage& msg);
+	cTask<> process_msglog_message_update(cMessageUpdate& msg);
 	cTask<> process_leaderboard_new_message(cMessage& msg, cPartialMember& member);
 
 	cTask<> OnHeartbeat() override;

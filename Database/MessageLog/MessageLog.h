@@ -9,5 +9,8 @@ public:
 	explicit cMessageLogDAO(cTransaction& txn) noexcept : m_conn(txn.GetConnection()) {}
 
 	void Register(const cMessage&);
+	std::optional<message_entry> Get(crefMessage msg);
+	void Update(crefMessage msg, std::string_view content);
+
 };
 #endif //GREEKBOT_MESSAGELOG_H

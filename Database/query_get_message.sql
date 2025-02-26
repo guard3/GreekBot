@@ -1,1 +1,0 @@
-SELECT channel_id, author_id, content FROM messages WHERE id IS ?1;

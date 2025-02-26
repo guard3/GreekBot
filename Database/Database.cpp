@@ -204,34 +204,6 @@ cDatabase::SB_GetRank(const cUser& user, int threshold) {
 }
 
 cTask<std::optional<message_entry>>
-cDatabase::GetMessage(const cSnowflake& id) {
-	co_await resume_on_db_strand();
-	auto[stmt, _] = g_db.prepare(QUERY_GET_MESSAGE);
-	stmt.bind(1, id);
-	std::optional<message_entry> result;
-	if (stmt.step()) {
-		auto& msg = result.emplace(
-			id,
-			stmt.column_int(0),
-			stmt.column_int(1)
-		);
-		if (auto text = stmt.column_text(2))
-			msg.content = text;
-	}
-	co_return result;
-}
-cTask<std::optional<message_entry>>
-cDatabase::UpdateMessage(const cSnowflake& id, std::string_view content) {
-	auto result = co_await GetMessage(id);
-	if (!result)
-		co_return result;
-	auto[stmt, _] = g_db.prepare("UPDATE messages SET content=? WHERE id IS ?;");
-	content.empty() ? stmt.bind(1, nullptr) : stmt.bind(1, content);
-	stmt.bind(2, id);
-	stmt.step();
-	co_return result;
-}
-cTask<std::optional<message_entry>>
 cDatabase::DeleteMessage(const cSnowflake& id) {
 	co_await resume_on_db_strand();
 	auto[stmt, _] = g_db.prepare(QUERY_DELETE_MESSAGE);
