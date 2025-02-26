@@ -75,6 +75,10 @@ add_executable(GreekBot main.cpp Discord/Bot.cpp Discord/Bot.h Discord/Common.h 
 	Database/DBInfractions.h
 		Database/Transaction.h
 		Database/Transaction.cpp
+		Database/MessageLog/MessageLog.h
+		Database/MessageLog/MessageLog.cpp
+		Database/DBMessageLog.h
+		GreekBot/MessageLogging.cpp
 )
 
 target_include_directories(
@@ -123,6 +127,9 @@ function(define_query VAR_NAME FILE_NAME)
     set(${VAR_NAME} ${CONTENT} PARENT_SCOPE)
 endfunction()
 
+define_query(QUERY_MSGLOG_REGISTER Database/MessageLog/query_msglog_register.sql)
+configure_file(Database/MessageLog/MessageLogQueries.h.in MessageLogQueries.h)
+
 define_query(QUERY_LB_UPDATE  Database/Leaderboard/query_lb_update.sql)
 define_query(QUERY_LB_RANK    Database/Leaderboard/query_lb_rank.sql  )
 define_query(QUERY_LB_TOP     Database/Leaderboard/query_lb_top.sql   )
@@ -152,7 +159,6 @@ define_query(QUERY_SB_GET_MESSAGE_AUTHOR Database/query_sb_get_msg_author.sql)
 define_query(QUERY_SB_GET_TOP_10 Database/query_sb_get_top_10.sql)
 define_query(QUERY_SB_GET_RANK Database/query_sb_get_rank.sql)
 
-define_query(QUERY_REGISTER_MESSAGE Database/query_register_message.sql)
 define_query(QUERY_GET_MESSAGE Database/query_get_message.sql)
 define_query(QUERY_DELETE_MESSAGE Database/query_delete_message.sql)
 define_query(QUERY_CLEANUP_MESSAGES Database/query_cleanup_messages.sql)

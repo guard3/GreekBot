@@ -202,17 +202,7 @@ cDatabase::SB_GetRank(const cUser& user, int threshold) {
 	}
 	co_return result;
 }
-cTask<>
-cDatabase::RegisterMessage(const cMessage& msg) {
-	co_await resume_on_db_strand();
-	auto[stmt, _] = g_db.prepare(QUERY_REGISTER_MESSAGE);
-	stmt.bind(1, msg.GetId());
-	stmt.bind(2, msg.GetChannelId());
-	stmt.bind(3, msg.GetAuthor().GetId());
-	auto content = msg.GetContent();
-	content.empty() ? stmt.bind(4, nullptr) : stmt.bind(4, content);
-	stmt.step();
-}
+
 cTask<std::optional<message_entry>>
 cDatabase::GetMessage(const cSnowflake& id) {
 	co_await resume_on_db_strand();

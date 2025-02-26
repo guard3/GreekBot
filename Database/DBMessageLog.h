@@ -1,0 +1,4 @@
+#ifndef GREEKBOT_DBMESSAGELOG_H
+#define GREEKBOT_DBMESSAGELOG_H
+#include "MessageLog/MessageLog.h"
+#endif //GREEKBOT_DBMESSAGELOG_H

@@ -13,6 +13,8 @@ struct unhandled_exception_t {
 };
 [[noreturn]]
 void unhandled_exception(const char*);
+/* Used for reporting unhandled exceptions */
+void report_exceptions(const unhandled_exception_t& ex) noexcept;
 /* Helper macros */
 #define HANDLER_BEGIN try
 #define HANDLER_END catch (...) { unhandled_exception(__func__); }
@@ -68,6 +70,7 @@ private:
 	cTask<> process_interaction(cMsgCompInteraction&);
 	cTask<> process_interaction(cModalSubmitInteraction&);
 
+	cTask<> process_msglog_new_message(const cMessage& msg);
 	cTask<> process_leaderboard_new_message(cMessage& msg, cPartialMember& member);
 
 	cTask<> OnHeartbeat() override;

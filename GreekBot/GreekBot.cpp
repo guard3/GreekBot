@@ -11,6 +11,28 @@ void unhandled_exception(const char* name) {
 	throw unhandled_exception_t{ name, std::current_exception() };
 }
 
+// TODO: more detailed report for xDiscordError
+static void report_exceptions_impl(const char* func, std::size_t level, const std::exception* pEx) noexcept {
+	cUtils::PrintErr("{}: {:>{}}{}", func, level == 0 ? "" : "╰╴", level, pEx ? pEx->what() : "An error occurred");
+	if (pEx) try {
+		std::rethrow_if_nested(*pEx);
+	} catch (const std::exception& nested) {
+		report_exceptions_impl(func, level + 2, &nested);
+	} catch (...) {
+		report_exceptions_impl(func, level + 2, nullptr);
+	}
+}
+
+void report_exceptions(const unhandled_exception_t& ex) noexcept {
+	try {
+		std::rethrow_exception(ex.except);
+	} catch (const std::exception& e) {
+		report_exceptions_impl(ex.name, 0, &e);
+	} catch (...) {
+		report_exceptions_impl(ex.name, 0, nullptr);
+	}
+}
+
 enum : uint32_t {
 	CMP_ID_LEADERBOARD_HELP = 0x4ECEBDEC,
 	CMP_ID_STARBOARD_HELP   = 0x33330ADE,
@@ -97,14 +119,9 @@ cGreekBot::OnInteractionCreate(cInteraction& i) {
 		/* Delegate interaction to the appropriate handler */
 		co_return co_await i.Visit([this](auto& i) { return process_interaction(i); });
 	} catch (const unhandled_exception_t& u) {
-		/* If an exception escaped the handler, report... */
-		try {
-			std::rethrow_exception(u.except);
-		} catch (const std::exception& e) {
-			cUtils::PrintErr("{}: {}", u.name, e.what());
-		} catch (...) {
-			cUtils::PrintErr("{}: {}", u.name, "An exception occurred");
-		}
+		report_exceptions(u);
+	} catch (...) {
+		report_exceptions({ __func__, std::current_exception() });
 	}
 	/* ...and send error message to the user */
 	static const auto FAIL_MESSAGE = []{
