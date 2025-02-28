@@ -74,6 +74,7 @@ private:
 	cTask<> process_msglog_new_message(const cMessage& msg);
 	cTask<> process_msglog_message_update(cMessageUpdate& msg);
 	cTask<> process_msglog_message_delete(std::span<const cSnowflake> msg_ids);
+	cTask<> process_starboard_message_delete(std::span<const cSnowflake> msg_ids);
 	cTask<> process_leaderboard_new_message(cMessage& msg, cPartialMember& member);
 
 	cTask<> OnHeartbeat() override;

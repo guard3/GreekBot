@@ -1,4 +1,3 @@
-#include "Database.h"
 #include "GreekBot.h"
 
 cTask<>
@@ -30,9 +29,10 @@ cGreekBot::OnMessageDelete(cSnowflake& message_id, cSnowflake& channel_id, hSnow
 			/* Delete message from the database and report to the log channel */
 			co_await process_msglog_message_delete(std::span(&message_id, 1));
 		} HANDLER_CATCH
-		/* Delete the starboard message from the channel and the database (if found) */
-		if (int64_t sb_msg_id = co_await cDatabase::SB_RemoveAll(message_id))
-			co_await DeleteMessage(LMG_CHANNEL_STARBOARD, sb_msg_id);
+		HANDLER_TRY {
+			/* Delete the starboard message from the channel and the database (if found) */
+			co_await process_starboard_message_delete(std::span(&message_id, 1));
+		} HANDLER_CATCH
 	}
 }
 cTask<>
@@ -40,13 +40,12 @@ cGreekBot::OnMessageDeleteBulk(std::span<cSnowflake> ids, cSnowflake& channel_id
 	/* Make sure we're in Learning Greek */
 	if (guild_id && *guild_id == LMG_GUILD_ID) {
 		HANDLER_TRY {
+			/* Delete message from the database and report to the log channel */
 			co_await process_msglog_message_delete(ids);
-		} HANDLER_CATCH;
-		/* Delete the starboard messages from the channel and the database (if found) */
-		for (cSnowflake& id : ids) {
-			if (int64_t sb_msg_id = co_await cDatabase::SB_RemoveAll(id)) try {
-				co_await DeleteMessage(LMG_CHANNEL_STARBOARD, sb_msg_id);
-			} catch (...) {}
-		}
+		} HANDLER_CATCH
+		HANDLER_TRY {
+			/* Delete the starboard messages from the channel and the database (if found) */
+			co_await process_starboard_message_delete(ids);
+		} HANDLER_CATCH
 	}
 }

@@ -80,6 +80,9 @@ add_executable(GreekBot main.cpp Discord/Bot.cpp Discord/Bot.h Discord/Common.h 
 		Database/DBMessageLog.h
 		GreekBot/MessageLogging.cpp
 		GreekBot/ExceptionReporting.cpp
+		Database/Starboard/Starboard.h
+		Database/Starboard/Starboard.cpp
+		Database/DBStarboard.h
 )
 
 target_include_directories(

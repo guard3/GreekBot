@@ -1,5 +1,6 @@
 #include "GreekBot.h"
 #include "Database.h"
+#include "DBStarboard.h"
 #include "Utils.h"
 #include "CDN.h"
 #include <algorithm>
@@ -76,6 +77,16 @@ cGreekBot::OnMessageReactionRemove(cSnowflake& user_id, cSnowflake& channel_id, 
 	std::optional<cMessage> msg;
 	co_await process_reaction(channel_id, message_id, sb_msg_id, num_reactions, msg);
 }
+
+cTask<>
+cGreekBot::process_starboard_message_delete(std::span<const cSnowflake> msg_ids) HANDLER_BEGIN {
+	/* Remove starboard entries and retrieve the ids of messages sent by the bot */
+	auto txn = co_await BorrowDatabase();
+	auto sb_msg_ids = cStarboardDAO(txn).DeleteAll(msg_ids);
+	co_await ReturnDatabase(std::move(txn));
+	/* Delete those messages */
+	co_await DeleteMessages(LMG_CHANNEL_STARBOARD, sb_msg_ids);
+} HANDLER_END
 
 cTask<>
 cGreekBot::process_reaction(const cSnowflake& channel_id, const cSnowflake& message_id, int64_t sb_msg_id, int64_t num_reactions, std::optional<cMessage>& msg) {
