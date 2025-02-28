@@ -157,13 +157,6 @@ cDatabase::SB_RemoveMessage(const cSnowflake& msg_id) {
 	stmt.bind(1, msg_id);
 	stmt.step();
 }
-cTask<int64_t>
-cDatabase::SB_RemoveAll(const cSnowflake& msg_id) {
-	co_await resume_on_db_strand();
-	auto[stmt, _] = g_db.prepare(QUERY_SB_REMOVE_ALL);
-	stmt.bind(1, msg_id);
-	co_return stmt.step() ? stmt.column_int(0) : 0;
-}
 cTask<std::vector<starboard_entry>>
 cDatabase::SB_GetTop10(int threshold) {
 	co_await resume_on_db_strand();

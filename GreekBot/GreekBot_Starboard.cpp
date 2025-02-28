@@ -1,9 +1,7 @@
 #include "GreekBot.h"
-#include "Database.h"
 #include "DBStarboard.h"
 #include "Utils.h"
 #include "CDN.h"
-#include <algorithm>
 
 namespace rng = std::ranges;
 
@@ -198,25 +196,6 @@ cGreekBot::process_reaction(const cSnowflake& channel_id, const cSnowflake& mess
 	/* Send the starboard message and save it in the database */
 	cMessage sb_msg = co_await CreateMessage(LMG_CHANNEL_STARBOARD, response.SetContent(std::move(content)));
 	co_await cDatabase::SB_RegisterMessage(message_id, sb_msg.GetId());
-}
-/* ========== Delete messages when all reactions are removed or when the original message is deleted ================ */
-cTask<>
-cGreekBot::OnMessageReactionRemoveAll(cSnowflake& channel_id, cSnowflake& message_id, hSnowflake guild_id) {
-	/* Make sure we're in Learning Greek */
-	if (!guild_id || *guild_id != LMG_GUILD_ID)
-		co_return;
-	/* Delete the message from the channel and the database (if found) */
-	if (int64_t sb_msg_id = co_await cDatabase::SB_RemoveAll(message_id))
-		co_await DeleteMessage(LMG_CHANNEL_STARBOARD, sb_msg_id);
-}
-cTask<>
-cGreekBot::OnMessageReactionRemoveEmoji(cSnowflake& channel_id, cSnowflake& message_id, hSnowflake guild_id, cEmoji& emoji) {
-	/* Make sure we're in Learning Greek and that the emoji is :Holy: */
-	if (!guild_id || *guild_id != LMG_GUILD_ID || !emoji.GetId() || *emoji.GetId() != LMG_EMOJI_HOLY)
-		co_return;
-	/* Delete the message from the channel and the database (if found) */
-	if (int64_t sb_msg_id = co_await cDatabase::SB_RemoveAll(message_id))
-		co_await DeleteMessage(LMG_CHANNEL_STARBOARD, sb_msg_id);
 }
 
 static cEmbed make_embed(const cUser& user, const starboard_entry& e, cColor color) {

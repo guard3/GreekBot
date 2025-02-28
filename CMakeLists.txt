@@ -159,7 +159,6 @@ define_query(QUERY_WC_EDT_MSG Database/query_wc_edt_msg.sql)
 
 define_query(QUERY_SB_REGISTER_REACTION Database/query_sb_register_reaction.sql)
 define_query(QUERY_SB_REMOVE_REACTION Database/query_sb_remove_reaction.sql)
-define_query(QUERY_SB_REMOVE_ALL Database/query_sb_remove_all.sql)
 define_query(QUERY_SB_REGISTER_MESSAGE Database/query_sb_register_msg.sql)
 define_query(QUERY_SB_REMOVE_MESSAGE Database/query_sb_remove_msg.sql)
 define_query(QUERY_SB_GET_MESSAGE_AUTHOR Database/query_sb_get_msg_author.sql)

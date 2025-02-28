@@ -45,7 +45,6 @@ public:
 	static cTask<> SB_RegisterMessage(const cSnowflake&, const cSnowflake&);
 	static cTask<std::pair<int64_t, int64_t>> SB_RemoveReaction(const cSnowflake&);
 	static cTask<> SB_RemoveMessage(const cSnowflake&);
-	static cTask<int64_t> SB_RemoveAll(const cSnowflake&);
 	static cTask<std::vector<starboard_entry>> SB_GetTop10(int);
 	static cTask<std::vector<starboard_entry>> SB_GetRank(const cUser&, int);
 
