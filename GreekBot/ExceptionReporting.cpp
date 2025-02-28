@@ -17,7 +17,7 @@ namespace detail {
 		cUtils::PrintErr("{}: {:>{}}{}", func, level == 0 ? "" : "╰╴", level, e.what());
 		try {
 			/* If the exception is xDiscordError, print additional error details */
-			if (auto p = dynamic_cast<const xDiscordError *>(&e))
+			if (auto p = dynamic_cast<const xDiscordError*>(&e))
 				cUtils::PrintErr("{}: {:>{}}Discord error details: {}", func, "╰╴", level += 2, p->errors());
 			/* If there's a nested exception, rethrow and report */
 			std::rethrow_if_nested(e);

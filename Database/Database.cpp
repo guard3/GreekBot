@@ -203,60 +203,6 @@ cDatabase::SB_GetRank(const cUser& user, int threshold) {
 	co_return result;
 }
 
-cTask<std::optional<message_entry>>
-cDatabase::DeleteMessage(const cSnowflake& id) {
-	co_await resume_on_db_strand();
-	auto[stmt, _] = g_db.prepare(QUERY_DELETE_MESSAGE);
-	stmt.bind(1, id);
-	std::optional<message_entry> result;
-	if (stmt.step()) {
-		result.emplace(
-			id,
-			stmt.column_int(0),
-			stmt.column_int(1)
-		);
-		if (auto text = stmt.column_text(2))
-			result->content = text;
-	}
-	co_return result;
-}
-cTask<std::vector<message_entry>>
-cDatabase::DeleteMessages(std::span<const cSnowflake> ids) {
-	co_await resume_on_db_strand();
-	if (ids.empty())
-		co_return {};
-	/* Make query */
-	std::string query = "DELETE FROM messages WHERE id IN (?";
-	for (std::size_t i = 1; i < ids.size(); ++i)
-		query += ",?";
-	query += ") RETURNING *;";
-	/* Prepare statement */
-	auto[stmt, _] = g_db.prepare(query);
-	for (std::size_t i = 0; i < ids.size(); ++i)
-		stmt.bind(i + 1, ids[i]);
-	/* Retrieve result */
-	std::vector<message_entry> result;
-	for (result.reserve(ids.size()); stmt.step();) {
-		auto& entry = result.emplace_back(
-			stmt.column_int(0),
-			stmt.column_int(1),
-			stmt.column_int(2)
-		);
-		if (auto text = stmt.column_text(3))
-			entry.content = text;
-	}
-	co_return result;
-}
-cTask<>
-cDatabase::CleanupMessages() {
-	using namespace std::chrono;
-	using namespace std::chrono_literals;
-	co_await resume_on_db_strand();
-	auto[stmt, _] = g_db.prepare(QUERY_CLEANUP_MESSAGES);
-	stmt.bind(1, duration_cast<milliseconds>(system_clock::now() - sys_days(2015y/1/1) - 15 * 24h).count());
-	stmt.step();
-}
-
 cTask<>
 cDatabase::RegisterTemporaryBan(crefUser user, std::chrono::sys_days expires_at) {
 	if (expires_at == std::chrono::sys_days{})

@@ -19,15 +19,6 @@ struct starboard_entry {
 	int64_t react_total;
 	int64_t max_react_per_msg;
 	int64_t rank;
-
-	starboard_entry(int64_t a, int64_t b, int64_t c, int64_t d, int64_t e): author_id(a), num_msg(b), react_total(c), max_react_per_msg(d), rank(e) {}
-};
-
-struct message_entry {
-	cSnowflake id;
-	cSnowflake channel_id;
-	cSnowflake author_id;
-	std::string content;
 };
 /* ================================================================================================================== */
 class cDatabase final {
@@ -57,10 +48,6 @@ public:
 	static cTask<int64_t> SB_RemoveAll(const cSnowflake&);
 	static cTask<std::vector<starboard_entry>> SB_GetTop10(int);
 	static cTask<std::vector<starboard_entry>> SB_GetRank(const cUser&, int);
-
-	static cTask<std::optional<message_entry>> DeleteMessage(const cSnowflake&);
-	static cTask<std::vector<message_entry>> DeleteMessages(std::span<const cSnowflake>);
-	static cTask<> CleanupMessages();
 
 	static cTask<> RegisterTemporaryBan(crefUser user, std::chrono::sys_days expires_at);
 	static cTask<std::vector<cSnowflake>> GetExpiredTemporaryBans();

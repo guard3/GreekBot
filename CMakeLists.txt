@@ -131,6 +131,7 @@ endfunction()
 define_query(QUERY_MSGLOG_REGISTER Database/MessageLog/query_msglog_register.sql)
 define_query(QUERY_MSGLOG_GET      Database/MessageLog/query_msglog_get.sql)
 define_query(QUERY_MSGLOG_UPDATE   Database/MessageLog/query_msglog_update.sql)
+define_query(QUERY_MSGLOG_CLEANUP  Database/MessageLog/query_msglog_cleanup.sql)
 configure_file(Database/MessageLog/MessageLogQueries.h.in MessageLogQueries.h)
 
 define_query(QUERY_LB_UPDATE  Database/Leaderboard/query_lb_update.sql)
@@ -161,9 +162,6 @@ define_query(QUERY_SB_REMOVE_MESSAGE Database/query_sb_remove_msg.sql)
 define_query(QUERY_SB_GET_MESSAGE_AUTHOR Database/query_sb_get_msg_author.sql)
 define_query(QUERY_SB_GET_TOP_10 Database/query_sb_get_top_10.sql)
 define_query(QUERY_SB_GET_RANK Database/query_sb_get_rank.sql)
-
-define_query(QUERY_DELETE_MESSAGE Database/query_delete_message.sql)
-define_query(QUERY_CLEANUP_MESSAGES Database/query_cleanup_messages.sql)
 
 define_query(QUERY_REGISTER_TEMPORARY_BAN Database/query_register_temporary_ban.sql)
 define_query(QUERY_REMOVE_TEMPORARY_BAN   Database/query_remove_temporary_ban.sql  )

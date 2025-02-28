@@ -1,1 +1,0 @@
-DELETE FROM messages WHERE (id >> 22) < ?1;

@@ -1,4 +1,5 @@
 #include "Database.h"
+#include "DBMessageLog.h"
 #include "GreekBot.h"
 #include "Utils.h"
 
@@ -10,7 +11,9 @@ cGreekBot::OnHeartbeat() try {
 	if (auto now = steady_clock::now(); now - m_before > 3h) {
 		m_before = now;
 		/* Cleanup old logged messages */
-		co_await cDatabase::CleanupMessages();
+		auto txn = co_await BorrowDatabase();
+		cMessageLogDAO(txn).Cleanup();
+		co_await ReturnDatabase(std::move(txn));
 		cUtils::PrintLog("Cleaned up old logged messages!");
 		/* Remove expired bans */
 		std::vector<cSnowflake> expired = co_await cDatabase::GetExpiredTemporaryBans();
