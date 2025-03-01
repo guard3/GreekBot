@@ -8,7 +8,7 @@ namespace rng = std::ranges;
 static constexpr int REACTION_THRESHOLD = 5;
 
 /* This array must be sorted for binary search to work */
-static constexpr std::uint64_t excluded_channels[] {
+static constexpr cSnowflake excluded_channels[] {
 	350234736754688020,  // #rules
 	355242373380308993,  // #moderators
 	363441099307483139,  // #announcements
@@ -42,7 +42,7 @@ cGreekBot::OnMessageReactionAdd(cSnowflake& user_id, cSnowflake& channel_id, cSn
 	if (*guild_id != LMG_GUILD_ID || *emoji.GetId() != LMG_EMOJI_HOLY)
 		co_return;
 	/* Also make sure that we're not in an excluded channel */
-	if (rng::binary_search(excluded_channels, channel_id.ToInt()))
+	if (rng::binary_search(excluded_channels, channel_id))
 		co_return;
 	/* Also make sure that the message author id is provided */
 	std::optional<cMessage> msg;
@@ -64,7 +64,7 @@ cGreekBot::OnMessageReactionRemove(cSnowflake& user_id, cSnowflake& channel_id, 
 	if (!guild_id || !emoji.GetId()) co_return;
 	if (*guild_id != LMG_GUILD_ID || *emoji.GetId() != LMG_EMOJI_HOLY) co_return;
 	/* Also make sure that we're not in an excluded channel */
-	if (rng::binary_search(excluded_channels, channel_id.ToInt()))
+	if (rng::binary_search(excluded_channels, channel_id))
 		co_return;
 	/* Make sure that reactions from the author don't count */
 	int64_t author_id = co_await cDatabase::SB_GetMessageAuthor(message_id);
