@@ -9,15 +9,15 @@ namespace detail {
 
 	static void report_exceptions_impl(const char* func, std::size_t level) noexcept {
 		/* Print a generic error message at the current level */
-		cUtils::PrintErr("{}: {:>{}}An error occurred", func, level == 0 ? "" : "╰╴", level);
+		cUtils::PrintErr("{}: {:>{}}An error occurred", func, level < 2 ? "" : "╰╴", level);
 	}
 
 	static void report_exceptions_impl(const char* func, std::size_t level, const std::exception& e) noexcept {
 		/* Print exception details at the current level */
-		cUtils::PrintErr("{}: {:>{}}{}", func, level == 0 ? "" : "╰╴", level, e.what());
+		cUtils::PrintErr("{}: {:>{}}{}", func, level < 2 ? "" : "╰╴", level, e.what());
 		try {
-			/* If the exception is xDiscordError, print additional error details */
-			if (auto p = dynamic_cast<const xDiscordError*>(&e))
+			/* If the exception is xDiscordError, print additional error details if they exist */
+			if (auto p = dynamic_cast<const xDiscordError*>(&e); p && p->errors() != "null")
 				cUtils::PrintErr("{}: {:>{}}Discord error details: {}", func, "╰╴", level += 2, p->errors());
 			/* If there's a nested exception, rethrow and report */
 			std::rethrow_if_nested(e);

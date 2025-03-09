@@ -191,4 +191,5 @@ cGreekBot::process_test(cAppCmdInteraction& i) HANDLER_BEGIN {
 		return msg;
 	}();
 	co_await InteractionSendMessage(i, MESSAGE);
+	co_await InteractionDefer(i, true);
 } HANDLER_END

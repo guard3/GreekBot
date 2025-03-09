@@ -21,24 +21,33 @@ bool detail::get_interaction_ack(const cInteraction& i) noexcept {
 	return i.m_ack;
 }
 
+[[noreturn]]
+static void throw_interaction_acknowledged() {
+	throw xDiscordError(eDiscordError::InteractionAcknowledged, "Interaction has already been acknowledged");
+}
+[[noreturn]]
+static void throw_invalid_form_body() {
+	throw xDiscordError(eDiscordError::InvalidFormBody, "Invalid form body");
+}
+
 cTask<>
 cBot::InteractionDefer(const cAppCmdInteraction& i, bool) {
 	using namespace detail;
-	if (get_interaction_ack(i)) throw xInteractionAcknowledgedError();
+	if (get_interaction_ack(i)) throw_interaction_acknowledged();
 	co_await DiscordPost(std::format("/interactions/{}/{}/callback", i.GetId(), i.GetToken()), {{ "type", DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE }});
 	set_interaction_ack(i);
 }
 cTask<>
 cBot::InteractionDefer(const cMsgCompInteraction& i, bool bThinking) {
 	using namespace detail;
-	if (get_interaction_ack(i)) throw xInteractionAcknowledgedError();
+	if (get_interaction_ack(i)) throw_interaction_acknowledged();
 	co_await DiscordPost(std::format("/interactions/{}/{}/callback", i.GetId(), i.GetToken()), {{ "type", bThinking ? DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE : DEFERRED_UPDATE_MESSAGE }});
 	set_interaction_ack(i);
 }
 cTask<>
 cBot::InteractionDefer(const cModalSubmitInteraction& i, bool bThinking) {
 	using namespace detail;
-	if (get_interaction_ack(i)) throw xInteractionAcknowledgedError();
+	if (get_interaction_ack(i)) throw_interaction_acknowledged();
 	co_await DiscordPost(std::format("/interactions/{}/{}/callback", i.GetId(), i.GetToken()), {{ "type", bThinking ? DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE : DEFERRED_UPDATE_MESSAGE }});
 	set_interaction_ack(i);
 }
@@ -68,7 +77,7 @@ cBot::InteractionSendMessage(const cInteraction& i, const cMessageBase& msg) {
 cTask<>
 cBot::InteractionSendModal(const cAppCmdInteraction& i, const cModal& modal) {
 	using namespace detail;
-	if (get_interaction_ack(i)) throw xInteractionAcknowledgedError();
+	if (get_interaction_ack(i)) throw_interaction_acknowledged();
 	json::object obj{{ "type", MODAL }};
 	json::value_from(modal, obj["data"]);
 	co_await DiscordPost(std::format("/interactions/{}/{}/callback", i.GetId(), i.GetToken()), obj);
@@ -77,7 +86,7 @@ cBot::InteractionSendModal(const cAppCmdInteraction& i, const cModal& modal) {
 cTask<>
 cBot::InteractionSendModal(const cMsgCompInteraction& i, const cModal& modal) {
 	using namespace detail;
-	if (get_interaction_ack(i)) throw xInteractionAcknowledgedError();
+	if (get_interaction_ack(i)) throw_interaction_acknowledged();
 	json::object obj{{ "type", MODAL }};
 	json::value_from(modal, obj["data"]);
 	co_await DiscordPost(std::format("/interactions/{}/{}/callback", i.GetId(), i.GetToken()), obj);
@@ -87,7 +96,7 @@ cTask<>
 cBot::InteractionSendModal(const cInteraction& i, const cModal& modal) {
 	return i.Visit(cVisitor{
 		[](const cModalSubmitInteraction&) -> cTask<> {
-			throw xInvalidFormBodyError();
+			throw_invalid_form_body();
 			co_return;
 		},
 		[this, &modal](auto& i) {
