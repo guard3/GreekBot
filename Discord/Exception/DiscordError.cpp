@@ -31,14 +31,14 @@ xDiscordError::xDiscordError(eDiscordError ec, const char* what_arg, const boost
 	sr.reset(error);
 	/* Initialize a string with 0 size and 256 capacity */
 	std::size_t size = 0, capacity = 256;
-	auto str = std::make_unique<char[]>(capacity);
+	auto str = std::make_shared_for_overwrite<char[]>(capacity);
 	/* Keep reading characters, reallocating when necessary */
 	for (;;) {
 		size += sr.read(str.get() + size, capacity - size).size();
 		if (sr.done())
 			break;
 		capacity *= 2;
-		auto buff = std::make_unique<char[]>(capacity);
+		auto buff = std::make_shared_for_overwrite<char[]>(capacity);
 		std::copy_n(str.get(), size, buff.get());
 		str = std::move(buff);
 	}
