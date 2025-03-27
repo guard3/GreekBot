@@ -13,14 +13,6 @@ struct sqlite::binder<cSnowflake> {
 	}
 };
 /* ================================================================================================================== */
-struct starboard_entry {
-	cSnowflake author_id;
-	int64_t num_msg;
-	int64_t react_total;
-	int64_t max_react_per_msg;
-	int64_t rank;
-};
-/* ================================================================================================================== */
 class cDatabase final {
 public:
 	cDatabase() = delete;
@@ -39,14 +31,6 @@ public:
 	static cTask<int64_t> WC_GetMessage(const cMemberUpdate&);
 	static cTask<> WC_EditMessage(int64_t);
 	static cTask<uint64_t> WC_DeleteMember(const cUser&);
-
-	static cTask<int64_t> SB_GetMessageAuthor(const cSnowflake&);
-	static cTask<std::pair<int64_t, int64_t>> SB_RegisterReaction(const cSnowflake&, const cSnowflake&);
-	static cTask<> SB_RegisterMessage(const cSnowflake&, const cSnowflake&);
-	static cTask<std::pair<int64_t, int64_t>> SB_RemoveReaction(const cSnowflake&);
-	static cTask<> SB_RemoveMessage(const cSnowflake&);
-	static cTask<std::vector<starboard_entry>> SB_GetTop10(int);
-	static cTask<std::vector<starboard_entry>> SB_GetRank(const cUser&, int);
 
 	static cTask<> RegisterTemporaryBan(crefUser user, std::chrono::sys_days expires_at);
 	static cTask<std::vector<cSnowflake>> GetExpiredTemporaryBans();

@@ -83,9 +83,9 @@ cBot::EditMessage(const cSnowflake& channel_id, const cSnowflake& target_msg, co
 }
 
 cTask<cMessage>
-cBot::GetChannelMessage(const cSnowflake& channel_id, const cSnowflake& msg_id) {
+cBot::GetChannelMessage(crefChannel channel, crefMessage message) {
 	co_return cMessage{
-		co_await DiscordGet(std::format("/channels/{}/messages/{}", channel_id, msg_id))
+		co_await DiscordGet(std::format("/channels/{}/messages/{}", channel.GetId(), message.GetId()))
 	};
 }
 

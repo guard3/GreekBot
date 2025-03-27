@@ -1,1 +1,0 @@
-SELECT author_id FROM starboard WHERE msg_id IS ?1;

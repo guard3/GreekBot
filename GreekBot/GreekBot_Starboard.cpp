@@ -2,6 +2,7 @@
 #include "DBStarboard.h"
 #include "Utils.h"
 #include "CDN.h"
+#include <ranges>
 
 namespace rng = std::ranges;
 
@@ -53,28 +54,34 @@ cGreekBot::OnMessageReactionAdd(cSnowflake& user_id, cSnowflake& channel_id, cSn
 	/* Check that reactions from the author don't count */
 	if (*message_author_id == user_id || *message_author_id == GetUser().GetId()) co_return;
 	/* Register received reaction in the database */
-	auto[sb_msg_id, num_reactions] = co_await cDatabase::SB_RegisterReaction(message_id, *message_author_id);
+	auto txn = co_await BorrowDatabase();
+	auto[sb_msg_id, num_reactions] = cStarboardDAO(txn).RegisterReaction(message_id, *message_author_id);
 	/* Process */
-	co_await process_reaction(channel_id, message_id, sb_msg_id, num_reactions, msg);
+	co_await process_reaction(std::move(txn), channel_id, message_id, msg, sb_msg_id, num_reactions);
 }
 
 cTask<>
-cGreekBot::OnMessageReactionRemove(cSnowflake& user_id, cSnowflake& channel_id, cSnowflake& message_id, hSnowflake guild_id, cEmoji& emoji) {
+cGreekBot::OnMessageReactionRemove(cSnowflake& user_id, cSnowflake& channel_id, cSnowflake& message_id, hSnowflake guild_id, cEmoji& emoji) HANDLER_BEGIN {
 	/* Make sure that we're in Learning Greek and that the emoji is :Holy: */
 	if (!guild_id || !emoji.GetId()) co_return;
 	if (*guild_id != LMG_GUILD_ID || *emoji.GetId() != LMG_EMOJI_HOLY) co_return;
 	/* Also make sure that we're not in an excluded channel */
 	if (rng::binary_search(excluded_channels, channel_id))
 		co_return;
-	/* Make sure that reactions from the author don't count */
-	int64_t author_id = co_await cDatabase::SB_GetMessageAuthor(message_id);
-	if (author_id == 0 || author_id == user_id || author_id == GetUser().GetId()) co_return;
-	/* Remove one reaction from the database */
-	auto[sb_msg_id, num_reactions] = co_await cDatabase::SB_RemoveReaction(message_id);
-	/* Process */
-	std::optional<cMessage> msg;
-	co_await process_reaction(channel_id, message_id, sb_msg_id, num_reactions, msg);
-}
+
+	auto txn = co_await BorrowDatabase();
+	cStarboardDAO dao(txn);
+	if (std::optional author_id = dao.GetMessageAuthor(message_id); !author_id || *author_id == user_id || *author_id == GetUser().GetId()) {
+		/* Make sure that reactions from the author don't count */
+		co_await ReturnDatabase(std::move(txn));
+	} else {
+		/* Remove one reaction from the database */
+		auto[sb_msg_id, num_reactions] = dao.RemoveReaction(message_id);
+		/* Process */
+		std::optional<cMessage> msg;
+		co_await process_reaction(std::move(txn), channel_id, message_id, msg, sb_msg_id, num_reactions);
+	}
+} HANDLER_END
 
 cTask<>
 cGreekBot::process_starboard_message_delete(std::span<const cSnowflake> msg_ids) HANDLER_BEGIN {
@@ -87,38 +94,38 @@ cGreekBot::process_starboard_message_delete(std::span<const cSnowflake> msg_ids)
 } HANDLER_END
 
 cTask<>
-cGreekBot::process_reaction(const cSnowflake& channel_id, const cSnowflake& message_id, int64_t sb_msg_id, int64_t num_reactions, std::optional<cMessage>& msg) {
+cGreekBot::process_reaction(cTransaction txn, crefChannel channel, crefMessage message, std::optional<cMessage>& msg, const std::optional<cSnowflake>& sb_msg_id, std::int64_t num_reactions) {
 	/* If the number of reactions is less than the threshold, delete the starboard message if it was posted before */
 	if (num_reactions < REACTION_THRESHOLD) {
 		if (sb_msg_id) {
-			co_await DeleteMessage(LMG_CHANNEL_STARBOARD, sb_msg_id);
-			co_await cDatabase::SB_RemoveMessage(message_id);
+			cStarboardDAO(txn).RemoveMessage(message);
+			co_await ReturnDatabase(std::move(txn));
+			co_await DeleteMessage(LMG_CHANNEL_STARBOARD, *sb_msg_id);
+		} else {
+			co_await ReturnDatabase(std::move(txn));
 		}
 		co_return;
 	}
-	co_await ResumeOnEventStrand();
 	/* Otherwise, prepare the message content with the :Holy: count */
-	const char* reaction;
-	switch (num_reactions) {
-		case REACTION_THRESHOLD:
-			reaction = "<:Holy:409075809723219969>";
-			break;
-		case REACTION_THRESHOLD + 1:
-			reaction = "<:magik:1167594533849149450>";
-			break;
-		default:
-			reaction = "<a:spin:1167594572050866207>";
-			break;
-	}
-	auto content = std::format("{} **{}** https://discord.com/channels/{}/{}/{}", reaction, num_reactions, LMG_GUILD_ID, channel_id, message_id);
+	std::string content = std::format("{} **{}** https://discord.com/channels/{}/{}/{}", [num_reactions] {
+		switch (num_reactions) {
+			case REACTION_THRESHOLD:
+				return "<:Holy:409075809723219969>";
+			case REACTION_THRESHOLD + 1:
+				return "<:magik:1167594533849149450>";
+			default:
+				return "<a:spin:1167594572050866207>";
+		}
+	}(), num_reactions, LMG_GUILD_ID, channel.GetId(), message.GetId());
 	/* If there is a message id registered in the database, edit the message with the new number of reactions */
 	if (sb_msg_id) {
-		co_await EditMessage(LMG_CHANNEL_STARBOARD, sb_msg_id, cMessageUpdate().SetContent(std::move(content)));
+		co_await ReturnDatabase(std::move(txn));
+		co_await EditMessage(LMG_CHANNEL_STARBOARD, *sb_msg_id, cMessageUpdate().SetContent(std::move(content)));
 		co_return;
 	}
 	/* Make sure that we have the message object available */
 	if (!msg)
-		msg.emplace(co_await GetChannelMessage(channel_id, message_id));
+		msg.emplace(co_await GetChannelMessage(channel, message));
 	cMember author_member = co_await GetGuildMember(LMG_GUILD_ID, msg->GetAuthor().GetId());
 	cUser&  author_user = *author_member.GetUser();
 	/* Prepare the message response with a preview embed */
@@ -195,7 +202,8 @@ cGreekBot::process_reaction(const cSnowflake& channel_id, const cSnowflake& mess
 		preview.SetDescription(msg->MoveContent());
 	/* Send the starboard message and save it in the database */
 	cMessage sb_msg = co_await CreateMessage(LMG_CHANNEL_STARBOARD, response.SetContent(std::move(content)));
-	co_await cDatabase::SB_RegisterMessage(message_id, sb_msg.GetId());
+	cStarboardDAO(txn).RegisterMessage(message, sb_msg);
+	co_await ReturnDatabase(std::move(txn));
 }
 
 static cEmbed make_embed(const cUser& user, const starboard_entry& e, cColor color) {
@@ -262,7 +270,9 @@ cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) HANDLER_BEGIN {
 			/* Acknowledge the interaction since we'll be accessing the database */
 			co_await InteractionDefer(i);
 			/* Retrieve user's starboard entry */
-			auto results = co_await cDatabase::SB_GetRank(*user, REACTION_THRESHOLD);
+			auto txn = co_await BorrowDatabase();
+			auto results = cStarboardDAO(txn).GetRank(*user, REACTION_THRESHOLD);
+			co_await ReturnDatabase(std::move(txn));
 			co_await ResumeOnEventStrand();
 			/* If the user isn't a member of Learning Greek... */
 			if (!member) {
@@ -293,23 +303,19 @@ cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) HANDLER_BEGIN {
 			/* Acknowledge the interaction since we'll be accessing the database */
 			co_await InteractionDefer(i);
 			/* Retrieve the top 10 entries for starboard */
-			auto results = co_await cDatabase::SB_GetTop10(REACTION_THRESHOLD);
+			auto txn = co_await BorrowDatabase();
+			auto results = cStarboardDAO(txn).GetTop10(REACTION_THRESHOLD);
+			co_await ReturnDatabase(std::move(txn));
 			if (results.empty())
 				co_return co_await InteractionSendMessage(i, response.SetContent("I have no <:Holy:409075809723219969> data yet. Y'all boring as fuck!"));
 			/* Prepare member generator */
-			const auto members = co_await [this, &i, &results]() -> cTask<std::vector<cMember>> {
-				const auto size = results.size();
-				std::vector<cSnowflake> user_ids;
-				user_ids.reserve(size);
-				for (auto& res : results)
-					user_ids.push_back(res.author_id);
-				std::vector<cMember> members;
-				members.reserve(size);
-				co_for(auto& mem, RequestGuildMembers(*i.GetGuildId(), user_ids))
+			std::vector<cMember> members; {
+				auto user_ids = results | std::views::transform(&starboard_entry::author_id) | rng::to<std::vector>();
+				members.reserve(results.size());
+				co_for (auto& mem, RequestGuildMembers(*i.GetGuildId(), user_ids))
 					members.push_back(std::move(mem));
-				co_await ResumeOnEventStrand();
-				co_return members;
-			}();
+			}
+			co_await ResumeOnEventStrand();
 			/* Get guild name in case it's needed */
 			std::string guild_name = m_guilds.at(LMG_GUILD_ID).GetName();
 			/* Create embeds */
