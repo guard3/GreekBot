@@ -7,16 +7,16 @@
 cTask<>
 cGreekBot::process_msglog_new_message(const cMessage& msg) HANDLER_BEGIN {
 	/* Save message for logging purposes */
-	auto txn = co_await BorrowDatabase();
+	auto txn = co_await cDatabase::BorrowDatabase();
 	cMessageLogDAO(txn).Register(msg);
-	co_await ReturnDatabase(std::move(txn));
+	co_await cDatabase::ReturnDatabase(std::move(txn));
 } HANDLER_END
 /* ========== Update message when its content changes and send confirmation message in the logging channel ========== */
 cTask<>
 cGreekBot::process_msglog_message_update(cMessageUpdate &msg) HANDLER_BEGIN {
 	std::string& content = *msg.GetContent();
 	/* Start a database transaction */
-	auto txn = co_await BorrowDatabase();
+	auto txn = co_await cDatabase::BorrowDatabase();
 	cMessageLogDAO dao(txn);
 	txn.Begin();
 	/* Retrieve the message from the database */
@@ -26,7 +26,7 @@ cGreekBot::process_msglog_message_update(cMessageUpdate &msg) HANDLER_BEGIN {
 		dao.Update(db_msg->id, content);
 	/* Commit the transaction */
 	txn.Commit();
-	co_await ReturnDatabase(std::move(txn));
+	co_await cDatabase::ReturnDatabase(std::move(txn));
 
 	/* If no message was found, there's nothing else to do */
 	if (!db_msg)
@@ -62,9 +62,9 @@ cGreekBot::process_msglog_message_update(cMessageUpdate &msg) HANDLER_BEGIN {
 cTask<>
 cGreekBot::process_msglog_message_delete(std::span<const cSnowflake> msg_ids) HANDLER_BEGIN {
 	/* Delete messages from the database */
-	auto txn = co_await BorrowDatabase();
+	auto txn = co_await cDatabase::BorrowDatabase();
 	auto db_msgs = cMessageLogDAO(txn).Delete(msg_ids);
-	co_await ReturnDatabase(std::move(txn));
+	co_await cDatabase::ReturnDatabase(std::move(txn));
 	/* Retrieve the authors of the deleted messages */
 	std::vector<std::variant<cUser, cSnowflake>> authors; {
 		auto user_ids = db_msgs | std::views::transform(&message_entry::author_id) | std::ranges::to<std::vector>();

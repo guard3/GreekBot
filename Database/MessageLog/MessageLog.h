@@ -1,7 +1,7 @@
 #ifndef GREEKBOT_MESSAGELOG_H
 #define GREEKBOT_MESSAGELOG_H
 #include "Message.h"
-#include "Transaction.h"
+#include "Database.h"
 
 struct message_entry {
 	cSnowflake id;

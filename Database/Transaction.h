@@ -1,6 +1,6 @@
 #ifndef GREEKBOT_TRANSACTION_H
 #define GREEKBOT_TRANSACTION_H
-#include "Database.h"
+#include "SQLite.h"
 
 class cTransaction {
 	sqlite::connection m_conn;

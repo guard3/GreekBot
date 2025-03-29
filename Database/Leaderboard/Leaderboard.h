@@ -1,7 +1,6 @@
 #ifndef GREEKBOT_LEADERBOARD_H
 #define GREEKBOT_LEADERBOARD_H
 #include "Database.h"
-#include "Transaction.h"
 
 struct leaderboard_entry {
 	cSnowflake   user_id;

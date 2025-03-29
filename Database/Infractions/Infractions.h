@@ -1,7 +1,6 @@
 #ifndef GREEKBOT_INFRACTIONS_H
 #define GREEKBOT_INFRACTIONS_H
 #include "Database.h"
-#include "Transaction.h"
 
 struct infraction_entry {
 	std::chrono::sys_time<std::chrono::milliseconds> timestamp;

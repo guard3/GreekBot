@@ -65,7 +65,6 @@ add_executable(GreekBot main.cpp Discord/Bot.cpp Discord/Bot.h Discord/Common.h 
 	Database/SQLite.h
 	Database/SQLite.cpp
 	GreekBot/LearningGreek.h
-	GreekBot/GreekBot_Database.cpp
 	Database/Leaderboard/Leaderboard.h
 	Database/Leaderboard/Leaderboard.cpp
 	Database/DBLeaderboard.h
@@ -73,20 +72,20 @@ add_executable(GreekBot main.cpp Discord/Bot.cpp Discord/Bot.h Discord/Common.h 
 	Database/Infractions/Infractions.h
 	Database/Infractions/Infractions.cpp
 	Database/DBInfractions.h
-		Database/Transaction.h
-		Database/Transaction.cpp
-		Database/MessageLog/MessageLog.h
-		Database/MessageLog/MessageLog.cpp
-		Database/DBMessageLog.h
-		GreekBot/MessageLogging.cpp
-		GreekBot/ExceptionReporting.cpp
-		Database/Starboard/Starboard.h
-		Database/Starboard/Starboard.cpp
-		Database/DBStarboard.h
-		Discord/Exception/DiscordError.h
-		Discord/Exception/DiscordError.cpp
-		Discord/Exception/HttpError.h
-		Discord/Exception/HttpError.cpp
+	Database/Transaction.h
+	Database/Transaction.cpp
+	Database/MessageLog/MessageLog.h
+	Database/MessageLog/MessageLog.cpp
+	Database/DBMessageLog.h
+	GreekBot/MessageLogging.cpp
+	GreekBot/ExceptionReporting.cpp
+	Database/Starboard/Starboard.h
+	Database/Starboard/Starboard.cpp
+	Database/DBStarboard.h
+	Discord/Exception/DiscordError.h
+	Discord/Exception/DiscordError.cpp
+	Discord/Exception/HttpError.h
+	Discord/Exception/HttpError.cpp
 )
 
 target_include_directories(

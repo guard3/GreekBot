@@ -1,6 +1,6 @@
 #ifndef GREEKBOT_STARBOARD_H
 #define GREEKBOT_STARBOARD_H
-#include "Transaction.h"
+#include "Database.h"
 #include <optional>
 /* ================================================================================================================== */
 struct reaction_entry {

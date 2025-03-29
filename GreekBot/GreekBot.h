@@ -2,7 +2,7 @@
 #define GREEKBOT_GREEKBOT_H
 #include "Bot.h"
 #include "LearningGreek.h"
-#include "Transaction.h"
+#include "Database.h"
 #include <unordered_map>
 #include <span>
 
@@ -33,10 +33,6 @@ private:
 	std::chrono::steady_clock::time_point m_before = std::chrono::steady_clock::now();
 
 	std::vector<cVoiceState> m_lmg_voice_states;
-
-	/* TODO: put these in cDatabase after refactoring */
-	static cTask<cTransaction> BorrowDatabase();
-	static cTask<> ReturnDatabase(cTransaction);
 
 	cTask<> process_avatar(cAppCmdInteraction&);
 	cTask<> process_rank(cAppCmdInteraction&);
