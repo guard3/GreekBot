@@ -5,6 +5,7 @@
 #include <thread>
 #include <boost/asio/defer.hpp>
 #include <boost/asio/io_context.hpp>
+#include <boost/asio/steady_timer.hpp>
 /* ========== The global sqlite connection ========================================================================== */
 static sqlite::connection g_db;
 /* ================================================================================================================== */
@@ -32,36 +33,57 @@ void cDatabase::Initialize() noexcept {
 	}
 	std::exit(EXIT_FAILURE);
 }
-/* ========== An awaitable which resumes a coroutine to the sqlite connection strand ================================ */
+/* ========== A custom io_context that runs on one strand and never runs out of work ================================ */
 namespace net = boost::asio;
-class resume_on_db_strand {
-	/* A custom io_context that runs on one strand and never runs out of work */
-	static inline auto ms_ioc = [] {
-		class _ : public net::io_context {
-			net::executor_work_guard<net::io_context::executor_type> m_work_guard;
-			std::thread m_work_thread;
-		public:
-			_() : net::io_context(1), m_work_guard(net::make_work_guard(*this)), m_work_thread([this] { run(); }) {}
-			~_() {
-				m_work_guard.reset();
-				m_work_thread.join();
-			}
-		};
-		return _();
-	}();
+namespace sys = boost::system;
+class db_context : public net::io_context {
+	net::executor_work_guard<net::io_context::executor_type> m_work_guard;
+	std::thread m_work_thread;
 public:
-	bool await_ready() const {
-		return ms_ioc.get_executor().running_in_this_thread();
+	db_context() : net::io_context(1), m_work_guard(net::make_work_guard(*this)), m_work_thread(&db_context::run, this) {}
+	~db_context() {
+		m_work_guard.reset();
+		m_work_thread.join();
 	}
-	void await_suspend(std::coroutine_handle<> h) const {
-		net::defer(ms_ioc, [h]{ h.resume(); });
-	}
-	void await_resume() const {}
+} static g_db_ctx;
+
+[[nodiscard]]
+auto resume_on_db_strand() {
+	struct awaitable {
+		bool await_ready() noexcept {
+			return g_db_ctx.get_executor().running_in_this_thread();
+		}
+		void await_suspend(std::coroutine_handle<> h) {
+			net::defer(g_db_ctx, h);
+		}
+		void await_resume() noexcept {}
+	};
+	return awaitable{};
+}
+
+[[nodiscard]]
+auto wait_on_db_strand(std::chrono::milliseconds duration) {
+	struct awaitable {
+		net::steady_timer timer;
+
+		bool await_ready() noexcept {
+			return false;
+		}
+		void await_suspend(std::coroutine_handle<> h) {
+			timer.async_wait([h] (const sys::error_code&) { h(); });
+		}
+		void await_resume() noexcept {}
+	};
+	return awaitable{ net::steady_timer(g_db_ctx, duration) };
 };
 
 cTask<>
 cDatabase::ResumeOnDatabaseStrand() {
 	co_await resume_on_db_strand();
+}
+cTask<>
+cDatabase::Wait(std::chrono::milliseconds duration) {
+	co_await wait_on_db_strand(duration);
 }
 /* ================================================================================================================== */
 cTask<uint64_t>

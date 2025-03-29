@@ -25,6 +25,7 @@ public:
 	/* Expose some internals while refactoring takes place - TODO: remove or make private */
 	static sqlite::connection CreateInstance();
 	static cTask<> ResumeOnDatabaseStrand();
+	static cTask<> Wait(std::chrono::milliseconds);
 
 	static cTask<uint64_t> WC_RegisterMember(const cMember&);
 	static cTask<> WC_UpdateMessage(const cUser&, const cMessage&);
