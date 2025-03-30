@@ -120,12 +120,12 @@ namespace sqlite {
 		connection(const std::filesystem::path& filename, int flags) : connection_ref(sqlite::open(filename, flags)) {}
 
 		connection(const connection&) = delete;
-		connection(connection&& o) noexcept : connection_ref(std::exchange(static_cast<connection_ref&>(o), {})) {}
+		connection(connection&& o) noexcept : connection_ref(o.release()) {}
 
 		~connection() { close(); }
 
 		connection& operator=(connection o) noexcept {
-			std::swap(static_cast<connection_ref&>(*this), static_cast<connection_ref&>(o));
+			std::swap<connection_ref>(*this, o);
 			return *this;
 		}
 
@@ -133,18 +133,28 @@ namespace sqlite {
 		void open(const Path& filename, int flags, Args&&... args) noexcept(std::is_nothrow_constructible_v<connection, Path&&, int, Args&&...>) {
 			*this = connection(filename, flags, std::forward<Args>(args)...);
 		}
+
+		[[nodiscard]]
+		connection_ref release() noexcept {
+			return std::exchange<connection_ref>(*this, {});
+		}
 	};
 
 	class statement : public statement_ref {
 	public:
 		explicit statement(statement_ref ref = {}) noexcept : statement_ref(ref) {}
 		statement(const statement&) = delete;
-		statement(statement&& o) noexcept : statement_ref(std::exchange(static_cast<statement_ref&>(o), {})) {}
+		statement(statement&& o) noexcept : statement_ref(o.release()) {}
 		~statement() { finalize(); }
 
 		statement& operator=(statement o) noexcept {
-			std::swap(static_cast<statement_ref&>(*this), static_cast<statement_ref&>(o));
+			std::swap<statement_ref>(*this, o);
 			return *this;
+		}
+
+		[[nodiscard]]
+		statement_ref release() noexcept {
+			return std::exchange<statement_ref>(*this, {});
 		}
 	};
 

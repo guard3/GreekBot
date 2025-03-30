@@ -37,7 +37,7 @@ sqlite::connection
 cTransaction::ReleaseConnection(std::error_code& ec) noexcept {
 	/* Rollback the transaction before returning, unless explicitly committed beforehand */
 	Rollback(ec);
-	return std::move(m_conn);
+	return sqlite::connection(std::exchange(m_conn, {}));
 }
 
 void
