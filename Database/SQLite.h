@@ -7,6 +7,12 @@
 #include <sqlite3.h>
 
 namespace sqlite {
+	enum class error {
+		busy = SQLITE_BUSY
+	};
+
+	std::error_code make_error_code(error) noexcept;
+
 	const std::error_category& error_category() noexcept;
 
 	class statement;
@@ -26,6 +32,7 @@ namespace sqlite {
 		}
 
 		const char* errmsg(this connection_ref self) noexcept { return sqlite3_errmsg(self); }
+		bool autocommit(this connection_ref self) noexcept { return sqlite3_get_autocommit(self); }
 
 		prepare_result<char> prepare(this connection_ref, std::string_view sql, std::error_code& ec) noexcept;
 		prepare_result<char> prepare(this connection_ref, std::string_view sql);
@@ -54,6 +61,15 @@ namespace sqlite {
 		void finalize() noexcept {
 			sqlite3_finalize(m_pStmt);
 			m_pStmt = nullptr;
+		}
+
+		void reset(this statement_ref self, std::error_code& ec) noexcept {
+			ec.assign(sqlite3_reset(self), error_category());
+		}
+		void reset(this statement_ref self) {
+			std::error_code ec;
+			if (self.reset(ec); ec)
+				throw std::system_error(ec);
 		}
 
 		connection_ref db_handle(this statement_ref self) noexcept {
@@ -164,4 +180,8 @@ namespace sqlite {
 		std::basic_string_view<CharT> tail;
 	};
 }
+
+/* Allow implicit conversions between sqlite::error and std::error_code */
+template<>
+struct std::is_error_code_enum<sqlite::error> : std::true_type {};
 #endif //GREEKBOT_SQLITE_H

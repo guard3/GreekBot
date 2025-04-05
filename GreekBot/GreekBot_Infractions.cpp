@@ -154,12 +154,12 @@ cGreekBot::process_warn_impl(cInteraction& i, const cSnowflake &user_id, std::st
 	cInfractionsDAO dao(txn);
 
 	/* Register new infraction and calculate the delta between the 2 most recent infractions */
-	txn.Begin();
+	co_await txn.Begin();
 	dao.Register(user_id, now, reason);
 	auto dt = dao.GetRecentDeltaTime(user_id);
 	/* Send confirmation message */
 	co_await InteractionSendMessage(i, response);
-	txn.Commit();
+	co_await txn.Commit();
 
 	/* Time out the user if the 2 most recent infractions were added in less than 3 months */
 	using namespace std::chrono;
@@ -194,11 +194,11 @@ cGreekBot::process_warn_impl(cInteraction& i, const cSnowflake &user_id, std::st
 		});
 
 		/* Register timeout in the database */
-		txn.Begin();
+		co_await txn.Begin();
 		dao.TimeOut(user_id, now);
 		/* Timeout member */
 		co_await ModifyGuildMember(*i.GetGuildId(), user_id, cMemberOptions().SetCommunicationsDisabledUntil(now + days(timeout_days)));
-		txn.Commit();
+		co_await txn.Commit();
 		/* Send confirmation message */
 		co_await InteractionSendMessage(i, response);
 	}
@@ -363,7 +363,7 @@ cGreekBot::process_infractions_remove(cMsgCompInteraction& i, std::string_view f
 	co_await InteractionDefer(i, false);
 	cTransaction txn = co_await cDatabase::BorrowDatabase();
 	cInfractionsDAO dao(txn);
-	txn.Begin();
+	co_await txn.Begin();
 
 	/* If an infraction was selected to be removed... */
 	if (fmt.starts_with("menu:")) {
@@ -443,7 +443,7 @@ cGreekBot::process_infractions_remove(cMsgCompInteraction& i, std::string_view f
 	}
 	/* Update original message and do database cleanup */
 	co_await InteractionEditMessage(i, response);
-	txn.Commit();
+	co_await txn.Commit();
 	co_await cDatabase::ReturnDatabase(std::move(txn));
 } HANDLER_END
 

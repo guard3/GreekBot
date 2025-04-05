@@ -23,6 +23,10 @@ namespace sqlite {
 		return cat;
 	}
 
+	std::error_code make_error_code(error e) noexcept {
+		return { static_cast<int>(e), error_category() };
+	}
+
 	/* Implement free open() function */
 	connection_ref open(const char* filename, int flags, std::error_code& ec) noexcept {
 		sqlite3* db{};

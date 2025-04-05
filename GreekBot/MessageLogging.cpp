@@ -18,14 +18,14 @@ cGreekBot::process_msglog_message_update(cMessageUpdate &msg) HANDLER_BEGIN {
 	/* Start a database transaction */
 	auto txn = co_await cDatabase::BorrowDatabase();
 	cMessageLogDAO dao(txn);
-	txn.Begin();
+	co_await txn.Begin();
 	/* Retrieve the message from the database */
 	std::optional db_msg = dao.Get(msg.GetId());
 	/* If the message is found, update its content in the database */
 	if (db_msg)
 		dao.Update(db_msg->id, content);
 	/* Commit the transaction */
-	txn.Commit();
+	co_await txn.Commit();
 	co_await cDatabase::ReturnDatabase(std::move(txn));
 
 	/* If no message was found, there's nothing else to do */
