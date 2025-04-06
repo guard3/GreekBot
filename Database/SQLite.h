@@ -8,7 +8,8 @@
 
 namespace sqlite {
 	enum class error {
-		busy = SQLITE_BUSY
+		internal = SQLITE_INTERNAL,
+		busy     = SQLITE_BUSY
 	};
 
 	std::error_code make_error_code(error) noexcept;

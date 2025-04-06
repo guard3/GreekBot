@@ -17,7 +17,7 @@ cStarboardDAO::RegisterReaction(crefMessage message, crefUser author) {
 	stmt.bind(2, author.GetId());
 	/* Make sure the statement returns at least one row */
 	if (!stmt.step())
-		throw std::system_error(SQLITE_INTERNAL, sqlite::error_category());
+		throw std::system_error(sqlite::error::internal);
 	/* Prepare the result */
 	reaction_entry result { std::nullopt, stmt.column_int(1) };
 	/* If the starboard message id is not 0, add it to the result */

@@ -50,7 +50,7 @@ cInfractionsDAO::GetStatsByUser(crefUser user, sys_milliseconds now) {
 				}
 			}
 		}
-		throw std::system_error(SQLITE_INTERNAL, sqlite::error_category());
+		throw std::system_error(sqlite::error::internal);
 	});
 }
 

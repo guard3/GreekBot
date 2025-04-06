@@ -108,7 +108,7 @@ cDatabase::WC_RegisterMember(const cMember& member) {
 	stmt.bind(2, member.JoinedAt().time_since_epoch().count());
 	/* Make sure the statement returns at least one row */
 	if (!stmt.step())
-		throw std::system_error(SQLITE_INTERNAL, sqlite::error_category());
+		throw std::system_error(sqlite::error::internal);
 	co_return static_cast<uint64_t>(stmt.column_int(0));
 }
 cTask<int64_t>
