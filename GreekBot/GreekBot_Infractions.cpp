@@ -155,8 +155,8 @@ cGreekBot::process_warn_impl(cInteraction& i, const cSnowflake &user_id, std::st
 
 	/* Register new infraction and calculate the delta between the 2 most recent infractions */
 	co_await txn.Begin();
-	dao.Register(user_id, now, reason);
-	auto dt = dao.GetRecentDeltaTime(user_id);
+	co_await dao.Register(user_id, now, reason);
+	auto dt = co_await dao.GetRecentDeltaTime(user_id);
 	/* Send confirmation message */
 	co_await InteractionSendMessage(i, response);
 	co_await txn.Commit();
@@ -195,7 +195,7 @@ cGreekBot::process_warn_impl(cInteraction& i, const cSnowflake &user_id, std::st
 
 		/* Register timeout in the database */
 		co_await txn.Begin();
-		dao.TimeOut(user_id, now);
+		co_await dao.TimeOut(user_id, now);
 		/* Timeout member */
 		co_await ModifyGuildMember(*i.GetGuildId(), user_id, cMemberOptions().SetCommunicationsDisabledUntil(now + days(timeout_days)));
 		co_await txn.Commit();
@@ -255,7 +255,7 @@ cGreekBot::process_infractions(cAppCmdInteraction& i) HANDLER_BEGIN {
 	/* Retrieve infraction stats from the database */
 	co_await InteractionDefer(i, true);
 	auto txn = co_await cDatabase::BorrowDatabase();
-	auto stats = cInfractionsDAO(txn).GetStatsByUser(*pUser, now);
+	auto stats = co_await cInfractionsDAO(txn).GetStatsByUser(*pUser, now);
 	co_await cDatabase::ReturnDatabase(std::move(txn));
 
 	auto& embed = response.EmplaceEmbeds().emplace_back();
@@ -307,7 +307,7 @@ cGreekBot::process_infractions_button(cMsgCompInteraction& i, cSnowflake user_id
 	/* Get user stats from the database */
 	co_await InteractionDefer(i);
 	auto txn = co_await cDatabase::BorrowDatabase();
-	auto stats = cInfractionsDAO(txn).GetStatsByUser(user_id, now);
+	auto stats = co_await cInfractionsDAO(txn).GetStatsByUser(user_id, now);
 	co_await cDatabase::ReturnDatabase(std::move(txn));
 
 	/* Prepare a response by keeping just the author's username and removing all buttons */
@@ -370,8 +370,8 @@ cGreekBot::process_infractions_remove(cMsgCompInteraction& i, std::string_view f
 		/* Collect parameters */
 		cSnowflake user_id = fmt.substr(5);
 		/* Delete selected infraction and retrieve updated user stats */
-		dao.Delete(user_id, sys_time(milliseconds(cUtils::ParseInt<milliseconds::rep>(i.GetValues().front()))));
-		auto stats = dao.GetStatsByUser(user_id, now);
+		co_await dao.Delete(user_id, sys_time(milliseconds(cUtils::ParseInt<milliseconds::rep>(i.GetValues().front()))));
+		auto stats = co_await dao.GetStatsByUser(user_id, now);
 		/* Update embed and buttons */
 		auto& embed = response.EmplaceEmbeds(i.GetMessage().MoveEmbeds()).at(0).SetTimestamp(now);
 		if (stats.entries.empty()) {
@@ -390,7 +390,7 @@ cGreekBot::process_infractions_remove(cMsgCompInteraction& i, std::string_view f
 		/* Collect parameters */
 		cSnowflake user_id = fmt.substr(4);
 		/* Delete all infractions of the user */
-		dao.DeleteAll(user_id);
+		co_await dao.DeleteAll(user_id);
 		/* Update response; Change embed message and remove all buttons */
 		response.EmplaceEmbeds(i.GetMessage().MoveEmbeds()).at(0).SetDescription("✅ All infractions removed").SetTimestamp(now).ResetFields();
 		response.EmplaceComponents();
@@ -401,7 +401,7 @@ cGreekBot::process_infractions_remove(cMsgCompInteraction& i, std::string_view f
 		cSnowflake user_id = fmt.substr(5, n - 5);
 		auto timestamp = sys_time(milliseconds(cUtils::ParseInt<milliseconds::rep>(fmt.substr(n + 1))));
 		/* Delete the selected infraction */
-		dao.Delete(user_id, timestamp);
+		co_await dao.Delete(user_id, timestamp);
 		/* Update response; Change embed message and remove all buttons */
 		auto& embed = response.EmplaceEmbeds(i.GetMessage().MoveEmbeds()).at(0);
 		auto& author = *embed.SetDescription("✅ Infraction removed").SetTimestamp(now).GetAuthor();
@@ -415,7 +415,7 @@ cGreekBot::process_infractions_remove(cMsgCompInteraction& i, std::string_view f
 		/* Collect parameters */
 		cSnowflake user_id = fmt;
 		/* Retrieve the 10 most recent infractions of the user */
-		auto stats = dao.GetStatsByUser(user_id, now);
+		auto stats = co_await dao.GetStatsByUser(user_id, now);
 		/* Update response with a select menu for each infraction found */
 		auto& embed = response.EmplaceEmbeds(i.GetMessage().MoveEmbeds()).at(0).SetTimestamp(now);
 		if (stats.entries.empty()) {
