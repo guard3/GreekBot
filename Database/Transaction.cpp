@@ -8,7 +8,7 @@ const cTransactionType cTransactionType::Immediate{ "BEGIN IMMEDIATE;" };
 void
 refTransaction::begin_impl(cTransactionType type, std::error_code& ec) noexcept {
 	/* If autocommit mode is off, then a transaction has begun; Treat this as a no-op */
-	if (m_conn && !m_conn.autocommit())
+	if (!m_conn || !m_conn.autocommit())
 		return ec.clear();
 	/* Begin the transaction statement */
 	auto[stmt, _] = m_conn.prepare(type.m_query, ec);
@@ -19,7 +19,7 @@ refTransaction::begin_impl(cTransactionType type, std::error_code& ec) noexcept 
 void
 refTransaction::commit_impl(std::error_code& ec) noexcept {
 	/* If autocommit mode is on, then no transaction is in progress; Treat this as a no-op */
-	if (m_conn && m_conn.autocommit())
+	if (!m_conn || m_conn.autocommit())
 		return ec.clear();
 	/* Begin the commit statement */
 	auto[stmt, _] = m_conn.prepare("COMMIT;", ec);
@@ -30,7 +30,7 @@ refTransaction::commit_impl(std::error_code& ec) noexcept {
 void
 refTransaction::rollback_impl(std::error_code& ec) noexcept {
 	/* If autocommit mode is on, then a transaction isn't in progress */
-	if (m_conn && m_conn.autocommit())
+	if (!m_conn || m_conn.autocommit())
 		return ec.clear();
 	/* Begin the rollback statement */
 	auto[stmt, _] = m_conn.prepare("ROLLBACK;", ec);
