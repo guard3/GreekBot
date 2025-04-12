@@ -16,7 +16,7 @@ class cInfractionsDAO : cBaseDAO {
 public:
 	using sys_milliseconds = std::chrono::sys_time<std::chrono::milliseconds>;
 
-	explicit cInfractionsDAO(cTransaction& txn) noexcept : cBaseDAO(txn) {}
+	explicit cInfractionsDAO(refTransaction txn) noexcept : cBaseDAO(txn) {}
 
 	/* Given user, timepoint and reason, register a new infraction and return the delta between the 2 most recent infractions */
 	[[nodiscard]] cTask<> Register(crefUser user, sys_milliseconds timepoint, std::string_view reason);

@@ -41,6 +41,7 @@ refTransaction::rollback_impl(std::error_code& ec) noexcept {
 cTask<>
 refTransaction::Begin(cTransactionType type, std::error_code& ec) {
 	/* Begin transaction */
+	co_await cDatabase::ResumeOnDatabaseStrand();
 	begin_impl(type, ec);
 	/* Retry if there are busy errors */
 	for (int i = 0; ec == sqlite::error::busy && i < 100; ++i) {
@@ -56,6 +57,7 @@ refTransaction::Begin(cTransactionType type, std::error_code& ec) {
 cTask<>
 refTransaction::Commit(std::error_code& ec) {
 	/* Commit transaction */
+	co_await cDatabase::ResumeOnDatabaseStrand();
 	commit_impl(ec);
 	/* Retry if there are busy errors */
 	for (int i = 0; ec == sqlite::error::busy && i < 100; ++i) {
@@ -67,14 +69,8 @@ refTransaction::Commit(std::error_code& ec) {
 
 cTask<>
 refTransaction::Rollback(std::error_code& ec) {
-	co_return rollback_impl(ec);
-}
-
-sqlite::connection
-cTransaction::ReleaseConnection(std::error_code& ec) noexcept {
-	/* Rollback the transaction before returning, unless explicitly committed beforehand */
+	co_await cDatabase::ResumeOnDatabaseStrand();
 	rollback_impl(ec);
-	return sqlite::connection(std::exchange(m_conn, {}));
 }
 
 cTask<>
@@ -99,9 +95,15 @@ refTransaction::Rollback() {
 }
 
 sqlite::connection
+cTransaction::ReleaseConnection(std::error_code& ec) noexcept {
+	rollback_impl(ec);
+	return ec ? sqlite::connection{} : sqlite::connection(std::exchange(m_conn, {}));
+}
+
+sqlite::connection
 cTransaction::ReleaseConnection() {
 	std::error_code ec;
-	if (auto result = ReleaseConnection(ec); !ec)
-		return result;
-	throw std::system_error(ec, m_conn.errmsg());
+	if (rollback_impl(ec); ec)
+		throw std::system_error(ec, m_conn.errmsg());
+	return sqlite::connection(std::exchange(m_conn, {}));
 }

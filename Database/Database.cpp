@@ -4,6 +4,7 @@
 #include "Utils.h"
 #include <thread>
 #include <boost/asio/defer.hpp>
+#include <boost/asio/dispatch.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/steady_timer.hpp>
 /* ========== The global sqlite connection ========================================================================== */
@@ -208,4 +209,16 @@ cDatabase::RemoveTemporaryBans(std::span<const cSnowflake> user_ids) {
 	for (std::size_t i = 0; i < user_ids.size(); ++i)
 		stmt.bind(i + 1, user_ids[i]);
 	stmt.step();
+}
+
+void refTransaction::Close() {
+	if (m_conn) {
+		net::dispatch(g_db_ctx, [conn = std::exchange(m_conn, {})] mutable {
+			std::error_code ec;
+			if (refTransaction(conn).rollback_impl(ec); ec)
+				conn.close();
+			else
+				g_db = sqlite::connection(conn);
+		});
+	}
 }

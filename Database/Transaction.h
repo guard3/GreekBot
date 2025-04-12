@@ -24,6 +24,7 @@ public:
 	explicit refTransaction(sqlite::connection_ref conn) noexcept : m_conn(conn) {}
 
 	sqlite::connection_ref GetConnection() noexcept { return m_conn; }
+	void Close();
 
 	[[nodiscard]] cTask<> Begin(cTransactionType type, std::error_code& ec);
 	[[nodiscard]] cTask<> Commit(std::error_code& ec);
@@ -42,10 +43,7 @@ public:
 	cTransaction(const cTransaction&) = delete;
 	cTransaction(cTransaction&& o) noexcept : refTransaction(std::exchange(o.m_conn, {})) {}
 
-	~cTransaction() {
-		// TODO: return the connection back to the global
-		m_conn.close();
-	}
+	~cTransaction() { Close(); }
 
 	cTransaction& operator=(cTransaction o) noexcept {
 		std::swap<refTransaction>(*this, o);

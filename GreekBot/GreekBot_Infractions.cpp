@@ -202,7 +202,6 @@ cGreekBot::process_warn_impl(cInteraction& i, const cSnowflake &user_id, std::st
 		/* Send confirmation message */
 		co_await InteractionSendMessage(i, response);
 	}
-	co_await cDatabase::ReturnDatabase(std::move(txn));
 }
 
 static void make_stats(cEmbed& embed, const infraction_result& res) {
@@ -254,9 +253,7 @@ cGreekBot::process_infractions(cAppCmdInteraction& i) HANDLER_BEGIN {
 	const auto now = i.GetId().GetTimestamp();
 	/* Retrieve infraction stats from the database */
 	co_await InteractionDefer(i, true);
-	auto txn = co_await cDatabase::BorrowDatabase();
-	auto stats = co_await cInfractionsDAO(txn).GetStatsByUser(*pUser, now);
-	co_await cDatabase::ReturnDatabase(std::move(txn));
+	auto stats = co_await cInfractionsDAO(co_await cDatabase::BorrowDatabase()).GetStatsByUser(*pUser, now);
 
 	auto& embed = response.EmplaceEmbeds().emplace_back();
 	embed.EmplaceAuthor(pUser->GetUsername()).SetIconUrl(cCDN::GetUserAvatar(*pUser));
@@ -306,9 +303,7 @@ cGreekBot::process_infractions_button(cMsgCompInteraction& i, cSnowflake user_id
 	const auto now = i.GetId().GetTimestamp();
 	/* Get user stats from the database */
 	co_await InteractionDefer(i);
-	auto txn = co_await cDatabase::BorrowDatabase();
-	auto stats = co_await cInfractionsDAO(txn).GetStatsByUser(user_id, now);
-	co_await cDatabase::ReturnDatabase(std::move(txn));
+	auto stats = co_await cInfractionsDAO(co_await cDatabase::BorrowDatabase()).GetStatsByUser(user_id, now);
 
 	/* Prepare a response by keeping just the author's username and removing all buttons */
 	cMessageUpdate response;
@@ -444,7 +439,6 @@ cGreekBot::process_infractions_remove(cMsgCompInteraction& i, std::string_view f
 	/* Update original message and do database cleanup */
 	co_await InteractionEditMessage(i, response);
 	co_await txn.Commit();
-	co_await cDatabase::ReturnDatabase(std::move(txn));
 } HANDLER_END
 
 cTask<>

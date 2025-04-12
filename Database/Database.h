@@ -27,6 +27,7 @@ public:
 	static cTask<> Wait(std::chrono::milliseconds);
 
 	[[nodiscard]] static cTask<cTransaction> BorrowDatabase();
+	[[deprecated("Use cTransaction::Close()")]]
 	[[nodiscard]] static cTask<> ReturnDatabase(cTransaction);
 
 	static cTask<uint64_t> WC_RegisterMember(const cMember&);
@@ -45,7 +46,7 @@ class cBaseDAO {
 protected:
 	sqlite::connection_ref m_conn;
 
-	explicit cBaseDAO(cTransaction& txn) noexcept : m_conn(txn.GetConnection()) {}
+	explicit cBaseDAO(refTransaction txn) noexcept : m_conn(txn.GetConnection()) {}
 
 	/* A helper function that retries on SQLITE_BUSY errors with a ~30s timeout */
 	template<std::invocable F>
