@@ -109,23 +109,17 @@ cStarboardDAO::GetTop10(int threshold) {
 	});
 }
 
-cTask<std::vector<starboard_entry>>
+cTask<std::optional<starboard_entry>>
 cStarboardDAO::GetRank(crefUser user, int threshold) {
 	return Exec([=, this] {
 		auto [stmt, _] = m_conn.prepare(QUERY_SB_GET_RANK);
 		stmt.bind(1, threshold);
 		stmt.bind(2, user.GetId());
 
-		std::vector<starboard_entry> result;
-		if (stmt.step()) {
-			result.emplace_back(
-				stmt.column_int(0),
-				stmt.column_int(1),
-				stmt.column_int(2),
-				stmt.column_int(3),
-				stmt.column_int(4)
-			);
-		}
-		return result;
+		return stmt.step() ? std::make_optional<starboard_entry>(stmt.column_int(0),
+		                                                         stmt.column_int(1),
+		                                                         stmt.column_int(2),
+		                                                         stmt.column_int(3),
+		                                                         stmt.column_int(4)) : std::nullopt;
 	});
 }

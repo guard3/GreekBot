@@ -29,7 +29,6 @@ public:
 	[[nodiscard]] cTask<std::vector<cSnowflake>> DeleteAll(std::span<const cSnowflake> msg_ids);
 
 	[[nodiscard]] cTask<std::vector<starboard_entry>> GetTop10(int threshold);
-	// TODO: use an optional
-	[[nodiscard]] cTask<std::vector<starboard_entry>> GetRank(crefUser user, int threshold);
+	[[nodiscard]] cTask<std::optional<starboard_entry>> GetRank(crefUser user, int threshold);
 };
 #endif //GREEKBOT_STARBOARD_H

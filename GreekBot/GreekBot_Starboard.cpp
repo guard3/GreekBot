@@ -198,36 +198,31 @@ cGreekBot::process_reaction(cTransaction txn, crefChannel channel, crefMessage m
 	co_await cStarboardDAO(txn).RegisterMessage(message, sb_msg);
 }
 
-static cEmbed make_embed(const cUser& user, const starboard_entry& e, cColor color) {
-	const char* medal;
-	switch (e.rank) {
-		case 1:  medal = "🥇"; break;
-		case 2:  medal = "🥈"; break;
-		case 3:  medal = "🥉"; break;
-		default: medal = "🏅"; break;
-	}
-
-	cEmbed embed;
+static void make_embed(cEmbed& embed, const cUser& user, const starboard_entry& e, cColor color) {
 	embed.EmplaceAuthor(user.GetUsername()).SetIconUrl(cCDN::GetUserAvatar(user));
-	embed.SetTitle(std::format("{} Rank **#{}**", medal, e.rank));
+	embed.SetTitle(std::format("{} Rank **#{}**", [&] {
+		switch (e.rank) {
+			case 1:  return "🥇";
+			case 2:  return "🥈";
+			case 3:  return "🥉";
+			default: return "🏅";
+		}
+	} (), e.rank));
 	embed.SetColor(color);
 	embed.SetFields({
 		{ "Total <:Holy:409075809723219969>", std::to_string(e.react_total), true },
 		{ "Messages", std::to_string(e.num_msg), true },
 		{ "Most in a single message", std::to_string(e.max_react_per_msg) }
 	});
-	return embed;
 }
 
-static cEmbed make_no_member_embed(const cUser* pUser, std::string_view guild_name, bool bAnymore) {
-	cEmbed embed;
+static void make_no_member_embed(cEmbed& embed, const cUser* pUser, std::string_view guild_name, bool bAnymore) {
 	embed.SetColor(LMG_COLOR_BLUE);
 	embed.SetDescription(std::format("User is not a member of **{}**{}.", guild_name, bAnymore ? " anymore" : ""));
 	if (pUser)
 		embed.EmplaceAuthor(pUser->GetUsername()).SetIconUrl(cCDN::GetUserAvatar(*pUser));
 	else
 		embed.EmplaceAuthor("Deleted User").SetIconUrl(cCDN::GetDefaultUserAvatar(cSnowflake{}));
-	return embed;
 }
 
 cTask<>
@@ -262,17 +257,17 @@ cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) HANDLER_BEGIN {
 			/* Acknowledge the interaction since we'll be accessing the database */
 			co_await InteractionDefer(i);
 			/* Retrieve user's starboard entry */
-			auto results = co_await cStarboardDAO(co_await cDatabase::BorrowDatabase()).GetRank(*user, REACTION_THRESHOLD);
+			std::optional db_entry = co_await cStarboardDAO(co_await cDatabase::BorrowDatabase()).GetRank(*user, REACTION_THRESHOLD);
 			co_await ResumeOnEventStrand();
 			/* If the user isn't a member of Learning Greek... */
 			if (!member) {
-				embeds.push_back(make_no_member_embed(user.Get(), m_guilds.at(LMG_GUILD_ID).GetName(), !results.empty()));
+				make_no_member_embed(embeds.emplace_back(), user.Get(), m_guilds.at(LMG_GUILD_ID).GetName(), db_entry.has_value());
 				break;
 			}
 			cColor color = get_lmg_member_color(*member);
 			/* If the user is registered in the leaderboard... */
-			if (!results.empty()) {
-				embeds.push_back(make_embed(*user, results.front(), color));
+			if (db_entry) {
+				make_embed(embeds.emplace_back(), *user, *db_entry, color);
 				break;
 			}
 			/* Otherwise... */
@@ -311,14 +306,14 @@ cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) HANDLER_BEGIN {
 			for (auto& entry : results) {
 				if (auto it = rng::find(members, entry.author_id, [](auto& m) -> auto& { return m.GetUser()->GetId(); }); it != members.end()) {
 					/* If the member is found, create an embed */
-					embeds.push_back(make_embed(*it->GetUser(), entry, get_lmg_member_color(*it)));
+					make_embed(embeds.emplace_back(), *it->GetUser(), entry, get_lmg_member_color(*it));
 				} else try {
 					/* If there's no member object for a user, then this user isn't a member of Learning Greek anymore */
 					cUser user = co_await GetUser(entry.author_id);
-					embeds.push_back(make_no_member_embed(&user, guild_name, true));
+					make_no_member_embed(embeds.emplace_back(), &user, guild_name, true);
 				} catch (const xDiscordError&) {
 					/* User object couldn't be retrieved, likely deleted */
-					embeds.push_back(make_no_member_embed(nullptr, guild_name, true));
+					make_no_member_embed(embeds.emplace_back(), nullptr, guild_name, true);
 				}
 			}
 			break;
