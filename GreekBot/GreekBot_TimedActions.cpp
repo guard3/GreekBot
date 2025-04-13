@@ -11,7 +11,7 @@ cGreekBot::OnHeartbeat() try {
 	if (auto now = steady_clock::now(); now - m_before > 3h) {
 		m_before = now;
 		/* Cleanup old logged messages */
-		co_await cMessageLogDAO(co_await cDatabase::BorrowDatabase()).Cleanup();
+		co_await cMessageLogDAO(co_await cDatabase::CreateTransaction()).Cleanup();
 		cUtils::PrintLog("Cleaned up old logged messages!");
 		/* Remove expired bans */
 		std::vector<cSnowflake> expired = co_await cDatabase::GetExpiredTemporaryBans();

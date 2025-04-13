@@ -138,12 +138,12 @@ define_query(QUERY_MSGLOG_REGISTER Database/MessageLog/query_msglog_register.sql
 define_query(QUERY_MSGLOG_GET      Database/MessageLog/query_msglog_get.sql)
 define_query(QUERY_MSGLOG_UPDATE   Database/MessageLog/query_msglog_update.sql)
 define_query(QUERY_MSGLOG_CLEANUP  Database/MessageLog/query_msglog_cleanup.sql)
-configure_file(Database/MessageLog/MessageLogQueries.h.in MessageLogQueries.h)
+configure_file(Database/MessageLog/Queries.h.in MessageLogQueries.h)
 
 define_query(QUERY_LB_UPDATE  Database/Leaderboard/query_lb_update.sql)
 define_query(QUERY_LB_RANK    Database/Leaderboard/query_lb_rank.sql  )
 define_query(QUERY_LB_TOP     Database/Leaderboard/query_lb_top.sql   )
-configure_file(Database/Leaderboard/LeaderboardQueries.h.in LeaderboardQueries.h)
+configure_file(Database/Leaderboard/Queries.h.in LeaderboardQueries.h)
 
 define_query(QUERY_WARN_REGISTER   Database/Infractions/query_warn_register.sql)
 define_query(QUERY_WARN_DELTA      Database/Infractions/query_warn_delta.sql)
@@ -151,7 +151,7 @@ define_query(QUERY_WARN_STATS      Database/Infractions/query_warn_stats.sql)
 define_query(QUERY_WARN_DELETE     Database/Infractions/query_warn_delete.sql)
 define_query(QUERY_WARN_DELETE_ALL Database/Infractions/query_warn_delete_all.sql)
 define_query(QUERY_WARN_TIMEOUT    Database/Infractions/query_warn_timeout.sql)
-configure_file(Database/Infractions/InfractionsQueries.h.in InfractionsQueries.h)
+configure_file(Database/Infractions/Queries.h.in InfractionsQueries.h)
 
 define_query(QUERY_SB_GET_MESSAGE_AUTHOR Database/Starboard/query_sb_get_msg_author.sql   )
 define_query(QUERY_SB_REGISTER_REACTION  Database/Starboard/query_sb_register_reaction.sql)

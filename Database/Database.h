@@ -26,8 +26,7 @@ public:
 	static cTask<> ResumeOnDatabaseStrand();
 	static cTask<> Wait(std::chrono::milliseconds);
 
-	// TODO: Rename to smth sensible
-	[[nodiscard]] static cTask<cTransaction> BorrowDatabase();
+	[[nodiscard]] static cTask<cTransaction> CreateTransaction();
 
 	static cTask<uint64_t> WC_RegisterMember(const cMember&);
 	static cTask<> WC_UpdateMessage(const cUser&, const cMessage&);

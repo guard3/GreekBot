@@ -87,7 +87,7 @@ cDatabase::Wait(std::chrono::milliseconds duration) {
 }
 /* ================================================================================================================== */
 cTask<cTransaction>
-cDatabase::BorrowDatabase() {
+cDatabase::CreateTransaction() {
 	co_await resume_on_db_strand();
 	co_return cTransaction(CreateInstance());
 }
