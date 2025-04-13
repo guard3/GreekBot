@@ -57,14 +57,12 @@ static void make_embed(cEmbed& embed, const cUser& user, cColor c, const leaderb
 cTask<>
 cGreekBot::process_leaderboard_new_message(cMessage& msg, cPartialMember& member) HANDLER_BEGIN {
 	/* Update leaderboard and retrieve the author's total xp */
-	auto txn = co_await cDatabase::BorrowDatabase();
-	auto xp = cLeaderboardDAO(txn).Update(msg);
-	co_await cDatabase::ReturnDatabase(std::move(txn));
+	std::int64_t xp = co_await cLeaderboardDAO(co_await cDatabase::BorrowDatabase()).Update(msg);
 	/* 0 XP means no changes where made to the database */
 	if (xp == 0)
 		co_return;
 	/* Calculate member level from xp */
-	auto[level, level_xp, next_level_xp] = calculate_level_info(xp);
+	auto [level, level_xp, next_level_xp] = calculate_level_info(xp);
 	/* Get the appropriate rank role for the current level, or 0 for no role */
 	const cSnowflake target_role_id = [level] {
 		if (level >= 100) return LMG_ROLE_PALIOS;
@@ -140,9 +138,7 @@ cGreekBot::process_rank(cAppCmdInteraction& i) HANDLER_BEGIN {
 	/* Acknowledge interaction while we're looking through the database */
 	co_await InteractionDefer(i, true);
 	/* Get user's ranking info from the database */
-	auto txn = co_await cDatabase::BorrowDatabase();
-	auto db_result = cLeaderboardDAO(txn).GetEntryByUser(*user);
-	co_await cDatabase::ReturnDatabase(std::move(txn));
+	std::optional db_result = co_await cLeaderboardDAO(co_await cDatabase::BorrowDatabase()).GetEntryByUser(*user);
 	co_await ResumeOnEventStrand();
 	/* Make sure that the selected user is a member of Learning Greek */
 	auto& embeds = response.EmplaceEmbeds();
@@ -167,9 +163,7 @@ cGreekBot::process_top(cAppCmdInteraction& i) HANDLER_BEGIN {
 	co_await InteractionDefer(i);
 
 	/* Get data from the database */
-	auto txn = co_await cDatabase::BorrowDatabase();
-	std::vector lb_entries = cLeaderboardDAO(txn).GetTop10Entries();
-	co_await cDatabase::ReturnDatabase(std::move(txn));
+	std::vector lb_entries = co_await cLeaderboardDAO(co_await cDatabase::BorrowDatabase()).GetTop10Entries();
 
 	cPartialMessage response;
 	if (lb_entries.empty())

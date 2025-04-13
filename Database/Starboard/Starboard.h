@@ -16,22 +16,20 @@ struct starboard_entry {
 	std::int64_t rank;
 };
 /* ================================================================================================================== */
-class cStarboardDAO {
-	sqlite::connection_ref m_conn;
-
+class cStarboardDAO : cBaseDAO {
 public:
-	explicit cStarboardDAO(cTransaction& txn) noexcept : m_conn(txn.GetConnection()) {}
+	explicit cStarboardDAO(refTransaction txn) noexcept : cBaseDAO(txn) {}
 
-	std::optional<cSnowflake> GetMessageAuthor(crefMessage message);
-	reaction_entry RegisterReaction(crefMessage message, crefUser author);
-	reaction_entry RemoveReaction(crefMessage message);
-	void RegisterMessage(crefMessage message, crefMessage starboard_message);
-	void RemoveMessage(crefMessage message);
+	[[nodiscard]] cTask<std::optional<cSnowflake>> GetMessageAuthor(crefMessage message);
+	[[nodiscard]] cTask<reaction_entry> RegisterReaction(crefMessage message, crefUser author);
+	[[nodiscard]] cTask<reaction_entry> RemoveReaction(crefMessage message);
+	[[nodiscard]] cTask<> RegisterMessage(crefMessage message, crefMessage starboard_message);
+	[[nodiscard]] cTask<> RemoveMessage(crefMessage message);
 
-	std::vector<cSnowflake> DeleteAll(std::span<const cSnowflake> msg_ids);
+	[[nodiscard]] cTask<std::vector<cSnowflake>> DeleteAll(std::span<const cSnowflake> msg_ids);
 
-	std::vector<starboard_entry> GetTop10(int threshold);
+	[[nodiscard]] cTask<std::vector<starboard_entry>> GetTop10(int threshold);
 	// TODO: use an optional
-	std::vector<starboard_entry> GetRank(crefUser user, int threshold);
+	[[nodiscard]] cTask<std::vector<starboard_entry>> GetRank(crefUser user, int threshold);
 };
 #endif //GREEKBOT_STARBOARD_H

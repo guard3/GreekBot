@@ -10,16 +10,14 @@ struct message_entry {
 	std::string content;
 };
 
-class cMessageLogDAO {
-	sqlite::connection_ref m_conn;
-
+class cMessageLogDAO : cBaseDAO {
 public:
-	explicit cMessageLogDAO(cTransaction& txn) noexcept : m_conn(txn.GetConnection()) {}
+	explicit cMessageLogDAO(refTransaction txn) noexcept : cBaseDAO(txn) {}
 
-	void Register(const cMessage&);
-	std::optional<message_entry> Get(crefMessage msg);
-	void Update(crefMessage msg, std::string_view content);
-	std::vector<message_entry> Delete(std::span<const cSnowflake>);
-	void Cleanup();
+	[[nodiscard]] cTask<> Register(const cMessage&);
+	[[nodiscard]] cTask<std::optional<message_entry>> Get(crefMessage msg);
+	[[nodiscard]] cTask<> Update(crefMessage msg, std::string_view content);
+	[[nodiscard]] cTask<std::vector<message_entry>> Delete(std::span<const cSnowflake>);
+	[[nodiscard]] cTask<> Cleanup();
 };
 #endif //GREEKBOT_MESSAGELOG_H

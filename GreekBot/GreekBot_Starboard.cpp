@@ -55,7 +55,7 @@ cGreekBot::OnMessageReactionAdd(cSnowflake& user_id, cSnowflake& channel_id, cSn
 	if (*message_author_id == user_id || *message_author_id == GetUser().GetId()) co_return;
 	/* Register received reaction in the database */
 	auto txn = co_await cDatabase::BorrowDatabase();
-	auto[sb_msg_id, num_reactions] = cStarboardDAO(txn).RegisterReaction(message_id, *message_author_id);
+	auto [sb_msg_id, num_reactions] = co_await cStarboardDAO(txn).RegisterReaction(message_id, *message_author_id);
 	/* Process */
 	co_await process_reaction(std::move(txn), channel_id, message_id, msg, sb_msg_id, num_reactions);
 }
@@ -71,12 +71,10 @@ cGreekBot::OnMessageReactionRemove(cSnowflake& user_id, cSnowflake& channel_id, 
 
 	auto txn = co_await cDatabase::BorrowDatabase();
 	cStarboardDAO dao(txn);
-	if (std::optional author_id = dao.GetMessageAuthor(message_id); !author_id || *author_id == user_id || *author_id == GetUser().GetId()) {
-		/* Make sure that reactions from the author don't count */
-		co_await cDatabase::ReturnDatabase(std::move(txn));
-	} else {
+	/* Make sure that reactions from the author don't count */
+	if (std::optional author_id = co_await dao.GetMessageAuthor(message_id); author_id && *author_id != user_id && *author_id != GetUser().GetId()) {
 		/* Remove one reaction from the database */
-		auto[sb_msg_id, num_reactions] = dao.RemoveReaction(message_id);
+		auto [sb_msg_id, num_reactions] = co_await dao.RemoveReaction(message_id);
 		/* Process */
 		std::optional<cMessage> msg;
 		co_await process_reaction(std::move(txn), channel_id, message_id, msg, sb_msg_id, num_reactions);
@@ -86,9 +84,7 @@ cGreekBot::OnMessageReactionRemove(cSnowflake& user_id, cSnowflake& channel_id, 
 cTask<>
 cGreekBot::process_starboard_message_delete(std::span<const cSnowflake> msg_ids) HANDLER_BEGIN {
 	/* Remove starboard entries and retrieve the ids of messages sent by the bot */
-	auto txn = co_await cDatabase::BorrowDatabase();
-	auto sb_msg_ids = cStarboardDAO(txn).DeleteAll(msg_ids);
-	co_await cDatabase::ReturnDatabase(std::move(txn));
+	auto sb_msg_ids = co_await cStarboardDAO(co_await cDatabase::BorrowDatabase()).DeleteAll(msg_ids);
 	/* Delete those messages */
 	co_await DeleteMessages(LMG_CHANNEL_STARBOARD, sb_msg_ids);
 } HANDLER_END
@@ -98,11 +94,9 @@ cGreekBot::process_reaction(cTransaction txn, crefChannel channel, crefMessage m
 	/* If the number of reactions is less than the threshold, delete the starboard message if it was posted before */
 	if (num_reactions < REACTION_THRESHOLD) {
 		if (sb_msg_id) {
-			cStarboardDAO(txn).RemoveMessage(message);
-			co_await cDatabase::ReturnDatabase(std::move(txn));
+			co_await cStarboardDAO(txn).RemoveMessage(message);
+			txn.Close();
 			co_await DeleteMessage(LMG_CHANNEL_STARBOARD, *sb_msg_id);
-		} else {
-			co_await cDatabase::ReturnDatabase(std::move(txn));
 		}
 		co_return;
 	}
@@ -119,7 +113,6 @@ cGreekBot::process_reaction(cTransaction txn, crefChannel channel, crefMessage m
 	}(), num_reactions, LMG_GUILD_ID, channel.GetId(), message.GetId());
 	/* If there is a message id registered in the database, edit the message with the new number of reactions */
 	if (sb_msg_id) {
-		co_await cDatabase::ReturnDatabase(std::move(txn));
 		co_await EditMessage(LMG_CHANNEL_STARBOARD, *sb_msg_id, cMessageUpdate().SetContent(std::move(content)));
 		co_return;
 	}
@@ -202,8 +195,7 @@ cGreekBot::process_reaction(cTransaction txn, crefChannel channel, crefMessage m
 		preview.SetDescription(msg->MoveContent());
 	/* Send the starboard message and save it in the database */
 	cMessage sb_msg = co_await CreateMessage(LMG_CHANNEL_STARBOARD, response.SetContent(std::move(content)));
-	cStarboardDAO(txn).RegisterMessage(message, sb_msg);
-	co_await cDatabase::ReturnDatabase(std::move(txn));
+	co_await cStarboardDAO(txn).RegisterMessage(message, sb_msg);
 }
 
 static cEmbed make_embed(const cUser& user, const starboard_entry& e, cColor color) {
@@ -270,9 +262,7 @@ cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) HANDLER_BEGIN {
 			/* Acknowledge the interaction since we'll be accessing the database */
 			co_await InteractionDefer(i);
 			/* Retrieve user's starboard entry */
-			auto txn = co_await cDatabase::BorrowDatabase();
-			auto results = cStarboardDAO(txn).GetRank(*user, REACTION_THRESHOLD);
-			co_await cDatabase::ReturnDatabase(std::move(txn));
+			auto results = co_await cStarboardDAO(co_await cDatabase::BorrowDatabase()).GetRank(*user, REACTION_THRESHOLD);
 			co_await ResumeOnEventStrand();
 			/* If the user isn't a member of Learning Greek... */
 			if (!member) {
@@ -303,9 +293,7 @@ cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) HANDLER_BEGIN {
 			/* Acknowledge the interaction since we'll be accessing the database */
 			co_await InteractionDefer(i);
 			/* Retrieve the top 10 entries for starboard */
-			auto txn = co_await cDatabase::BorrowDatabase();
-			auto results = cStarboardDAO(txn).GetTop10(REACTION_THRESHOLD);
-			co_await cDatabase::ReturnDatabase(std::move(txn));
+			auto results = co_await cStarboardDAO(co_await cDatabase::BorrowDatabase()).GetTop10(REACTION_THRESHOLD);
 			if (results.empty())
 				co_return co_await InteractionSendMessage(i, response.SetContent("I have no <:Holy:409075809723219969> data yet. Y'all boring as fuck!"));
 			/* Prepare member generator */

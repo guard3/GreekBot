@@ -91,12 +91,6 @@ cDatabase::BorrowDatabase() {
 	co_await resume_on_db_strand();
 	co_return cTransaction(CreateInstance());
 }
-
-cTask<>
-cDatabase::ReturnDatabase(cTransaction txn) {
-	co_await resume_on_db_strand();
-	g_db = txn.ReleaseConnection();
-}
 /* ================================================================================================================== */
 cTask<uint64_t>
 cDatabase::WC_RegisterMember(const cMember& member) {
