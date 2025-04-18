@@ -86,6 +86,9 @@ add_executable(GreekBot main.cpp Discord/Bot.cpp Discord/Bot.h Discord/Common.h 
 	Discord/Exception/DiscordError.cpp
 	Discord/Exception/HttpError.h
 	Discord/Exception/HttpError.cpp
+	Database/TempBans/TempBans.h
+	Database/TempBans/TempBans.cpp
+	Database/DBTempBans.h
 )
 
 target_include_directories(
@@ -162,15 +165,17 @@ define_query(QUERY_SB_GET_TOP_10         Database/Starboard/query_sb_get_top_10.
 define_query(QUERY_SB_GET_RANK           Database/Starboard/query_sb_get_rank.sql         )
 configure_file(Database/Starboard/Queries.h.in StarboardQueries.h)
 
+define_query(QUERY_TEMPBAN_REGISTER    Database/TempBans/query_tempban_register.sql   )
+define_query(QUERY_TEMPBAN_GET_EXPIRED Database/TempBans/query_tempban_get_expired.sql)
+define_query(QUERY_TEMPBAN_REMOVE      Database/TempBans/query_tempban_remove.sql     )
+configure_file(Database/TempBans/Queries.h.in TempBanQueries.h)
+
 define_query(QUERY_INIT       Database/query_init.sql      )
 define_query(QUERY_WC_REG_MBR Database/query_wc_reg_mbr.sql)
 define_query(QUERY_WC_UPD_MSG Database/query_wc_upd_msg.sql)
 define_query(QUERY_WC_GET_MSG Database/query_wc_get_msg.sql)
 define_query(QUERY_WC_DEL_MBR Database/query_wc_del_mbr.sql)
 define_query(QUERY_WC_EDT_MSG Database/query_wc_edt_msg.sql)
-
-define_query(QUERY_REGISTER_TEMPORARY_BAN Database/query_register_temporary_ban.sql)
-define_query(QUERY_REMOVE_TEMPORARY_BAN   Database/query_remove_temporary_ban.sql  )
 configure_file(Database/Queries.h.in Queries.h)
 
 # Add the binary directory to the include directories, since that's where the header files are generated

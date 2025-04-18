@@ -33,11 +33,6 @@ public:
 	static cTask<int64_t> WC_GetMessage(const cMemberUpdate&);
 	static cTask<> WC_EditMessage(int64_t);
 	static cTask<uint64_t> WC_DeleteMember(const cUser&);
-
-	static cTask<> RegisterTemporaryBan(crefUser user, std::chrono::sys_days expires_at);
-	static cTask<std::vector<cSnowflake>> GetExpiredTemporaryBans();
-	static cTask<> RemoveTemporaryBan(crefUser user);
-	static cTask<> RemoveTemporaryBans(std::span<const cSnowflake> user_ids);
 };
 /* ========== A base type for all DAO classes ======================================================================= */
 class cBaseDAO {

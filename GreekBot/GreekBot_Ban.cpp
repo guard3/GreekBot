@@ -1,5 +1,5 @@
 #include "CDN.h"
-#include "Database.h"
+#include "DBTempBans.h"
 #include "GreekBot.h"
 #include "Utils.h"
 /* ========== Subcommand name hashes for easy switching ============================================================= */
@@ -176,14 +176,18 @@ cGreekBot::process_unban(cInteraction& i, cSnowflake user_id) HANDLER_BEGIN {
 			throw std::runtime_error("");
 		}
 	});
+	/* Remove the ban from the database */
+	auto txn = co_await cDatabase::CreateTransaction();
+	co_await txn.Begin();
+	co_await cTempBanDAO(txn).Remove(user_id);
 	/* Unban the user */
 	try {
 		co_await RemoveGuildBan(*i.GetGuildId(), user_id, std::format("{} used the /unban command", i.GetUser().GetUsername()));
 	} catch (xDiscordError&) {
 		/* Ban not found, but that's fine */
 	}
-	/* Also remove the ban from the database */
-	co_await cDatabase::RemoveTemporaryBan(user_id);
+	co_await txn.Commit();
+	txn.Close();
 	/* Send confirmation */
 	co_await InteractionEditMessage(i, msg.SetComponents({
 		cActionRow{
@@ -376,10 +380,15 @@ cGreekBot::process_ban(cInteraction& i, std::uint32_t sc, const cSnowflake& user
 	} catch (...) {
 		/* Couldn't send ban reason in DMs, the user may not be a member of the guild but that's fine */
 	}
+	/* If the ban is temporary, register it to the database or delete it if it isn't temporary */
+	auto txn = co_await cDatabase::CreateTransaction();
+	co_await txn.Begin();
+	co_await cTempBanDAO(txn).Register(user_id, expiry);
 	/* Ban */
 	co_await CreateGuildBan(*i.GetGuildId(), user_id, delete_messages, reason);
-	/* If the ban is temporary, register it to the database or delete it if it isn't temporary */
-	co_await cDatabase::RegisterTemporaryBan(user_id, expiry);
+	co_await txn.Commit();
+	txn.Close();
+
 	/* Send confirmation message */
 	co_await InteractionSendMessage(i, response.SetComponents({
 		cActionRow{

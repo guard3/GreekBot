@@ -152,59 +152,6 @@ cDatabase::WC_UpdateMessage(const cUser& user, const cMessage& msg) {
 	stmt.step();
 }
 
-cTask<>
-cDatabase::RegisterTemporaryBan(crefUser user, std::chrono::sys_days expires_at) {
-	if (expires_at == std::chrono::sys_days{})
-		return RemoveTemporaryBan(user);
-	return [](crefUser user, std::chrono::sys_days expires_at) -> cTask<> {
-		co_await resume_on_db_strand();
-		auto conn = cDatabase::CreateInstance();
-		auto[stmt, _] = conn.prepare(QUERY_REGISTER_TEMPORARY_BAN);
-		g_db = std::move(conn);
-		stmt.bind(1, user.GetId());
-		stmt.bind(2, expires_at.time_since_epoch().count());
-		stmt.step();
-	} (user, expires_at);
-}
-cTask<std::vector<cSnowflake>>
-cDatabase::GetExpiredTemporaryBans() {
-	using namespace std::chrono;
-	co_await resume_on_db_strand();
-	auto conn = CreateInstance();
-	auto[stmt, _] = conn.prepare("SELECT user_id FROM tempbans WHERE ? >= expires_at;");
-	g_db = std::move(conn);
-	stmt.bind(1, floor<days>(system_clock::now()).time_since_epoch().count());
-	std::vector<cSnowflake> result;
-	while (stmt.step())
-		result.emplace_back(stmt.column_int(0));
-	co_return result;
-}
-cTask<>
-cDatabase::RemoveTemporaryBan(crefUser user) {
-	co_await resume_on_db_strand();
-	auto conn = CreateInstance();
-	auto[stmt, _] = conn.prepare(QUERY_REMOVE_TEMPORARY_BAN);
-	g_db = std::move(conn);
-	stmt.bind(1, user.GetId());
-	stmt.step();
-}
-cTask<>
-cDatabase::RemoveTemporaryBans(std::span<const cSnowflake> user_ids) {
-	if (user_ids.empty())
-		co_return;
-	co_await resume_on_db_strand();
-	std::string query = "DELETE FROM tempbans WHERE user_id IN (?";
-	for (std::size_t i = 1; i < user_ids.size(); ++i)
-		query += ",?";
-	query += ");";
-	auto conn = CreateInstance();
-	auto[stmt, _] = conn.prepare(query);
-	g_db = std::move(conn);
-	for (std::size_t i = 0; i < user_ids.size(); ++i)
-		stmt.bind(i + 1, user_ids[i]);
-	stmt.step();
-}
-
 void refTransaction::Close() {
 	if (m_conn) {
 		net::dispatch(g_db_ctx, [conn = std::exchange(m_conn, {})] mutable {

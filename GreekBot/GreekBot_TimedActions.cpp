@@ -1,5 +1,6 @@
 #include "Database.h"
 #include "DBMessageLog.h"
+#include "DBTempBans.h"
 #include "GreekBot.h"
 #include "Utils.h"
 
@@ -10,11 +11,13 @@ cGreekBot::OnHeartbeat() try {
 	/* The following actions will be taking place once every few hours */
 	if (auto now = steady_clock::now(); now - m_before > 3h) {
 		m_before = now;
+		/* Create a transaction */
+		cTransaction txn = co_await cDatabase::CreateTransaction();
 		/* Cleanup old logged messages */
-		co_await cMessageLogDAO(co_await cDatabase::CreateTransaction()).Cleanup();
+		co_await cMessageLogDAO(txn).Cleanup();
 		cUtils::PrintLog("Cleaned up old logged messages!");
 		/* Remove expired bans */
-		std::vector<cSnowflake> expired = co_await cDatabase::GetExpiredTemporaryBans();
+		std::vector<cSnowflake> expired = co_await cTempBanDAO(txn).GetExpired();
 		std::vector<cSnowflake> unbanned;
 		unbanned.reserve(expired.size());
 		cPartialMessage msg;
@@ -27,7 +30,7 @@ cGreekBot::OnHeartbeat() try {
 		}
 		/* If at least one user was unbanned, remove them from the database */
 		if (!unbanned.empty()) {
-			co_await cDatabase::RemoveTemporaryBans(unbanned);
+			co_await cTempBanDAO(txn).Remove(unbanned);
 			cUtils::PrintLog("{} ban{} expired", unbanned.size(), unbanned.size() == 1 ? "" : "s");
 		}
 		/* Prune */

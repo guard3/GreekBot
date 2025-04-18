@@ -1,0 +1,1 @@
+SELECT user_id FROM tempbans WHERE ? >= expires_at;
