@@ -29,12 +29,12 @@ enum : std::uint32_t {
 };
 /* ========== Implement process_event() ============================================================================= */
 void
-cGateway::implementation::process_event(const json::value& v) {
+cGateway::implementation::process_event(std::shared_ptr<websocket_session> sess, const json::value& v) {
 	bool bSuccess = false;  // Indicates whether the event payload was successfully parsed;
 	std::string event_name; // The name of the event as a string
 #define switch_strand() ResumeOnEventStrand(); bSuccess = true
 	try {
-		/* Update last sequence received */
+		/* Update the last sequence received */
 		m_last_sequence = v.at("s").as_int64();
 		/* Determine the event type */
 		event_name = json::value_to<std::string>(v.at("t"));
@@ -274,12 +274,12 @@ cGateway::implementation::process_event(const json::value& v) {
 			throw;
 		} catch (const std::exception &e) {
 			const char* what = e.what();
-			cUtils::PrintErr("Unhandled exception while {}{}{}{}{}", s1, event_name, s2, *what ? ": " : "", what);
+			cUtils::PrintErr("Unhandled exception while {}{}{}{}{}", +s1, event_name, +s2, *what ? ": " : "", what);
 		} catch (...) {
-			cUtils::PrintErr("Unhandled exception while {}{}{}{}{}", s1, event_name, s2, "", "");
+			cUtils::PrintErr("Unhandled exception while {}{}{}{}{}", +s1, event_name, +s2, "", "");
 		}
 		/* Restart if the error occurred while parsing the event payload */
 		if (!bSuccess)
-			net::defer(m_ws_strand, [this] { restart(); });
+			net::defer(m_ws_strand, [this, sess = std::move(sess)] mutable { restart(std::move(sess)); });
 	}
 }

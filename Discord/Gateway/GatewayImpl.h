@@ -20,6 +20,8 @@ namespace sys   = boost::system;
 namespace urls  = boost::urls;
 /* ========== Separate cGateway implementation class to avoid including boost everywhere ============================ */
 struct cGateway::implementation final {
+	/* Forward declaration of the websocket session type */
+	struct websocket_session;
 	/* Aliases for the stream types used for http and websocket with SSL support */
 	using ssl_stream = net::ssl::stream<beast::tcp_stream>;
 	using websocket_stream = beast::websocket::stream<ssl_stream>;
@@ -30,7 +32,6 @@ struct cGateway::implementation final {
 	/* Constructors */
 	implementation(cGateway*, std::string_view, eIntent);
 	implementation(const implementation&) = delete;
-	~implementation();
 	/* Assignment */
 	implementation& operator=(const implementation&) = delete;
 	/* The parent gateway object through which events are handled */
@@ -38,17 +39,16 @@ struct cGateway::implementation final {
 	/* The contexts for asio */
 	net::io_context   m_ioc;
 	net::ssl::context m_ctx;
-	/* Strands for synchronisation */
+	/* Strands for synchronization */
 	net::strand<net::io_context::executor_type> m_ws_strand;   // A strand for WebSocket operations
 	net::strand<net::io_context::executor_type> m_http_strand; // A strand for HTTP operations
 	/* Resolvers */
-	net::ip::tcp::resolver   m_resolver;
-	int                      m_async_status;     // Flags of pending operations and status of the websocket stream
+	net::ip::tcp::resolver m_ws_resolver;
+	net::ip::tcp::resolver m_http_resolver;
+	std::weak_ptr<websocket_session> m_ws_session;
+	bool                     m_ws_terminating{}; // Flags of pending operations and status of the websocket stream
 	steady_clock::time_point m_error_started_at; // The time point of the first connection error; used for retrying
-	beast::flat_buffer       m_buffer;           // A buffer for reading from the websocket
 	beast::flat_buffer       m_http_buffer;      // A buffer for storing http responses
-	std::deque<std::string>  m_queue;            // A queue with all pending messages to be sent
-	std::unique_ptr<websocket_stream> m_ws;      // The websocket stream
 	std::unique_ptr<ssl_stream> m_http_stream;   // The SSL stream used for HTTP
 	/* HTTP */
 	struct http_entry {
@@ -56,10 +56,10 @@ struct cGateway::implementation final {
 		http_response&      response;
 		std::coroutine_handle<> coro;
 	};
-	bool                   m_http_terminate; // Whether HTTP requests should be cancelled upon session termination;
-	std::deque<http_entry> m_http_queue;     // A queue of pending HTTP requests
-	net::steady_timer      m_http_timer;     // The timer for scheduling HTTP stream shutdown after a period of inactivity
-	std::exception_ptr     m_http_exception; // The exception to be propagated after an error during HTTP operations
+	bool                   m_http_terminate{}; // Whether HTTP requests should be cancelled upon session termination;
+	std::deque<http_entry> m_http_queue;       // A queue of pending HTTP requests
+	net::steady_timer      m_http_timer;       // The timer for scheduling HTTP stream shutdown after a period of inactivity
+	std::exception_ptr     m_http_exception;   // The exception to be propagated after an error during HTTP operations
 	/* Initial parameters for identifying */
 	std::string m_http_auth; // The authorization parameter for HTTP requests 'Bot token'
 	eIntent     m_intents;   // The gateway intents
@@ -67,16 +67,9 @@ struct cGateway::implementation final {
 	urls::url    m_cached_gateway_url; // The url used for initial connections
 	urls::url    m_resume_gateway_url; // The url used for resuming connections
 	std::string  m_session_id;         // The current session id, used for resuming; empty = no valid session
-	std::int64_t m_last_sequence;      // The last event sequence received, used for heartbeating; 0 = none received
-	/* Heartbeating */
-	net::steady_timer m_heartbeat_timer;    // The async timer for heartbeats
-	milliseconds      m_heartbeat_interval; // The interval between heartbeats
-	bool              m_heartbeat_ack;      // Is the heartbeat acknowledged?
+	std::int64_t m_last_sequence{};    // The last event sequence received, used for heartbeating; 0 = none received
 	/* Json parsing for gateway events */
 	json::stream_parser m_parser; // The json parser
-	/* Zlib stuff for decompressing websocket messages */
-	z_stream m_inflate_stream;
-	Byte     m_inflate_buffer[4096];
 	/* Request Guild Members stuff */
 	struct guild_members_entry {
 		std::deque<cGuildMembersChunk> chunks;
@@ -84,35 +77,32 @@ struct cGateway::implementation final {
 		std::exception_ptr except;
 		std::chrono::steady_clock::time_point started_at;
 	};
-	std::uint64_t                 m_rgm_nonce = 0; // The nonce of the payload
+	std::uint64_t                 m_rgm_nonce{};   // The nonce of the payload
 	std::exception_ptr            m_rgm_exception; // An exception in case all pending requests need to be canceled
 	std::deque<std::coroutine_handle<>> m_pending; // The queue of pending requests for when the gateway is unavailable
 	std::unordered_map<std::uint64_t, guild_members_entry> m_rgm_entries; // A map to hold and manage all responses
 	/* Partial application object */
 	std::optional<cApplication> m_application;
-	/* A buffer to hold exception messages for when allocations are unfavorable */
-	char m_err_msg[256];
-	std::byte m_mem_rc_buff[4096];
 
 	/* Gateway commands */
-	void resume();
-	void identify();
-	void heartbeat();
+	void resume(std::shared_ptr<websocket_session>);
+	void identify(std::shared_ptr<websocket_session>);
+	void heartbeat(std::shared_ptr<websocket_session>);
 	void on_heartbeat();
 	/* Websocket message queuing */
-	void send(std::string);
+	void send(std::shared_ptr<websocket_session>, std::string);
 	/* Beast/Asio async functions */
-	void on_read(const sys::error_code&, std::size_t);
-	void on_write(const sys::error_code&);
-	void on_expire(const sys::error_code&);
-	void on_close() noexcept;
-	void restart() noexcept;
+	void on_read(std::shared_ptr<websocket_session>, const sys::error_code&, std::size_t) noexcept;
+	void on_write(std::shared_ptr<websocket_session>, const sys::error_code&) noexcept;
+	void on_expire(std::shared_ptr<websocket_session>, const sys::error_code&);
+	void on_close(std::shared_ptr<websocket_session>) noexcept;
+	void restart(std::shared_ptr<websocket_session>) noexcept;
 	void retry(std::exception_ptr) noexcept;
 	/* A method that initiates the gateway connection */
 	void run_session() noexcept;
 	void run_context() noexcept;
 	/* A method that's invoked for every gateway event */
-	void process_event(const json::value&);
+	void process_event(std::shared_ptr<websocket_session>, const json::value&);
 	/* Http functions */
 	void http_start();
 	net::awaitable<void> http_coro();
@@ -163,6 +153,34 @@ struct cGateway::implementation final {
 
 	void Run();
 	void RequestExit() noexcept;
+};
+/* ================================================================================================================== */
+struct cGateway::implementation::websocket_session {
+	beast::flat_buffer buffer;     // A buffer for reading from the websocket
+	std::deque<std::string> queue; // A queue with all pending messages to be sent
+	websocket_stream stream;       // The websocket stream
+	/* Heartbeating */
+	net::steady_timer hb_timer; // The async timer for heartbeats
+	milliseconds hb_interval;   // The interval between heartbeats
+	bool hb_ack = false;        // Is the heartbeat acknowledged?
+	bool closing = false;       // Are we closing this session?
+	/* Zlib stuff for decompressing websocket messages */
+	z_stream inflate_stream{};
+	Byte inflate_buffer[4096];
+
+	websocket_session(auto& ioc, auto& ctx) : stream(ioc, ctx), hb_timer(ioc) {
+		/* Initialize zlib inflate stream */
+		switch (inflateInit(&inflate_stream)) {
+			case Z_OK:
+				break;
+			case Z_MEM_ERROR:
+				throw std::bad_alloc();
+			default:
+				throw std::runtime_error("Could not initialize inflate stream");
+		}
+	}
+	websocket_session(const websocket_session&) = delete;
+	websocket_session& operator=(const websocket_session&) = delete;
 };
 /* ========== Make void a valid coroutine return type for cGateway::implementation member functions ================= */
 template<typename... Args>

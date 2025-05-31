@@ -85,7 +85,7 @@ cGateway::implementation::RequestGuildMembers(const cSnowflake& guild_id, std::s
 	co_await [this] {
 		struct _ {
 			implementation& self;
-			bool await_ready() const noexcept { return self.m_ws && self.m_ws->is_open(); }
+			bool await_ready() const noexcept { return !self.m_ws_session.expired(); }
 			void await_suspend(std::coroutine_handle<> h) const { self.m_pending.push_back(h); }
 			void await_resume() const {
 				if (self.m_rgm_exception)
@@ -95,8 +95,8 @@ cGateway::implementation::RequestGuildMembers(const cSnowflake& guild_id, std::s
 	}();
 	/* Back up the current nonce and increment the original for future use */
 	auto nonce = m_rgm_nonce++;
-	/* Send payload */
-	send([&guild_id, query, user_ids, nonce] {
+	/* Send payload - if we reach this point, then the session pointer is guaranteed to be valid */
+	send(m_ws_session.lock(), [&guild_id, query, user_ids, nonce] {
 		json::object obj;
 		obj.reserve(2);
 		obj.emplace("op", 8);

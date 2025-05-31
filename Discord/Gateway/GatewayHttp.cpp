@@ -7,7 +7,7 @@ cGateway::implementation::http_coro() {
 	using namespace std::chrono_literals;
 	/* If the HTTP stream is null, initialize a new one */
 	if (!m_http_stream) {
-		auto results = co_await m_resolver.async_resolve(DISCORD_API_HOST, "https", net::use_awaitable);
+		auto results = co_await m_http_resolver.async_resolve(DISCORD_API_HOST, "https", net::use_awaitable);
 		auto stream = std::make_unique<ssl_stream>(m_http_strand, m_ctx);
 		/* Connect and perform the SSL handshake; 30s timeout */
 		stream->next_layer().expires_after(30s);
