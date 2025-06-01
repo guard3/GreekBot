@@ -1,18 +1,8 @@
 #include "Database.h"
 #include "GreekBot.h"
-#include "Utils.h"
-#include <csignal>
 #include <cstdio>
-#include <thread>
 
 int main(int argc, const char** argv) {
-	/* Set the main thread to block certain signals */
-	sigset_t set;
-	sigemptyset(&set);
-	sigaddset(&set, SIGINT);
-	sigaddset(&set, SIGTSTP);
-	sigaddset(&set, SIGTERM);
-	pthread_sigmask(SIG_BLOCK, &set, NULL);
 	/* Check arguments! */
 	if (argc != 2) {
 		std::puts("You forgot to give me a token!");
@@ -21,22 +11,7 @@ int main(int argc, const char** argv) {
 	/* Initialize the database and the bot client */
 	cDatabase::Initialize();
 	cGreekBot client(argv[1]);
-	/* Wait for a termination signal in order to stop the bot gracefully */
-	std::thread t(&cGreekBot::Run, &client);
-	for (int sig = 0;;) {
-		sigwait(&set, &sig);
-		switch (sig) {
-			case SIGINT:
-			case SIGTSTP:
-			case SIGTERM:
-				cUtils::PrintErr("Interrupt received. Terminating...");
-				client.RequestExit();
-				break;
-			default:
-				continue;
-		}
-		break;
-	}
-	t.join();
+	client.Run();
+
 	return EXIT_SUCCESS;
 }

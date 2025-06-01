@@ -86,7 +86,5 @@ public:
 	virtual cTask<> OnVoiceStateUpdate(cVoiceState&) { co_return; }
 	/* Run the client loop */
 	void Run();
-	/* Gracefully close the client connection and request program exit */
-	void RequestExit() noexcept;
 };
 #endif /* DISCORD_GATEWAY_H */

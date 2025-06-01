@@ -243,16 +243,9 @@ cGateway::implementation::run_session() noexcept try {
 		pUrl = &m_cached_gateway_url;
 	}
 	/* Make sure that the url scheme is WSS */
-	if (pUrl->scheme_id() != urls::scheme::wss) {
-		class _ : public std::exception {
-			char m_msg[256];
-		public:
-			_(const urls::url& url) : m_msg{} {
-				std::format_to_n(m_msg, std::size(m_msg) - 1, "Invalid gateway URL {}", std::string_view(url.data(), url.size()));
-			}
-			const char* what() const noexcept override { return m_msg; }
-		}; throw _(*pUrl);
-	}
+	if (pUrl->scheme_id() != urls::scheme::wss)
+		throw std::runtime_error(std::format("Not a WebSocket url: {}", std::string_view{ pUrl->data(), pUrl->size() }));
+
 	net::co_spawn(m_ws_strand, [this, url = *pUrl]() mutable -> net::awaitable<void> {
 		using namespace std::chrono_literals;
 		/* Create a new websocket session */
@@ -343,9 +336,9 @@ cGateway::implementation::run_context() noexcept {
 			m_ioc.run();
 			break;
 		} catch (const std::exception& e) {
-			cUtils::PrintErr("An unhandled exception escaped main loop: {}", e.what());
+			cUtils::PrintErr("An unhandled exception escaped main loop{}{}", *e.what() ? ": " : ".", e.what());
 		} catch (...) {
-			cUtils::PrintErr("An unhandled exception escaped main loop.");
+			cUtils::PrintErr("An unhandled exception escaped main loop{}{}", ".", "");
 		}
 		net::dispatch(m_ws_strand, [this] noexcept {
 			auto sess = m_ws_session.lock();
@@ -357,21 +350,34 @@ cGateway::implementation::run_context() noexcept {
 /* ================================================================================================================== */
 void
 cGateway::implementation::Run() {
+	// Catch signals to terminate gracefully
+	net::signal_set sigset(m_ws_strand, SIGINT, SIGTSTP, SIGTERM);
+	sigset.async_wait([this](const sys::error_code& ec, int sig) {
+		if (!ec) {
+			char buffer[32];
+			cUtils::PrintLog("{} received, terminating...", [sig, &buffer] -> std::string_view {
+				switch (sig) {
+					case SIGINT: return "SIGINT";
+					case SIGTSTP: return "SIGTSTP";
+					case SIGTERM: return "SIGTERM";
+					default: return { buffer, std::format_to(buffer, "Signal {}", sig) };
+				}
+			}());
+			// Terminate websocket
+			m_ws_terminating = true;
+			if (auto sess = m_ws_session.lock())
+				restart(std::move(sess));
+			// Terminate http
+			net::post(m_http_strand, [this] {
+				m_http_terminate = true;
+				m_http_timer.cancel();
+			});
+		}
+	});
+
+	// Start
 	run_session();
 	std::thread t(&implementation::run_context, this);
 	run_context();
 	t.join();
-}
-/* ================================================================================================================== */
-void
-cGateway::implementation::RequestExit() noexcept {
-	net::dispatch(m_ws_strand, [this] {
-		m_ws_terminating = true;
-		if (auto sess = m_ws_session.lock())
-			restart(std::move(sess));
-	});
-	net::dispatch(m_http_strand, [this] {
-		m_http_terminate = true;
-		m_http_timer.cancel();
-	});
 }

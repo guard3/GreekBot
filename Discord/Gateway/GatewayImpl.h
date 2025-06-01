@@ -152,7 +152,6 @@ struct cGateway::implementation final {
 	cAsyncGenerator<cMember> RequestGuildMembers(const cSnowflake&, std::string_view, std::span<const cSnowflake>);
 
 	void Run();
-	void RequestExit() noexcept;
 };
 /* ================================================================================================================== */
 struct cGateway::implementation::websocket_session {
