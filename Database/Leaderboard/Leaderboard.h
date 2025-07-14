@@ -1,6 +1,9 @@
 #ifndef GREEKBOT_LEADERBOARD_H
 #define GREEKBOT_LEADERBOARD_H
 #include "Database.h"
+#include "MessageFwd.h"
+#include "UserFwd.h"
+#include <vector>
 
 struct leaderboard_entry {
 	cSnowflake   user_id;

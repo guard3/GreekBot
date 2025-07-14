@@ -1,5 +1,5 @@
 #include "CDN.h"
-#include "Database.h"
+#include "DBWelcoming.h"
 #include "GreekBot.h"
 
 static const cSnowflake NEW_MEMBERS_CHANNEL_ID = 1143888492422770778;
@@ -7,10 +7,10 @@ static const cSnowflake NEW_MEMBERS_CHANNEL_ID = 1143888492422770778;
 cTask<>
 cGreekBot::OnGuildMemberAdd(cSnowflake& guild_id, cMember& member) {
 	if (guild_id == LMG_GUILD_ID) {
-		if (const uint64_t old_msg_id = co_await cDatabase::WC_RegisterMember(member); old_msg_id != 0) try {
-			co_await DeleteMessage(NEW_MEMBERS_CHANNEL_ID, old_msg_id);
-		}
-		catch (...) {}
+		HANDLER_TRY {
+			if (const uint64_t old_msg_id = co_await cWelcomingDAO(co_await cDatabase::CreateTransaction()).RegisterMember(member); old_msg_id != 0)
+				co_await DeleteMessage(NEW_MEMBERS_CHANNEL_ID, old_msg_id);
+		} HANDLER_CATCH
 	}
 }
 
@@ -20,7 +20,9 @@ cGreekBot::OnGuildMemberUpdate(cSnowflake& guild_id, cMemberUpdate& member) {
 	// TODO: Actually check for proficiency roles since MEE6 gives old roles to members that come back, YIKES!
 	if (guild_id == LMG_GUILD_ID && !member.GetRoles().empty() && !member.IsPending()) {
 		/* Check if there's a message registered in the database for this member */
-		const int64_t msg_id = co_await cDatabase::WC_GetMessage(member);
+		auto txn = co_await cDatabase::CreateTransaction();
+		cWelcomingDAO dao(txn);
+		const int64_t msg_id = co_await dao.GetMessage(member);
 		if (msg_id == 0 && member.GetNickname().empty()) {
 			cMessage msg = co_await CreateMessage(NEW_MEMBERS_CHANNEL_ID, cPartialMessage()
 				.SetContent(std::format("<@{}> Just got a rank!{}", member.GetUser().GetId(), member.GetFlags() & MEMBER_FLAG_DID_REJOIN ? "\n-# They rejoined the server." : ""))
@@ -39,7 +41,7 @@ cGreekBot::OnGuildMemberUpdate(cSnowflake& guild_id, cMemberUpdate& member) {
 					}
 				})
 			);
-			co_await cDatabase::WC_UpdateMessage(member.GetUser(), msg);
+			co_await dao.UpdateMessage(member.GetUser(), msg);
 		}
 		else if (msg_id > 0 && !member.GetNickname().empty()) {
 			/* If the message is unedited and the member has a nickname, edit the message
@@ -58,7 +60,7 @@ cGreekBot::OnGuildMemberUpdate(cSnowflake& guild_id, cMemberUpdate& member) {
 					})
 				);
 			} catch (const xDiscordError&) {}
-			co_await cDatabase::WC_EditMessage(msg_id);
+			co_await dao.EditMessage(msg_id);
 		}
 	}
 }
@@ -68,7 +70,7 @@ cGreekBot::OnGuildMemberRemove(cSnowflake& guild_id, cUser& user) {
 	if (guild_id != LMG_GUILD_ID)
 		co_return;
 	/* Delete the welcoming message if it exists */
-	if (uint64_t msg_id = co_await cDatabase::WC_DeleteMember(user); msg_id != 0) try {
+	if (uint64_t msg_id = co_await cWelcomingDAO(co_await cDatabase::CreateTransaction()).DeleteMember(user); msg_id != 0) try {
 		co_await DeleteMessage(NEW_MEMBERS_CHANNEL_ID, msg_id);
 	} catch (...) {}
 	/* Notify that the user left */

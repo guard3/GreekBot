@@ -1,3 +1,4 @@
+#include "Message.h"
 #include "Leaderboard.h"
 #include "LeaderboardQueries.h"
 

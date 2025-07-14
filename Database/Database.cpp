@@ -92,66 +92,6 @@ cDatabase::CreateTransaction() {
 	co_return cTransaction(CreateInstance());
 }
 /* ================================================================================================================== */
-cTask<uint64_t>
-cDatabase::WC_RegisterMember(const cMember& member) {
-	co_await resume_on_db_strand();
-	/* Prepare statement */
-	auto conn = CreateInstance();
-	auto[stmt, _] = conn.prepare(QUERY_WC_REG_MBR);
-	g_db = std::move(conn);
-	stmt.bind(1, member.GetUser()->GetId());
-	stmt.bind(2, member.JoinedAt().time_since_epoch().count());
-	/* Make sure the statement returns at least one row */
-	if (!stmt.step())
-		throw std::system_error(sqlite::error::internal);
-	co_return static_cast<uint64_t>(stmt.column_int(0));
-}
-cTask<int64_t>
-cDatabase::WC_GetMessage(const cMemberUpdate& member) {
-	co_await resume_on_db_strand();
-
-	auto conn = CreateInstance();
-	auto[stmt, _] = conn.prepare(QUERY_WC_GET_MSG);
-	g_db = std::move(conn);
-	stmt.bind(1, member.GetUser().GetId());
-
-	co_return stmt.step() ? stmt.column_int(0) : -1;
-}
-cTask<>
-cDatabase::WC_EditMessage(int64_t msg_id) {
-	co_await resume_on_db_strand();
-
-	auto conn = CreateInstance();
-	auto[stmt, _] = conn.prepare(QUERY_WC_EDT_MSG);
-	g_db = std::move(conn);
-	stmt.bind(1, msg_id);
-
-	stmt.step();
-}
-cTask<uint64_t>
-cDatabase::WC_DeleteMember(const cUser& user) {
-	co_await resume_on_db_strand();
-
-	auto conn = CreateInstance();
-	auto[stmt, _] = conn.prepare(QUERY_WC_DEL_MBR);
-	g_db = std::move(conn);
-	stmt.bind(1, user.GetId());
-
-	co_return stmt.step() ? static_cast<uint64_t>(stmt.column_int(0)) : 0;
-}
-cTask<>
-cDatabase::WC_UpdateMessage(const cUser& user, const cMessage& msg) {
-	co_await resume_on_db_strand();
-
-	auto conn = CreateInstance();
-	auto[stmt, _] = conn.prepare(QUERY_WC_UPD_MSG);
-	g_db = std::move(conn);
-	stmt.bind(1, user.GetId());
-	stmt.bind(2, msg.GetId());
-
-	stmt.step();
-}
-
 void refTransaction::Close() {
 	if (m_conn) {
 		net::dispatch(g_db_ctx, [conn = std::exchange(m_conn, {})] mutable {

@@ -1,6 +1,9 @@
 #ifndef GREEKBOT_TEMPBANS_H
 #define GREEKBOT_TEMPBANS_H
 #include "Database.h"
+#include "UserFwd.h"
+#include <vector>
+#include <span>
 
 class cTempBanDAO : cBaseDAO {
 public:

@@ -1,7 +1,11 @@
 #ifndef GREEKBOT_STARBOARD_H
 #define GREEKBOT_STARBOARD_H
 #include "Database.h"
+#include "MessageFwd.h"
+#include "UserFwd.h"
 #include <optional>
+#include <span>
+#include <vector>
 /* ================================================================================================================== */
 struct reaction_entry {
 	std::optional<cSnowflake> starboard_message_id;

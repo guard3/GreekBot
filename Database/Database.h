@@ -1,9 +1,8 @@
 #ifndef GREEKBOT_DATABASE_H
 #define GREEKBOT_DATABASE_H
+#include "Base.h"
 #include "Coroutines.h"
-#include "Message.h"
 #include "Transaction.h"
-#include <vector>
 /* ========== Make cSnowflake bindable to prepared statements as an int ============================================= */
 template<>
 struct sqlite::binder<cSnowflake> {
@@ -27,12 +26,6 @@ public:
 	static cTask<> Wait(std::chrono::milliseconds);
 
 	[[nodiscard]] static cTask<cTransaction> CreateTransaction();
-
-	static cTask<uint64_t> WC_RegisterMember(const cMember&);
-	static cTask<> WC_UpdateMessage(const cUser&, const cMessage&);
-	static cTask<int64_t> WC_GetMessage(const cMemberUpdate&);
-	static cTask<> WC_EditMessage(int64_t);
-	static cTask<uint64_t> WC_DeleteMember(const cUser&);
 };
 /* ========== A base type for all DAO classes ======================================================================= */
 class cBaseDAO {

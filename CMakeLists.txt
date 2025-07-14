@@ -89,6 +89,7 @@ add_executable(GreekBot main.cpp Discord/Bot.cpp Discord/Bot.h Discord/Common.h 
 	Database/TempBans/TempBans.h
 	Database/TempBans/TempBans.cpp
 	Database/DBTempBans.h
+	Database/Welcoming/Welcoming.cpp
 )
 
 target_include_directories(
@@ -170,12 +171,14 @@ define_query(QUERY_TEMPBAN_GET_EXPIRED Database/TempBans/query_tempban_get_expir
 define_query(QUERY_TEMPBAN_REMOVE      Database/TempBans/query_tempban_remove.sql     )
 configure_file(Database/TempBans/Queries.h.in TempBanQueries.h)
 
-define_query(QUERY_INIT       Database/query_init.sql      )
-define_query(QUERY_WC_REG_MBR Database/query_wc_reg_mbr.sql)
-define_query(QUERY_WC_UPD_MSG Database/query_wc_upd_msg.sql)
-define_query(QUERY_WC_GET_MSG Database/query_wc_get_msg.sql)
-define_query(QUERY_WC_DEL_MBR Database/query_wc_del_mbr.sql)
-define_query(QUERY_WC_EDT_MSG Database/query_wc_edt_msg.sql)
+define_query(QUERY_WC_REGISTER_MEMBER Database/Welcoming/query_wc_register_member.sql)
+define_query(QUERY_WC_UPDATE_MESSAGE  Database/Welcoming/query_wc_update_message.sql )
+define_query(QUERY_WC_GET_MESSAGE     Database/Welcoming/query_wc_get_message.sql    )
+define_query(QUERY_WC_EDIT_MESSAGE    Database/Welcoming/query_wc_edit_message.sql   )
+define_query(QUERY_WC_DELETE_MEMBER   Database/Welcoming/query_wc_delete_member.sql  )
+configure_file(Database/Welcoming/Queries.h.in WelcomingQueries.h)
+
+define_query(QUERY_INIT Database/query_init.sql)
 configure_file(Database/Queries.h.in Queries.h)
 
 # Add the binary directory to the include directories, since that's where the header files are generated
