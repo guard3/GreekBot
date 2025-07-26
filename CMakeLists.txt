@@ -72,8 +72,6 @@ add_executable(GreekBot main.cpp Discord/Bot.cpp Discord/Bot.h Discord/Common.h 
 	Database/Infractions/Infractions.h
 	Database/Infractions/Infractions.cpp
 	Database/DBInfractions.h
-	Database/Transaction.h
-	Database/Transaction.cpp
 	Database/MessageLog/MessageLog.h
 	Database/MessageLog/MessageLog.cpp
 	Database/DBMessageLog.h

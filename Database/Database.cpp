@@ -3,25 +3,32 @@
 #include "SQLite.h"
 #include "Utils.h"
 #include <thread>
-#include <boost/asio/defer.hpp>
+#include <boost/asio/post.hpp>
 #include <boost/asio/dispatch.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/steady_timer.hpp>
-/* ========== The global sqlite connection ========================================================================== */
-static sqlite::connection g_db;
-/* ================================================================================================================== */
+
+namespace net = boost::asio;
+using namespace std::chrono_literals;
+
+/**
+ * The global sqlite connection instance
+ */
+static sqlite::connection dbConn;
+
 sqlite::connection
-cDatabase::CreateInstance() {
+static dbCreateInstance() {
 	/* Open the database connection; NOMUTEX since we make sure to use the connection in a strand */
-	return g_db ? std::move(g_db) : sqlite::connection(cUtils::GetExecutablePath().replace_filename("database.db"), SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX);
+	return dbConn ? std::move(dbConn) : sqlite::connection(cUtils::GetExecutablePath().replace_filename("database.db"), SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX);
 }
-/* ========== The database instance constructor which initializes the global sqlite connection ====================== */
-void cDatabase::Initialize() noexcept {
+
+void
+dbInitialize() noexcept {
 	try {
 		/* Open the database connection */
-		g_db = CreateInstance();
+		dbConn = dbCreateInstance();
 		/* Execute the init statements */
-		for (auto ret = g_db.prepare(QUERY_INIT); ret.stmt; ret = g_db.prepare(ret.tail))
+		for (auto ret = dbConn.prepare(QUERY_INIT); ret.stmt; ret = dbConn.prepare(ret.tail))
 			while(ret.stmt.step());
 		/* Print confirmation message */
 		cUtils::PrintDbg("Database initialized successfully");
@@ -33,36 +40,46 @@ void cDatabase::Initialize() noexcept {
 	}
 	std::exit(EXIT_FAILURE);
 }
-/* ========== A custom io_context that runs on one strand and never runs out of work ================================ */
-namespace net = boost::asio;
-namespace sys = boost::system;
-class db_context : public net::io_context {
+
+/**
+ * A custom io_context that runs on one strand and never runs out of work
+ */
+class dbContext : public net::io_context {
 	net::executor_work_guard<net::io_context::executor_type> m_work_guard;
 	std::thread m_work_thread;
 public:
-	db_context() : net::io_context(1), m_work_guard(net::make_work_guard(*this)), m_work_thread(&db_context::run, this) {}
-	~db_context() {
+	dbContext() : net::io_context(1), m_work_guard(net::make_work_guard(*this)), m_work_thread(&net::io_context::run, this) {}
+	~dbContext() {
 		m_work_guard.reset();
 		m_work_thread.join();
 	}
-} static g_db_ctx;
+} static dbCtx;
 
+/**
+ * Resume the execution of the caller coroutine to the database strand
+ * @return
+ */
 [[nodiscard]]
-auto resume_on_db_strand() {
+static auto dbResume() {
 	struct awaitable {
 		bool await_ready() noexcept {
-			return g_db_ctx.get_executor().running_in_this_thread();
+			return dbCtx.get_executor().running_in_this_thread();
 		}
 		void await_suspend(std::coroutine_handle<> h) {
-			net::defer(g_db_ctx, h);
+			net::post(dbCtx, h);
 		}
 		void await_resume() noexcept {}
 	};
 	return awaitable{};
 }
 
+/**
+ * Wait and resume execution of the caller coroutine to the database strand
+ * @param duration
+ * @return
+ */
 [[nodiscard]]
-auto wait_on_db_strand(std::chrono::milliseconds duration) {
+static auto dbWait(std::chrono::milliseconds duration) {
 	struct awaitable {
 		net::steady_timer timer;
 
@@ -70,36 +87,143 @@ auto wait_on_db_strand(std::chrono::milliseconds duration) {
 			return false;
 		}
 		void await_suspend(std::coroutine_handle<> h) {
-			timer.async_wait([h] (const sys::error_code&) { h(); });
+			timer.async_wait([h] (auto&&) { h.resume(); });
 		}
 		void await_resume() noexcept {}
 	};
-	return awaitable{ net::steady_timer(g_db_ctx, duration) };
-};
+	return awaitable{ net::steady_timer(dbCtx, duration) };
+}
+/* ================================================================================================================== */
+
+void
+refTransaction::begin_impl(cTransactionType type, std::error_code& ec) noexcept {
+	/* If autocommit mode is off, then a transaction has begun; Treat this as a no-op */
+	if (!m_conn || !m_conn.autocommit())
+		return ec.clear();
+	/* Begin the transaction statement */
+	auto[stmt, _] = m_conn.prepare(type.m_query, ec);
+	/* Execute the statement while no error is set */
+	while (!ec && stmt.step(ec));
+}
+
+void
+refTransaction::commit_impl(std::error_code& ec) noexcept {
+	/* If autocommit mode is on, then no transaction is in progress; Treat this as a no-op */
+	if (!m_conn || m_conn.autocommit())
+		return ec.clear();
+	/* Begin the commit statement */
+	auto[stmt, _] = m_conn.prepare("COMMIT;", ec);
+	/* Execute the statement while no error is set */
+	while (!ec && stmt.step(ec));
+}
+
+void
+refTransaction::rollback_impl(std::error_code& ec) noexcept {
+	/* If autocommit mode is on, then a transaction isn't in progress */
+	if (!m_conn || m_conn.autocommit())
+		return ec.clear();
+	/* Begin the rollback statement */
+	auto[stmt, _] = m_conn.prepare("ROLLBACK;", ec);
+	/* Execute the statement while no error is set */
+	while (!ec && stmt.step(ec));
+}
 
 cTask<>
-cDatabase::ResumeOnDatabaseStrand() {
-	co_await resume_on_db_strand();
+refTransaction::Begin(cTransactionType type, std::error_code& ec) {
+	/* Begin transaction */
+	co_await dbResume();
+	begin_impl(type, ec);
+	/* Retry if there are busy errors */
+	for (int i = 0; ec == sqlite::error::busy && i < 100; ++i) {
+		/* Attempt to roll back the transaction */
+		if (rollback_impl(ec); ec)
+			break;
+		/* Wait a bit before retrying */
+		co_await dbWait(100ms);
+		begin_impl(type, ec);
+	}
 }
+
 cTask<>
-cDatabase::Wait(std::chrono::milliseconds duration) {
-	co_await wait_on_db_strand(duration);
+refTransaction::Commit(std::error_code& ec) {
+	/* Commit transaction */
+	co_await dbResume();
+	commit_impl(ec);
+	/* Retry if there are busy errors */
+	for (int i = 0; ec == sqlite::error::busy && i < 100; ++i) {
+		/* Wait a bit before retrying; don't roll back the transaction */
+		co_await dbWait(100ms);
+		commit_impl(ec);
+	}
 }
-/* ================================================================================================================== */
-cTask<cTransaction>
-cDatabase::CreateTransaction() {
-	co_await resume_on_db_strand();
-	co_return cTransaction(CreateInstance());
+
+cTask<>
+refTransaction::Rollback(std::error_code& ec) {
+	co_await dbResume();
+	rollback_impl(ec);
 }
-/* ================================================================================================================== */
+
+cTask<>
+refTransaction::Begin(cTransactionType type) {
+	std::error_code ec;
+	if (co_await Begin(type, ec); ec)
+		throw std::system_error(ec, m_conn.errmsg());
+}
+
+cTask<>
+refTransaction::Commit() {
+	std::error_code ec;
+	if (co_await Commit(ec); ec)
+		throw std::system_error(ec, m_conn.errmsg());
+}
+
+cTask<>
+refTransaction::Rollback() {
+	std::error_code ec;
+	if (co_await Rollback(ec); ec)
+		throw std::system_error(ec, m_conn.errmsg());
+}
+
 void refTransaction::Close() {
 	if (m_conn) {
-		net::dispatch(g_db_ctx, [conn = std::exchange(m_conn, {})] mutable {
+		net::dispatch(dbCtx, [conn = std::exchange(m_conn, {})] mutable {
 			std::error_code ec;
 			if (refTransaction(conn).rollback_impl(ec); ec)
 				conn.close();
 			else
-				g_db = sqlite::connection(conn);
+				dbConn = sqlite::connection(conn);
 		});
 	}
+}
+
+cTask<cTransaction>
+cTransaction::New() {
+	co_await dbResume();
+	co_return cTransaction(dbCreateInstance());
+}
+
+sqlite::connection
+cTransaction::ReleaseConnection(std::error_code& ec) noexcept {
+	rollback_impl(ec);
+	return ec ? sqlite::connection{} : sqlite::connection(std::exchange(m_conn, {}));
+}
+
+sqlite::connection
+cTransaction::ReleaseConnection() {
+	std::error_code ec;
+	if (rollback_impl(ec); ec)
+		throw std::system_error(ec, m_conn.errmsg());
+	return sqlite::connection(std::exchange(m_conn, {}));
+}
+
+/**
+ * DAO helper functions for switching to the database strand
+ */
+cTask<>
+cBaseDAO::resume_on_db_strand() {
+	co_await dbResume();
+}
+cTask<>
+cBaseDAO::wait_on_db_strand(std::chrono::milliseconds duration) {
+	co_await dbWait(duration);
 }

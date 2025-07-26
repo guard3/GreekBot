@@ -2,7 +2,6 @@
 #include "DBInfractions.h"
 #include "GreekBot.h"
 #include "Utils.h"
-#include "Transaction.h"
 #include <ranges>
 
 static const auto NO_PERM_MSG = [] {
@@ -150,7 +149,7 @@ cGreekBot::process_warn_impl(cInteraction& i, const cSnowflake &user_id, std::st
 
 	/* Acknowledge interaction since accessing the database may be slow */
 	co_await InteractionDefer(i, true);
-	auto txn = co_await cDatabase::CreateTransaction();
+	auto txn = co_await cTransaction::New();
 	cInfractionsDAO dao(txn);
 
 	/* Register new infraction and calculate the delta between the 2 most recent infractions */
@@ -253,7 +252,7 @@ cGreekBot::process_infractions(cAppCmdInteraction& i) HANDLER_BEGIN {
 	const auto now = i.GetId().GetTimestamp();
 	/* Retrieve infraction stats from the database */
 	co_await InteractionDefer(i, true);
-	auto stats = co_await cInfractionsDAO(co_await cDatabase::CreateTransaction()).GetStatsByUser(*pUser, now);
+	auto stats = co_await cInfractionsDAO(co_await cTransaction::New()).GetStatsByUser(*pUser, now);
 
 	auto& embed = response.EmplaceEmbeds().emplace_back();
 	embed.EmplaceAuthor(pUser->GetUsername()).SetIconUrl(cCDN::GetUserAvatar(*pUser));
@@ -303,7 +302,7 @@ cGreekBot::process_infractions_button(cMsgCompInteraction& i, cSnowflake user_id
 	const auto now = i.GetId().GetTimestamp();
 	/* Get user stats from the database */
 	co_await InteractionDefer(i);
-	auto stats = co_await cInfractionsDAO(co_await cDatabase::CreateTransaction()).GetStatsByUser(user_id, now);
+	auto stats = co_await cInfractionsDAO(co_await cTransaction::New()).GetStatsByUser(user_id, now);
 
 	/* Prepare a response by keeping just the author's username and removing all buttons */
 	cMessageUpdate response;
@@ -356,7 +355,7 @@ cGreekBot::process_infractions_remove(cMsgCompInteraction& i, std::string_view f
 
 	/* In all other cases, accessing the database is required */
 	co_await InteractionDefer(i, false);
-	cTransaction txn = co_await cDatabase::CreateTransaction();
+	auto txn = co_await cTransaction::New();
 	cInfractionsDAO dao(txn);
 	co_await txn.Begin();
 

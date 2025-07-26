@@ -12,7 +12,7 @@ cGreekBot::OnHeartbeat() try {
 	if (auto now = steady_clock::now(); now - m_before > 3h) {
 		m_before = now;
 		/* Create a transaction */
-		cTransaction txn = co_await cDatabase::CreateTransaction();
+		auto txn = co_await cTransaction::New();
 		/* Cleanup old logged messages */
 		co_await cMessageLogDAO(txn).Cleanup();
 		cUtils::PrintLog("Cleaned up old logged messages!");

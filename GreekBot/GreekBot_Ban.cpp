@@ -177,7 +177,7 @@ cGreekBot::process_unban(cInteraction& i, cSnowflake user_id) HANDLER_BEGIN {
 		}
 	});
 	/* Remove the ban from the database */
-	auto txn = co_await cDatabase::CreateTransaction();
+	auto txn = co_await cTransaction::New();
 	co_await txn.Begin();
 	co_await cTempBanDAO(txn).Remove(user_id);
 	/* Unban the user */
@@ -381,7 +381,7 @@ cGreekBot::process_ban(cInteraction& i, std::uint32_t sc, const cSnowflake& user
 		/* Couldn't send ban reason in DMs, the user may not be a member of the guild but that's fine */
 	}
 	/* If the ban is temporary, register it to the database or delete it if it isn't temporary */
-	auto txn = co_await cDatabase::CreateTransaction();
+	auto txn = co_await cTransaction::New();
 	co_await txn.Begin();
 	co_await cTempBanDAO(txn).Register(user_id, expiry);
 	/* Ban */

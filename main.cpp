@@ -9,7 +9,7 @@ int main(int argc, const char** argv) {
 		return EXIT_FAILURE;
 	}
 	/* Initialize the database and the bot client */
-	cDatabase::Initialize();
+	dbInitialize();
 	cGreekBot client(argv[1]);
 	client.Run();
 
