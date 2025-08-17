@@ -11,11 +11,21 @@ cGreekBot::OnGuildMemberAdd(cSnowflake& guild_id, cMember& member) {
 			if (const uint64_t old_msg_id = co_await cWelcomingDAO(co_await cTransaction::New()).RegisterMember(member); old_msg_id != 0)
 				co_await DeleteMessage(NEW_MEMBERS_CHANNEL_ID, old_msg_id);
 		} HANDLER_CATCH
+
+		// TEST
+		HANDLER_TRY {
+			co_await process_nick_new_member(member);
+		} HANDLER_CATCH
 	}
 }
 
 cTask<>
 cGreekBot::OnGuildMemberUpdate(cSnowflake& guild_id, cMemberUpdate& member) {
+	// TEST
+	if (guild_id == LMG_GUILD_ID) HANDLER_TRY {
+		co_await process_nick_member_update(member);
+	} HANDLER_CATCH
+
 	/* If a member has 1 or more roles, it means they *may* be candidates for welcoming */
 	// TODO: Actually check for proficiency roles since MEE6 gives old roles to members that come back, YIKES!
 	if (guild_id == LMG_GUILD_ID && !member.GetRoles().empty() && !member.IsPending()) {
