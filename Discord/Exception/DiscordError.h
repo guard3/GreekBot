@@ -11,6 +11,7 @@ namespace boost::json {
 /* ========== Discord error codes; I'm going to be filling these as I need them ===================================== */
 enum class eDiscordError {
 	GeneralError            = -1,
+	UnknownMessage          = 10008,
 	UnknownWebhook          = 10015,
 	UnknownInteraction      = 10062,
 	InteractionAcknowledged = 40060,

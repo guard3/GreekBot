@@ -1,0 +1,1 @@
+UPDATE nicknames SET nick=? WHERE user_id IS ?;

@@ -83,6 +83,11 @@ cGreekBot::OnGuildMemberRemove(cSnowflake& guild_id, cUser& user) {
 	if (uint64_t msg_id = co_await cWelcomingDAO(co_await cTransaction::New()).DeleteMember(user); msg_id != 0) try {
 		co_await DeleteMessage(NEW_MEMBERS_CHANNEL_ID, msg_id);
 	} catch (...) {}
+
+	HANDLER_TRY {
+		co_await process_nick_member_remove(user);
+	} HANDLER_CATCH
+
 	/* Notify that the user left */
 	using namespace std::chrono;
 	cPartialMessage msg;

@@ -73,6 +73,7 @@ private:
 
 	cTask<> process_nick_new_member(const cMember&);
 	cTask<> process_nick_member_update(const cMemberUpdate&);
+	cTask<> process_nick_member_remove(const cUser&);
 
 	cTask<> process_starboard_message_delete(std::span<const cSnowflake> msg_ids);
 	cTask<> process_leaderboard_new_message(cMessage& msg, cPartialMember& member);

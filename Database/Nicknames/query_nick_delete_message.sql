@@ -1,0 +1,1 @@
+UPDATE nicknames SET msg_id=NULL WHERE user_id IS ?;
