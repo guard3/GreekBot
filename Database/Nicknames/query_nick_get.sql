@@ -1,0 +1,1 @@
+SELECT msg_id, nick FROM nicknames WHERE user_id IS ?;

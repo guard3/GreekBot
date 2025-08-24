@@ -1,1 +1,1 @@
-UPDATE nicknames SET nick=? WHERE user_id IS ?;
+UPDATE nicknames SET nick=? WHERE user_id IS ? RETURNING msg_id;

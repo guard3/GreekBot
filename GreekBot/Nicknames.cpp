@@ -58,8 +58,33 @@ cGreekBot::process_nick_member_update(const cMemberUpdate& member) HANDLER_BEGIN
 		co_return;
 	}
 
-	if (auto nick = member.GetNickname(); !nick.empty()) {
-		// Update db if necessary
+	if (auto member_nick = member.GetNickname(); !member_nick.empty()) {
+		// Update the notification message to notify of nickname change
+		auto txn = co_await cTransaction::New();
+		cNicknamesDAO dao(txn);
+
+		std::optional msg_id = co_await dao.Update(member.GetUser(), member_nick);
+
+		co_await txn.Begin();
+		if (msg_id) try {
+			co_await dao.DeleteMessage(member.GetUser());
+			co_await EditMessage(LMG_CHANNEL_NICKNAMES_TEST, *msg_id, cMessageUpdate()
+				.SetContent(std::format("<@{}> Just got a nickname!", member.GetUser().GetId()))
+				.SetComponents({
+					cActionRow{
+						cButton{
+							BUTTON_STYLE_SECONDARY,
+							std::format("DLT#{}", GetUser().GetId()), // Save the GreekBot id as the author
+							"Dismiss"
+						}
+					}
+				})
+			);
+		} catch (const xDiscordError& ex) {
+			if (ex.code() != eDiscordError::UnknownMessage) // If the message is not found (probably already deleted) that's fine!
+				throw;
+		}
+		co_await txn.Commit();
 	} else if (!std::views::filter(member.GetRoles(), [](auto& id) {
 		return std::ranges::contains(LMG_PROFICIENCY_ROLES, id);
 	}).empty()) {
@@ -68,8 +93,30 @@ cGreekBot::process_nick_member_update(const cMemberUpdate& member) HANDLER_BEGIN
 		cNicknamesDAO dao(txn);
 
 		co_await txn.Begin();
-		// TODO: automatically reassign nickname at this point; make a dao function that returns an entire entry
-		if (std::optional msg_id = co_await dao.GetMessage(member.GetUser()); !msg_id) {
+		auto [msg_id, nick] = co_await dao.GetEntry(member.GetUser());
+		if (!nick.empty()) {
+			// If there is a nickname registered already, update the member silently
+			co_await ModifyGuildMember(LMG_GUILD_ID, member.GetUser().GetId(), cMemberOptions().SetNick(std::move(nick)));
+			// Update any leftover notification message; This shouldn't really happen, but let's be sure
+			if (msg_id) try {
+				co_await dao.DeleteMessage(member.GetUser());
+				co_await EditMessage(LMG_CHANNEL_NICKNAMES_TEST, *msg_id, cMessageUpdate()
+					.SetContent(std::format("<@{}> rejoined and their original nickname was restored!", member.GetUser().GetId()))
+					.SetComponents({
+						cActionRow{
+							cButton{
+								BUTTON_STYLE_SECONDARY,
+								std::format("DLT#{}", GetUser().GetId()), // Save the GreekBot id as the author
+								"Dismiss"
+							}
+						}
+					})
+				);
+			} catch (const xDiscordError& ex) {
+				if (ex.code() != eDiscordError::UnknownMessage)
+					throw;
+			}
+		} else if (!msg_id) {
 			auto msg = co_await CreateMessage(LMG_CHANNEL_NICKNAMES_TEST, cPartialMessage()
 				.SetContent(std::format("<@{}> just got a rank!", member.GetUser().GetId()))
 				.SetComponents({
@@ -88,8 +135,8 @@ cGreekBot::process_nick_member_update(const cMemberUpdate& member) HANDLER_BEGIN
 				})
 			);
 			co_await dao.RegisterMessage(member.GetUser(), msg);
-			co_await txn.Commit();
 		}
+		co_await txn.Commit();
 	}
 } HANDLER_END
 

@@ -90,6 +90,7 @@ add_executable(GreekBot main.cpp Discord/Bot.cpp Discord/Bot.h Discord/Common.h 
 	Database/Welcoming/Welcoming.cpp
 	GreekBot/Nicknames.cpp
 	Database/Nicknames/Nicknames.cpp
+		GreekBot/Welcoming.cpp
 )
 
 target_include_directories(
@@ -153,6 +154,7 @@ define_query(QUERY_NICK_REGISTER         Database/Nicknames/query_nick_register.
 define_query(QUERY_NICK_DELETE_MESSAGE   Database/Nicknames/query_nick_delete_message.sql  )
 define_query(QUERY_NICK_UPDATE           Database/Nicknames/query_nick_update.sql          )
 define_query(QUERY_NICK_GET_MESSAGE      Database/Nicknames/query_nick_get_message.sql     )
+define_query(QUERY_NICK_GET              Database/Nicknames/query_nick_get.sql             )
 define_query(QUERY_NICK_REGISTER_MESSAGE Database/Nicknames/query_nick_register_message.sql)
 configure_file(Database/Nicknames/Queries.h.in NicknamesQueries.h)
 
