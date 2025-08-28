@@ -15,11 +15,9 @@ public:
 	explicit cNicknamesDAO(refTransaction txn) noexcept : cBaseDAO(txn) {}
 
 	[[nodiscard]]
-	cTask<> Register(const cMember&);
+	cTask<std::optional<cSnowflake>> DeleteMessage(crefUser);
 	[[nodiscard]]
-	cTask<> DeleteMessage(crefUser);
-	[[nodiscard]]
-	cTask<std::optional<cSnowflake>> Update(crefUser, std::string_view);
+	cTask<> Update(crefUser, std::string_view);
 	[[nodiscard]]
 	cTask<std::optional<cSnowflake>> GetMessage(crefUser);
 	[[nodiscard]]

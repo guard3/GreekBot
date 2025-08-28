@@ -150,7 +150,6 @@ define_query(QUERY_LB_RANK    Database/Leaderboard/query_lb_rank.sql  )
 define_query(QUERY_LB_TOP     Database/Leaderboard/query_lb_top.sql   )
 configure_file(Database/Leaderboard/Queries.h.in LeaderboardQueries.h)
 
-define_query(QUERY_NICK_REGISTER         Database/Nicknames/query_nick_register.sql        )
 define_query(QUERY_NICK_DELETE_MESSAGE   Database/Nicknames/query_nick_delete_message.sql  )
 define_query(QUERY_NICK_UPDATE           Database/Nicknames/query_nick_update.sql          )
 define_query(QUERY_NICK_GET_MESSAGE      Database/Nicknames/query_nick_get_message.sql     )
