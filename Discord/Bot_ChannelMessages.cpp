@@ -14,9 +14,9 @@ cBot::delete_message(const cSnowflake& channel_id, const cSnowflake& msg_id, std
 }
 
 cTask<>
-cBot::DeleteMessage(const cSnowflake& channel_id, const cSnowflake& msg_id, std::string_view reason) {
+cBot::DeleteMessage(crefChannel channel, crefMessage msg, std::string_view reason) {
 	std::optional<cHttpField> opt;
-	co_await delete_message(channel_id, msg_id, reason.empty() ? std::span<cHttpField>() : std::span(&opt.emplace("X-Audit-Log-Reason", cUtils::PercentEncode(reason)), 1));
+	co_await delete_message(channel.GetId(), msg.GetId(), reason.empty() ? std::span<cHttpField>() : std::span(&opt.emplace("X-Audit-Log-Reason", cUtils::PercentEncode(reason)), 1));
 }
 
 cTask<>

@@ -1,6 +1,6 @@
 #ifndef DISCORD_MEMBERFWD_H
 #define DISCORD_MEMBERFWD_H
-#include "BaseFwd.h"
+#include "UserFwd.h"
 DISCORD_FWDDECL_CLASS(MemberOptions);
 DISCORD_FWDDECL_CLASS(MemberUpdate);
 DISCORD_FWDDECL_CLASS(PartialMember);

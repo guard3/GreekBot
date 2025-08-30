@@ -4,12 +4,12 @@
 /* ================================================================================================================== */
 DISCORD_FWDDECL_CLASS(Channel);
 /* ========== A simple const reference wrapper around either a channel or a snowflake =============================== */
-class crefChannel final {
-	const cSnowflake& m_id;
-public:
-	crefChannel(const cChannel& channel) noexcept;
-	crefChannel(const cSnowflake& id) noexcept : m_id(id) {}
+class crefChannel {
+	const cSnowflake* m_pId;
 
-	const cSnowflake& GetId() const noexcept { return m_id; }
+public:
+	constexpr crefChannel(const cSnowflake& id) noexcept : m_pId(&id) {}
+
+	constexpr const cSnowflake& GetId() const noexcept { return *m_pId; }
 };
 #endif /* DISCORD_CHANNELFWD_H */

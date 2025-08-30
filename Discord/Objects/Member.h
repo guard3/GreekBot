@@ -66,6 +66,11 @@ public:
 	std::span<const cSnowflake> GetRoles() const noexcept { return m_roles; }
 	eMemberFlag GetFlags() const noexcept { return m_flags; }
 	bool IsPending() const noexcept { return m_pending; }
+
+	/**
+	 * Allow implicit conversions to crefUser
+	 */
+	operator crefUser() const noexcept { return m_user; }
 };
 
 class cPartialMember {
@@ -118,6 +123,12 @@ public:
 
 	chUser GetUser() const noexcept { return m_user ? &*m_user : nullptr; }
 	hUser  GetUser()       noexcept { return m_user ? &*m_user : nullptr; }
+
+	/**
+	 * Allow implicit conversions to crefUser; Throws std::bad_optional
+	 * @throws std::bad_optional_access if this->GetUser() returns null
+	 */
+	operator crefUser() const noexcept { return m_user.value(); }
 };
 cMember
 tag_invoke(boost::json::value_to_tag<cMember>, const boost::json::value&);

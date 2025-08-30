@@ -31,11 +31,10 @@ public:
 
 	const cSnowflake& GetId() const noexcept { return id; }
 	eChannelType GetType() const noexcept { return type; }
-};
-typedef   hHandle<cChannel>   hChannel;
-typedef  chHandle<cChannel>  chChannel;
-typedef  uhHandle<cChannel>  uhChannel;
-typedef uchHandle<cChannel> uchChannel;
 
-inline crefChannel::crefChannel(const cChannel& channel) noexcept : m_id(channel.GetId()) {}
+	/**
+	 * Allow implicit conversion to crefChannel
+	 */
+	operator crefChannel() const noexcept { return id; }
+};
 #endif /* DISCORD_CHANNEL_H */

@@ -30,7 +30,10 @@ public:
 
 	std::string MoveUsername() noexcept { return std::move(m_username); }
 	std::string   MoveAvatar() noexcept { return std::move(m_avatar);   }
+
+	/**
+	 * Allow implicit conversions to crefUser
+	 */
+	operator crefUser() const noexcept { return m_id; }
 };
-/* ================================================================================================================== */
-inline crefUser::crefUser(const cUser& user) noexcept : m_id(user.GetId()) {}
 #endif /* DISCORD_USER_H */

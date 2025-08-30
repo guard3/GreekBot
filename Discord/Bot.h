@@ -65,11 +65,11 @@ public:
 
 	cTask<int> BeginGuildPrune(const cSnowflake& id, int days, std::string_view reason = {});
 
-	cTask<cChannel> CreateDM(const cSnowflake& recipient_id);
+	cTask<cChannel> CreateDM(crefUser recipient);
 	cTask<cMessage> CreateMessage(crefChannel channel, const cMessageBase& msg);
-	cTask<cMessage> CreateDMMessage(const cSnowflake& recipient_id, const cMessageBase& msg);
-	cTask<cMessage> EditMessage(const cSnowflake& channel_id, const cSnowflake& target_msg, const cMessageUpdate& msg);
-	cTask<> DeleteMessage(const cSnowflake& channel_id, const cSnowflake& msg_id, std::string_view reason = {});
+	cTask<cMessage> CreateDMMessage(crefUser recipient, const cMessageBase& msg);
+	cTask<cMessage> EditMessage(crefChannel channel, crefMessage target_msg, const cMessageUpdate& msg);
+	cTask<> DeleteMessage(crefChannel channel, crefMessage msg, std::string_view reason = {});
 	cTask<> DeleteMessages(crefChannel channel, std::span<const cSnowflake> msg_ids, std::string_view reason = {});
 	cTask<cMessage> GetChannelMessage(crefChannel channel, crefMessage message);
 	cAsyncGenerator<cMessage> GetChannelMessages(crefChannel channel, std::size_t limit = 50);

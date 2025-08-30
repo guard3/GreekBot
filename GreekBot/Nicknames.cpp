@@ -10,7 +10,7 @@ cGreekBot::process_nick_new_member(const cMember& member) HANDLER_BEGIN {
 	// When a member joins, delete any leftover notification message from the last time they joined (if applicable).
 	// Notice how we don't care about any explicit transactions!
 	// Once a member joins, the associated message MUST be NULL in the database no matter what
-	if (std::optional msg_id = co_await cNicknamesDAO(co_await cTransaction::New()).DeleteMessage(*member.GetUser())) try {
+	if (std::optional msg_id = co_await cNicknamesDAO(co_await cTransaction::New()).DeleteMessage(member)) try {
 		co_await DeleteMessage(LMG_CHANNEL_NEW_MEMBERS, *msg_id);
 	} catch (const xDiscordError& ex) {
 		if (ex.code() != eDiscordError::UnknownMessage) // If the message is not found (probably already deleted) that's fine!
@@ -38,17 +38,17 @@ cGreekBot::process_nick_member_update(const cMemberUpdate& member) HANDLER_BEGIN
 
 			// Also make sure no notification message remains
 			co_await txn.Begin();
-			if (std::optional msg_id = co_await dao.DeleteMessage(member.GetUser())) {
+			if (std::optional msg_id = co_await dao.DeleteMessage(member)) {
 				co_await DeleteMessage(LMG_CHANNEL_NEW_MEMBERS, *msg_id);
 			}
 		} else if (auto member_nick = member.GetNickname(); !member_nick.empty()) { // If the member is verified AND has a nickname...
 			// Update the nickname in the database
 			// Notice how there is no active transaction is in progress yet; we want the update to happen as eagerly as possible!
-			co_await dao.Update(member.GetUser(), member_nick);
+			co_await dao.Update(member, member_nick);
 
 			// Update the notification message to notify of nickname change
 			co_await txn.Begin();
-			if (std::optional msg_id = co_await dao.DeleteMessage(member.GetUser())) {
+			if (std::optional msg_id = co_await dao.DeleteMessage(member)) {
 				co_await EditMessage(LMG_CHANNEL_NEW_MEMBERS, *msg_id, cMessageUpdate()
 					.SetContent(std::format("<@{}> Just got a nickname!", member.GetUser().GetId()))
 					.SetComponents({
@@ -68,7 +68,7 @@ cGreekBot::process_nick_member_update(const cMemberUpdate& member) HANDLER_BEGIN
 		}).empty()) {
 			// At this point, we need to restore the original nickname of the member (if applicable) and send a notification message
 			co_await txn.Begin();
-			if (auto [msg_id, nick] = co_await dao.Get(member.GetUser()); !nick.empty()) { // If there is a nickname registered in the database...
+			if (auto [msg_id, nick] = co_await dao.Get(member); !nick.empty()) { // If there is a nickname registered in the database...
 				co_await ModifyGuildMember(LMG_GUILD_ID, member.GetUser().GetId(), cMemberOptions().SetNick(std::move(nick)));
 
 				// Message attributes
@@ -77,8 +77,7 @@ cGreekBot::process_nick_member_update(const cMemberUpdate& member) HANDLER_BEGIN
 					cActionRow{
 						cButton{
 							BUTTON_STYLE_SECONDARY,
-							std::format("DLT#{}",
-							GetUser().GetId()), // Save the GreekBot id as the author
+							std::format("DLT#{}", GetUser().GetId()), // Save the GreekBot id as the author
 							"Dismiss"
 						}
 					}
@@ -87,7 +86,7 @@ cGreekBot::process_nick_member_update(const cMemberUpdate& member) HANDLER_BEGIN
 				// Send a message to notify that the nickname was restored automatically, or edit the existing one
 				// Having to edit a leftover message shouldn't ever happen, but we do it just to be safe
 				if (msg_id) {
-					co_await dao.DeleteMessage(member.GetUser());
+					co_await dao.DeleteMessage(member);
 					co_await EditMessage(LMG_CHANNEL_NEW_MEMBERS, *msg_id, cMessageUpdate().SetContent(std::move(content)).SetComponents(std::move(components)));
 				} else {
 					co_await CreateMessage(LMG_CHANNEL_NEW_MEMBERS, cPartialMessage().SetContent(std::move(content)).SetComponents(std::move(components)));
