@@ -116,7 +116,7 @@ cGreekBot::process_nick_member_update(const cMemberUpdate& member) HANDLER_BEGIN
 			}
 		}
 	} catch (const xDiscordError& ex) {
-		if (ex.code() == eDiscordError::UnknownMessage) // If the message is not found (probably already deleted) that's fine!
+		if (ex.code() != eDiscordError::UnknownMessage) // If the message is not found (probably already deleted) that's fine!
 			throw;
 	}
 
