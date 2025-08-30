@@ -4,12 +4,6 @@ CREATE TABLE IF NOT EXISTS leaderboard(
     xp INTEGER NOT NULL,
     timestamp INTEGER NOT NULL
 );
-CREATE TABLE IF NOT EXISTS welcoming(
-    user_id INTEGER PRIMARY KEY,
-    msg_id INTEGER UNIQUE,
-    old_id INTEGER UNIQUE,
-    joined_at INTEGER NOT NULL
-);
 CREATE TABLE IF NOT EXISTS nicknames(
     user_id INTEGER PRIMARY KEY,
     msg_id INTEGER UNIQUE,

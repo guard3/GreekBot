@@ -11,7 +11,7 @@ cGreekBot::process_nick_new_member(const cMember& member) HANDLER_BEGIN {
 	// Notice how we don't care about any explicit transactions!
 	// Once a member joins, the associated message MUST be NULL in the database no matter what
 	if (std::optional msg_id = co_await cNicknamesDAO(co_await cTransaction::New()).DeleteMessage(*member.GetUser())) try {
-		co_await DeleteMessage(LMG_CHANNEL_NICKNAMES_TEST, *msg_id);
+		co_await DeleteMessage(LMG_CHANNEL_NEW_MEMBERS, *msg_id);
 	} catch (const xDiscordError& ex) {
 		if (ex.code() != eDiscordError::UnknownMessage) // If the message is not found (probably already deleted) that's fine!
 			throw;
@@ -39,7 +39,7 @@ cGreekBot::process_nick_member_update(const cMemberUpdate& member) HANDLER_BEGIN
 			// Also make sure no notification message remains
 			co_await txn.Begin();
 			if (std::optional msg_id = co_await dao.DeleteMessage(member.GetUser())) {
-				co_await DeleteMessage(LMG_CHANNEL_NICKNAMES_TEST, *msg_id);
+				co_await DeleteMessage(LMG_CHANNEL_NEW_MEMBERS, *msg_id);
 			}
 		} else if (auto member_nick = member.GetNickname(); !member_nick.empty()) { // If the member is verified AND has a nickname...
 			// Update the nickname in the database
@@ -49,7 +49,7 @@ cGreekBot::process_nick_member_update(const cMemberUpdate& member) HANDLER_BEGIN
 			// Update the notification message to notify of nickname change
 			co_await txn.Begin();
 			if (std::optional msg_id = co_await dao.DeleteMessage(member.GetUser())) {
-				co_await EditMessage(LMG_CHANNEL_NICKNAMES_TEST, *msg_id, cMessageUpdate()
+				co_await EditMessage(LMG_CHANNEL_NEW_MEMBERS, *msg_id, cMessageUpdate()
 					.SetContent(std::format("<@{}> Just got a nickname!", member.GetUser().GetId()))
 					.SetComponents({
 						cActionRow{
@@ -88,12 +88,12 @@ cGreekBot::process_nick_member_update(const cMemberUpdate& member) HANDLER_BEGIN
 				// Having to edit a leftover message shouldn't ever happen, but we do it just to be safe
 				if (msg_id) {
 					co_await dao.DeleteMessage(member.GetUser());
-					co_await EditMessage(LMG_CHANNEL_NICKNAMES_TEST, *msg_id, cMessageUpdate().SetContent(std::move(content)).SetComponents(std::move(components)));
+					co_await EditMessage(LMG_CHANNEL_NEW_MEMBERS, *msg_id, cMessageUpdate().SetContent(std::move(content)).SetComponents(std::move(components)));
 				} else {
-					co_await CreateMessage(LMG_CHANNEL_NICKNAMES_TEST, cPartialMessage().SetContent(std::move(content)).SetComponents(std::move(components)));
+					co_await CreateMessage(LMG_CHANNEL_NEW_MEMBERS, cPartialMessage().SetContent(std::move(content)).SetComponents(std::move(components)));
 				}
 			} else if (!msg_id) { // If there is no nickname registered in the database and no notification message...
-				auto msg = co_await CreateMessage(LMG_CHANNEL_NICKNAMES_TEST, cPartialMessage()
+				auto msg = co_await CreateMessage(LMG_CHANNEL_NEW_MEMBERS, cPartialMessage()
 					.SetContent(std::format("<@{}> just got a rank!", member.GetUser().GetId()))
 					.SetComponents({
 						cActionRow{
@@ -130,7 +130,7 @@ cGreekBot::process_nick_member_remove(const cUser& user) HANDLER_BEGIN {
 	auto txn = co_await cTransaction::New();
 	co_await txn.Begin();
 	if (std::optional msg_id = co_await cNicknamesDAO(txn).DeleteMessage(user)) try {
-		co_await DeleteMessage(LMG_CHANNEL_NICKNAMES_TEST, *msg_id);
+		co_await DeleteMessage(LMG_CHANNEL_NEW_MEMBERS, *msg_id);
 	} catch (const xDiscordError& ex) {
 		if (ex.code() != eDiscordError::UnknownMessage) // If the message is not found (probably already deleted) that's fine!
 			throw;

@@ -3,32 +3,16 @@
 
 cTask<>
 cGreekBot::OnGuildMemberAdd(cSnowflake& guild_id, cMember& member) {
-	if (guild_id == LMG_GUILD_ID) {
-		// Old welcoming feature; TODO: remove
-		HANDLER_TRY {
-			co_await process_welcoming_new_member(member);
-		} HANDLER_CATCH
-
-		// New nicknames feature
-		HANDLER_TRY {
-			co_await process_nick_new_member(member);
-		} HANDLER_CATCH
-	}
+	if (guild_id == LMG_GUILD_ID) HANDLER_TRY {
+		co_await process_nick_new_member(member);
+	} HANDLER_CATCH
 }
 
 cTask<>
 cGreekBot::OnGuildMemberUpdate(cSnowflake& guild_id, cMemberUpdate& member) {
-	if (guild_id == LMG_GUILD_ID) {
-		// Old welcoming feature; TODO: remove
-		HANDLER_TRY {
-			co_await process_welcoming_member_update(member);
-		} HANDLER_CATCH
-
-		// New nicknames feature
-		HANDLER_TRY {
-			co_await process_nick_member_update(member);
-		} HANDLER_CATCH
-	}
+	if (guild_id == LMG_GUILD_ID) HANDLER_TRY {
+		co_await process_nick_member_update(member);
+	} HANDLER_CATCH
 }
 
 cTask<>
@@ -36,12 +20,6 @@ cGreekBot::OnGuildMemberRemove(cSnowflake& guild_id, cUser& user) {
 	if (guild_id != LMG_GUILD_ID)
 		co_return;
 
-	// Old welcoming feature; TODO: remove
-	HANDLER_TRY {
-		co_await process_welcoming_member_remove(user);
-	} HANDLER_CATCH
-
-	// New nicknames feature
 	HANDLER_TRY {
 		co_await process_nick_member_remove(user);
 	} HANDLER_CATCH

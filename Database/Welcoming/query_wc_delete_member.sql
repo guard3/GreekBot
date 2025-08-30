@@ -1,1 +1,0 @@
-DELETE FROM welcoming WHERE user_id IS ?1 RETURNING ABS(msg_id);

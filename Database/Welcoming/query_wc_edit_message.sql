@@ -1,1 +1,0 @@
-UPDATE welcoming SET msg_id=-msg_id WHERE msg_id IS ?1;
