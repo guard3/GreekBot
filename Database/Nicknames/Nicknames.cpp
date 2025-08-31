@@ -57,7 +57,7 @@ cNicknamesDAO::RegisterMessage(crefUser user, crefMessage msg) {
 
 cTask<std::int64_t>
 cNicknamesDAO::Cleanup() {
-	return Exec([this]{
+	return Exec([this] -> std::int64_t {
 		auto [stmt, _] = m_conn.prepare(QUERY_NICK_CLEANUP);
 
 		while (stmt.step());

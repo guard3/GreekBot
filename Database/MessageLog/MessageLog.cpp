@@ -74,7 +74,7 @@ cMessageLogDAO::Delete(std::span<const cSnowflake> ids) {
 
 cTask<std::int64_t>
 cMessageLogDAO::Cleanup() {
-	return Exec([this] {
+	return Exec([this] -> std::int64_t {
 		using namespace std::chrono;
 		using namespace std::chrono_literals;
 		auto [stmt, _] = m_conn.prepare(QUERY_MSGLOG_CLEANUP);
