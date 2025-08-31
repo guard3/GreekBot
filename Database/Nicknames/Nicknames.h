@@ -47,6 +47,14 @@ public:
 	 */
 	[[nodiscard]]
 	cTask<> RegisterMessage(crefUser user, crefMessage msg);
+
+	/**
+	 * Deletes any stale entries where both the notification message id and the nickname are NULL.
+	 * This can happen if a user joins, gets a rank and leaves before any nickname is assigned.
+	 * @return An awaitable returning the number of entries deleted
+	 */
+	[[nodiscard]]
+	cTask<std::int64_t> Cleanup();
 };
 
 #endif //GREEKBOT_NICKNAMES_H

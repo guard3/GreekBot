@@ -152,6 +152,7 @@ define_query(QUERY_NICK_DELETE_MESSAGE   Database/Nicknames/query_nick_delete_me
 define_query(QUERY_NICK_UPDATE           Database/Nicknames/query_nick_update.sql          )
 define_query(QUERY_NICK_GET              Database/Nicknames/query_nick_get.sql             )
 define_query(QUERY_NICK_REGISTER_MESSAGE Database/Nicknames/query_nick_register_message.sql)
+define_query(QUERY_NICK_CLEANUP          Database/Nicknames/query_nick_cleanup.sql         )
 configure_file(Database/Nicknames/Queries.h.in NicknamesQueries.h)
 
 define_query(QUERY_WARN_REGISTER   Database/Infractions/query_warn_register.sql)

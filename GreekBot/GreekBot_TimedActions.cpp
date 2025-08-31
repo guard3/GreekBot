@@ -1,6 +1,7 @@
 #include "Database.h"
 #include "DBMessageLog.h"
 #include "DBTempBans.h"
+#include "DBNicknames.h"
 #include "GreekBot.h"
 #include "Utils.h"
 
@@ -13,9 +14,16 @@ cGreekBot::OnHeartbeat() try {
 		m_before = now;
 		/* Create a transaction */
 		auto txn = co_await cTransaction::New();
+
 		/* Cleanup old logged messages */
 		co_await cMessageLogDAO(txn).Cleanup();
 		cUtils::PrintLog("Cleaned up old logged messages!");
+
+		// Remove any stale nickname entries
+		if (auto num = co_await cNicknamesDAO(txn).Cleanup(); num > 0) {
+			cUtils::PrintLog("Cleaned up {} entries for members who joined, got no nickname and left", num);
+		}
+
 		/* Remove expired bans */
 		std::vector<cSnowflake> expired = co_await cTempBanDAO(txn).GetExpired();
 		std::vector<cSnowflake> unbanned;

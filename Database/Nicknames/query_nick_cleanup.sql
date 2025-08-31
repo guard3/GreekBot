@@ -1,0 +1,1 @@
+DELETE FROM nicknames WHERE msg_id IS NULL AND nick IS NULL;

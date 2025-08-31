@@ -54,3 +54,14 @@ cNicknamesDAO::RegisterMessage(crefUser user, crefMessage msg) {
 		while (stmt.step());
 	});
 }
+
+cTask<std::int64_t>
+cNicknamesDAO::Cleanup() {
+	return Exec([this]{
+		auto [stmt, _] = m_conn.prepare(QUERY_NICK_CLEANUP);
+
+		while (stmt.step());
+
+		return sqlite3_changes64(m_conn);
+	});
+}
