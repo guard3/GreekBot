@@ -3,4 +3,8 @@
 #include "BaseFwd.h"
 DISCORD_FWDDECL_CLASS(Role);
 DISCORD_FWDDECL_CLASS(RoleTags);
+
+struct crefRole : crefBase {
+	using crefBase::crefBase;
+};
 #endif /* DISCORD_ROLEFWD_H */

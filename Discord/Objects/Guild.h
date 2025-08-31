@@ -35,6 +35,11 @@ public:
 	std::span<const cRole> GetRoles() const noexcept { return roles; }
 
 	std::vector<cRole> MoveRoles() noexcept { return std::move(roles); }
+
+	/**
+	 * Allow implicit conversion to crefGuild
+	 */
+	operator crefGuild() const noexcept { return id; }
 };
 
 cGuild

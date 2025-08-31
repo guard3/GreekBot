@@ -95,6 +95,11 @@ public:
 	bool     IsHoisted() const noexcept { return m_hoist;       }
 	bool     IsManaged() const noexcept { return m_managed;     }
 	bool IsMentionable() const noexcept { return m_mentionable; }
+
+	/**
+	 * Allow implicit conversion to crefRole
+	 */
+	operator crefRole() const noexcept { return m_id; }
 };
 
 cRole tag_invoke(boost::json::value_to_tag<cRole>, const boost::json::value&);

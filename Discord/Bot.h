@@ -41,11 +41,11 @@ public:
 	const cUser& GetUser() const noexcept { return m_user.value(); }
 	cUser& GetUser() noexcept { return m_user.value(); }
 
-	cTask<cUser> GetUser(const cSnowflake& user_id);
-	cTask<cMember> GetGuildMember(const cSnowflake& guild_id, const cSnowflake& user_id);
-	cTask<std::vector<cRole>> GetGuildRoles(const cSnowflake& guild_id);
-	cTask<> AddGuildMemberRole(const cSnowflake& guild_id, crefUser user, const cSnowflake& role_id);
-	cTask<> RemoveGuildMemberRole(const cSnowflake& guild_id, crefUser user, const cSnowflake& role_id);
+	cTask<cUser> GetUser(crefUser user);
+	cTask<cMember> GetGuildMember(crefGuild guild, crefUser user);
+	cTask<std::vector<cRole>> GetGuildRoles(crefGuild guild);
+	cTask<> AddGuildMemberRole(crefGuild guild, crefUser user, crefRole role);
+	cTask<> RemoveGuildMemberRole(crefGuild guild_id, crefUser user, crefRole role);
 	/* Interactions - Defer message or update */
 	cTask<> InteractionDefer(const cAppCmdInteraction&, bool thinking = false);
 	cTask<> InteractionDefer(const cMsgCompInteraction&, bool thinking = false);
@@ -63,7 +63,7 @@ public:
 	cTask<cMessage> InteractionGetMessage(const cInteraction&, crefMessage = cSnowflake());
 	cTask<>         InteractionDeleteMessage(const cInteraction&, crefMessage = cSnowflake());
 
-	cTask<int> BeginGuildPrune(const cSnowflake& id, int days, std::string_view reason = {});
+	cTask<int> BeginGuildPrune(crefGuild guild, int days, std::string_view reason = {});
 
 	cTask<cChannel> CreateDM(crefUser recipient);
 	cTask<cMessage> CreateMessage(crefChannel channel, const cMessageBase& msg);
@@ -75,9 +75,9 @@ public:
 	cAsyncGenerator<cMessage> GetChannelMessages(crefChannel channel, std::size_t limit = 50);
 	cAsyncGenerator<cMessage> GetChannelMessagesBefore(crefChannel channel, crefMessage before_this_message, std::size_t limit = 50);
 
-	cTask<> ModifyGuildMember(const cSnowflake& guild_id, const cSnowflake& user_id, const cMemberOptions&);
-	cTask<> RemoveGuildMember(const cSnowflake& guild_id, const cSnowflake& user_id, std::string_view reason = {});
-	cTask<> CreateGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, std::chrono::seconds delete_message_seconds = std::chrono::seconds(0), std::string_view reason = {});
-	cTask<> RemoveGuildBan(const cSnowflake& guild_id, const cSnowflake& user_id, std::string_view reason = {});
+	cTask<> ModifyGuildMember(crefGuild guild, crefUser user, const cMemberOptions&);
+	cTask<> RemoveGuildMember(crefGuild guild, crefUser user, std::string_view reason = {});
+	cTask<> CreateGuildBan(crefGuild guild, crefUser user, std::chrono::seconds delete_message_seconds = std::chrono::seconds(0), std::string_view reason = {});
+	cTask<> RemoveGuildBan(crefGuild guild, crefUser user, std::string_view reason = {});
 };
 #endif // GREEKBOT_BOT_H

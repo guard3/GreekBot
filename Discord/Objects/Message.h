@@ -227,10 +227,13 @@ public:
 	/* Movers */
 	auto      MoveAuthor() noexcept { return std::move(author);      }
 	auto MoveAttachments() noexcept { return std::move(attachments); }
+
+	/**
+	 * Allow implicit conversion to crefMessage
+	 */
+	operator crefMessage() const noexcept { return id; }
 };
 /* ========== JSON conversion ======================================================================================= */
 cMessage
 tag_invoke(boost::json::value_to_tag<cMessage>, const boost::json::value&);
-/* ================================================================================================================== */
-inline crefMessage::crefMessage(const cMessage &msg) noexcept : m_id(msg.GetId()) {}
 #endif /* DISCORD_MESSAGE_H */
