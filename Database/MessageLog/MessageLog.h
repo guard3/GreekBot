@@ -18,6 +18,6 @@ public:
 	[[nodiscard]] cTask<std::optional<message_entry>> Get(crefMessage msg);
 	[[nodiscard]] cTask<> Update(crefMessage msg, std::string_view content);
 	[[nodiscard]] cTask<std::vector<message_entry>> Delete(std::span<const cSnowflake>);
-	[[nodiscard]] cTask<> Cleanup();
+	[[nodiscard]] cTask<std::int64_t> Cleanup();
 };
 #endif //GREEKBOT_MESSAGELOG_H

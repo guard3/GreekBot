@@ -72,13 +72,15 @@ cMessageLogDAO::Delete(std::span<const cSnowflake> ids) {
 	});
 }
 
-cTask<>
+cTask<std::int64_t>
 cMessageLogDAO::Cleanup() {
 	return Exec([this] {
 		using namespace std::chrono;
 		using namespace std::chrono_literals;
 		auto [stmt, _] = m_conn.prepare(QUERY_MSGLOG_CLEANUP);
 		stmt.bind(1, duration_cast<milliseconds>(system_clock::now() - sys_days(2015y/1/1) - 15 * 24h).count());
-		stmt.step();
+		while (stmt.step());
+
+		return sqlite3_changes64(m_conn);
 	});
 }

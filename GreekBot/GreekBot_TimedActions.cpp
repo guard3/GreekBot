@@ -15,13 +15,14 @@ cGreekBot::OnHeartbeat() try {
 		/* Create a transaction */
 		auto txn = co_await cTransaction::New();
 
-		/* Cleanup old logged messages */
-		co_await cMessageLogDAO(txn).Cleanup();
-		cUtils::PrintLog("Cleaned up old logged messages!");
+		// Cleanup old logged messages
+		if (auto num = co_await cMessageLogDAO(txn).Cleanup(); num > 0) {
+			cUtils::PrintLog("Cleaned up {} old logged message{}", num, num == 1 ? "" : "s");
+		}
 
 		// Remove any stale nickname entries
 		if (auto num = co_await cNicknamesDAO(txn).Cleanup(); num > 0) {
-			cUtils::PrintLog("Cleaned up {} entries for members who joined, got no nickname and left", num);
+			cUtils::PrintLog("Cleaned up {} entr{} for members who joined, got no nickname and left", num, num == 1 ? "y" : "ies");
 		}
 
 		/* Remove expired bans */
@@ -43,6 +44,10 @@ cGreekBot::OnHeartbeat() try {
 		}
 		/* Prune */
 		std::size_t total_pruned = 0;
+
+		cMemberOptions memberUpdate;
+		auto& new_roles = memberUpdate.EmplaceRoles();
+
 		try {
 			co_await ResumeOnEventStrand();
 			std::string guild_name = m_guilds.at(LMG_GUILD_ID).GetName();
@@ -51,7 +56,7 @@ cGreekBot::OnHeartbeat() try {
 			co_for (auto& member, RequestGuildMembers(LMG_GUILD_ID)) {
 				/* We only care about those who have joined for 2 days or more and still have no roles */
 				if (auto member_for = floor<days>(started_at - member.JoinedAt()); member_for >= days(2) && member.GetRoles().empty()) {
-					chUser user = member.GetUser();
+					auto& user = *member.GetUser();
 					/* Attempt to send a DM explaining the reason of the kick */
 					try {
 						msg.SetContent(std::format("You have been kicked from **{}** because **{:%Q}** day{} have passed since you joined and you didn't get a proficiency rank.\n\n"
@@ -59,11 +64,25 @@ cGreekBot::OnHeartbeat() try {
 						                           "- Verify your phone number\n"
 						                           "- Get a proficiency rank as mentioned in `#welcoming`\n"
 						                           "https://discord.gg/greek", guild_name, member_for, member_for == days(1) ? "" : "s"));
-						co_await CreateDMMessage(user->GetId(), msg);
+						co_await CreateDMMessage(user, msg);
 					} catch (...) {}
 					/* Then kick */
-					co_await RemoveGuildMember(LMG_GUILD_ID, user->GetId(), "Failed to get a rank");
+					co_await RemoveGuildMember(LMG_GUILD_ID, user, "Failed to get a rank");
 					++total_pruned;
+				} else if (member.PremiumSince() == system_clock::time_point{} && !(member.GetPermissions() & PERM_MANAGE_ROLES)) { // If the (non-admin) member is not a nitro booster...
+					auto& user = *member.GetUser();
+					// Copy the member roles to the member update object, filtering out any color roles
+					auto roles = member.GetRoles();
+					new_roles.clear();
+					std::ranges::copy_if(roles, std::back_inserter(new_roles), [](auto& role_id) { return !std::ranges::contains(LMG_NITRO_BOOSTER_COLOR_ROLES, role_id); });
+
+					// Remove the color role if one exists
+					if (roles.size() != new_roles.size()) try {
+						co_await ModifyGuildMember(LMG_GUILD_ID, member, memberUpdate);
+						cUtils::PrintLog("{} with id {} stopped nitro boosting. Their color role was removed!", user.GetUsername(), user.GetId());
+					} catch (const xDiscordError& ex) {
+						cUtils::PrintErr("{} with id {} stopped nitro boosting. Their color role was not removed: {}", user.GetUsername(), user.GetId(), ex.what());
+					}
 				}
 			}
 		} catch (...) {

@@ -68,22 +68,6 @@ cGreekBot::process_proficiency_menu(cMsgCompInteraction& i) HANDLER_BEGIN {
 cTask<>
 cGreekBot::process_booster_menu(cMsgCompInteraction& i) HANDLER_BEGIN {
 	using namespace std::chrono;
-	/* All the color roles available in Learning Greek */
-	static constexpr cSnowflake color_roles[] {
-		 657145859439329280, // @Κακούλης
-		 677183404743327764, // @Πορτοκαλί
-		 735954079355895889, // @Μέλας
-		 755763454266179595, // @Λεμόνι
-		 777323857018617877, // @Μπεκρής
-		 793570278084968488, // @Γύπας
-		 925379778251485206, // @Ροζουλής
-		 941041008169336913, // @Πολωνός
-		1109212629882392586, // @Τούρκος
-		1121773567785308181, // @Πέγκω
-		1156980445058170991, // @Κυνεζί
-		1163945469567832215, // @Πάπια
-		1265742860783845558  // @Κατσίκα
-	};
 
 	/* Acknowledge interaction */
 	co_await InteractionDefer(i);
@@ -95,7 +79,7 @@ cGreekBot::process_booster_menu(cMsgCompInteraction& i) HANDLER_BEGIN {
 	auto member_roles = member->GetRoles();
 
 	std::vector roles = member_roles
-	                  | std::views::filter([](auto& id) { return !std::ranges::contains(color_roles, id); })
+	                  | std::views::filter([](auto& id) { return !std::ranges::contains(LMG_NITRO_BOOSTER_COLOR_ROLES, id); })
 	                  | std::ranges::to<std::vector>();
 
 	/* Retrieve the selected role id */
