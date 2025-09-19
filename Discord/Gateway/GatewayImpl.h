@@ -160,7 +160,7 @@ struct cGateway::implementation::websocket_session {
 	websocket_stream stream;       // The websocket stream
 	/* Heartbeating */
 	net::steady_timer hb_timer; // The async timer for heartbeats
-	milliseconds hb_interval;   // The interval between heartbeats
+	milliseconds hb_interval{}; // The interval between heartbeats
 	bool hb_ack = false;        // Is the heartbeat acknowledged?
 	bool closing = false;       // Are we closing this session?
 	/* Zlib stuff for decompressing websocket messages */
@@ -178,6 +178,8 @@ struct cGateway::implementation::websocket_session {
 				throw std::runtime_error("Could not initialize inflate stream");
 		}
 	}
+	~websocket_session() { inflateEnd(&inflate_stream); }
+
 	websocket_session(const websocket_session&) = delete;
 	websocket_session& operator=(const websocket_session&) = delete;
 };
