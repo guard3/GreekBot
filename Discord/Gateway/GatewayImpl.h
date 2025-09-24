@@ -68,8 +68,6 @@ struct cGateway::implementation final {
 	urls::url    m_resume_gateway_url; // The url used for resuming connections
 	std::string  m_session_id;         // The current session id, used for resuming; empty = no valid session
 	std::int64_t m_last_sequence{};    // The last event sequence received, used for heartbeating; 0 = none received
-	/* Json parsing for gateway events */
-	json::stream_parser m_parser; // The json parser
 	/* Request Guild Members stuff */
 	struct guild_members_entry {
 		std::deque<cGuildMembersChunk> chunks;
@@ -92,7 +90,7 @@ struct cGateway::implementation final {
 	/* Websocket message queuing */
 	void send(std::shared_ptr<websocket_session>, std::string);
 	/* Beast/Asio async functions */
-	void on_read(std::shared_ptr<websocket_session>, const sys::error_code&, std::size_t) noexcept;
+	void on_read(std::shared_ptr<websocket_session>, const sys::error_code&) noexcept;
 	void on_write(std::shared_ptr<websocket_session>, const sys::error_code&) noexcept;
 	void on_expire(std::shared_ptr<websocket_session>, const sys::error_code&);
 	void on_close(std::shared_ptr<websocket_session>) noexcept;
@@ -163,6 +161,8 @@ struct cGateway::implementation::websocket_session {
 	milliseconds hb_interval{}; // The interval between heartbeats
 	bool hb_ack = false;        // Is the heartbeat acknowledged?
 	bool closing = false;       // Are we closing this session?
+	/* Json parsing for gateway events */
+	json::stream_parser parser; // The json parser
 	/* Zlib stuff for decompressing websocket messages */
 	z_stream inflate_stream{};
 	Byte inflate_buffer[4096];

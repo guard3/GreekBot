@@ -50,7 +50,8 @@ cGateway::implementation::restart(std::shared_ptr<websocket_session> sess) noexc
 	pSess->hb_timer.cancel(); // Stop heartbeating to prevent writing further data to the stream
 	pSess->stream.async_close(beast::websocket::close_code::none, [_ = std::move(sess)](const sys::error_code&) {});
 
-	m_ws_session.reset();
+	if (m_ws_session.lock().get() == pSess)
+		m_ws_session.reset();
 	if (!m_ws_terminating)
 		run_session();
 }
@@ -61,13 +62,14 @@ cGateway::implementation::on_close(std::shared_ptr<websocket_session> sess) noex
 	sess->closing = true;    // Mark the current session as closing to cancel any pending handlers associated with it
 	sess->hb_timer.cancel(); // Stop heartbeating to prevent writing further data to the stream
 
-	m_ws_session.reset();
+	if (m_ws_session.lock() == sess)
+		m_ws_session.reset();
 	if (!m_ws_terminating)
 		run_session();
 }
 /* ================================================================================================================== */
 void
-cGateway::implementation::on_read(std::shared_ptr<websocket_session> sess, const sys::error_code& ec, std::size_t bytes_read) noexcept try {
+cGateway::implementation::on_read(std::shared_ptr<websocket_session> sess, const sys::error_code& ec) noexcept try {
 	/* If the session was closed gracefully by the server... */
 	if (ec == beast::websocket::error::closed) {
 		switch (auto& rsn = sess->stream.reason(); rsn.code) {
@@ -105,41 +107,56 @@ cGateway::implementation::on_read(std::shared_ptr<websocket_session> sess, const
 	/* If any other error occurs, report it and close the connection */
 	if (ec)
 		throw sys::system_error(ec);
-	/* Reset the JSON parser and feed it the received message */
-	m_parser.reset();
-	char* in = (char*)sess->buffer.data().data();
-	if (bytes_read >= 4 && 0 == std::memcmp(in + bytes_read - 4, "\x00\x00\xFF\xFF", 4)) {
-		/* If the message ends in the Z_SYNC_FLUSH suffix, decompress */
-		auto& inflate_stream = sess->inflate_stream;
-		auto& inflate_buffer = sess->inflate_buffer;
 
-		inflate_stream.avail_in = bytes_read;
-		inflate_stream.next_in  = (Byte*)in;
-		do {
-			inflate_stream.avail_out = std::size(inflate_buffer);
-			inflate_stream.next_out  = inflate_buffer;
-			switch (inflate(&inflate_stream, Z_NO_FLUSH)) {
-				case Z_OK:
-				case Z_STREAM_END:
-					m_parser.write((char*)inflate_buffer, std::size(inflate_buffer) - inflate_stream.avail_out);
-					break;
-				case Z_MEM_ERROR:
-					throw std::bad_alloc();
-				default:
-					throw std::runtime_error(inflate_stream.msg ? inflate_stream.msg : "Zlib error");
-			}
-		} while (inflate_stream.avail_out == 0);
-	} else {
-		/* If the message isn't compressed, directly feed it into the json parser */
-		m_parser.write(in, bytes_read);
+	auto msg = sess->buffer.data();
+	auto msg_size = msg.size();
+	auto msg_data = reinterpret_cast<Byte*>(msg.data());
+
+	/* If the received message does not end in the Z_SYNC_FLUSH suffix, keep reading */
+	if (msg_size < 4 || 0 != std::memcmp(msg_data + msg_size - 4, "\x00\x00\xFF\xFF", 4)) {
+		auto pSess = sess.get();
+		pSess->stream.async_read(pSess->buffer, [this, sess = std::move(sess)](const sys::error_code& ec, std::size_t) mutable {
+			on_read(std::move(sess), ec);
+		});
+		return;
 	}
+
+	/* Decompress the message and feed the output to the JSON parser as we go */
+	auto& inflate_stream = sess->inflate_stream;
+	auto& inflate_buffer = sess->inflate_buffer;
+	inflate_stream.avail_in = msg_size;
+	inflate_stream.next_in  = msg_data;
+	do {
+		inflate_stream.avail_out = std::size(inflate_buffer);
+		inflate_stream.next_out = inflate_buffer;
+		switch (inflate(&inflate_stream, Z_NO_FLUSH)) {
+			case Z_OK:
+				sess->parser.write(reinterpret_cast<char*>(inflate_buffer), std::size(inflate_buffer) - inflate_stream.avail_out);
+				break;
+			case Z_STREAM_END: // This shouldn't ever happen
+				struct ex : std::exception {
+					const char* what() const noexcept override { return "Zlib stream ended unexpectedly"; }
+				};
+				throw ex{};
+			default:
+				throw std::runtime_error(inflate_stream.msg ? inflate_stream.msg : "Zlib error");
+		}
+	} while (inflate_stream.avail_out == 0);
+
 	/* Consume all read bytes from the dynamic buffer */
-	sess->buffer.consume(bytes_read);
-	/* Release the parsed json value */
-	const json::value v = m_parser.release();
-	cUtils::PrintDbg("{}", json::serialize(v));
+	sess->buffer.consume(msg_size);
+
 	/* Start the next asynchronous read operation to keep listening for more events */
-	sess->stream.async_read(sess->buffer, [this, sess](const sys::error_code& ec, std::size_t size) mutable { on_read(std::move(sess), ec, size); });
+	sess->stream.async_read(sess->buffer, [this, sess](const sys::error_code& ec, std::size_t) mutable {
+		sess->parser.reset();
+		on_read(std::move(sess), ec);
+	});
+
+	/* Release the parsed json value */
+	const json::value v = sess->parser.release();
+#ifdef DEBUG
+	cUtils::PrintDbg("{}", json::serialize(v));
+#endif
 	/* Process the event */
 	switch (v.at("op").to_number<int>()) {
 		case OP_DISPATCH:
@@ -281,7 +298,7 @@ cGateway::implementation::run_session() noexcept try {
 		auto pSess = sess.get();
 		ws_layer.async_read(pSess->buffer, [this, sess = std::move(sess)](const sys::error_code& ec, std::size_t size) mutable {
 			m_ws_session = sess; // Save a weak reference to the session
-			on_read(std::move(sess), ec, size);
+			on_read(std::move(sess), ec);
 		});
 		/* The stream is successfully set up, clear the error timer */
 		m_error_started_at = {};
