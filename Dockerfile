@@ -1,17 +1,13 @@
-FROM debian:12
+FROM debian:13
 LABEL authors="guard3"
 
 # Install necessary packages
-RUN apt update && apt full-upgrade && apt install -y g++ lsb-release wget software-properties-common gnupg git cmake libssl-dev zlib1g-dev libsqlite3-dev
-
-# Install LLVM 19
-RUN bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)" -- 19 all
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt update && apt -y full-upgrade && apt install -y wget clang gdb cmake libc++-dev libssl-dev zlib1g-dev libsqlite3-dev
 
 # Install Boost
-RUN wget -qO- https://archives.boost.io/release/1.88.0/source/boost_1_88_0.tar.gz | tar -xz
-WORKDIR "/boost_1_88_0"
-RUN ./bootstrap.sh && ./b2 cxxflags=-stdlib=libc++ linkflags=-stdlib=libc++ toolset=clang-19 install
+RUN wget -qO- https://archives.boost.io/release/1.89.0/source/boost_1_89_0.tar.gz | tar -xz
+WORKDIR "/boost_1_89_0"
+RUN ./bootstrap.sh && ./b2 cxxflags=-stdlib=libc++ linkflags=-stdlib=libc++ install
 WORKDIR "/"
 RUN rm -rf boost_*
-
-ENTRYPOINT [ "bash" ]
