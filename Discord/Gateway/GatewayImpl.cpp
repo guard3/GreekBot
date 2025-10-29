@@ -1,7 +1,5 @@
 #include "GatewayImpl.h"
 #include "Utils.h"
-
-#include <print>
 /* ========== Gateway event/command opcodes ========================================================================= */
 enum eGatewayOpcode {
 	OP_DISPATCH              = 0,  // An event was dispatched.
@@ -129,17 +127,14 @@ cGateway::implementation::on_read(std::shared_ptr<websocket_session> sess, const
 	do {
 		inflate_stream.avail_out = std::size(inflate_buffer);
 		inflate_stream.next_out = inflate_buffer;
-		switch (inflate(&inflate_stream, Z_NO_FLUSH)) {
+		switch (int res = inflate(&inflate_stream, Z_NO_FLUSH)) {
 			case Z_OK:
 				sess->parser.write(reinterpret_cast<char*>(inflate_buffer), std::size(inflate_buffer) - inflate_stream.avail_out);
 				break;
-			case Z_STREAM_END: // This shouldn't ever happen
-				struct ex : std::exception {
-					const char* what() const noexcept override { return "Zlib stream ended unexpectedly"; }
-				};
-				throw ex{};
+			case Z_ERRNO:
+				throw std::system_error(errno, std::generic_category(), "Zlib error");
 			default:
-				throw std::runtime_error(inflate_stream.msg ? inflate_stream.msg : "Zlib error");
+				throw std::system_error(res, zlib::error_category(), "Zlib error");
 		}
 	} while (inflate_stream.avail_out == 0);
 

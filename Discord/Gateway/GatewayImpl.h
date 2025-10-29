@@ -3,6 +3,7 @@
 #include "Application.h"
 #include "Gateway.h"
 #include "GuildMembersResult.h"
+#include "ZlibError.h"
 #include <deque>
 #include <thread>
 #include <boost/asio.hpp>
@@ -169,13 +170,13 @@ struct cGateway::implementation::websocket_session {
 
 	websocket_session(auto& ioc, auto& ctx) : stream(ioc, ctx), hb_timer(ioc) {
 		/* Initialize zlib inflate stream */
-		switch (inflateInit(&inflate_stream)) {
+		switch (int res = inflateInit(&inflate_stream)) {
 			case Z_OK:
 				break;
-			case Z_MEM_ERROR:
-				throw std::bad_alloc();
+			case Z_ERRNO:
+				throw std::system_error(errno, std::generic_category(), "Cannot initialize zlib stream");
 			default:
-				throw std::runtime_error("Could not initialize inflate stream");
+				throw std::system_error(res, zlib::error_category(), "Cannot initialize zlib stream");
 		}
 	}
 	~websocket_session() { inflateEnd(&inflate_stream); }

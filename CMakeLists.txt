@@ -90,6 +90,7 @@ add_executable(GreekBot main.cpp Discord/Bot.cpp Discord/Bot.h Discord/Common.h 
 	Database/DBTempBans.h
 	GreekBot/Nicknames.cpp
 	Database/Nicknames/Nicknames.cpp
+	Discord/Gateway/ZlibError.cpp
 )
 
 target_include_directories(
