@@ -259,13 +259,8 @@ cGreekBot::process_infractions(cAppCmdInteraction& i) HANDLER_BEGIN {
 	embed.SetColor(LMG_COLOR_YELLOW);
 	embed.SetTimestamp(now);
 
-	/* Check that the user is a member of Learning Greek */
-	if (!pMember) {
-		co_await ResumeOnEventStrand();
-		embed.SetDescription(std::format("User is not a member of **{}**{}", m_guilds.at(*i.GetGuildId()).GetName(), stats.entries.empty() ? "" : " anymore"));
-	}
 	/* Fill the embed with infraction info */
-	else if (stats.entries.empty()) {
+	if (stats.entries.empty()) {
 		embed.SetDescription("✅ No infractions found");
 	} else {
 		/* Update embed to include stats */
@@ -285,6 +280,11 @@ cGreekBot::process_infractions(cAppCmdInteraction& i) HANDLER_BEGIN {
 				}
 			}
 		});
+	}
+
+	if (!pMember) {
+		co_await ResumeOnEventStrand();
+		embed.EmplaceFooter(std::format("Not a member of {}{}", m_guilds.at(*i.GetGuildId()).GetName(), stats.entries.empty() ? "" : " anymore"));
 	}
 
 	co_await InteractionSendMessage(i, response);
