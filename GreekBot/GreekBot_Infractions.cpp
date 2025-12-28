@@ -13,7 +13,7 @@ static const auto NO_PERM_MSG = [] {
 cTask<>
 cGreekBot::process_warn(cAppCmdInteraction& i) HANDLER_BEGIN {
 	/* First, make sure that the invoking user has the appropriate permissions, just for good measure */
-	if (!(i.GetMember()->GetPermissions() & PERM_MODERATE_MEMBERS))
+	if (i.GetMember()->GetPermissions().TestNone(PERM_MODERATE_MEMBERS))
 		co_return co_await InteractionSendMessage(i, NO_PERM_MSG);
 
 	/* Collect parameters */
@@ -50,7 +50,7 @@ cGreekBot::process_warn(cAppCmdInteraction& i) HANDLER_BEGIN {
 		if (pUser->IsBotUser() || pUser->IsSystemUser())
 			return "You can't warn bots! Bots ενωμένα ποτέ νικημένα! 🤖";
 		/* Check for target moderator */
-		if (pMember->GetPermissions() & PERM_MODERATE_MEMBERS)
+		if (pMember->GetPermissions().TestAny(PERM_MODERATE_MEMBERS))
 			return "You can't warn a fellow moderator!";
 		/* No error condition, yay! */
 		return nullptr;
@@ -88,7 +88,7 @@ cGreekBot::process_warn(cAppCmdInteraction& i) HANDLER_BEGIN {
 cTask<>
 cGreekBot::process_warn(cModalSubmitInteraction& i, std::string_view fmt) HANDLER_BEGIN {
 	/* Check permissions */
-	if (!(i.GetMember()->GetPermissions() & PERM_MODERATE_MEMBERS))
+	if (i.GetMember()->GetPermissions().TestNone(PERM_MODERATE_MEMBERS))
 		co_return co_await InteractionSendMessage(i, NO_PERM_MSG);
 
 	/* A simple exception for when the fmt (for whatever reason) is invalid */
@@ -242,7 +242,7 @@ cGreekBot::process_infractions(cAppCmdInteraction& i) HANDLER_BEGIN {
 		pMember = i.GetMember();
 	}
 	/* ...otherwise, the invoking user must have the appropriate permissions */
-	else if (!(i.GetMember()->GetPermissions() & PERM_MODERATE_MEMBERS)) {
+	else if (i.GetMember()->GetPermissions().TestNone(PERM_MODERATE_MEMBERS)) {
 		co_return co_await InteractionSendMessage(i, response
 			.SetFlags(MESSAGE_FLAG_EPHEMERAL)
 			.SetContent("You can't do that! You are only allowed to view your own infractions.")
@@ -293,7 +293,7 @@ cGreekBot::process_infractions(cAppCmdInteraction& i) HANDLER_BEGIN {
 cTask<>
 cGreekBot::process_infractions_button(cMsgCompInteraction& i, cSnowflake user_id) HANDLER_BEGIN {
 	/* We only allow a moderator or the offending user to view infractions */
-	if (i.GetUser().GetId() != user_id && !(i.GetMember()->GetPermissions() & PERM_MODERATE_MEMBERS)) {
+	if (i.GetUser().GetId() != user_id && i.GetMember()->GetPermissions().TestNone(PERM_MODERATE_MEMBERS)) {
 		co_return co_await InteractionSendMessage(i, cPartialMessage()
 			.SetFlags(MESSAGE_FLAG_EPHEMERAL)
 			.SetContent("You can't do that! You are only allowed to view your own infractions.")
@@ -337,7 +337,7 @@ cTask<>
 cGreekBot::process_infractions_remove(cMsgCompInteraction& i, std::string_view fmt) HANDLER_BEGIN {
 	using namespace std::chrono;
 	/* First of all, check the invoking member's permissions */
-	if (!(i.GetMember()->GetPermissions() & PERM_MODERATE_MEMBERS))
+	if (i.GetMember()->GetPermissions().TestNone(PERM_MODERATE_MEMBERS))
 		co_return co_await InteractionSendMessage(i, NO_PERM_MSG);
 
 	const auto now = i.GetId().GetTimestamp();
@@ -443,7 +443,7 @@ cGreekBot::process_infractions_remove(cMsgCompInteraction& i, std::string_view f
 cTask<>
 cGreekBot::process_timeout_remove(cMsgCompInteraction& i, cSnowflake user_id) HANDLER_BEGIN {
 	/* Check permissions */
-	if (!(i.GetMember()->GetPermissions() & PERM_MODERATE_MEMBERS))
+	if (i.GetMember()->GetPermissions().TestNone(PERM_MODERATE_MEMBERS))
 		co_return co_await InteractionSendMessage(i, NO_PERM_MSG);
 
 	cMessageUpdate response;

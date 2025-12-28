@@ -57,7 +57,7 @@ cPartialMember::cPartialMember(const json::object& o):
 	m_flags(json::value_to<eMemberFlag>(o.at("flags"))),
 	m_permissions([&o] {
 		auto p = o.if_contains("permissions");
-		return p ? json::value_to<ePermission>(*p) : PERM_NONE;
+		return p ? json::value_to<ePermission>(*p) : ePermission{};
 	}()),
 	m_roles(json::value_to<std::vector<cSnowflake>>(o.at("roles"))) {}
 

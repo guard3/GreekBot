@@ -1,6 +1,7 @@
 #ifndef DISCORD_COMMON_H
 #define DISCORD_COMMON_H
 #include "Common/Concepts.h"
+#include "Common/FlagSet.h"
 #include "Common/Ptr.h"
 #include "Common/Visitor.h"
 #include <cstdint>

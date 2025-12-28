@@ -99,7 +99,7 @@ cTask<>
 cGreekBot::process_ban(cAppCmdInteraction& i) HANDLER_BEGIN {
 	using namespace std::chrono;
 	/* Check that the invoking user has appropriate permissions, for extra measure */
-	if (!(i.GetMember()->GetPermissions() & PERM_BAN_MEMBERS))
+	if (i.GetMember()->GetPermissions().TestNone(PERM_BAN_MEMBERS))
 		co_return co_await InteractionSendMessage(i, MISSING_PERMISSION_MESSAGE);
 	/* Collect options */
 	auto& subcommand = i.GetOptions().front();
@@ -139,7 +139,7 @@ cGreekBot::process_ban(cAppCmdInteraction& i) HANDLER_BEGIN {
 cTask<>
 cGreekBot::process_unban(cInteraction& i, cSnowflake user_id) HANDLER_BEGIN {
 	/* Make sure that the invoking user has the appropriate permissions */
-	if (!(i.GetMember()->GetPermissions() & PERM_BAN_MEMBERS)) [[unlikely]]
+	if (i.GetMember()->GetPermissions().TestNone(PERM_BAN_MEMBERS)) [[unlikely]]
 		co_return co_await InteractionSendMessage(i, MISSING_PERMISSION_MESSAGE);
 	/* Acknowledge interaction */
 	co_await InteractionDefer(i);
@@ -204,7 +204,7 @@ cGreekBot::process_unban(cInteraction& i, cSnowflake user_id) HANDLER_BEGIN {
 cTask<>
 cGreekBot::process_ban_ctx_menu(cAppCmdInteraction& i, std::string_view subcommand) HANDLER_BEGIN {
 	/* Check that the invoking member has appropriate permissions */
-	if (!(i.GetMember()->GetPermissions() & PERM_BAN_MEMBERS))
+	if (i.GetMember()->GetPermissions().TestNone(PERM_BAN_MEMBERS))
 		co_return co_await InteractionSendMessage(i, MISSING_PERMISSION_MESSAGE);
 	/* Retrieve the user to be banned */
 	auto[user, member] = i.GetOptions().front().GetValue<APP_CMD_OPT_USER>();
@@ -259,7 +259,7 @@ cGreekBot::process_ban_ctx_menu(cAppCmdInteraction& i, std::string_view subcomma
 cTask<>
 cGreekBot::process_ban_modal(cModalSubmitInteraction& i, std::string_view custom_id) HANDLER_BEGIN {
 	/* Check that the invoking member has appropriate permissions */
-	if (!(i.GetMember()->GetPermissions() & PERM_BAN_MEMBERS))
+	if (i.GetMember()->GetPermissions().TestNone(PERM_BAN_MEMBERS))
 		co_return co_await InteractionSendMessage(i, MISSING_PERMISSION_MESSAGE);
 	/* A simple exception for when the modal id (for whatever reason) is invalid */
 	struct _ : std::exception {

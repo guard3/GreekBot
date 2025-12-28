@@ -1,13 +1,7 @@
 #include "Role.h"
-#include "Utils.h"
 #include <boost/json.hpp>
 
 namespace json = boost::json;
-
-ePermission
-tag_invoke(json::value_to_tag<ePermission>, const json::value& v) {
-	return (ePermission)cUtils::ParseInt<std::underlying_type_t<ePermission>>(v.as_string());
-}
 
 cRole
 tag_invoke(json::value_to_tag<cRole>, const json::value& v) {
