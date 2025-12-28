@@ -106,7 +106,7 @@ target_include_directories(
 target_compile_definitions(GreekBot PRIVATE $<$<CONFIG:Debug>:DEBUG>)
 
 # Find packages
-find_package(Boost 1.86.0 REQUIRED COMPONENTS url OPTIONAL_COMPONENTS json) # Boost/JSON and Boost/URL are required, although Boost/JSON can be used as header-only
+find_package(Boost 1.90.0 REQUIRED COMPONENTS url OPTIONAL_COMPONENTS json) # Boost/JSON and Boost/URL are required, although Boost/JSON can be used as header-only
 find_package(OpenSSL REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(SQLite3 3.35.0 REQUIRED)
