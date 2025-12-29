@@ -69,7 +69,7 @@ cGreekBot::OnHeartbeat() try {
 					/* Then kick */
 					co_await RemoveGuildMember(LMG_GUILD_ID, user, "Failed to get a rank");
 					++total_pruned;
-				} else if (member.PremiumSince() == system_clock::time_point{} && member.GetPermissions().TestNone(PERM_MANAGE_ROLES)) { // If the (non-admin) member is not a nitro booster...
+				} else if (member.PremiumSince() == system_clock::time_point{} && member.GetPermissions().TestNone(ePermission::ManageRoles)) { // If the (non-admin) member is not a nitro booster...
 					auto& user = *member.GetUser();
 					// Copy the member roles to the member update object, filtering out any color roles
 					auto roles = member.GetRoles();
