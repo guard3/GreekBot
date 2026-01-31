@@ -64,14 +64,14 @@ cBot::CreateDM(crefUser recipient) {
 }
 
 cTask<cMessage>
-cBot::CreateMessage(crefChannel channel, const cMessageBase& msg) {
+cBot::CreateMessage(crefChannel channel, cMessageView msg) {
 	co_return cMessage{
 		co_await DiscordPost(std::format("/channels/{}/messages", channel.GetId()), json::value_from(msg).get_object())
 	};
 }
 
 cTask<cMessage>
-cBot::CreateDMMessage(crefUser recipient, const cMessageBase& msg) {
+cBot::CreateDMMessage(crefUser recipient, cMessageView msg) {
 	co_return co_await CreateMessage(co_await CreateDM(recipient), msg);
 }
 

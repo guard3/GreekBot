@@ -59,7 +59,7 @@ cBot::InteractionDefer(const cInteraction& i, bool bThinking) {
 }
 
 cTask<>
-cBot::InteractionSendMessage(const cInteraction& i, const cMessageBase& msg) {
+cBot::InteractionSendMessage(const cInteraction& i, cMessageView msg) {
 	using namespace detail;
 	/* If the interaction has been acknowledged before, send a followup message... */
 	if (get_interaction_ack(i)) {

@@ -52,7 +52,7 @@ public:
 	cTask<> InteractionDefer(const cModalSubmitInteraction&, bool thinking = false);
 	cTask<> InteractionDefer(const cInteraction&, bool thinking = false);
 	/* Interactions - Send new message */
-	cTask<> InteractionSendMessage(const cInteraction&, const cMessageBase&);
+	cTask<> InteractionSendMessage(const cInteraction&, cMessageView);
 	/* Interactions - Send modal */
 	cTask<> InteractionSendModal(const cAppCmdInteraction&, const cModal&);
 	cTask<> InteractionSendModal(const cMsgCompInteraction&, const cModal&);
@@ -66,8 +66,8 @@ public:
 	cTask<int> BeginGuildPrune(crefGuild guild, int days, std::string_view reason = {});
 
 	cTask<cChannel> CreateDM(crefUser recipient);
-	cTask<cMessage> CreateMessage(crefChannel channel, const cMessageBase& msg);
-	cTask<cMessage> CreateDMMessage(crefUser recipient, const cMessageBase& msg);
+	cTask<cMessage> CreateMessage(crefChannel channel, cMessageView msg);
+	cTask<cMessage> CreateDMMessage(crefUser recipient, cMessageView msg);
 	cTask<cMessage> EditMessage(crefChannel channel, crefMessage target_msg, const cMessageUpdate& msg);
 	cTask<> DeleteMessage(crefChannel channel, crefMessage msg, std::string_view reason = {});
 	cTask<> DeleteMessages(crefChannel channel, std::span<const cSnowflake> msg_ids, std::string_view reason = {});
