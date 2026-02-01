@@ -92,6 +92,9 @@ add_executable(GreekBot main.cpp Discord/Bot.cpp Discord/Bot.h Discord/Common.h 
 	Database/Nicknames/Nicknames.cpp
 	Discord/Gateway/ZlibError.cpp
 	Discord/Permission.cpp
+	Discord/Objects/Component/TextDisplay.cpp
+	Discord/Objects/Component/ComponentBase.cpp
+	Discord/Objects/Component/ComponentType.cpp
 )
 
 target_include_directories(

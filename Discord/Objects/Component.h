@@ -4,19 +4,11 @@
 #include "Component/SelectMenu.h"
 #include "Component/TextInput.h"
 #include "Component/UnsupportedComponent.h"
+#include "Component/TextDisplay.h"
+#include "Component/ComponentType.h"
 #include <span>
 #include <variant>
-/* The type of component; Exposed publicly because it's used in component interactions */
-enum eComponentType {
-	COMPONENT_ACTION_ROW = 1, // A container for other components
-	COMPONENT_BUTTON,         // A button object
-	COMPONENT_SELECT_MENU,    // A select menu for picking from choices
-	COMPONENT_TEXT_INPUT      // A Text input object
-};
-eComponentType
-tag_invoke(boost::json::value_to_tag<eComponentType>, const boost::json::value& v);
-void
-tag_invoke(boost::json::value_from_tag, boost::json::value&, eComponentType);
+
 /* Define component as a variant of all types that may appear in an action row */
 using cComponent = std::variant<cButton, cSelectMenu, cTextInput, cUnsupportedComponent>;
 using   hComponent =   hHandle<cComponent>;
@@ -55,4 +47,15 @@ cActionRow
 tag_invoke(boost::json::value_to_tag<cActionRow>, const boost::json::value&);
 void
 tag_invoke(boost::json::value_from_tag, boost::json::value&, const cActionRow&);
+
+using cContentComponent = std::variant<cTextDisplay, cUnsupportedComponent>;
+
+template<>
+struct boost::json::is_variant_like<cContentComponent> : std::false_type {};
+
+cContentComponent
+tag_invoke(boost::json::value_to_tag<cContentComponent>, const boost::json::value&);
+
+void
+tag_invoke(boost::json::value_from_tag, boost::json::value&, const cContentComponent&);
 #endif /* DISCORD_COMPONENT_H */

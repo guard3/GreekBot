@@ -220,7 +220,27 @@ public:
  * Used for sending new messages
  * TODO: implement
  */
-class cPartialMessageV2 : public cMessageBase {};
+class cPartialMessageV2 : public cMessageBase {
+	std::vector<cContentComponent> m_components;
+
+public:
+	cPartialMessageV2() = default;
+
+	explicit cPartialMessageV2(const boost::json::value&);
+	explicit cPartialMessageV2(const boost::json::object&);
+	explicit cPartialMessageV2(eMessageFlag flags, const boost::json::object&);
+
+	template<typename Self>
+	auto GetComponents(this Self&& self) noexcept {
+		return std::span(self.m_components);
+	}
+
+	template<typename Self>
+	auto&& SetComponents(this Self&& self, std::vector<cContentComponent> vec) noexcept {
+		self.m_components = std::move(vec);
+		return std::forward<Self>(self);
+	}
+};
 
 template<typename F>
 decltype(auto) cMessageView::Visit(this cMessageView self, F&& f) {

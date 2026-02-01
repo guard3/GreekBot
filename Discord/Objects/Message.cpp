@@ -35,13 +35,19 @@ cPartialMessage::cPartialMessage(eMessageFlag flags, const json::object& o) :
 	}()),
 	m_embeds(json::value_to<std::vector<cEmbed>>(o.at("embeds"))) {}
 
+cPartialMessageV2::cPartialMessageV2(const json::value& v) : cPartialMessageV2(v.as_object()) {}
+cPartialMessageV2::cPartialMessageV2(const json::object& o): cPartialMessageV2(get_message_flags(o), o) {}
+cPartialMessageV2::cPartialMessageV2(eMessageFlag flags, const json::object& o) :
+	cMessageBase(flags),
+	m_components(json::value_to<std::vector<cContentComponent>>(o.at("components"))) {}
+
 cMessage::cMessage(const json::value&  v) : cMessage(v.as_object()) {}
 cMessage::cMessage(const json::object& o) :
 	m_data([&] {
 		using variant_type = std::variant<cPartialMessage, cPartialMessageV2>;
 		auto flags = get_message_flags(o);
 		return flags & MESSAGE_FLAG_IS_COMPONENTS_V2
-		             ? variant_type(std::in_place_type<cPartialMessageV2>)
+		             ? variant_type(std::in_place_type<cPartialMessageV2>, flags, o)
 		             : variant_type(std::in_place_type<cPartialMessage>, flags, o);
 	}()),
 	id(o.at("id").as_string()),
@@ -115,7 +121,6 @@ tag_invoke(json::value_from_tag, json::value& v, const cPartialMessage& m) {
 		json::value_from(e, obj["embeds"]);
 }
 
-// Dummy JSON conversion for components v2; TODO: Add component support
 void
 tag_invoke(json::value_from_tag, json::value& v, const cPartialMessageV2& m) {
 	auto& obj = v.emplace_object();
@@ -126,7 +131,7 @@ tag_invoke(json::value_from_tag, json::value& v, const cPartialMessageV2& m) {
 		obj.emplace("tts", true);
 	obj.emplace("flags", flags & (MESSAGE_FLAG_EPHEMERAL | MESSAGE_FLAG_SUPPRESS_EMBEDS) | MESSAGE_FLAG_IS_COMPONENTS_V2);
 
-	obj["components"].emplace_array();
+	json::value_from(m.GetComponents(), obj["components"]);
 }
 
 void

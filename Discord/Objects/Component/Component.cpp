@@ -1,16 +1,8 @@
 #include "Component.h"
+#include "ComponentType.h"
 #include <boost/json.hpp>
 /* ================================================================================================================== */
 namespace json = boost::json;
-/* ================================================================================================================== */
-eComponentType
-tag_invoke(json::value_to_tag<eComponentType>, const json::value& v) {
-	return (eComponentType)v.to_number<std::underlying_type_t<eComponentType>>();
-}
-void
-tag_invoke(json::value_from_tag, json::value& v, eComponentType t) {
-	v = t;
-}
 /* ================================================================================================================== */
 cActionRow::cActionRow(const json::value& v) : cActionRow(v.as_object()) {}
 cActionRow::cActionRow(const json::object& o) : m_components(json::value_to<std::vector<cComponent>>(o.at("components"))) {}
@@ -96,4 +88,19 @@ tag_invoke(json::value_from_tag, json::value& v, const cTextInput& ti) {
 	auto max_length = std::max(ti.GetMaxLength(), std::uint16_t(1));
 	if (max_length < 4000)
 		obj.emplace("max_length", std::max(min_length, max_length));
+}
+
+cContentComponent
+tag_invoke(json::value_to_tag<cContentComponent>, const json::value& v) {
+	switch (v.at("type").to_number<int>()) {
+	case COMPONENT_TEXT_DISPLAY:
+		return cContentComponent(std::in_place_type<cTextDisplay>, v);
+	default:
+		return cContentComponent(std::in_place_type<cUnsupportedComponent>, v);
+	}
+}
+
+void
+tag_invoke(json::value_from_tag, json::value& v, const cContentComponent& cmp) {
+	std::visit([&v](const auto& cmp) { json::value_from(cmp, v); }, cmp);
 }

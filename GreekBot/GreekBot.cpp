@@ -185,11 +185,7 @@ cGreekBot::process_interaction(cModalSubmitInteraction& i) HANDLER_BEGIN {
 
 cTask<>
 cGreekBot::process_test(cAppCmdInteraction& i) HANDLER_BEGIN {
-	static const auto MESSAGE = [] {
-		cPartialMessage msg;
-		msg.SetFlags(MESSAGE_FLAG_EPHEMERAL).SetContent("Nothing to see here, go look elsewhere.");
-		return msg;
-	}();
-	co_await InteractionSendMessage(i, MESSAGE);
-	co_await InteractionDefer(i, true);
+	co_await InteractionSendMessage(i, cPartialMessageV2().SetFlags(MESSAGE_FLAG_EPHEMERAL).SetComponents({
+		cTextDisplay("Nothing to see here, go look elsewhere.")
+	}));
 } HANDLER_END
