@@ -6,22 +6,10 @@
 #include "Component/UnsupportedComponent.h"
 #include "Component/TextDisplay.h"
 #include "Component/ComponentType.h"
+#include "Component/Label.h"
+#include "ComponentFwd.h"
 #include <span>
 #include <variant>
-
-/* Define component as a variant of all types that may appear in an action row */
-using cComponent = std::variant<cButton, cSelectMenu, cTextInput, cUnsupportedComponent>;
-using   hComponent =   hHandle<cComponent>;
-using  chComponent =  chHandle<cComponent>;
-using  uhComponent =  uhHandle<cComponent>;
-using uchComponent = uchHandle<cComponent>;
-/* Provide custom JSON conversions for cComponent */
-template<>
-struct boost::json::is_variant_like<cComponent> : std::false_type {};
-cComponent
-tag_invoke(boost::json::value_to_tag<cComponent>, const boost::json::value&);
-void
-tag_invoke(boost::json::value_from_tag, boost::json::value&, const cComponent&);
 
 class cActionRow final {
 private:
@@ -58,4 +46,23 @@ tag_invoke(boost::json::value_to_tag<cContentComponent>, const boost::json::valu
 
 void
 tag_invoke(boost::json::value_from_tag, boost::json::value&, const cContentComponent&);
+
+///
+
+using cLayoutPartialComponent = std::variant<cActionRow, cPartialLabel, cUnsupportedComponent>;
+
+cLayoutPartialComponent
+tag_invoke(boost::json::value_to_tag<cLayoutPartialComponent>, const boost::json::value&);
+
+template<>
+struct boost::json::is_variant_like<cLayoutPartialComponent> : std::false_type {};
+
+using cLayoutComponent = std::variant<cActionRow, cLabel, cUnsupportedComponent>;
+
+template<>
+struct boost::json::is_variant_like<cLayoutComponent> : std::false_type {};
+
+void
+tag_invoke(boost::json::value_from_tag, boost::json::value&, const cLayoutComponent&);
+
 #endif /* DISCORD_COMPONENT_H */

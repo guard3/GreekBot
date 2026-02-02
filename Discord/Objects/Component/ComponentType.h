@@ -3,11 +3,12 @@
 #include "Base.h"
 
 enum eComponentType {
-	COMPONENT_ACTION_ROW = 1,   // Container to display a row of interactive components
-	COMPONENT_BUTTON,           // Button object
-	COMPONENT_SELECT_MENU,      // Select menu for picking from defined text options
-	COMPONENT_TEXT_INPUT,       // Text input object
-	COMPONENT_TEXT_DISPLAY = 10 // Markdown text
+	COMPONENT_ACTION_ROW = 1,    // Container to display a row of interactive components
+	COMPONENT_BUTTON,            // Button object
+	COMPONENT_SELECT_MENU,       // Select menu for picking from defined text options
+	COMPONENT_TEXT_INPUT,        // Text input object
+	COMPONENT_TEXT_DISPLAY = 10, // Markdown text
+	COMPONENT_LABEL = 18         // Container associating a label and description with a component
 };
 
 eComponentType

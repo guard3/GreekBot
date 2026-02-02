@@ -13,14 +13,15 @@ cGreekBot::process_nickname_button(cMsgCompInteraction& i, cSnowflake user_id) H
 		co_return co_await InteractionSendMessage(i, MISSING_PERMISSION_MESSAGE);
 	/* Respond with a modal */
 	co_await InteractionSendModal(i, cModal{ "NICKNAME_MODAL", "Assign a nickname!", {
-		cActionRow{
+		cLabel{
+			"Greek nickname",
 			cTextInput{
 				TEXT_INPUT_SHORT,
 				user_id.ToString(), // Save the member id
-				"Greek nickname"
+				""
 			}.SetMaxLength(30) // Nicknames can be up to 30 characters
-		}}
-	});
+		}
+	}});
 } HANDLER_END
 
 cTask<>
@@ -31,6 +32,7 @@ cGreekBot::process_modal(cModalSubmitInteraction& i) HANDLER_BEGIN {
 	/* Acknowledge the interaction immediately */
 	co_await InteractionDefer(i);
 	/* Modify the member referenced in the modal */
-	auto& text_input = std::get<cTextInput>(i.GetComponents().front().GetComponents().front());
+	auto& label = std::get<cPartialLabel>(i.GetComponents().front());
+	auto& text_input = std::get<cTextInput>(label.GetComponent());
 	co_await ModifyGuildMember(*i.GetGuildId(), cSnowflake(text_input.GetCustomId()), cMemberOptions().SetNick(text_input.MoveValue()));
 } HANDLER_END

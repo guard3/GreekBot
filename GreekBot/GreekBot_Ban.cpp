@@ -280,7 +280,7 @@ cGreekBot::process_ban_modal(cModalSubmitInteraction& i, std::string_view custom
 	/* Retrieve submitted options */
 	std::string_view reason, goodbye, expiry_fmt;
 	for (auto& action_row: i.GetComponents()) {
-		for (auto& component: action_row.GetComponents()) {
+		for (auto& component: std::get<cActionRow>(action_row).GetComponents()) {
 			auto& text_input = std::get<cTextInput>(component);
 			switch (auto crc = cUtils::CRC32(0, text_input.GetCustomId())) {
 				case 0x23240F07: // "BAN_REASON"

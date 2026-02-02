@@ -1,6 +1,6 @@
 #ifndef DISCORD_UNSUPPORTEDCOMPONENT_H
 #define DISCORD_UNSUPPORTEDCOMPONENT_H
-#include "Common.h"
+#include "Base.h"
 /* ========== A dummy component not directly supported ============================================================== */
 class cUnsupportedComponent final {
 	std::unique_ptr<boost::json::value> m_value;
@@ -12,11 +12,11 @@ class cUnsupportedComponent final {
 public:
 	explicit cUnsupportedComponent(const boost::json::value&);
 	cUnsupportedComponent(const cUnsupportedComponent&);
-	cUnsupportedComponent(cUnsupportedComponent&&) noexcept = default;
+	cUnsupportedComponent(cUnsupportedComponent&&) noexcept;
 	~cUnsupportedComponent();
 
 	cUnsupportedComponent& operator=(const cUnsupportedComponent&);
-	cUnsupportedComponent& operator=(cUnsupportedComponent&&) = default;
+	cUnsupportedComponent& operator=(cUnsupportedComponent&&) noexcept;
 };
 using   hUnsupportedComponent =   hHandle<cUnsupportedComponent>;
 using  chUnsupportedComponent =  chHandle<cUnsupportedComponent>;

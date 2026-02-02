@@ -6,10 +6,10 @@ class cModal final {
 private:
 	std::string             m_custom_id;
 	std::string             m_title;
-	std::vector<cActionRow> m_components;
+	std::vector<cLayoutComponent> m_components;
 
 public:
-	cModal(std::string custom_id, std::string title, std::vector<cActionRow> components):
+	cModal(std::string custom_id, std::string title, std::vector<cLayoutComponent> components):
 		m_custom_id(std::move(custom_id)),
 		m_title(std::move(title)),
 		m_components(std::move(components)) {}

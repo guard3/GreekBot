@@ -71,7 +71,8 @@ tag_invoke(json::value_from_tag, json::value& v, const cTextInput& ti) {
 	obj.reserve(7);
 	obj.emplace("type", COMPONENT_TEXT_INPUT);
 	obj.emplace("custom_id", ti.GetCustomId());
-	obj.emplace("label", ti.GetLabel());
+	if (auto label = ti.GetLabel(); !label.empty())
+		obj.emplace("label", ti.GetLabel());
 	obj.emplace("style", ti.GetStyle());
 	/* Fill out optional values */
 	auto min_length = std::min(ti.GetMinLength(), std::uint16_t(4000));
@@ -102,5 +103,22 @@ tag_invoke(json::value_to_tag<cContentComponent>, const json::value& v) {
 
 void
 tag_invoke(json::value_from_tag, json::value& v, const cContentComponent& cmp) {
+	std::visit([&v](const auto& cmp) { json::value_from(cmp, v); }, cmp);
+}
+
+cLayoutPartialComponent
+tag_invoke(json::value_to_tag<cLayoutPartialComponent>, const json::value& v) {
+	switch (v.at("type").to_number<int>()) {
+	case COMPONENT_ACTION_ROW:
+		return cLayoutPartialComponent(std::in_place_type<cActionRow>, v);
+	case COMPONENT_LABEL:
+		return cLayoutPartialComponent(std::in_place_type<cPartialLabel>, v);
+	default:
+		return cLayoutPartialComponent(std::in_place_type<cUnsupportedComponent>, v);
+	}
+}
+
+void
+tag_invoke(json::value_from_tag, json::value& v, const cLayoutComponent& cmp) {
 	std::visit([&v](const auto& cmp) { json::value_from(cmp, v); }, cmp);
 }

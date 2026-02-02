@@ -9,4 +9,4 @@ cModalSubmitInteraction::cModalSubmitInteraction(const json::object& o) : cModal
 cModalSubmitInteraction::cModalSubmitInteraction(const json::object& o, const json::object& d) :
 	cInteraction(INTERACTION_MODAL_SUBMIT, o),
 	m_custom_id(json::value_to<std::string>(d.at("custom_id"))),
-	m_components(json::value_to<std::vector<cActionRow>>(d.at("components"))) {}
+	m_components(json::value_to<std::vector<cLayoutPartialComponent>>(d.at("components"))) {}
