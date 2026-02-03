@@ -17,8 +17,7 @@ cGreekBot::process_nickname_button(cMsgCompInteraction& i, cSnowflake user_id) H
 			"Greek nickname",
 			cTextInput{
 				TEXT_INPUT_SHORT,
-				user_id.ToString(), // Save the member id
-				""
+				user_id.ToString() // Save the member id
 			}.SetMaxLength(30) // Nicknames can be up to 30 characters
 		}
 	}});

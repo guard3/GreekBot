@@ -69,11 +69,11 @@ cGreekBot::process_warn(cAppCmdInteraction& i) HANDLER_BEGIN {
 					return pUser->GetUsername();
 			} ()),
 			{
-				cActionRow{
+				cLabel{
+					"Reason",
 					cTextInput{
 						TEXT_INPUT_SHORT,
 						"dummy_id", // We don't need a custom id since this is the only component of the modal
-						"Reason",
 						false
 					}
 				}
@@ -116,7 +116,8 @@ cGreekBot::process_warn(cModalSubmitInteraction& i, std::string_view fmt) HANDLE
 	} ()) co_return co_await InteractionSendMessage(i, cPartialMessage().SetFlags(MESSAGE_FLAG_EPHEMERAL).SetContent(error_msg));
 
 	/* Proceed with the regular implementation */
-	std::string_view reason = get<cTextInput>(get<cActionRow>(i.GetComponents().front()).GetComponents().front()).GetValue();
+	auto& label = std::get<cPartialLabel>(i.GetComponents().front());
+	std::string_view reason = get<cTextInput>(label.GetComponent()).GetValue();
 	co_await process_warn_impl(i, user_id, username, avatar, discriminator, reason);
 } HANDLER_END
 

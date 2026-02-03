@@ -228,29 +228,30 @@ cGreekBot::process_ban_ctx_menu(cAppCmdInteraction& i, std::string_view subcomma
 		std::format("ban:{}:{}:{}:{}", user->GetId(), user->GetAvatar(), user->GetUsername(), user->GetDiscriminator()),
 		std::format("Ban @{}", display_name),
 		{
-			cActionRow{
+			cLabel{
+				"Ban reason (optional)",
 				cTextInput{
 					TEXT_INPUT_SHORT,
 					"BAN_REASON",
-					"Ban reason (optional)",
 					false
-				}
+				},
 			},
-			cActionRow{
+			cLabel{
+				"Custom goodbye message (optional)",
 				cTextInput{
 					TEXT_INPUT_PARAGRAPH,
 					"BAN_MESSAGE",
-					"Custom goodbye message (optional)",
 					false
-				}
+				},
 			},
-			cActionRow{
+			cLabel{
+				"For how long or until when to ban (optional)",
 				cTextInput{
 					TEXT_INPUT_SHORT,
 					"BAN_UNTIL",
-					"For how long or until when to ban (optional)",
 					false
-				}
+				},
+				"Duration (e.g., 30d, 1y2m) or date (YYYY-MM-DD)"
 			}
 		}
 	});
@@ -279,23 +280,21 @@ cGreekBot::process_ban_modal(cModalSubmitInteraction& i, std::string_view custom
 		co_return co_await InteractionSendMessage(i, get_no_ban_msg(SUBCMD_USER));
 	/* Retrieve submitted options */
 	std::string_view reason, goodbye, expiry_fmt;
-	for (auto& action_row: i.GetComponents()) {
-		for (auto& component: std::get<cActionRow>(action_row).GetComponents()) {
-			auto& text_input = std::get<cTextInput>(component);
-			switch (auto crc = cUtils::CRC32(0, text_input.GetCustomId())) {
-				case 0x23240F07: // "BAN_REASON"
-					reason = text_input.GetValue();
-					break;
-				case 0x1A1955B8: // "BAN_MESSAGE"
-					goodbye = text_input.GetValue();
-					break;
-				case 0xA4EA5974: // "BAN_UNTIL"
-					expiry_fmt = text_input.GetValue();
-					break;
-				[[unlikely]]
-				default:
-					throw std::runtime_error(std::format("Unexpected text input id: \"{}\" 0x{:08X}", text_input.GetCustomId(), crc));
-			}
+	for (auto& component: i.GetComponents()) {
+		auto& label = std::get<cPartialLabel>(component);
+		auto& text_input = std::get<cTextInput>(label.GetComponent());
+		switch (auto crc = cUtils::CRC32(0, text_input.GetCustomId())) {
+		case 0x23240F07: // "BAN_REASON"
+			reason = text_input.GetValue();
+			break;
+		case 0x1A1955B8: // "BAN_MESSAGE"
+			goodbye = text_input.GetValue();
+			break;
+		case 0xA4EA5974: // "BAN_UNTIL"
+			expiry_fmt = text_input.GetValue();
+			break;
+		default:
+			throw std::runtime_error(std::format("Unexpected text input id: {:?} 0x{:08X}", text_input.GetCustomId(), crc));
 		}
 	}
 	/* Ban */

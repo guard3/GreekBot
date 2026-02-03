@@ -65,31 +65,6 @@ tag_invoke(json::value_from_tag, json::value& v, const cSelectMenu& sm) {
 	if (auto s = sm.GetPlaceholder(); !s.empty())
 		obj.emplace("placeholder", s);
 }
-void
-tag_invoke(json::value_from_tag, json::value& v, const cTextInput& ti) {
-	auto& obj = v.emplace_object();
-	obj.reserve(7);
-	obj.emplace("type", COMPONENT_TEXT_INPUT);
-	obj.emplace("custom_id", ti.GetCustomId());
-	if (auto label = ti.GetLabel(); !label.empty())
-		obj.emplace("label", ti.GetLabel());
-	obj.emplace("style", ti.GetStyle());
-	/* Fill out optional values */
-	auto min_length = std::min(ti.GetMinLength(), std::uint16_t(4000));
-	if (ti.IsRequired()) {
-		/* If the text input is required, then its minimum length should be 1
-		 * The only reason we do that is for a more factually correct error message in the discord client */
-		min_length = std::max(min_length, std::uint16_t(1));
-	} else {
-		obj.emplace("required", false);
-	}
-	if (min_length != 0)
-		obj.emplace("min_length", min_length);
-	/* Constrain max length */
-	auto max_length = std::max(ti.GetMaxLength(), std::uint16_t(1));
-	if (max_length < 4000)
-		obj.emplace("max_length", std::max(min_length, max_length));
-}
 
 cContentComponent
 tag_invoke(json::value_to_tag<cContentComponent>, const json::value& v) {
