@@ -7,37 +7,52 @@ enum eTextInputStyle : std::uint8_t {
 	TEXT_INPUT_PARAGRAPH,
 };
 
-class cTextInput final : public cComponentBase {
-	std::string     m_custom_id;
-	std::string     m_value;
-	eTextInputStyle m_style;
-	bool            m_required;
-	std::uint16_t   m_min_length;
-	std::uint16_t   m_max_length;
-
-public:
-	explicit cTextInput(const boost::json::value&);
-	explicit cTextInput(const boost::json::object&);
-
-	template<iExplicitlyConvertibleTo<std::string> Str = std::string>
-	cTextInput(eTextInputStyle style, Str&& custom_id, bool required = true):
-		m_custom_id(std::forward<Str>(custom_id)),
-		m_style(style),
-		m_required(required),
-		m_min_length(0),
-		m_max_length(4000) {}
+/**
+ * Partial Text Input is an interaction response object. It is received from modal interactions
+ */
+struct cPartialTextInput : cComponentBase {
+	explicit cPartialTextInput(const boost::json::value&);
+	explicit cPartialTextInput(const boost::json::object&);
 
 	/* Getters */
-	std::string_view GetCustomId() const noexcept { return m_custom_id;  }
-	std::string_view    GetValue() const noexcept { return m_value;      }
+	std::string_view GetValue()    const noexcept { return m_value;     }
+	std::string_view GetCustomId() const noexcept { return m_custom_id; }
+
+	/* Movers */
+	std::string MoveValue()    noexcept { return std::move(m_value);     }
+	std::string MoveCustomId() noexcept { return std::move(m_custom_id); }
+
+protected:
+	std::string m_custom_id;
+	std::string m_value;
+
+	template<typename Str>
+	explicit cPartialTextInput(Str&& custom_id) : m_custom_id(std::forward<Str>(custom_id)) {}
+};
+
+/**
+ * Text Input is an interactive component that allows users to enter free-form text responses in modals.
+ * It supports both short, single-line inputs and longer, multi-line paragraph inputs.
+ */
+class cTextInput : public cPartialTextInput {
+	eTextInputStyle m_style;
+	bool            m_required;
+	std::uint16_t   m_min_length = 0;
+	std::uint16_t   m_max_length = 4000;
+
+public:
+	template<iExplicitlyConvertibleTo<std::string> Str = std::string>
+	cTextInput(eTextInputStyle style, Str&& custom_id, bool required = true):
+		cPartialTextInput(std::forward<Str>(custom_id)),
+		m_style(style),
+		m_required(required) {}
+
+	/* Getters */
 	eTextInputStyle     GetStyle() const noexcept { return m_style;      }
 	std::uint16_t   GetMinLength() const noexcept { return m_min_length; }
 	std::uint16_t   GetMaxLength() const noexcept { return m_max_length; }
 
 	bool IsRequired() const noexcept { return m_required; }
-	/* Movers */
-	std::string MoveCustomId() noexcept { return std::move(m_custom_id); }
-	std::string    MoveValue() noexcept { return std::move(m_value);     }
 	/* Resetters */
 	void  ResetRequired() noexcept { m_required = true;   }
 	void ResetMinLength() noexcept { m_min_length = 0;    }
@@ -62,8 +77,8 @@ public:
 eTextInputStyle
 tag_invoke(boost::json::value_to_tag<eTextInputStyle>, const boost::json::value&);
 
-cTextInput
-tag_invoke(boost::json::value_to_tag<cTextInput>, const boost::json::value&);
+cPartialTextInput
+tag_invoke(boost::json::value_to_tag<cPartialTextInput>, const boost::json::value&);
 /// @}
 
 /** @name JSON value from object conversion

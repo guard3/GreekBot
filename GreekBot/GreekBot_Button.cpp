@@ -32,6 +32,6 @@ cGreekBot::process_modal(cModalSubmitInteraction& i) HANDLER_BEGIN {
 	co_await InteractionDefer(i);
 	/* Modify the member referenced in the modal */
 	auto& label = std::get<cPartialLabel>(i.GetComponents().front());
-	auto& text_input = std::get<cTextInput>(label.GetComponent());
+	auto& text_input = std::get<cPartialTextInput>(label.GetComponent());
 	co_await ModifyGuildMember(*i.GetGuildId(), cSnowflake(text_input.GetCustomId()), cMemberOptions().SetNick(text_input.MoveValue()));
 } HANDLER_END

@@ -4,26 +4,11 @@
 
 namespace json = boost::json;
 
-cTextInput::cTextInput(const json::value& v): cTextInput(v.as_object()) {}
-cTextInput::cTextInput(const json::object& o):
+cPartialTextInput::cPartialTextInput(const json::value& v): cPartialTextInput(v.as_object()) {}
+cPartialTextInput::cPartialTextInput(const json::object& o):
+	cComponentBase(o),
 	m_custom_id(json::value_to<std::string>(o.at("custom_id"))),
-	m_value(json::value_to<std::string>(o.at("value"))),
-	m_style([&o] {
-		auto p = o.if_contains("style");
-		return p ? json::value_to<eTextInputStyle>(*p) : TEXT_INPUT_SHORT;
-	}()),
-	m_required([&o] {
-		auto p = o.if_contains("required");
-		return p && p->as_bool();
-	}()),
-	m_min_length([&o] {
-		auto p = o.if_contains("min_length");
-		return p ? p->to_number<std::uint16_t>() : 0;
-	}()),
-	m_max_length([&o] {
-		auto p = o.if_contains("max_length");
-		return p ? p->to_number<std::uint16_t>() : 4000;
-	}()) {}
+	m_value(json::value_to<std::string>(o.at("value"))) {}
 
 /** @name JSON value to object conversion
  */
@@ -33,9 +18,9 @@ tag_invoke(json::value_to_tag<eTextInputStyle>, const json::value& v) {
 	return static_cast<eTextInputStyle>(v.to_number<std::underlying_type_t<eTextInputStyle>>());
 }
 
-cTextInput
-tag_invoke(json::value_to_tag<cTextInput>, const json::value& v) {
-	return cTextInput{ v };
+cPartialTextInput
+tag_invoke(json::value_to_tag<cPartialTextInput>, const json::value& v) {
+	return cPartialTextInput{ v };
 }
 /// @}
 

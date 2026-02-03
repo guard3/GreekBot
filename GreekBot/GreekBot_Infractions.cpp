@@ -117,8 +117,8 @@ cGreekBot::process_warn(cModalSubmitInteraction& i, std::string_view fmt) HANDLE
 
 	/* Proceed with the regular implementation */
 	auto& label = std::get<cPartialLabel>(i.GetComponents().front());
-	std::string_view reason = get<cTextInput>(label.GetComponent()).GetValue();
-	co_await process_warn_impl(i, user_id, username, avatar, discriminator, reason);
+	auto& text_input = std::get<cPartialTextInput>(label.GetComponent());
+	co_await process_warn_impl(i, user_id, username, avatar, discriminator, text_input.GetValue());
 } HANDLER_END
 
 cTask<>

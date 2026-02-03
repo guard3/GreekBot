@@ -9,7 +9,7 @@ DISCORD_FWDDECL_CLASS(TextInput);
 DISCORD_FWDDECL_CLASS(UnsupportedComponent);
 
 /* Define component as a variant of all types that may appear in an action row */
-using cComponent = std::variant<cButton, cSelectMenu, cTextInput, cUnsupportedComponent>;
+using cComponent = std::variant<cButton, cSelectMenu, cUnsupportedComponent>;
 using   hComponent =   hHandle<cComponent>;
 using  chComponent =  chHandle<cComponent>;
 using  uhComponent =  uhHandle<cComponent>;

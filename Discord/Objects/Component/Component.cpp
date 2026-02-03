@@ -14,8 +14,6 @@ tag_invoke(json::value_to_tag<cComponent>, const json::value& v) {
 			return cComponent(std::in_place_type<cButton>, v);
 		case COMPONENT_SELECT_MENU:
 			return cComponent(std::in_place_type<cSelectMenu>, v);
-		case COMPONENT_TEXT_INPUT:
-			return cComponent(std::in_place_type<cTextInput>, v);
 		default:
 			return cComponent(std::in_place_type<cUnsupportedComponent>, v);
 	}
