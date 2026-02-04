@@ -4,36 +4,6 @@
 /* ================================================================================================================== */
 namespace json = boost::json;
 /* ================================================================================================================== */
-cActionRow::cActionRow(const json::value& v) : cActionRow(v.as_object()) {}
-cActionRow::cActionRow(const json::object& o) : m_components(json::value_to<std::vector<cComponent>>(o.at("components"))) {}
-/* ================================================================================================================== */
-cComponent
-tag_invoke(json::value_to_tag<cComponent>, const json::value& v) {
-	switch (v.at("type").to_number<int>()) {
-		case COMPONENT_BUTTON:
-			return cComponent(std::in_place_type<cButton>, v);
-		case COMPONENT_SELECT_MENU:
-			return cComponent(std::in_place_type<cSelectMenu>, v);
-		default:
-			return cComponent(std::in_place_type<cUnsupportedComponent>, v);
-	}
-}
-void
-tag_invoke(json::value_from_tag, json::value& v, const cComponent& comp) {
-	std::visit([&v](auto&& c) { json::value_from(c, v); }, comp);
-}
-/* ================================================================================================================== */
-cActionRow
-tag_invoke(json::value_to_tag<cActionRow>, const json::value& v) {
-	return cActionRow{ v };
-}
-void
-tag_invoke(json::value_from_tag, json::value& v, const cActionRow& row) {
-	json::object& obj = v.emplace_object();
-	obj.emplace("type", COMPONENT_ACTION_ROW);
-	json::value_from(row.GetComponents(), obj["components"]);
-}
-/* ================================================================================================================== */
 void
 tag_invoke(json::value_from_tag, json::value& v, const cButton& b) {
 	json::object& obj = v.emplace_object();

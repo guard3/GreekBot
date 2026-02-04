@@ -320,14 +320,16 @@ cGreekBot::process_infractions_button(cMsgCompInteraction& i, cSnowflake user_id
 		/* Write stats to the embed */
 		make_stats(embed, stats);
 		/* Add 'Remove an infraction' and 'Remove all infractions' buttons */
-		comps.emplace_back(cButton{
-			BUTTON_STYLE_SECONDARY,
-			std::format("unwarn:{}", user_id),
-			"Remove an infraction"
-		}, cButton {
-			BUTTON_STYLE_DANGER,
-			std::format("unwarn:all:{}", user_id),
-			"Remove all infractions"
+		comps.emplace_back(cActionRow{
+			cButton{
+				BUTTON_STYLE_SECONDARY,
+				std::format("unwarn:{}", user_id),
+				"Remove an infraction"
+			}, cButton {
+				BUTTON_STYLE_DANGER,
+				std::format("unwarn:all:{}", user_id),
+				"Remove all infractions"
+			}
 		});
 	}
 	/* Update original message */
@@ -424,15 +426,17 @@ cGreekBot::process_infractions_remove(cMsgCompInteraction& i, std::string_view f
 			auto& comps = response.EmplaceComponents(i.GetMessage().MoveComponents());
 			get<cButton>(comps.at(0).GetComponents().front()).SetLabel("Cancel").SetCustomId(std::format("unwarn:cancel:{}", user_id));
 			/* Add a select menu */
-			comps.emplace(comps.begin(), cSelectMenu{
-				std::format("unwarn:menu:{}", user_id),
-				stats.entries | std::views::transform([](infraction_entry& e) {
-					return cSelectOption{
-						e.reason.empty() ? "Unspecified" : std::move(e.reason),
-						std::to_string(e.timestamp.time_since_epoch().count())
-					};
-				}) | std::ranges::to<std::vector>(),
-				"Choose which infraction to remove"
+			comps.emplace(comps.begin(), cActionRow{
+				cSelectMenu{
+					std::format("unwarn:menu:{}", user_id),
+					stats.entries | std::views::transform([](infraction_entry& e) {
+						return cSelectOption{
+							e.reason.empty() ? "Unspecified" : std::move(e.reason),
+							std::to_string(e.timestamp.time_since_epoch().count())
+						};
+					}) | std::ranges::to<std::vector>(),
+					"Choose which infraction to remove"
+				}
 			});
 		}
 	}

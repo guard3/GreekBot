@@ -4,6 +4,7 @@
 #include "ComponentFwd.h"
 #include "TextInput.h"
 #include "UnsupportedComponent.h"
+#include <variant>
 
 /**
  * Partial label is an interaction response object. It is received from modal interactions
