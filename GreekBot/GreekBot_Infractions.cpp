@@ -136,12 +136,12 @@ cGreekBot::process_warn_impl(cInteraction& i, const cSnowflake &user_id, std::st
 	response.SetComponents({
 		cActionRow{
 			cButton{
-				BUTTON_STYLE_SECONDARY,
+				eButtonStyle::Secondary,
 				std::format("infractions:{}", user_id),
 				"View all infractions"
 			},
 			cButton{
-				BUTTON_STYLE_DANGER,
+				eButtonStyle::Danger,
 				std::format("unwarn:undo:{}:{}", user_id, now.time_since_epoch().count()),
 				"Undo"
 			}
@@ -186,7 +186,7 @@ cGreekBot::process_warn_impl(cInteraction& i, const cSnowflake &user_id, std::st
 		response.SetComponents({
 			cActionRow{
 				cButton{
-					BUTTON_STYLE_DANGER,
+					eButtonStyle::Danger,
 					std::format("timeout:{}", user_id),
 					"Remove timeout"
 				}
@@ -270,12 +270,12 @@ cGreekBot::process_infractions(cAppCmdInteraction& i) HANDLER_BEGIN {
 		response.SetComponents({
 			cActionRow{
 				cButton{
-					BUTTON_STYLE_SECONDARY,
+					eButtonStyle::Secondary,
 					std::format("unwarn:{}", pUser->GetId()),
 					"Remove an infraction"
 				},
 				cButton{
-					BUTTON_STYLE_DANGER,
+					eButtonStyle::Danger,
 					std::format("unwarn:all:{}", pUser->GetId()),
 					"Remove all infractions"
 				}
@@ -322,11 +322,11 @@ cGreekBot::process_infractions_button(cMsgCompInteraction& i, cSnowflake user_id
 		/* Add 'Remove an infraction' and 'Remove all infractions' buttons */
 		comps.emplace_back(cActionRow{
 			cButton{
-				BUTTON_STYLE_SECONDARY,
+				eButtonStyle::Secondary,
 				std::format("unwarn:{}", user_id),
 				"Remove an infraction"
 			}, cButton {
-				BUTTON_STYLE_DANGER,
+				eButtonStyle::Danger,
 				std::format("unwarn:all:{}", user_id),
 				"Remove all infractions"
 			}

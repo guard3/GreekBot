@@ -5,24 +5,6 @@
 namespace json = boost::json;
 /* ================================================================================================================== */
 void
-tag_invoke(json::value_from_tag, json::value& v, const cButton& b) {
-	json::object& obj = v.emplace_object();
-	obj = {
-		{ "type",  COMPONENT_BUTTON },
-		{ "style", b.GetStyle()     }
-	};
-	if (auto label = b.GetLabel(); !label.empty())
-		obj.emplace("label", label);
-	if (b.IsDisabled())
-		obj.emplace("disabled", true);
-	if (b.GetStyle() == BUTTON_STYLE_LINK)
-		obj.emplace("url", b.GetUrl());
-	else
-		obj.emplace("custom_id", b.GetCustomId());
-	if (auto pEmoji = b.GetEmoji().Get())
-		json::value_from(*pEmoji, obj["emoji"]);
-}
-void
 tag_invoke(json::value_from_tag, json::value& v, const cSelectMenu& sm) {
 	json::object& obj = v.emplace_object();
 	obj = {

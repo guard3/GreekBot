@@ -149,7 +149,7 @@ cGreekBot::process_rank(cAppCmdInteraction& i) HANDLER_BEGIN {
 	co_await InteractionSendMessage(i, response.SetComponents({
 		cActionRow{
 			cButton{
-				BUTTON_STYLE_SECONDARY,
+				eButtonStyle::Secondary,
 				"LEADERBOARD_HELP",
 				"How does this work?"
 			}
@@ -205,7 +205,7 @@ cGreekBot::process_top(cAppCmdInteraction& i) HANDLER_BEGIN {
 	co_await InteractionSendMessage(i, response.SetComponents({
 		cActionRow{
 			cButton{
-				BUTTON_STYLE_SECONDARY,
+				eButtonStyle::Secondary,
 				"LEADERBOARD_HELP",
 				"How does this work?"
 			}

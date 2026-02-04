@@ -323,7 +323,7 @@ cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) HANDLER_BEGIN {
 	co_await InteractionSendMessage(i, response.SetComponents({
 		cActionRow{
 			cButton{
-				BUTTON_STYLE_SECONDARY,
+				eButtonStyle::Secondary,
 				"STARBOARD_HELP",
 				"How does this work?"
 			}

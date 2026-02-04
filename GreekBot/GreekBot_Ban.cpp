@@ -192,7 +192,7 @@ cGreekBot::process_unban(cInteraction& i, cSnowflake user_id) HANDLER_BEGIN {
 	co_await InteractionEditMessage(i, msg.SetComponents({
 		cActionRow{
 			cButton{
-				BUTTON_STYLE_SECONDARY,
+				eButtonStyle::Secondary,
 				std::format("DLT#{}", i.GetUser().GetId()),
 				"Dismiss"
 			}
@@ -393,12 +393,12 @@ cGreekBot::process_ban(cInteraction& i, std::uint32_t sc, const cSnowflake& user
 	co_await InteractionSendMessage(i, response.SetComponents({
 		cActionRow{
 			cButton{
-				BUTTON_STYLE_DANGER,
+				eButtonStyle::Danger,
 				std::format("BAN#{}", user_id),
 				"Revoke ban"
 			},
 			cButton{
-				BUTTON_STYLE_SECONDARY,
+				eButtonStyle::Secondary,
 				std::format("DLT#{}", i.GetUser().GetId()),
 				"Dismiss"
 			}

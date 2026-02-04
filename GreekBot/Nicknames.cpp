@@ -54,7 +54,7 @@ cGreekBot::process_nick_member_update(const cMemberUpdate& member) HANDLER_BEGIN
 					.SetComponents({
 						cActionRow{
 							cButton{
-								BUTTON_STYLE_SECONDARY,
+								eButtonStyle::Secondary,
 								std::format("DLT#{}",
 								GetUser().GetId()), // Save the GreekBot id as the author
 								"Dismiss"
@@ -76,7 +76,7 @@ cGreekBot::process_nick_member_update(const cMemberUpdate& member) HANDLER_BEGIN
 				std::vector components{
 					cActionRow{
 						cButton{
-							BUTTON_STYLE_SECONDARY,
+							eButtonStyle::Secondary,
 							std::format("DLT#{}", GetUser().GetId()), // Save the GreekBot id as the author
 							"Dismiss"
 						}
@@ -97,13 +97,13 @@ cGreekBot::process_nick_member_update(const cMemberUpdate& member) HANDLER_BEGIN
 					.SetComponents({
 						cActionRow{
 							cButton{
-								BUTTON_STYLE_PRIMARY,
+								eButtonStyle::Primary,
 								std::format("NCK#{}",
 								member.GetUser().GetId()), // Save the member id
 								"Assign nickname"
 							},
 							cButton{
-								BUTTON_STYLE_SECONDARY,
+								eButtonStyle::Secondary,
 								std::format("DLT#{}",
 								GetUser().GetId()), // Save the GreekBot id as the author
 								"Dismiss"

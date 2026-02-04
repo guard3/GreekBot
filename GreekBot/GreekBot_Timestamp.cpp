@@ -41,7 +41,7 @@ cGreekBot::process_timestamp(cAppCmdInteraction& i) HANDLER_BEGIN {
 					.SetComponents({
 						cActionRow{
 							cButton{
-								BUTTON_STYLE_SECONDARY,
+								eButtonStyle::Secondary,
 								std::format("DLT#{}", i.GetUser().GetId()),
 								"Dismiss"
 							}
