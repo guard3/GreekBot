@@ -104,39 +104,41 @@ cGreekBot::OnInteractionCreate(cInteraction& i) {
 cTask<>
 cGreekBot::process_interaction(cAppCmdInteraction& i) HANDLER_BEGIN {
 	switch (i.GetCommandId().ToInt()) {
-		case 878391425568473098: // avatar
-			return process_avatar(i);
-		case 938199801420456066: // rank
-			return process_rank(i);
-		case 938863857466757131: // top
-			return process_top(i);
-		case 1031907652541890621: // ban
-			return process_ban(i);
-		case 904462004071313448: // holy
-			return process_starboard_leaderboard(i);
-		case 1177042125205024868: // timestamp
-			return process_timestamp(i);
-		case 1170787836434317363: // Apps > Ban
-			return process_ban_ctx_menu(i, "user");
-		case 1174826008474570892: // Apps > Ban Turk
-			return process_ban_ctx_menu(i, "turk");
-		case 1174836455714078740: // Apps > Ban Greek
-			return process_ban_ctx_menu(i, "greek");
-		case 1254933366562754591: // clear
-			return process_clear(i);
-		case 1336758756062527581: // /warn
-		case 1340296154868613231: // Apps > Warn
-			return process_warn(i);
-		case 1336832339753570386: // /infractions
-		case 1340461497221910568: // Apps > View infractions
-			return process_infractions(i);
-		case 1178824125192613939: // test
-			return process_test(i);
-		/* ========== Learning Greek specific commands ========== */
-		case 1294358361248370698: // unban
-			return process_unban(i);
-		default:
-			throw std::runtime_error(std::format("Unhandled command {:?} {}", i.GetCommandName(), i.GetCommandId()));
+	case 878391425568473098: // avatar
+		return process_avatar(i);
+	case 938199801420456066: // rank
+		return process_rank(i);
+	case 938863857466757131: // top
+		return process_top(i);
+	case 1031907652541890621: // ban
+		return process_ban(i);
+	case 904462004071313448: // holy
+		return process_starboard_leaderboard(i);
+	case 1177042125205024868: // timestamp
+		return process_timestamp(i);
+	case 1170787836434317363: // Apps > Ban
+		return process_ban_ctx_menu(i, "user");
+	case 1174826008474570892: // Apps > Ban Turk
+		return process_ban_ctx_menu(i, "turk");
+	case 1174836455714078740: // Apps > Ban Greek
+		return process_ban_ctx_menu(i, "greek");
+	case 1254933366562754591: // clear
+		return process_clear(i);
+	case 1336758756062527581: // /warn
+	case 1340296154868613231: // Apps > Warn
+		return process_warn(i);
+	case 1336832339753570386: // /infractions
+	case 1340461497221910568: // Apps > View infractions
+		return process_infractions(i);
+	case 1178824125192613939: // test
+		return process_test(i);
+	/* ========== Learning Greek specific commands ========== */
+	case 1294358361248370698: // unban
+		return process_unban(i);
+	case 1472307604041629920: // levels
+		return process_levels(i);
+	default:
+		throw std::runtime_error(std::format("Unhandled command {:?} {}", i.GetCommandName(), i.GetCommandId()));
 	}
 } HANDLER_END
 

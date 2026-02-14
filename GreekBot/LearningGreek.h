@@ -29,6 +29,7 @@ inline constexpr cSnowflake LMG_ROLE_EPITIMOS             =  466238555304230913;
 inline constexpr cSnowflake LMG_ROLE_ELLINOPOULO          =  608687509291008000; // @Ελληνόπουλο
 inline constexpr cSnowflake LMG_ROLE_PALIOS               =  631559446782410752; // @Παλιός
 inline constexpr cSnowflake LMG_ROLE_POLL                 =  650330610358943755; // @Poll
+inline constexpr cSnowflake LMG_ROLE_VETERANOS            =  817337981979066398; // @Βετεράνος
 inline constexpr cSnowflake LMG_ROLE_CYPRUS               = 1247132108686884894; // @Cyprus
 /* ========== Learning Greek role groups ============================================================================ */
 inline constexpr cSnowflake LMG_RANK_ROLES[] {

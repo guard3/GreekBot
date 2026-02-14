@@ -65,6 +65,7 @@ cGreekBot::process_leaderboard_new_message(cMessage& msg, cPartialMember& member
 	auto [level, level_xp, next_level_xp] = calculate_level_info(xp);
 	/* Get the appropriate rank role for the current level, or 0 for no role */
 	const cSnowflake target_role_id = [level] {
+		if (level >= 150) return LMG_ROLE_VETERANOS;
 		if (level >= 100) return LMG_ROLE_PALIOS;
 		if (level >=  70) return LMG_ROLE_ELLINOPOULO;
 		if (level >=  50) return LMG_ROLE_EPITIMOS;
@@ -219,4 +220,42 @@ cGreekBot::process_leaderboard_help(cMsgCompInteraction& i) HANDLER_BEGIN {
 		.SetFlags(MESSAGE_FLAG_EPHEMERAL)
 		.SetContent("Every minute that you're messaging, you randomly gain between 15 and 25 **XP**.")
 	);
+} HANDLER_END
+
+cTask<>
+cGreekBot::process_levels(cAppCmdInteraction& i) HANDLER_BEGIN {
+	cPartialMessage response;
+	response.SetFlags(MESSAGE_FLAG_EPHEMERAL);
+	response.SetContent(std::format(R"(# Earn XP just by chatting!
+Every minute that you're messaging, you randomly gain between 15 and 25 **XP**. Keep chatting to level up, unlock new roles and gain extra server perks.
+### Level 6 <@&{}>
+### Level 10 <@&{}>
+### Level 15 <@&{}>
+- Create threads
+### Level 20 <@&{}>
+- Create polls
+### Level 25 <@&{}>
+- Use soundboard
+- Create events
+### Level 35 <@&{}>
+### Level 40 <@&{}>
+### Level 50 <@&{}>
+- Change your nickname
+### Level 70 <@&{}>
+### Level 100 <@&{}>
+### Level 150 <@&{}>)",
+		LMG_ROLE_ACTIVE_USER,
+		LMG_ROLE_MEMBER,
+		LMG_ROLE_ACTIVE_MEMBER,
+		LMG_ROLE_REALLY_ACTIVE_MEMBER,
+		LMG_ROLE_USUAL_SUSPECT,
+		LMG_ROLE_GREEK_LOVER,
+		LMG_ROLE_PROESTOS,
+		LMG_ROLE_EPITIMOS,
+		LMG_ROLE_ELLINOPOULO,
+		LMG_ROLE_PALIOS,
+		LMG_ROLE_VETERANOS
+	));
+
+	co_await InteractionSendMessage(i, response);
 } HANDLER_END
