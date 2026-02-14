@@ -14,7 +14,6 @@ add_executable(GreekBot main.cpp Discord/Bot.cpp Discord/Bot.h Discord/Common.h 
 	Discord/Objects/Modal.h
 	Discord/Objects/Modal.cpp
 	Discord/Objects/Component/TextInput.h
-	Discord/Objects/Component/Component.cpp
 	Discord/Objects/Component/Button.h
 	Discord/Objects/Component/SelectMenu.h
 	Discord/Objects/Embed/EmbedField.h

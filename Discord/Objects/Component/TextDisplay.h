@@ -16,10 +16,27 @@ public:
 	/* Getters */
 	std::string_view GetContent() const noexcept { return m_content; }
 
+	/* Movers */
+	std::string MoveContent() noexcept { return std::move(m_content); }
+
+	/* Emplacers */
+	std::string& EmplaceContent() noexcept {
+		m_content.clear();
+		return m_content;
+	}
+	template<typename Arg, typename... Args>
+	std::string& EmplaceContent(Arg&& arg, Args&&... args) {
+		if constexpr (sizeof...(args) == 0 && std::is_assignable_v<std::string&, Arg&&>) {
+			return m_content = std::forward<Arg>(arg);
+		} else {
+			return m_content = std::string(std::forward<Arg>(arg), std::forward<Args>(args)...);
+		}
+	}
+
 	/* Setters */
-	template<typename Self>
-	Self&& SetContent(this Self&& self, std::string content) noexcept {
-		self.m_content = std::move(content);
+	template<typename Self, typename Arg>
+	Self&& SetContent(this Self&& self, Arg&& content) noexcept {
+		self.EmplaceContent(std::forward<Arg>(content));
 		return std::forward<Self>(self);
 	}
 };

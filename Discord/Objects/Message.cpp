@@ -1,3 +1,4 @@
+#include "Component/ComponentType.h"
 #include "Message.h"
 #include "Utils.h"
 #include <boost/json.hpp>
@@ -39,7 +40,7 @@ cPartialMessageV2::cPartialMessageV2(const json::value& v) : cPartialMessageV2(v
 cPartialMessageV2::cPartialMessageV2(const json::object& o): cPartialMessageV2(get_message_flags(o), o) {}
 cPartialMessageV2::cPartialMessageV2(eMessageFlag flags, const json::object& o) :
 	cMessageBase(flags),
-	m_components(json::value_to<std::vector<cContentComponent>>(o.at("components"))) {}
+	m_components(json::value_to<std::vector<component_type>>(o.at("components"))) {}
 
 cMessage::cMessage(const json::value&  v) : cMessage(v.as_object()) {}
 cMessage::cMessage(const json::object& o) :
@@ -82,6 +83,16 @@ tag_invoke(json::value_to_tag<cMessageUpdate>, const json::value& v) {
 cMessage
 tag_invoke(json::value_to_tag<cMessage>, const json::value& v) {
 	return cMessage{ v };
+}
+
+cPartialMessageV2::component_type
+tag_invoke(json::value_to_tag<cPartialMessageV2::component_type>, const json::value& v) {
+	switch (v.at("type").to_number<int>()) {
+	case COMPONENT_TEXT_DISPLAY:
+		return cPartialMessageV2::component_type(std::in_place_type<cTextDisplay>, v);
+	default:
+		return cPartialMessageV2::component_type(std::in_place_type<cUnsupportedComponent>, v);
+	}
 }
 /// @}
 
@@ -142,5 +153,10 @@ tag_invoke(json::value_from_tag, json::value& v, const cMessage& msg) {
 void
 tag_invoke(json::value_from_tag, json::value& v, cMessageView msg) {
 	msg.Visit([&v](const auto& msg) { json::value_from(msg, v); });
+}
+
+void
+tag_invoke(json::value_from_tag, json::value& v, const cPartialMessageV2::component_type& cmp) {
+	std::visit([&v](const auto& cmp) { json::value_from(cmp, v); }, cmp);
 }
 /// @}

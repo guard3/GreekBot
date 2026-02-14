@@ -1,5 +1,4 @@
 #include "Label.h"
-#include "Component.h"
 #include "ComponentType.h"
 #include <boost/json.hpp>
 
@@ -38,11 +37,10 @@ tag_invoke(json::value_from_tag, json::value& v, const cLabel& label) {
 	obj.reserve(5);
 
 	obj.emplace("type", COMPONENT_LABEL);
+	obj.emplace("id", label.GetId());
 	obj.emplace("label", label.GetLabel());
 	json::value_from(label.GetComponent(), obj["component"]);
 
-	if (auto id = label.GetId(); id != 0)
-		obj.emplace("id", id);
 	if (auto desc = label.GetDescription(); !desc.empty())
 		obj.emplace("description", desc);
 }

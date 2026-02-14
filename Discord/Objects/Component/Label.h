@@ -1,7 +1,5 @@
 #ifndef DISCORD_LABEL_H
 #define DISCORD_LABEL_H
-#include "ComponentBase.h"
-#include "ComponentFwd.h"
 #include "TextInput.h"
 #include "UnsupportedComponent.h"
 #include <variant>
@@ -9,8 +7,13 @@
 /**
  * Partial label is an interaction response object. It is received from modal interactions
  */
-struct cPartialLabel : cComponentBase {
-	using child_component_type = std::variant<cPartialTextInput, cUnsupportedComponent>;
+class cPartialLabel : public cComponentBase {
+	using variant_type = std::variant<cPartialTextInput, cUnsupportedComponent>;
+
+public:
+	struct child_component_type : cVariantComponentBase, variant_type {
+		using variant_type::variant_type;
+	};
 
 	explicit cPartialLabel(const boost::json::value&);
 	explicit cPartialLabel(const boost::json::object&);
@@ -24,8 +27,13 @@ private:
 /**
  * Label is a top-level layout component. Labels wrap modal components with text as a label and optional description.
  */
-struct cLabel final : cComponentBase {
-	using child_component_type = std::variant<cTextInput, cUnsupportedComponent>;
+class cLabel : public cComponentBase {
+	using variant_type = std::variant<cTextInput, cUnsupportedComponent>;
+
+public:
+	struct child_component_type : cVariantComponentBase, variant_type {
+		using variant_type::variant_type;
+	};
 
 	template<iExplicitlyConvertibleTo<std::string> Str1 = std::string,
 	         iExplicitlyConvertibleTo<std::string> Str2 = std::string,

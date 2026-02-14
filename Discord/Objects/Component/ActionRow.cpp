@@ -1,13 +1,8 @@
 #include "ActionRow.h"
-#include "Button.h"
-#include "SelectMenu.h"
-#include "UnsupportedComponent.h"
 #include "ComponentType.h"
 #include <boost/json.hpp>
 
 namespace json = boost::json;
-
-cActionRow::cActionRow(std::initializer_list<child_component_type> components) : m_components(components) {}
 
 cActionRow::cActionRow(const json::value& v) : cActionRow(v.as_object()) {}
 cActionRow::cActionRow(const json::object& o) : cComponentBase(o), m_components(json::value_to<std::vector<child_component_type>>(o.at("components"))) {}

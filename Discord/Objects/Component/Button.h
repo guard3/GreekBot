@@ -1,7 +1,6 @@
 #ifndef DISCORD_BUTTON_H
 #define DISCORD_BUTTON_H
 #include "ComponentBase.h"
-#include "ComponentFwd.h"
 #include "Emoji.h"
 #include <optional>
 

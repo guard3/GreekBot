@@ -1,5 +1,6 @@
 #ifndef DISCORD_SELECTMENU_H
 #define DISCORD_SELECTMENU_H
+#include "ComponentBase.h"
 #include "Emoji.h"
 #include <optional>
 #include <vector>
@@ -27,8 +28,7 @@ public:
 	std::string_view       GetLabel() const noexcept { return m_label;       }
 	std::string_view       GetValue() const noexcept { return m_value;       }
 	std::string_view GetDescription() const noexcept { return m_description; }
-	chEmoji                GetEmoji() const noexcept { return m_emoji ? m_emoji.operator->() : nullptr; }
-	 hEmoji                GetEmoji()       noexcept { return m_emoji ? m_emoji.operator->() : nullptr; }
+	auto GetEmoji(this auto&& self) noexcept { return cPtr(self.m_emoji ? self.m_emoji.operator->() : nullptr); }
 	/* Movers */
 	std::string       MoveLabel() noexcept { return std::move(m_label);       }
 	std::string       MoveValue() noexcept { return std::move(m_value);       }
@@ -78,29 +78,32 @@ public:
 			return m_emoji.emplace(std::forward<Arg>(arg), std::forward<Arg>(args)...);
 	}
 	/* Setters */
-	template<typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
-	cSelectOption& SetLabel(Arg&& arg) & { EmplaceLabel(std::forward<Arg>(arg)); return *this; }
-	template<typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
-	cSelectOption& SetValue(Arg&& arg) & { EmplaceValue(std::forward<Arg>(arg)); return *this; }
-	template<typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
-	cSelectOption& SetDescription(Arg&& arg) & { EmplaceDescription(std::forward<Arg>(arg)); return *this; }
-	template<typename Arg = cEmoji> requires std::constructible_from<cEmoji, Arg&&>
-	cSelectOption& SetEmoji(Arg&& arg) & { EmplaceEmoji(std::forward<Arg>(arg)); return *this; }
-	template<typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
-	cSelectOption&& SetLabel(Arg&& arg) && { return std::move(SetLabel(std::forward<Arg>(arg))); }
-	template<typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
-	cSelectOption&& SetValue(Arg&& arg) && { return std::move(SetValue(std::forward<Arg>(arg))); }
-	template<typename Arg = std::string> requires std::constructible_from<std::string, Arg&&>
-	cSelectOption&& SetDescription(Arg&& arg) && { return std::move(SetDescription(std::forward<Arg>(arg))); }
-	template<typename Arg = cEmoji> requires std::constructible_from<cEmoji, Arg&&>
-	cSelectOption&& SetEmoji(Arg&& arg) && { return std::move(SetEmoji(std::forward<Arg>(arg))); }
-};
-cSelectOption
-tag_invoke(boost::json::value_to_tag<cSelectOption>, const boost::json::value&);
-void
-tag_invoke(boost::json::value_from_tag, boost::json::value&, const cSelectOption&);
+	template<typename Self, iExplicitlyConvertibleTo<std::string> Arg = std::string>
+	Self&& SetLabel(this Self&& self, Arg&& arg) {
+		self.EmplaceLabel(std::forward<Arg>(arg));
+		return std::forward<Self>(self);
+	}
 
-class cSelectMenu final {
+	template<typename Self, iExplicitlyConvertibleTo<std::string> Arg = std::string>
+	Self&& SetValue(this Self&& self, Arg&& arg) {
+		self.EmplaceValue(std::forward<Arg>(arg));
+		return std::forward<Self>(self);
+	}
+
+	template<typename Self, iExplicitlyConvertibleTo<std::string> Arg = std::string>
+	Self&& SetDescription(this Self&& self, Arg&& arg) {
+		self.EmplaceDescription(std::forward<Arg>(arg));
+		return std::forward<Self>(self);
+	}
+
+	template<typename Self, iExplicitlyConvertibleTo<std::string> Arg = std::string>
+	Self&& SetEmoji(this Self&& self, Arg&& arg) {
+		self.EmplaceEmoji(std::forward<Arg>(arg));
+		return std::forward<Self>(self);
+	}
+};
+
+class cSelectMenu : public cComponentBase {
 	std::string m_custom_id;
 	std::string m_placeholder;
 	std::vector<cSelectOption> m_options;
@@ -118,17 +121,32 @@ public:
 		m_placeholder(std::forward<Str2>(placeholder)),
 		m_options(std::forward<Vec>(options)) {}
 	/* Getters */
-	std::string_view              GetCustomId() const noexcept { return m_custom_id;   }
-	std::string_view           GetPlaceholder() const noexcept { return m_placeholder; }
-	std::span<const cSelectOption> GetOptions() const noexcept { return m_options;     }
-	std::span<      cSelectOption> GetOptions()       noexcept { return m_options;     }
+	std::string_view    GetCustomId() const noexcept { return m_custom_id;   }
+	std::string_view GetPlaceholder() const noexcept { return m_placeholder; }
+	auto GetOptions(this auto&& self) noexcept { return std::span(self.m_options); }
 	/* Movers */
-	std::string               MoveCustomId() noexcept { return std::move(m_custom_id);   }
-	std::string            MovePlaceholder() noexcept { return std::move(m_placeholder); }
-	std::vector<cSelectOption> MoveOptions() noexcept { return std::move(m_options);     }
+	auto    MoveCustomId() noexcept { return std::move(m_custom_id);   }
+	auto MovePlaceholder() noexcept { return std::move(m_placeholder); }
+	auto     MoveOptions() noexcept { return std::move(m_options);     }
 };
+
+/** @name Value to JSON conversions
+ */
+/// @{
+cSelectOption
+tag_invoke(boost::json::value_to_tag<cSelectOption>, const boost::json::value&);
+
 cSelectMenu
 tag_invoke(boost::json::value_to_tag<cSelectMenu>, const boost::json::value&);
+/// @}
+
+/** @name Value from JSON conversions
+ */
+/// @{
+void
+tag_invoke(boost::json::value_from_tag, boost::json::value&, const cSelectOption&);
+
 void
 tag_invoke(boost::json::value_from_tag, boost::json::value&, const cSelectMenu&);
+/// @}
 #endif /* DISCORD_SELECTMENU_H */
