@@ -69,34 +69,32 @@ cTask<>
 cGreekBot::process_booster_menu(cMsgCompInteraction& i) HANDLER_BEGIN {
 	using namespace std::chrono;
 
-	/* Acknowledge interaction */
 	co_await InteractionDefer(i);
-	/* Prepare the confirmation message */
-	cPartialMessage response;
-	response.SetFlags(MESSAGE_FLAG_EPHEMERAL);
-	/* Create a new role vector */
-	auto member = i.GetMember();
-	auto member_roles = member->GetRoles();
 
-	std::vector roles = member_roles
-	                  | std::views::filter([](auto& id) { return !std::ranges::contains(LMG_NITRO_BOOSTER_COLOR_ROLES, id); })
-	                  | std::ranges::to<std::vector>();
+	// Prepare the member update object, which contains all current roles with any color roles filtered out
+	auto pMember = i.GetMember();
+	cMemberOptions member_update;
+	auto& roles = member_update.EmplaceRoles(std::from_range, pMember->GetRoles() | std::views::filter([](auto& id) {
+		return !std::ranges::contains(LMG_NITRO_BOOSTER_COLOR_ROLES, id);
+	}));
 
-	/* Retrieve the selected role id */
+	// Retrieve the selected role id
 	cSnowflake selected_id = i.GetValues().front();
-	/* Include the selected role id if the user is boosting */
-	if (member->PremiumSince() > sys_seconds{}) {
-		if (selected_id != 0)
-			roles.push_back(selected_id);
-		/* Update member and send the confirmation message */
-		co_await ModifyGuildMember(LMG_GUILD_ID, i.GetUser().GetId(), cMemberOptions().SetRoles(std::move(roles)));
-		if (selected_id != 0)
-			response.SetContent(std::format("I gave you the <@&{}> role!", selected_id));
-		else if (roles.size() < member_roles.size())
-			response.SetContent("I took away your color role!");
-		else co_return;
-		co_return co_await InteractionSendMessage(i, response);
+
+	cPartialMessage response;
+	if (selected_id == 0) {
+		// No color selected; remove roles
+		co_await ModifyGuildMember(LMG_GUILD_ID, i.GetUser(), member_update);
+		response.SetContent("I took away your color role!");
+	} else if (pMember->PremiumSince() == sys_seconds{}) {
+		// No nitro boosting; show error
+		response.SetContent("Sorry, custom colors are only available for <@&593038680608735233>s!");
+	} else {
+		// Nitro boosting; give color
+		roles.push_back(selected_id);
+		co_await ModifyGuildMember(LMG_GUILD_ID, i.GetUser(), member_update);
+		response.SetContent(std::format("I gave you the <@&{}> role!", selected_id));
 	}
-	if (selected_id != 0)
-		co_await InteractionSendMessage(i, response.SetContent("Sorry, custom colors are only available for <@&593038680608735233>s!"));
+
+	co_await InteractionSendMessage(i, response.SetFlags(MESSAGE_FLAG_EPHEMERAL));
 } HANDLER_END
