@@ -62,6 +62,7 @@ private:
 	cTask<> process_infractions_button(cMsgCompInteraction&, cSnowflake);
 	cTask<> process_infractions_remove(cMsgCompInteraction&, std::string_view);
 	cTask<> process_timeout_remove(cMsgCompInteraction&, cSnowflake);
+	cTask<> process_sanitize(cAppCmdInteraction&);
 	cTask<> process_test(cAppCmdInteraction&);
 
 	cTask<> process_interaction(cAppCmdInteraction&);

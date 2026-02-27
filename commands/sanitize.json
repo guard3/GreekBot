@@ -1,0 +1,10 @@
+{
+  "name": "sanitize",
+  "description": "Remove tracking tokens from youtube links.",
+  "options": [{
+    "type": 3,
+    "name": "link",
+    "description": "The youtube link to sanitize.",
+    "required": true
+  }]
+}
