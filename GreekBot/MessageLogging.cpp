@@ -96,7 +96,7 @@ cGreekBot::process_msglog_message_delete(std::span<const cSnowflake> msg_ids) HA
 		else
 			embed.EmplaceAuthor("Deleted user").SetIconUrl(cCDN::GetDefaultUserAvatar(db_msg.author_id));
 		embed.SetColor(LMG_COLOR_RED);
-		embed.SetDescription(std::format("❌ Their message was **deleted** in <#{}>", db_msg.channel_id));
+		embed.SetDescription(std::format("❌ Their message was **deleted** in {:c}", db_msg.channel_id));
 		embed.SetTimestamp(db_msg.id.GetTimestamp());
 		embed.SetFields({
 			{ "Message ID", std::format("`{}`", db_msg.id), true },

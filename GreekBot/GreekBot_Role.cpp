@@ -24,7 +24,7 @@ cGreekBot::process_role_button(cMsgCompInteraction& i, cSnowflake selected_role_
 	if (selected_role_id == LMG_ROLE_POLL) {
 		/* @Poll is only available for natives */
 		if (!std::ranges::contains(member_role_ids, LMG_ROLE_NATIVE))
-			co_return co_await InteractionSendMessage(i, response.SetContent(std::format("Sorry, <@&{}> is only available for <@&{}>s!", selected_role_id, LMG_ROLE_NATIVE)));
+			co_return co_await InteractionSendMessage(i, response.SetContent(std::format("Sorry, {:r} is only available for {:r}s!", selected_role_id, LMG_ROLE_NATIVE)));
 	} else if (!std::ranges::contains(valid_roles, selected_role_id)) {
 		throw std::runtime_error(std::format("Role id {} was unexpected", selected_role_id));
 	}
@@ -32,10 +32,10 @@ cGreekBot::process_role_button(cMsgCompInteraction& i, cSnowflake selected_role_
 	co_await InteractionDefer(i);
 	if (std::ranges::contains(member_role_ids, selected_role_id)) {
 		co_await RemoveGuildMemberRole(LMG_GUILD_ID, i.GetUser(), selected_role_id);
-		response.SetContent(std::format("I took away your <@&{}> role!", selected_role_id));
+		response.SetContent(std::format("I took away your {:r} role!", selected_role_id));
 	} else {
 		co_await AddGuildMemberRole(*i.GetGuildId(), i.GetUser(), selected_role_id);
-		response.SetContent(std::format("I gave you the <@&{}> role!", selected_role_id));
+		response.SetContent(std::format("I gave you the {:r} role!", selected_role_id));
 	}
 	co_await InteractionSendMessage(i, response);
 } HANDLER_END
@@ -61,7 +61,7 @@ cGreekBot::process_proficiency_menu(cMsgCompInteraction& i) HANDLER_BEGIN {
 	co_await ModifyGuildMember(*i.GetGuildId(), i.GetUser().GetId(), cMemberOptions().SetRoles(std::move(roles)));
 	co_await InteractionSendMessage(i, cPartialMessage()
 		.SetFlags(MESSAGE_FLAG_EPHEMERAL)
-		.SetContent(std::format("I gave you the <@&{}> role!", selected_role))
+		.SetContent(std::format("I gave you the {:r} role!", selected_role))
 	);
 } HANDLER_END
 /* ================================================================================================================== */
@@ -88,12 +88,12 @@ cGreekBot::process_booster_menu(cMsgCompInteraction& i) HANDLER_BEGIN {
 		response.SetContent("I took away your color role!");
 	} else if (pMember->PremiumSince() == sys_seconds{}) {
 		// No nitro boosting; show error
-		response.SetContent("Sorry, custom colors are only available for <@&593038680608735233>s!");
+		response.SetContent(std::format("Sorry, custom colors are only available for {:r}s!", LMG_ROLE_NITRO_BOOSTER));
 	} else {
 		// Nitro boosting; give color
 		roles.push_back(selected_id);
 		co_await ModifyGuildMember(LMG_GUILD_ID, i.GetUser(), member_update);
-		response.SetContent(std::format("I gave you the <@&{}> role!", selected_id));
+		response.SetContent(std::format("I gave you the {:r} role!", selected_id));
 	}
 
 	co_await InteractionSendMessage(i, response.SetFlags(MESSAGE_FLAG_EPHEMERAL));

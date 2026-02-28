@@ -26,6 +26,7 @@ inline constexpr cSnowflake LMG_ROLE_USUAL_SUSPECT        =  410753563543732225;
 inline constexpr cSnowflake LMG_ROLE_GREEK_LOVER          =  410754841556549633; // @Greek Lover
 inline constexpr cSnowflake LMG_ROLE_PROESTOS             =  414523335595130905; // @Προεστός
 inline constexpr cSnowflake LMG_ROLE_EPITIMOS             =  466238555304230913; // @Επίτιμος
+inline constexpr cSnowflake LMG_ROLE_NITRO_BOOSTER        =  593038680608735233; // @Nitro Booster
 inline constexpr cSnowflake LMG_ROLE_ELLINOPOULO          =  608687509291008000; // @Ελληνόπουλο
 inline constexpr cSnowflake LMG_ROLE_PALIOS               =  631559446782410752; // @Παλιός
 inline constexpr cSnowflake LMG_ROLE_POLL                 =  650330610358943755; // @Poll

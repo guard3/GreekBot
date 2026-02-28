@@ -335,6 +335,6 @@ cTask<>
 cGreekBot::process_starboard_help(cMsgCompInteraction& i) HANDLER_BEGIN {
 	co_await InteractionSendMessage(i, cPartialMessage()
 		.SetFlags(MESSAGE_FLAG_EPHEMERAL)
-		.SetContent("When a message receives **5 or more** <:Holy:409075809723219969> reactions, it gets to appear in <#978993330694266920>. Reacting to *your own* messages doesn't count!")
+		.SetContent(std::format("When a message receives **5 or more** <:Holy:409075809723219969> reactions, it gets to appear in {:c}. Reacting to *your own* messages doesn't count!", LMG_CHANNEL_STARBOARD))
 	);
 } HANDLER_END

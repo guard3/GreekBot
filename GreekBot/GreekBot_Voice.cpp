@@ -32,7 +32,7 @@ cGreekBot::OnVoiceStateUpdate(cVoiceState& voice_state) {
 			[[unlikely]]
 			embed.SetDescription(std::format("<:vc_leave:1253820278816112720> Left a voice channel"));
 		} else {
-			embed.SetDescription(std::format("<:vc_leave:1253820278816112720> Left <#{}>", *it->GetChannelId()));
+			embed.SetDescription(std::format("<:vc_leave:1253820278816112720> Left {:c}", *it->GetChannelId()));
 			fields.emplace_back("Channel ID", std::format("`{}`", *it->GetChannelId()), true);
 			/* Don't forget to remove the voice state from the list */
 			m_lmg_voice_states.erase(it);
@@ -40,14 +40,14 @@ cGreekBot::OnVoiceStateUpdate(cVoiceState& voice_state) {
 	} else if (it == m_lmg_voice_states.end()) {
 		/* If there's no voice state for the user, that means they just connected to the channel */
 		embed.SetColor(0x3598DC);
-		embed.SetDescription(std::format("<:vc_join:1253810834950586472> Joined <#{}>", *pChannelId));
+		embed.SetDescription(std::format("<:vc_join:1253810834950586472> Joined {:c}", *pChannelId));
 		fields.emplace_back("Channel ID", std::format("`{}`", *pChannelId), true);
 		/* Add the voice state to the list */
 		m_lmg_voice_states.push_back(std::move(voice_state));
 	} else if (auto& old_channel_id = *it->GetChannelId(); *pChannelId != old_channel_id) {
 		/* If the channel id changed, that means the user moved to another channel */
 		embed.SetColor(0x9B59B6);
-		embed.SetDescription(std::format("<:vc_move:1253816785405349948> Moved from <#{}> to <#{}>", old_channel_id, *pChannelId));
+		embed.SetDescription(std::format("<:vc_move:1253816785405349948> Moved from {:c} to {:c}", old_channel_id, *pChannelId));
 		fields.emplace_back("Old Channel ID", std::format("`{}`", old_channel_id), true);
 		fields.emplace_back("New Channel ID", std::format("`{}`", *pChannelId), true);
 		/* Update the cached voice state */

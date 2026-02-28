@@ -228,22 +228,22 @@ cGreekBot::process_levels(cAppCmdInteraction& i) HANDLER_BEGIN {
 	response.SetFlags(MESSAGE_FLAG_EPHEMERAL);
 	response.SetContent(std::format(R"(# Earn XP just by chatting!
 Every minute that you're messaging, you randomly gain between 15 and 25 **XP**. Keep chatting to level up, unlock new roles and gain extra server perks.
-### Level 6 <@&{}>
-### Level 10 <@&{}>
-### Level 15 <@&{}>
+### Level 6 {:r}
+### Level 10 {:r}
+### Level 15 {:r}
 - Create threads
-### Level 20 <@&{}>
+### Level 20 {:r}
 - Create polls
-### Level 25 <@&{}>
+### Level 25 {:r}
 - Use soundboard
 - Create events
-### Level 35 <@&{}>
-### Level 40 <@&{}>
-### Level 50 <@&{}>
+### Level 35 {:r}
+### Level 40 {:r}
+### Level 50 {:r}
 - Change your nickname
-### Level 70 <@&{}>
-### Level 100 <@&{}>
-### Level 150 <@&{}>)",
+### Level 70 {:r}
+### Level 100 {:r}
+### Level 150 {:r})",
 		LMG_ROLE_ACTIVE_USER,
 		LMG_ROLE_MEMBER,
 		LMG_ROLE_ACTIVE_MEMBER,

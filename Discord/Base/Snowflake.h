@@ -1,6 +1,7 @@
 #ifndef DISCORD_SNOWFLAKE_H
 #define DISCORD_SNOWFLAKE_H
 #include "SnowflakeFwd.h"
+#include <algorithm>
 #include <charconv>
 #include <chrono>
 #include <string_view>
@@ -63,11 +64,39 @@ struct std::hash<cSnowflake> : std::hash<std::uint64_t> {
 	}
 };
 /* ========== Make cSnowflake formattable =========================================================================== */
-template<typename CharT>
-struct std::formatter<cSnowflake, CharT> : std::formatter<std::string_view, CharT> {
-	template<typename OutputIt>
-	OutputIt format(const cSnowflake& sf, std::basic_format_context<OutputIt, CharT>& ctx) const {
-		return std::formatter<std::string_view, CharT>::format(sf.ToString(), ctx);
+template<>
+struct std::formatter<cSnowflake> {
+	std::string_view m_prefix;
+
+	constexpr auto parse(std::format_parse_context& ctx) {
+		auto begin = ctx.begin(), end = std::find(begin, ctx.end(), '}');
+		if (begin != end) {
+			if (std::string_view spec{ begin, end }; spec == "u" || spec == "user")
+				m_prefix = "@";
+			else if (spec == "r" || spec == "role")
+				m_prefix = "@&";
+			else if (spec == "c" || spec == "channel")
+				m_prefix = "#";
+			else
+				throw std::format_error("invalid cSnowflake format specifier (use u/user, r/role, c/channel)");
+		}
+		return end;
+	}
+
+	auto format(const cSnowflake& sf, std::format_context& ctx) const {
+		auto out = ctx.out();
+		auto str = sf.ToString();
+
+		// If no mention prefix is specified, print the snowflake as a plain string
+		if (m_prefix.empty())
+			return std::copy(str.begin(), str.end(), out);
+
+		*out++ = '<';
+		out = std::copy(m_prefix.begin(), m_prefix.end(), out);
+		out = std::copy(str.begin(), str.end(), out);
+		*out++ = '>';
+
+		return out;
 	}
 };
 #endif /* DISCORD_SNOWFLAKE_H */

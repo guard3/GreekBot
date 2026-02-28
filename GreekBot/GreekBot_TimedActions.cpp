@@ -33,7 +33,7 @@ cGreekBot::OnHeartbeat() try {
 		for (const cSnowflake& user_id : expired) try {
 			co_await RemoveGuildBan(LMG_GUILD_ID, user_id, "Temporary ban expired");
 			unbanned.push_back(user_id);
-			co_await CreateMessage(LMG_CHANNEL_USER_LOG, msg.SetContent(std::format("<@{}>'s ban expired", user_id)));
+			co_await CreateMessage(LMG_CHANNEL_USER_LOG, msg.SetContent(std::format("{:u}'s ban expired", user_id)));
 		} catch (const xDiscordError&) {
 			/* Ban not found but that's fine! */
 		}
