@@ -97,6 +97,7 @@ add_executable(GreekBot main.cpp Discord/Bot.cpp Discord/Bot.h Discord/Common.h 
 	Discord/Objects/Component/Label.cpp
 	Discord/Objects/Component/ActionRow.cpp
 	GreekBot/Sanitize.cpp
+		GreekBot/UserLogging.cpp
 )
 
 target_include_directories(

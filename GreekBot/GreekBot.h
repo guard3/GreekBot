@@ -69,6 +69,9 @@ private:
 	cTask<> process_interaction(cMsgCompInteraction&);
 	cTask<> process_interaction(cModalSubmitInteraction&);
 
+	cTask<> process_usrlog_new_member(const cMember&);
+	cTask<> process_usrlog_member_remove(const cUser&);
+
 	cTask<> process_msglog_new_message(const cMessage& msg);
 	cTask<> process_msglog_message_update(cMessageUpdate& msg);
 	cTask<> process_msglog_message_delete(std::span<const cSnowflake> msg_ids);
