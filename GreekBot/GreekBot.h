@@ -80,6 +80,10 @@ private:
 	cTask<> process_nick_member_update(const cMemberUpdate&);
 	cTask<> process_nick_member_remove(const cUser&);
 
+	cTask<> process_native_polls_reaction_add(crefUser, crefChannel, crefMessage, hMember, const cEmoji&);
+
+	cTask<> process_starboard_reaction_add(crefUser, crefChannel, crefMessage, hSnowflake, cEmoji&);
+	cTask<> process_starboard_reaction_remove(crefUser, crefChannel, crefMessage, cEmoji&);
 	cTask<> process_starboard_message_delete(std::span<const cSnowflake> msg_ids);
 	cTask<> process_leaderboard_new_message(cMessage& msg, cPartialMember& member);
 

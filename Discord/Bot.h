@@ -75,6 +75,8 @@ public:
 	cAsyncGenerator<cMessage> GetChannelMessages(crefChannel channel, std::size_t limit = 50);
 	cAsyncGenerator<cMessage> GetChannelMessagesBefore(crefChannel channel, crefMessage before_this_message, std::size_t limit = 50);
 
+	cTask<> DeleteReaction(crefChannel channel, crefMessage message, const cEmoji& emoji, crefUser = cSnowflake());
+
 	cTask<> ModifyGuildMember(crefGuild guild, crefUser user, const cMemberOptions&);
 	cTask<> RemoveGuildMember(crefGuild guild, crefUser user, std::string_view reason = {});
 	cTask<> CreateGuildBan(crefGuild guild, crefUser user, std::chrono::seconds delete_message_seconds = std::chrono::seconds(0), std::string_view reason = {});

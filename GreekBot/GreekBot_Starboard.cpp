@@ -36,48 +36,43 @@ static constexpr cSnowflake excluded_channels[] {
 static_assert(rng::is_sorted(excluded_channels), "Must be sorted for binary search");
 
 cTask<>
-cGreekBot::OnMessageReactionAdd(cSnowflake& user_id, cSnowflake& channel_id, cSnowflake& message_id, hSnowflake guild_id, hSnowflake message_author_id, hMember member, cEmoji& emoji) {
-	/* Make sure that we're in Learning Greek and that the emoji is :Holy: */
-	if (!guild_id || !emoji.GetId())
+cGreekBot::process_starboard_reaction_add(crefUser user, crefChannel channel, crefMessage message, hSnowflake message_author_id, cEmoji& emoji) HANDLER_BEGIN {
+	// Make sure the emoji is :Holy: and that we're not in one of the excluded channels
+	if (emoji != LMG_EMOJI_HOLY || rng::contains(excluded_channels, channel.GetId()))
 		co_return;
-	if (*guild_id != LMG_GUILD_ID || *emoji.GetId() != LMG_EMOJI_HOLY)
-		co_return;
-	/* Also make sure that we're not in an excluded channel */
-	if (rng::binary_search(excluded_channels, channel_id))
-		co_return;
-	/* Also make sure that the message author id is provided */
+
+	// Make sure that the message author id is provided
 	std::optional<cMessage> msg;
-	if (!message_author_id) {
-		auto& m = msg.emplace(co_await GetChannelMessage(channel_id, message_id));
-		message_author_id = &m.GetAuthor().GetId();
-	}
-	/* Check that reactions from the author don't count */
-	if (*message_author_id == user_id || *message_author_id == GetUser().GetId()) co_return;
+	if (!message_author_id)
+		message_author_id = &msg.emplace(co_await GetChannelMessage(channel, message)).GetAuthor().GetId();
+
+	// Check for reactions that don't count...
+	if (*message_author_id == user.GetId()      // ...that include the message author...
+	 || *message_author_id == GetUser().GetId() // ...as well as reactions to messages by this bot.
+	) co_return;
+
 	/* Register received reaction in the database */
 	auto txn = co_await cTransaction::New();
-	auto [sb_msg_id, num_reactions] = co_await cStarboardDAO(txn).RegisterReaction(message_id, *message_author_id);
+	auto [sb_msg_id, num_reactions] = co_await cStarboardDAO(txn).RegisterReaction(message, *message_author_id);
 	/* Process */
-	co_await process_reaction(std::move(txn), channel_id, message_id, msg, sb_msg_id, num_reactions);
-}
+	co_await process_reaction(std::move(txn), channel, message, msg, sb_msg_id, num_reactions);
+} HANDLER_END
 
 cTask<>
-cGreekBot::OnMessageReactionRemove(cSnowflake& user_id, cSnowflake& channel_id, cSnowflake& message_id, hSnowflake guild_id, cEmoji& emoji) HANDLER_BEGIN {
-	/* Make sure that we're in Learning Greek and that the emoji is :Holy: */
-	if (!guild_id || !emoji.GetId()) co_return;
-	if (*guild_id != LMG_GUILD_ID || *emoji.GetId() != LMG_EMOJI_HOLY) co_return;
-	/* Also make sure that we're not in an excluded channel */
-	if (rng::binary_search(excluded_channels, channel_id))
+cGreekBot::process_starboard_reaction_remove(crefUser user, crefChannel channel, crefMessage message, cEmoji& emoji) HANDLER_BEGIN {
+	// Make sure the emoji is :Holy: and that we're not in one of the excluded channels
+	if (emoji != LMG_EMOJI_HOLY || rng::contains(excluded_channels, channel.GetId()))
 		co_return;
 
 	auto txn = co_await cTransaction::New();
 	cStarboardDAO dao(txn);
 	/* Make sure that reactions from the author don't count */
-	if (std::optional author_id = co_await dao.GetMessageAuthor(message_id); author_id && *author_id != user_id && *author_id != GetUser().GetId()) {
+	if (std::optional author_id = co_await dao.GetMessageAuthor(message); author_id && *author_id != user.GetId() && *author_id != GetUser().GetId()) {
 		/* Remove one reaction from the database */
-		auto [sb_msg_id, num_reactions] = co_await dao.RemoveReaction(message_id);
+		auto [sb_msg_id, num_reactions] = co_await dao.RemoveReaction(message);
 		/* Process */
 		std::optional<cMessage> msg;
-		co_await process_reaction(std::move(txn), channel_id, message_id, msg, sb_msg_id, num_reactions);
+		co_await process_reaction(std::move(txn), channel, message, msg, sb_msg_id, num_reactions);
 	}
 } HANDLER_END
 
@@ -281,7 +276,7 @@ cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) HANDLER_BEGIN {
 			auto& embed = embeds.emplace_back();
 			embed.EmplaceAuthor(user->GetUsername()).SetIconUrl(cCDN::GetUserAvatar(*user));
 			embed.SetColor(color);
-			embed.SetDescription(std::format("User has no <:Holy:409075809723219969>ed messages. {}", msg));
+			embed.SetDescription(std::format("User has no {}ed messages. {}", LMG_EMOJI_HOLY, msg));
 			break;
 		}
 		case 0x1D400909: { // top10
@@ -290,7 +285,7 @@ cGreekBot::process_starboard_leaderboard(cAppCmdInteraction& i) HANDLER_BEGIN {
 			/* Retrieve the top 10 entries for starboard */
 			auto results = co_await cStarboardDAO(co_await cTransaction::New()).GetTop10(REACTION_THRESHOLD);
 			if (results.empty())
-				co_return co_await InteractionSendMessage(i, response.SetContent("I have no <:Holy:409075809723219969> data yet. Y'all boring as fuck!"));
+				co_return co_await InteractionSendMessage(i, response.SetContent(std::format("I have no {} data yet. Y'all boring as fuck!", LMG_EMOJI_HOLY)));
 			/* Prepare member generator */
 			std::vector<cMember> members; {
 				auto user_ids = results | std::views::transform(&starboard_entry::author_id) | rng::to<std::vector>();
@@ -335,6 +330,6 @@ cTask<>
 cGreekBot::process_starboard_help(cMsgCompInteraction& i) HANDLER_BEGIN {
 	co_await InteractionSendMessage(i, cPartialMessage()
 		.SetFlags(MESSAGE_FLAG_EPHEMERAL)
-		.SetContent(std::format("When a message receives **5 or more** <:Holy:409075809723219969> reactions, it gets to appear in {:c}. Reacting to *your own* messages doesn't count!", LMG_CHANNEL_STARBOARD))
+		.SetContent(std::format("When a message receives **5 or more** {} reactions, it gets to appear in {:c}. Reacting to *your own* messages doesn't count!", LMG_EMOJI_HOLY, LMG_CHANNEL_STARBOARD))
 	);
 } HANDLER_END

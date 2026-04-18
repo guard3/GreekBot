@@ -1,4 +1,5 @@
 #include "Emoji.h"
+#include "Utils.h"
 #include <boost/json.hpp>
 
 namespace json = boost::json;
@@ -20,9 +21,7 @@ cEmoji::cEmoji(const json::object& o) :
 
 std::string
 cEmoji::ToString() const {
-	if (m_id.ToInt())
-		return std::format("<{}:{}:{}>", m_animated ? "a" : "", m_name, m_id);
-	return m_name;
+	return std::format("{}", *this);
 }
 cEmoji
 tag_invoke(json::value_to_tag<cEmoji>, const json::value& v) {
@@ -38,4 +37,26 @@ tag_invoke(json::value_from_tag, json::value& v, const cEmoji& e) {
 		obj.emplace("id", nullptr);
 	if (e.IsAnimated())
 		obj.emplace("animated", true);
+}
+
+std::format_context::iterator
+std::formatter<cEmoji>::format(const cEmoji& emoji, std::format_context& ctx) const {
+	const auto name = emoji.GetName();
+	const auto pId = emoji.GetId();
+
+	if (m_bPct) {
+		auto out = ctx.out();
+		out = cUtils::PercentEncodeTo(out, name);
+		if (pId) {
+			auto id = pId->ToString();
+			out = cUtils::PercentEncodeTo(out, ":");
+			out = std::copy(id.begin(), id.end(), out);
+		}
+		return out;
+	}
+
+	if (pId)
+		return std::format_to(ctx.out(), "<{}:{}:{}>", emoji.IsAnimated() ? "a" : "", name, *pId);
+
+	return std::copy(name.begin(), name.end(), ctx.out());
 }

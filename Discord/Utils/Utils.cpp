@@ -92,42 +92,12 @@ cUtils::print_dbg(std::string str, char nl) noexcept try {
 } catch (...) {}
 /* ================================================================================================================== */
 std::string
-cUtils::PercentEncode(std::string_view sv) {
-	/* A lookup table to check if a character is unreserved or not */
-	static const bool unreserved_char[256] {
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0,
-		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0,
-		0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1,
-		0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	};
-	/* Reserve at most 3 times as many characters for the output string */
+cUtils::PercentEncode(std::string_view str) {
 	std::string result;
-	result.reserve(sv.size() * 3);
-	/* Parse the input */
-	for (unsigned char c : sv) {
-		if (unreserved_char[c])
-			result.push_back(static_cast<char>(c));
-		else {
-			static const char hex[] = "0123456789ABCDEF";
-			result.push_back('%');
-			result.push_back(hex[c >> 4]);
-			result.push_back(hex[c & 15]);
-		}
-	}
-	/* Return result */
-	result.shrink_to_fit();
+
+	// The worst case scenario is all characters being reserved, thus needing percent encoding in the form of %XX.
+	// Therefore, the largest possible encoded string is str.size() * 3.
+	result.resize_and_overwrite(str.size() * 3, [str](char* buf, std::size_t) { return PercentEncodeTo(buf, str) - buf; });
 	return result;
 }
 /* ================================================================================================================== */

@@ -92,6 +92,42 @@ public:
 	static std::vector<uint8_t> Base64Decode(std::string_view);
 	/* Percent encoding */
 	static std::string PercentEncode(std::string_view);
+	template<std::output_iterator<char> OutputIt>
+	static OutputIt PercentEncodeTo(OutputIt out, std::string_view str) {
+		/* A lookup table to check if a character is unreserved or not */
+		static constexpr bool unreserved_char[256] {
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0,
+			1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0,
+			0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+			1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1,
+			0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+			1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+		};
+
+		/* Parse the input */
+		for (unsigned char c : str) {
+			if (unreserved_char[c])
+				*out++ = static_cast<char>(c);
+			else {
+				static constexpr char hex[] = "0123456789ABCDEF";
+				*out++ = '%';
+				*out++ = hex[c >> 4];
+				*out++ = hex[c & 15];
+			}
+		}
+
+		return out;
+	}
 	/* Parse ISO8601 timestamp; basic or extended format */
 	static std::chrono::sys_time<std::chrono::milliseconds> ParseISOTimestamp(std::string_view);
 	template<typename Duration>

@@ -90,6 +90,11 @@ cBot::GetChannelMessage(crefChannel channel, crefMessage message) {
 }
 
 cTask<>
+cBot::DeleteReaction(crefChannel channel, crefMessage message, const cEmoji& emoji, crefUser user) {
+	co_await DiscordDelete(std::format("/channels/{}/messages/{}/reactions/{:pct}/{}", channel.GetId(), message.GetId(), emoji, user.GetId() == 0 ? "@me" : user.GetId()));
+}
+
+cTask<>
 cBot::RemoveGuildMember(crefGuild guild, crefUser user, std::string_view reason) {
 	std::optional<cHttpField> opt;
 	auto fields = reason.empty() ? std::span<cHttpField>() : std::span{ &opt.emplace("X-Audit-Log-Reason", cUtils::PercentEncode(reason)), 1 };

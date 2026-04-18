@@ -5,10 +5,11 @@
 /* ========== The id of Learning Greek ============================================================================== */
 inline constexpr cSnowflake LMG_GUILD_ID = 350234668680871946;
 /* ========== Learning Greek channels =============================================================================== */
-inline constexpr cSnowflake LMG_CHANNEL_USER_LOG    =  469274019565142017;
-inline constexpr cSnowflake LMG_CHANNEL_MESSAGE_LOG =  539521989061378048;
-inline constexpr cSnowflake LMG_CHANNEL_STARBOARD   =  978993330694266920;
-inline constexpr cSnowflake LMG_CHANNEL_NEW_MEMBERS = 1143888492422770778;
+inline constexpr cSnowflake LMG_CHANNEL_USER_LOG     =  469274019565142017;
+inline constexpr cSnowflake LMG_CHANNEL_MESSAGE_LOG  =  539521989061378048;
+inline constexpr cSnowflake LMG_CHANNEL_NATIVE_POLLS =  650331739293745172;
+inline constexpr cSnowflake LMG_CHANNEL_STARBOARD    =  978993330694266920;
+inline constexpr cSnowflake LMG_CHANNEL_NEW_MEMBERS  = 1143888492422770778;
 /* ========== Learning Greek roles ================================================================================== */
 inline constexpr cSnowflake LMG_ROLE_FLUENT               =  350483489461895168; // @Fluent
 inline constexpr cSnowflake LMG_ROLE_NATIVE               =  350483752490631181; // @Native
@@ -76,7 +77,11 @@ inline constexpr cSnowflake LMG_NITRO_BOOSTER_COLOR_ROLES[] {
 	1468608859567554631  // @Ελιόν
 };
 /* ========== Emojis ================================================================================================ */
-inline constexpr cSnowflake LMG_EMOJI_HOLY = 409075809723219969;
+inline constexpr cSnowflake LMG_EMOJI_ID_HOLY   = 409075809723219969;
+inline constexpr cSnowflake LMG_EMOJI_ID_HEBONK = 831316355214606386;
+
+inline constexpr cEmoji LMG_EMOJI_HOLY{   "Holy",   LMG_EMOJI_ID_HOLY   };
+inline constexpr cEmoji LMG_EMOJI_HEBONK{ "hebonk", LMG_EMOJI_ID_HEBONK };
 /* ========== Common colors ========================================================================================= */
 inline constexpr cColor LMG_COLOR_RED         = 0xC43135;
 inline constexpr cColor LMG_COLOR_GREEN       = 0x248046;
