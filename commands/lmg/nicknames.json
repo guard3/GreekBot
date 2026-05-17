@@ -1,0 +1,5 @@
+{
+  "name": "nicknames",
+  "description": "See what users haven't had a nickname assigned to them yet",
+  "default_member_permissions": "134217728"
+}

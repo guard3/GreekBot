@@ -136,3 +136,115 @@ cGreekBot::process_nick_member_remove(const cUser& user) HANDLER_BEGIN {
 	}
 	co_await txn.Commit();
 } HANDLER_END
+
+cTask<>
+cGreekBot::process_nicknames(cAppCmdInteraction& i) HANDLER_BEGIN {
+	// Sanity check, test whether the invoking user has the appropriate permissions
+	if (constexpr auto perm = ePermission::ManageNicknames; i.GetMember()->GetPermissions().TestNone(perm)) {
+		co_return co_await InteractionSendMessage(i, cPartialMessage()
+			.SetFlags(MESSAGE_FLAG_EPHEMERAL)
+			.SetContent(std::format("You can't do that! You're missing the `{}` permission.", perm))
+		);
+	}
+
+	// Get a list of all members
+	std::vector<cMember> nonlearners; // natives or non learners
+	std::vector<cMember> fluents;     // C2
+	std::vector<cMember> learners;    // anyone else :)
+	nonlearners.reserve(100);
+	fluents.reserve(100);
+	learners.reserve(100);
+
+	co_await InteractionDefer(i);
+
+	co_for (cMember& member, RequestGuildMembers(LMG_GUILD_ID)) {
+		// The relevant members are those without a nickname
+		if (!member.GetNick().empty())
+			continue;
+
+		// Classify the member based on their proficiency role if they have one
+		for (auto& role_id : member.GetRoles()) {
+			std::vector<cMember>* pVec{};
+			switch (role_id.ToInt()) {
+			case LMG_ROLE_NATIVE.ToInt():
+			case LMG_ROLE_NON_LEARNER.ToInt():
+				pVec = &nonlearners;
+				break;
+			case LMG_ROLE_FLUENT.ToInt():
+				pVec = &fluents;
+				break;
+			case LMG_ROLE_BEGINNER.ToInt():
+			case LMG_ROLE_ELEMENTARY.ToInt():
+			case LMG_ROLE_INTERMEDIATE.ToInt():
+			case LMG_ROLE_UPPER_INTERMEDIATE.ToInt():
+			case LMG_ROLE_ADVANCED.ToInt():
+				pVec = &learners;
+				break;
+			}
+
+			if (pVec) {
+				pVec->push_back(std::move(member));
+				break;
+			}
+		}
+	}
+
+	// Formulate the report message
+	std::string content;
+	content.reserve(2000);
+
+	if (!learners.empty()) {
+		content += "## Learners\n";
+		for (auto& member : learners)
+			std::format_to(std::back_inserter(content), "{:u} ", member.GetUser()->GetId());
+		content.back() = '\n';
+	}
+	if (!fluents.empty()) {
+		content += "## Fluents\n";
+		for (auto& member : fluents)
+			std::format_to(std::back_inserter(content), "{:u} ", member.GetUser()->GetId());
+		content.back() = '\n';
+	}
+	if (!nonlearners.empty()) {
+		content += "## Natives and non-learners\n";
+		for (auto& member : nonlearners)
+			std::format_to(std::back_inserter(content), "{:u} ", member.GetUser()->GetId());
+		content.back() = '\n';
+	}
+	if (content.empty())
+		content = "Nothing to show";
+
+	// Prepare the message
+	cPartialMessage msg;
+	msg.SetComponents({
+		cActionRow{
+			cButton{
+				eButtonStyle::Secondary,
+				std::format("DLT#{}", i.GetUser().GetId()),
+				"Dismiss"
+			}
+		}
+	});
+
+	// Send the message
+	//
+	// Note: The maximum supported message content size is 2000 characters. If we ever forget to assign nicknames to a significant
+	// number of people, we can easily exceed this in one go, which will result in interaction errors. To avoid that, check
+	// the content length and send in chunks if necessary
+	//
+	// TODO: Use components v2 with TextDisplays, which support up to 4000 characters
+	while (content.size() > 2000) {
+		// Content is too large, we have to chunk it!
+		// We know the message content is ' ' delimited, so we can start working backwards until we have an acceptable size.
+		std::size_t pos{};
+		while ((pos = content.rfind(' ', pos - 1)) > 2000);
+
+		// Send the suitably sized substring
+		co_await InteractionSendMessage(i, msg.SetContent(content.substr(0, pos)));
+
+		// Erase the substring we just sent and try again
+		content.erase(0, pos + 1);
+	}
+
+	co_await InteractionSendMessage(i, msg.SetContent(std::move(content)));
+} HANDLER_END

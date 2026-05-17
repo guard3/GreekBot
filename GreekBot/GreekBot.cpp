@@ -139,6 +139,8 @@ cGreekBot::process_interaction(cAppCmdInteraction& i) HANDLER_BEGIN {
 		return process_unban(i);
 	case 1472307604041629920: // levels
 		return process_levels(i);
+	case 1505552326000246895:
+		return process_nicknames(i); // nicknames
 	default:
 		throw std::runtime_error(std::format("Unhandled command {:?} {}", i.GetCommandName(), i.GetCommandId()));
 	}

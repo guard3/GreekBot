@@ -80,6 +80,8 @@ private:
 	cTask<> process_nick_member_update(const cMemberUpdate&);
 	cTask<> process_nick_member_remove(const cUser&);
 
+	cTask<> process_nicknames(cAppCmdInteraction&);
+
 	cTask<> process_native_polls_reaction_add(crefUser, crefChannel, crefMessage, hMember, const cEmoji&);
 
 	cTask<> process_starboard_reaction_add(crefUser, crefChannel, crefMessage, hSnowflake, cEmoji&);
