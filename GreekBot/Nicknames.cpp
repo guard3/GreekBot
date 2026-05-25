@@ -139,6 +139,8 @@ cGreekBot::process_nick_member_remove(const cUser& user) HANDLER_BEGIN {
 
 cTask<>
 cGreekBot::process_nicknames(cAppCmdInteraction& i) HANDLER_BEGIN {
+	using namespace std::chrono;
+
 	// Sanity check, test whether the invoking user has the appropriate permissions
 	if (constexpr auto perm = ePermission::ManageNicknames; i.GetMember()->GetPermissions().TestNone(perm)) {
 		co_return co_await InteractionSendMessage(i, cPartialMessage()
@@ -157,36 +159,58 @@ cGreekBot::process_nicknames(cAppCmdInteraction& i) HANDLER_BEGIN {
 
 	co_await InteractionDefer(i);
 
-	co_for (cMember& member, RequestGuildMembers(LMG_GUILD_ID)) {
-		// The relevant members are those without a nickname
-		if (!member.GetNick().empty())
-			continue;
+	milliseconds retry_after{};
+	try {
+		co_for (cMember& member, RequestGuildMembers(LMG_GUILD_ID)) {
+			// The relevant members are those without a nickname
+			if (!member.GetNick().empty())
+				continue;
 
-		// Classify the member based on their proficiency role if they have one
-		for (auto& role_id : member.GetRoles()) {
-			std::vector<cMember>* pVec{};
-			switch (role_id.ToInt()) {
-			case LMG_ROLE_NATIVE.ToInt():
-			case LMG_ROLE_NON_LEARNER.ToInt():
-				pVec = &nonlearners;
-				break;
-			case LMG_ROLE_FLUENT.ToInt():
-				pVec = &fluents;
-				break;
-			case LMG_ROLE_BEGINNER.ToInt():
-			case LMG_ROLE_ELEMENTARY.ToInt():
-			case LMG_ROLE_INTERMEDIATE.ToInt():
-			case LMG_ROLE_UPPER_INTERMEDIATE.ToInt():
-			case LMG_ROLE_ADVANCED.ToInt():
-				pVec = &learners;
-				break;
-			}
+			// Classify the member based on their proficiency role if they have one
+			for (auto& role_id : member.GetRoles()) {
+				std::vector<cMember>* pVec{};
+				switch (role_id.ToInt()) {
+				case LMG_ROLE_NATIVE.ToInt():
+				case LMG_ROLE_NON_LEARNER.ToInt():
+					pVec = &nonlearners;
+					break;
+				case LMG_ROLE_FLUENT.ToInt():
+					pVec = &fluents;
+					break;
+				case LMG_ROLE_BEGINNER.ToInt():
+				case LMG_ROLE_ELEMENTARY.ToInt():
+				case LMG_ROLE_INTERMEDIATE.ToInt():
+				case LMG_ROLE_UPPER_INTERMEDIATE.ToInt():
+				case LMG_ROLE_ADVANCED.ToInt():
+					pVec = &learners;
+					break;
+				}
 
-			if (pVec) {
-				pVec->push_back(std::move(member));
-				break;
+				if (pVec) {
+					pVec->push_back(std::move(member));
+					break;
+				}
 			}
 		}
+	} catch (const xRateLimitError& ex) {
+		retry_after = ex.retry_after();
+	}
+
+	// Prepare the message
+	cPartialMessage msg;
+	msg.SetComponents({
+		cActionRow{
+			cButton{
+				eButtonStyle::Secondary,
+				std::format("DLT#{}", i.GetUser().GetId()),
+				"Dismiss"
+			}
+		}
+	});
+
+	// If a rate limit error occurred, report the time when the timer resets
+	if (retry_after != milliseconds{}) {
+		co_return co_await InteractionSendMessage(i, msg.SetContent(std::format("You are being rate limited. Try again <t:{:%Q}:R>", time_point_cast<seconds>(system_clock::now() + retry_after).time_since_epoch())));
 	}
 
 	// Formulate the report message
@@ -214,17 +238,7 @@ cGreekBot::process_nicknames(cAppCmdInteraction& i) HANDLER_BEGIN {
 	if (content.empty())
 		content = "Nothing to show";
 
-	// Prepare the message
-	cPartialMessage msg;
-	msg.SetComponents({
-		cActionRow{
-			cButton{
-				eButtonStyle::Secondary,
-				std::format("DLT#{}", i.GetUser().GetId()),
-				"Dismiss"
-			}
-		}
-	});
+
 
 	// Send the message
 	//

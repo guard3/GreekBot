@@ -3,6 +3,8 @@
 #include "Interaction.h"
 #include "Utils.h"
 #include "VoiceState.h"
+#include "Exception/HttpError.h"
+
 /* ========== Event type enum ======================================================================================= */
 enum : std::uint32_t {
 	RESUMED                       = 0x712ED6EE,
@@ -24,6 +26,7 @@ enum : std::uint32_t {
 	MESSAGE_REACTION_REMOVE_ALL   = 0x02A1D6E9,
 	MESSAGE_REACTION_REMOVE_EMOJI = 0xEB390E5D,
 	GUILD_MEMBERS_CHUNK           = 0x343F4BC5,
+	RATE_LIMITED                  = 0x6E263280,
 	USER_UPDATE                   = 0xBFC98531,
 	VOICE_STATE_UPDATE            = 0x1555C75D
 };
@@ -237,6 +240,34 @@ cGateway::implementation::process_event(std::shared_ptr<websocket_session> sess,
 				/* Resume the coroutine to consume the chunks */
 				if (entry.coro)
 					entry.coro.resume();
+			}	break;
+			case RATE_LIMITED: {
+				auto& meta = d.at("meta").as_object();
+				// The only gateway event that can be rate limited is Request Guild Members (8)
+				// Any value other than that means that additional support must be added
+				switch (auto op = d.at("opcode").to_number<int>()) {
+				case 8: {
+					auto it = m_rgm_entries.find(cUtils::ParseInt<std::uint64_t>(meta.at("nonce").as_string()));
+					/* If there's no entry with nonce, smth must have gone pretty wrong */
+					if (it == m_rgm_entries.end()) {
+						struct _ : std::exception {
+							const char* what() const noexcept override { return "Unexpected RATE_LIMITED event."; }
+						}; throw _{};
+					}
+					/* Register a rate limit exception */
+					auto& entry = it->second;
+					try {
+						throw xRateLimitError("Request Guild Member", &d); // Little hack, xRateLimitError shouldn't really be an HTTP error at this point... TODO: fix
+					} catch (...) {
+						entry.except = std::current_exception();
+					}
+					/* Resume the coroutine to propagate the exception */
+					if (entry.coro)
+						entry.coro.resume();
+				} break;
+				default:
+					cUtils::PrintErr("Unexpected RATE_LIMITED event for gateway opcode {}", op);
+				}
 			}	break;
 			case USER_UPDATE: {
 				cUser user{ d };
