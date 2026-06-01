@@ -1,12 +1,9 @@
 #ifndef DISCORD_DISCORDERROR_H
 #define DISCORD_DISCORDERROR_H
+#include "Common.h"
 #include <memory>
 #include <system_error>
 #include <string_view>
-/* ========== Boost forward declarations ============================================================================ */
-namespace boost::json {
-	class value;
-}
 
 /* ========== Discord error codes; I'm going to be filling these as I need them ===================================== */
 enum class eDiscordError {
@@ -23,6 +20,9 @@ struct std::is_error_code_enum<eDiscordError> : std::true_type {};
 
 std::error_code make_error_code(eDiscordError) noexcept;
 
+eDiscordError
+tag_invoke(boost::json::value_to_tag<eDiscordError>, const boost::json::value&);
+
 /* ========== A specialized exception type for discord error codes ================================================== */
 class xDiscordError : public std::system_error {
 	std::shared_ptr<char[]> m_errors;        // Use a shared pointer for the errors string to make sure xDiscordError
@@ -35,4 +35,7 @@ public:
 
 	std::string_view errors() const noexcept;
 };
+
+xDiscordError
+tag_invoke(boost::json::value_to_tag<xDiscordError>, const boost::json::value&);
 #endif /* DISCORD_DISCORDERROR_H */

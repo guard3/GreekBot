@@ -2,6 +2,9 @@
 #include <format>
 #include <string>
 #include <boost/json.hpp>
+
+namespace json = boost::json;
+
 /* ========== The error category for eDiscordError ================================================================== */
 class cDiscordCategory : public std::error_category {
 	static const cDiscordCategory ms_instance;
@@ -22,12 +25,12 @@ make_error_code(eDiscordError ec) noexcept {
 	return { static_cast<int>(ec), cDiscordCategory::GetInstance() };
 }
 /* ========== xDiscordError constructors ============================================================================ */
-xDiscordError::xDiscordError(eDiscordError ec) : std::system_error(static_cast<int>(ec), cDiscordCategory::GetInstance()), m_errors_size{} {}
-xDiscordError::xDiscordError(eDiscordError ec, const std::string& what_arg, const boost::json::value* error) : xDiscordError(ec, what_arg.c_str(), error) {}
-xDiscordError::xDiscordError(eDiscordError ec, const char* what_arg, const boost::json::value* error) : std::system_error(static_cast<int>(ec), cDiscordCategory::GetInstance(), what_arg) {
+xDiscordError::xDiscordError(eDiscordError ec) : std::system_error(static_cast<int>(ec), cDiscordCategory::GetInstance()) {}
+xDiscordError::xDiscordError(eDiscordError ec, const std::string& what_arg, const json::value* error) : xDiscordError(ec, what_arg.c_str(), error) {}
+xDiscordError::xDiscordError(eDiscordError ec, const char* what_arg, const json::value* error) : std::system_error(static_cast<int>(ec), cDiscordCategory::GetInstance(), what_arg) {
 	if (!error) return;
 	/* Create a serializer for the supplied error object */
-	boost::json::serializer sr;
+	json::serializer sr;
 	sr.reset(error);
 	/* Initialize a string with 0 size and 256 capacity */
 	std::size_t size = 0, capacity = 256;
@@ -50,4 +53,27 @@ xDiscordError::xDiscordError(eDiscordError ec, const char* what_arg, const boost
 std::string_view
 xDiscordError::errors() const noexcept {
 	return m_errors ? std::string_view(m_errors.get(), m_errors_size) : "null";
+}
+
+eDiscordError
+tag_invoke(json::value_to_tag<eDiscordError>, const json::value& v) {
+	auto code = v.to_number<std::underlying_type_t<eDiscordError>>();
+
+	// Handle the special case of code 0, which is reserved by std::error_code to show success
+	return code == 0 ? eDiscordError::GeneralError : static_cast<eDiscordError>(code);
+}
+
+xDiscordError
+tag_invoke(json::value_to_tag<xDiscordError>, const json::value& v) {
+	auto ec = eDiscordError::GeneralError;
+
+	auto pObj = v.if_object();
+	if (const json::value* pValue; pObj && (pValue = pObj->if_contains("code"))) {
+		ec = json::value_to<eDiscordError>(*pValue);
+
+		if ((pValue = pObj->if_contains("message")))
+			return xDiscordError(ec, pValue->as_string().c_str(), pObj->if_contains("errors"));
+	}
+
+	return xDiscordError(ec);
 }

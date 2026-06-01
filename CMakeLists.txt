@@ -99,6 +99,7 @@ add_executable(GreekBot main.cpp Discord/Bot.cpp Discord/Bot.h Discord/Common.h 
 	GreekBot/Sanitize.cpp
 	GreekBot/UserLogging.cpp
 	GreekBot/NativePolls.cpp
+		Discord/Exception/RateLimitError.cpp
 )
 
 target_include_directories(

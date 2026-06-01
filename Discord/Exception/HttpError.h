@@ -1,11 +1,8 @@
 #ifndef DISCORD_HTTPERROR_H
 #define DISCORD_HTTPERROR_H
+#include "Common.h"
 #include <chrono>
 #include <system_error>
-/* ========== Boost forward declarations ============================================================================ */
-namespace boost::json {
-	class object;
-}
 
 /* ========== The HTTP status codes mentioned in the Discord documentation ========================================== */
 enum class eHttpStatus {
@@ -33,17 +30,5 @@ struct xHttpError : std::system_error {
 	xHttpError(eHttpStatus);
 	xHttpError(eHttpStatus, const char* what_arg);
 	xHttpError(eHttpStatus, const std::string& what_arg);
-};
-/* ========== A specialized exception type for 'Too many requests' status code ====================================== */
-class xRateLimitError : public xHttpError {
-	std::chrono::milliseconds m_retry_after;
-	bool                      m_global{};
-
-public:
-	xRateLimitError(const char* what_arg, const boost::json::object* obj = nullptr);
-	xRateLimitError(const std::string& what_arg, const boost::json::object* obj = nullptr);
-
-	auto retry_after() const noexcept { return m_retry_after; }
-	auto      global() const noexcept { return m_global;      }
 };
 #endif /* DISCORD_HTTPERROR_H */

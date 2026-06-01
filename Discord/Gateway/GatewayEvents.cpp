@@ -1,9 +1,9 @@
+#include "Exception.h"
 #include "GatewayImpl.h"
 #include "Guild.h"
 #include "Interaction.h"
 #include "Utils.h"
 #include "VoiceState.h"
-#include "Exception/HttpError.h"
 
 /* ========== Event type enum ======================================================================================= */
 enum : std::uint32_t {
@@ -257,7 +257,7 @@ cGateway::implementation::process_event(std::shared_ptr<websocket_session> sess,
 					/* Register a rate limit exception */
 					auto& entry = it->second;
 					try {
-						throw xRateLimitError("Request Guild Member", &d); // Little hack, xRateLimitError shouldn't really be an HTTP error at this point... TODO: fix
+						throw xRateLimitError("Request Guild Member", &d);
 					} catch (...) {
 						entry.except = std::current_exception();
 					}

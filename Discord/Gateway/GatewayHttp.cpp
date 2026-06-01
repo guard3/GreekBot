@@ -140,28 +140,21 @@ cGateway::implementation::DiscordRequestNoRetry(beast::http::verb method, std::s
 	/* Process response */
 	auto status = response.result();
 	auto result = response[beast::http::field::content_type] == "application/json" ? json::parse(response.body()) : json::value();
-	/* If the status indicates success, return result */
+	/* If the status indicates success, return the result JSON */
 	if (beast::http::to_status_class(status) == beast::http::status_class::successful)
 		co_return result;
-	/* If the status indicates rate limiting, throw a rate limit exception */
-	const json::object* pObj = result.if_object();
-	/* If the HTTP status is 'too many requests', throw a special exception */
-	if (status == beast::http::status::too_many_requests)
-		throw xRateLimitError(response.reason(), pObj);
+
+	// ...otherwise throw an appropriate exception with the http error mixed in
 	// TODO: retry on error 502
-	/* Otherwise throw a discord exception with the http error mixed in */
 	try {
 		throw xHttpError(static_cast<eHttpStatus>(status), response.reason());
 	} catch (...) {
-		eDiscordError ec = eDiscordError::GeneralError;
-		if (const json::value* pValue; pObj && (pValue = pObj->if_contains("code"))) {
-			/* Ignore code 0 because it's reserved for std::error_code to show success */
-			if (auto code = pValue->to_number<std::underlying_type_t<eDiscordError>>(); code != 0)
-				ec = static_cast<eDiscordError>(code);
-			if ((pValue = pObj->if_contains("message")))
-				std::throw_with_nested(xDiscordError(ec, pValue->as_string().c_str(), pObj->if_contains("errors")));
-		}
-		std::throw_with_nested(xDiscordError(ec));
+		// If the status indicates rate limiting, throw a rate limit exception
+		if (status == beast::http::status::too_many_requests)
+			std::throw_with_nested(xRateLimitError(response.reason(), result.if_object()));
+
+		// Otherwise interpret the result as a discord error
+		std::throw_with_nested(json::value_to<xDiscordError>(result));
 	}
 }
 /* ================================================================================================================== */

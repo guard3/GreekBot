@@ -21,17 +21,6 @@ make_error_code(eHttpStatus ec) noexcept {
 xHttpError::xHttpError(eHttpStatus status) : std::system_error(static_cast<int>(status), cHttpCategory::GetInstance()) {}
 xHttpError::xHttpError(eHttpStatus status, const char* what_arg) : std::system_error(static_cast<int>(status), cHttpCategory::GetInstance(), what_arg) {}
 xHttpError::xHttpError(eHttpStatus status, const std::string& what_arg) : xHttpError(status, what_arg.c_str()) {}
-/* ========== xRateLimitError constructors ========================================================================== */
-xRateLimitError::xRateLimitError(const std::string& what_arg, const boost::json::object* pObj) : xRateLimitError(what_arg.c_str(), pObj) {}
-xRateLimitError::xRateLimitError(const char* what_arg, const boost::json::object* pObj) : xHttpError(eHttpStatus::TooManyRequests, what_arg) {
-	using namespace std::chrono;
-	/* If the input JSON value is an object, parse its contents */
-	if (const boost::json::value* pValue; pObj) {
-		if ((pValue = pObj->if_contains("retry_after")))
-			m_retry_after = floor<milliseconds>(duration<double>(pValue->to_number<double>()));
-		m_global = (pValue = pObj->if_contains("global")) && pValue->as_bool();
-	}
-}
 /* ================================================================================================================== */
 std::string
 cHttpCategory::message(int ec) const {
