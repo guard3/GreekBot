@@ -12,7 +12,8 @@ cGreekBot::process_sanitize(cAppCmdInteraction& i) {
 	} else if (auto host = url->encoded_host_name(); !host.ends_with("youtube.com") && !host.ends_with("youtu.be")
 		                                          || url->scheme_id() != urls::scheme::https && url->scheme_id() != urls::scheme::http) {
 		response.SetContent("Please provide a youtube url.");
-	} else if (urls::url clean_url = *url; clean_url.params().erase("si", urls::ignore_case) == 0) {
+	} else if (urls::url clean_url = *url; clean_url.params().erase("si", urls::ignore_case) == 0
+		                                && clean_url.params().erase("is", urls::ignore_case) == 0) {
 		response.SetContent("Your youtube link is already clean!");
 	} else {
 		response.SetContent(clean_url.buffer());
