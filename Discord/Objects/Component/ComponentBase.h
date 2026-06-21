@@ -1,7 +1,7 @@
 #ifndef DISCORD_COMPONENTBASE_H
 #define DISCORD_COMPONENTBASE_H
 #include "Base.h"
-#include <variant>
+#include "ComponentFwd.h"
 
 /**
  * A base class for every component that holds the optional component identifier
@@ -31,31 +31,6 @@ public:
 	Self&& SetId(this Self&& self, std::int32_t id) noexcept {
 		self.m_id = id;
 		return std::forward<Self>(self);
-	}
-};
-
-/**
- * A helper base class for variant-like components
- */
-struct cVariantComponentBase {
-	template<typename T, typename Self>
-	auto&& As(this Self&& self) {
-		return std::get<T>(std::forward<Self>(self));
-	}
-
-	template<typename T, typename Self>
-	auto If(this Self&& self) {
-		return cPtr(std::get_if<T>(std::addressof(self)));
-	}
-
-	template<typename Self, typename F>
-	decltype(auto) Visit(this Self&& self, F&& f) {
-		return std::visit(std::forward<F>(f), std::forward<Self>(self));
-	}
-
-	template<typename R, typename Self, typename F>
-	R Visit(this Self&& self, F&& f) {
-		return std::visit<R>(std::forward<F>(f), std::forward<Self>(self));
 	}
 };
 #endif //DISCORD_COMPONENTBASE_H

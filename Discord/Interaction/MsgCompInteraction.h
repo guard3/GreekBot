@@ -1,7 +1,6 @@
 #ifndef DISCORD_MSGCOMPINTERACTION_H
 #define DISCORD_MSGCOMPINTERACTION_H
 #include "Component.h"
-#include "Component/ComponentType.h"
 #include "InteractionBase.h"
 #include "Message.h"
 #include <span>

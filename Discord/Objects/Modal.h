@@ -2,13 +2,8 @@
 #define GREEKBOT_MODAL_H
 #include "Component.h"
 
-class cModal {
-	using variant_type = std::variant<cActionRow, cLabel, cUnsupportedComponent>;
-
-public:
-	struct component_type : cVariantComponentBase, variant_type {
-		using variant_type::variant_type;
-	};
+struct cModal {
+	using component_type = cVariantComponent<cActionRow, cLabel, cUnsupportedComponent>;
 
 	cModal(std::string custom_id, std::string title, std::vector<component_type> components):
 		m_custom_id(std::move(custom_id)),
@@ -24,12 +19,6 @@ private:
 	std::string                 m_title;
 	std::vector<component_type> m_components;
 };
-
-template<>
-struct boost::json::is_variant_like<cModal::component_type> : std::false_type {};
-
-void
-tag_invoke(boost::json::value_from_tag, boost::json::value&, const cModal::component_type&);
 
 void
 tag_invoke(boost::json::value_from_tag, boost::json::value&, const cModal&);

@@ -10,7 +10,17 @@ enum eTextInputStyle : std::uint8_t {
 /**
  * Partial Text Input is an interaction response object. It is received from modal interactions
  */
-struct cPartialTextInput : cComponentBase {
+class cPartialTextInput : public cComponentBase {
+	std::string m_custom_id;
+	std::string m_value;
+
+protected:
+	template<typename Str>
+	explicit cPartialTextInput(Str&& custom_id) : m_custom_id(std::forward<Str>(custom_id)) {}
+
+public:
+	static constexpr auto Type = COMPONENT_TEXT_INPUT;
+
 	explicit cPartialTextInput(const boost::json::value&);
 	explicit cPartialTextInput(const boost::json::object&);
 
@@ -21,13 +31,6 @@ struct cPartialTextInput : cComponentBase {
 	/* Movers */
 	std::string MoveValue()    noexcept { return std::move(m_value);     }
 	std::string MoveCustomId() noexcept { return std::move(m_custom_id); }
-
-protected:
-	std::string m_custom_id;
-	std::string m_value;
-
-	template<typename Str>
-	explicit cPartialTextInput(Str&& custom_id) : m_custom_id(std::forward<Str>(custom_id)) {}
 };
 
 /**
@@ -41,6 +44,8 @@ class cTextInput : public cPartialTextInput {
 	std::uint16_t   m_max_length = 4000;
 
 public:
+	static constexpr auto Type = COMPONENT_TEXT_INPUT;
+
 	template<iExplicitlyConvertibleTo<std::string> Str = std::string>
 	cTextInput(eTextInputStyle style, Str&& custom_id, bool required = true):
 		cPartialTextInput(std::forward<Str>(custom_id)),

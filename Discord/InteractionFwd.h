@@ -4,5 +4,5 @@
 DISCORD_FWDDECL_CLASS(Interaction);
 DISCORD_FWDDECL_CLASS(AppCmdInteraction);
 DISCORD_FWDDECL_CLASS(MsgCompInteraction);
-DISCORD_FWDDECL_CLASS(ModalSubmitInteraction);
+DISCORD_FWDDECL_STRUCT(ModalSubmitInteraction);
 #endif /* DISCORD_INTERACTIONFWD_H */

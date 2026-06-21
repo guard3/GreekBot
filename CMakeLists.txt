@@ -93,13 +93,13 @@ add_executable(GreekBot main.cpp Discord/Bot.cpp Discord/Bot.h Discord/Common.h 
 	Discord/Permission.cpp
 	Discord/Objects/Component/TextDisplay.cpp
 	Discord/Objects/Component/ComponentBase.cpp
-	Discord/Objects/Component/ComponentType.cpp
 	Discord/Objects/Component/Label.cpp
 	Discord/Objects/Component/ActionRow.cpp
 	GreekBot/Sanitize.cpp
 	GreekBot/UserLogging.cpp
 	GreekBot/NativePolls.cpp
-		Discord/Exception/RateLimitError.cpp
+	Discord/Exception/RateLimitError.cpp
+	Discord/Objects/ComponentFwd.cpp
 )
 
 target_include_directories(

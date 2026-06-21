@@ -1,4 +1,3 @@
-#include "ComponentType.h"
 #include "SelectMenu.h"
 #include <boost/json.hpp>
 
@@ -17,7 +16,7 @@ cSelectOption::cSelectOption(const json::object& o):
 }
 
 cSelectMenu::cSelectMenu(const json::value& v) : cSelectMenu(v.as_object()) {}
-cSelectMenu::cSelectMenu(const json::object& o):
+cSelectMenu::cSelectMenu(const json::object& o): cComponentBase(o),
 	m_custom_id(json::value_to<std::string>(o.at("custom_id"))),
 	m_placeholder([&o] {
 		auto p = o.if_contains("placeholder");

@@ -1,4 +1,3 @@
-#include "ComponentType.h"
 #include "TextInput.h"
 #include <boost/json.hpp>
 

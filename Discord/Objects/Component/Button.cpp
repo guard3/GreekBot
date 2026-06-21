@@ -1,5 +1,4 @@
 #include "Button.h"
-#include "ComponentType.h"
 #include <boost/json.hpp>
 
 namespace json = boost::json;

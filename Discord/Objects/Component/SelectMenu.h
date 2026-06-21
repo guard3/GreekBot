@@ -109,6 +109,8 @@ class cSelectMenu : public cComponentBase {
 	std::vector<cSelectOption> m_options;
 
 public:
+	static constexpr auto Type = COMPONENT_SELECT_MENU;
+
 	explicit cSelectMenu(const boost::json::value&);
 	explicit cSelectMenu(const boost::json::object&);
 

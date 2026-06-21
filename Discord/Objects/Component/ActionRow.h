@@ -13,13 +13,10 @@
  * - Up to 5 contextually grouped buttons
  * - A single select component
  */
-class cActionRow : public cComponentBase {
-	using variant_type = std::variant<cButton, cSelectMenu, cUnsupportedComponent>;
+struct cActionRow : cComponentBase {
+	static constexpr auto Type = COMPONENT_ACTION_ROW;
 
-public:
-	struct child_component_type : cVariantComponentBase, variant_type {
-		using variant_type::variant_type;
-	};
+	using child_component_type = cVariantComponent<cButton, cSelectMenu, cUnsupportedComponent>;
 
 	explicit cActionRow(const boost::json::value&);
 	explicit cActionRow(const boost::json::object&);
@@ -39,20 +36,11 @@ private:
 	std::vector<child_component_type> m_components;
 };
 
-/**
- * Disable the default JSON conversions
- */
-template<>
-struct boost::json::is_variant_like<cActionRow::child_component_type> : std::false_type {};
-
 /** @name JSON value to object conversion
  */
 /// @{
 cActionRow
 tag_invoke(boost::json::value_to_tag<cActionRow>, const boost::json::value&);
-
-cActionRow::child_component_type
-tag_invoke(boost::json::value_to_tag<cActionRow::child_component_type>, const boost::json::value&);
 /// @}
 
 /** @name JSON value from object conversion
@@ -60,8 +48,5 @@ tag_invoke(boost::json::value_to_tag<cActionRow::child_component_type>, const bo
 /// @{
 void
 tag_invoke(boost::json::value_from_tag, boost::json::value&, const cActionRow&);
-
-void
-tag_invoke(boost::json::value_from_tag, boost::json::value&, const cActionRow::child_component_type&);
 /// @}
 #endif //DISCORD_ACTIONROW_H

@@ -1,6 +1,7 @@
 #ifndef DISCORD_UNSUPPORTEDCOMPONENT_H
 #define DISCORD_UNSUPPORTEDCOMPONENT_H
-#include "Base.h"
+#include "ComponentBase.h"
+
 /* ========== A dummy component not directly supported ============================================================== */
 class cUnsupportedComponent final {
 	std::unique_ptr<boost::json::value> m_value;
@@ -10,6 +11,8 @@ class cUnsupportedComponent final {
 	friend void
 	tag_invoke(boost::json::value_from_tag, boost::json::value&, const cUnsupportedComponent&);
 public:
+	static constexpr auto Type = COMPONENT_UNSUPPORTED;
+
 	explicit cUnsupportedComponent(const boost::json::value&);
 	cUnsupportedComponent(const cUnsupportedComponent&);
 	cUnsupportedComponent(cUnsupportedComponent&&) noexcept;
@@ -18,10 +21,6 @@ public:
 	cUnsupportedComponent& operator=(const cUnsupportedComponent&);
 	cUnsupportedComponent& operator=(cUnsupportedComponent&&) noexcept;
 };
-using   hUnsupportedComponent =   hHandle<cUnsupportedComponent>;
-using  chUnsupportedComponent =  chHandle<cUnsupportedComponent>;
-using  uhUnsupportedComponent =  uhHandle<cUnsupportedComponent>;
-using uchUnsupportedComponent = uchHandle<cUnsupportedComponent>;
 /* ========== JSON conversion overloads ============================================================================= */
 cUnsupportedComponent
 tag_invoke(boost::json::value_to_tag<cUnsupportedComponent>, const boost::json::value&);

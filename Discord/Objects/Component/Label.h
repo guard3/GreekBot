@@ -2,18 +2,13 @@
 #define DISCORD_LABEL_H
 #include "TextInput.h"
 #include "UnsupportedComponent.h"
-#include <variant>
 
 /**
  * Partial label is an interaction response object. It is received from modal interactions
  */
-class cPartialLabel : public cComponentBase {
-	using variant_type = std::variant<cPartialTextInput, cUnsupportedComponent>;
-
-public:
-	struct child_component_type : cVariantComponentBase, variant_type {
-		using variant_type::variant_type;
-	};
+struct cPartialLabel : cComponentBase {
+	static constexpr auto Type = COMPONENT_LABEL;
+	using child_component_type = cVariantComponent<cPartialTextInput, cUnsupportedComponent>;
 
 	explicit cPartialLabel(const boost::json::value&);
 	explicit cPartialLabel(const boost::json::object&);
@@ -27,13 +22,9 @@ private:
 /**
  * Label is a top-level layout component. Labels wrap modal components with text as a label and optional description.
  */
-class cLabel : public cComponentBase {
-	using variant_type = std::variant<cTextInput, cUnsupportedComponent>;
-
-public:
-	struct child_component_type : cVariantComponentBase, variant_type {
-		using variant_type::variant_type;
-	};
+struct cLabel : cComponentBase {
+	static constexpr auto Type = COMPONENT_LABEL;
+	using child_component_type = cVariantComponent<cTextInput, cUnsupportedComponent>;
 
 	template<iExplicitlyConvertibleTo<std::string> Str1 = std::string,
 	         iExplicitlyConvertibleTo<std::string> Str2 = std::string,
@@ -50,23 +41,11 @@ private:
 	child_component_type m_component;
 };
 
-/**
- * Disable the default JSON conversions for std::variant
- */
-template<>
-struct boost::json::is_variant_like<cPartialLabel::child_component_type> : std::false_type {};
-
-template<>
-struct boost::json::is_variant_like<cLabel::child_component_type> : std::false_type {};
-
 /** @name JSON value to object conversion
  */
 /// @{
 cPartialLabel
 tag_invoke(boost::json::value_to_tag<cPartialLabel>, const boost::json::value&);
-
-cPartialLabel::child_component_type
-tag_invoke(boost::json::value_to_tag<cPartialLabel::child_component_type>, const boost::json::value&);
 /// @}
 
 /** @name JSON value from object conversion
@@ -74,8 +53,5 @@ tag_invoke(boost::json::value_to_tag<cPartialLabel::child_component_type>, const
 /// @{
 void
 tag_invoke(boost::json::value_from_tag, boost::json::value&, const cLabel&);
-
-void
-tag_invoke(boost::json::value_from_tag, boost::json::value&, const cLabel::child_component_type&);
 /// @}
 #endif //DISCORD_LABEL_H

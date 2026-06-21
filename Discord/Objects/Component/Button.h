@@ -30,6 +30,8 @@ class cButton : public cComponentBase {
 	}
 
 public:
+	static constexpr auto Type = COMPONENT_BUTTON;
+
 	explicit cButton(const boost::json::value&);
 	explicit cButton(const boost::json::object&);
 

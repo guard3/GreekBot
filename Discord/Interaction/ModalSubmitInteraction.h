@@ -5,13 +5,8 @@
 #include <span>
 #include <vector>
 
-class cModalSubmitInteraction final : public cInteraction {
-	using variant_type = std::variant<cActionRow, cPartialLabel, cUnsupportedComponent>;
-
-public:
-	struct component_type : cVariantComponentBase, variant_type {
-		using variant_type::variant_type;
-	};
+struct cModalSubmitInteraction : cInteraction {
+	using component_type = cVariantComponent<cActionRow, cPartialLabel, cUnsupportedComponent>;
 
 	explicit cModalSubmitInteraction(const boost::json::value&);
 	explicit cModalSubmitInteraction(const boost::json::object&);
@@ -29,10 +24,4 @@ private:
 	explicit cModalSubmitInteraction(const boost::json::object&, const boost::json::object&);
 	using cInteraction::Visit;
 };
-
-template<>
-struct boost::json::is_variant_like<cModalSubmitInteraction::component_type> : std::false_type {};
-
-cModalSubmitInteraction::component_type
-tag_invoke(boost::json::value_to_tag<cModalSubmitInteraction::component_type>, const boost::json::value&);
 #endif /* DISCORD_MODALSUBMITINTERACTION_H */

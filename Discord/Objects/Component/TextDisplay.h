@@ -6,6 +6,8 @@ class cTextDisplay : public cComponentBase {
 	std::string m_content;
 
 public:
+	static constexpr auto Type = COMPONENT_TEXT_DISPLAY;
+
 	cTextDisplay() = default;
 	template<iExplicitlyConvertibleTo<std::string> Str = std::string>
 	explicit cTextDisplay(Str&& content) : m_content(std::forward<Str>(content)) {}

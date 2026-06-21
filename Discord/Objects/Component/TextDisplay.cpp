@@ -1,4 +1,3 @@
-#include "ComponentType.h"
 #include "TextDisplay.h"
 #include <boost/json.hpp>
 

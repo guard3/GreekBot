@@ -220,13 +220,8 @@ public:
  * Used for sending new messages
  * TODO: implement
  */
-class cPartialMessageV2 : public cMessageBase {
-	using variant_type = std::variant<cTextDisplay, cUnsupportedComponent>;
-
-public:
-	struct component_type : cVariantComponentBase, variant_type {
-		using variant_type::variant_type;
-	};
+struct cPartialMessageV2 : cMessageBase {
+	using component_type = cVariantComponent<cTextDisplay, cUnsupportedComponent>;
 
 	cPartialMessageV2() = default;
 
@@ -248,12 +243,6 @@ public:
 private:
 	std::vector<component_type> m_components;
 };
-
-/**
- * Disable default variant JSON conversions
- */
-template<>
-struct boost::json::is_variant_like<cPartialMessageV2::component_type> : std::false_type {};
 
 template<typename F>
 decltype(auto) cMessageView::Visit(this cMessageView self, F&& f) {
@@ -356,9 +345,6 @@ tag_invoke(boost::json::value_to_tag<cMessageUpdate>, const boost::json::value&)
 
 cMessage
 tag_invoke(boost::json::value_to_tag<cMessage>, const boost::json::value&);
-
-cPartialMessageV2::component_type
-tag_invoke(boost::json::value_to_tag<cPartialMessageV2::component_type>, const boost::json::value&);
 /// @}
 
 /** @name JSON value from object conversion
@@ -378,8 +364,5 @@ tag_invoke(boost::json::value_from_tag, boost::json::value&, const cMessage&);
 
 void
 tag_invoke(boost::json::value_from_tag, boost::json::value&, cMessageView);
-
-void
-tag_invoke(boost::json::value_from_tag, boost::json::value&, const cPartialMessageV2::component_type&);
 /// @}
 #endif /* DISCORD_MESSAGE_H */
