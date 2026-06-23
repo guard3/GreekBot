@@ -19,7 +19,7 @@ cMessageUpdate::cMessageUpdate(const json::object& o) :
 	if (auto p = o.if_contains("content"))
 		m_content.emplace(json::value_to<std::string>(*p));
 	if (auto p = o.if_contains("components"))
-		m_components.emplace(json::value_to<std::vector<cActionRow>>(*p));
+		m_components.emplace(json::value_to<std::vector<component_type>>(*p));
 	if (auto p = o.if_contains("embeds"))
 		m_embeds.emplace(json::value_to<std::vector<cEmbed>>(*p));
 }
@@ -91,11 +91,27 @@ tag_invoke(json::value_to_tag<cMessage>, const json::value& v) {
 void
 tag_invoke(json::value_from_tag, json::value& v, const cMessageUpdate& m) {
 	auto& obj = v.emplace_object();
-	obj.reserve(3);
+	obj.reserve(4);
+
+	if (auto p = m.GetComponents().Get()) {
+		// If there are edited components, add them to the JSON object
+		json::value_from(*p, obj["components"]);
+
+		// If at least one component V2 is found, set the appropriate message flag.
+		// This is done for the case where a message with legacy components is updated to components V2.
+		// Legacy components only support action rows as top-level components, so this is what we test against.
+		for (auto& component : *p) {
+			if (!component.If<cActionRow>()) {
+				obj.emplace("flags", MESSAGE_FLAG_IS_COMPONENTS_V2);
+				obj.emplace("content", nullptr);
+				obj.emplace("embeds", nullptr);
+				return;
+			}
+		}
+	}
+
 	if (auto p = m.GetContent().Get())
 		obj.emplace("content", *p);
-	if (auto p = m.GetComponents().Get())
-		json::value_from(*p, obj["components"]);
 	if (auto p = m.GetEmbeds().Get())
 		json::value_from(*p, obj["embeds"]);
 }

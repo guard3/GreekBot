@@ -1,0 +1,307 @@
+{
+  "flags": 32768,
+  "components": [{
+    "type": 10,
+    "content": "# Proficiency roles\nSelect one of the following roles to change your proficiency level"
+  }, {
+    "type": 1,
+    "components": [{
+      "type": 3,
+      "custom_id": "PROFICIENCY_MENU",
+      "placeholder": "Choose an option...",
+      "options": [{
+        "label": "Native",
+        "value": "350483752490631181",
+        "description": "If greek is your native language",
+        "emoji": {
+          "id": "1247170349523669086",
+          "name": "select_gr"
+        }
+      }, {
+        "label": "Cypriot",
+        "value": "1247132108686884894",
+        "description": "If cypriot greek is your native language",
+        "emoji": {
+          "id": "1247170344385642556",
+          "name": "select_cy"
+        }
+      }, {
+        "label": "Beginner",
+        "value": "351117824300679169",
+        "description": "If you just started learning greek or your level is A1",
+        "emoji": {
+          "id": "1247170325872119918",
+          "name": "select_a1"
+        }
+      }, {
+        "label": "Elementary",
+        "value": "351117954974482435",
+        "description": "If your greek level is A2",
+        "emoji": {
+          "id": "1247170328967516163",
+          "name": "select_a2"
+        }
+      }, {
+        "label": "Intermediate",
+        "value": "350485376109903882",
+        "description": "If your greek level is B1",
+        "emoji": {
+          "id": "1247170331450540084",
+          "name": "select_b1"
+        }
+      }, {
+        "label": "Upper Intermediate",
+        "value": "351118486426091521",
+        "description": "If your greek level is B2",
+        "emoji": {
+          "id": "1247170334155739176",
+          "name": "select_b2"
+        }
+      }, {
+        "label": "Advanced",
+        "value": "350485279238258689",
+        "description": "If your greek level is C1",
+        "emoji": {
+          "id": "1247170337498599455",
+          "name": "select_c1"
+        }
+      }, {
+        "label": "Fluent",
+        "value": "350483489461895168",
+        "description": "If your greek level is C2",
+        "emoji": {
+          "id": "1247170341059694655",
+          "name": "select_c2"
+        }
+      }, {
+        "label": "Non Learner",
+        "value": "352001527780474881",
+        "description": "If you don't know greek and you don't want to learn it",
+        "emoji": {
+          "id": "1247170352585375754",
+          "name": "select_no"
+        }
+      }]
+    }]
+  }, {
+    "type": 1,
+    "components": [{
+      "type": 2,
+      "style": 5,
+      "label": "Don't know what to pick?",
+      "url": "https://en.wikipedia.org/wiki/Common_European_Framework_of_Reference_for_Languages"
+    }]
+  }, {
+    "type": 10,
+    "content": "# Extra roles\nHere's an overview of all the extra roles that we offer to customize your experience in the server! You may choose as many as you want by clicking at the appropriate button.\n## Language roles\n- 🇬🇷 <@&762747975164100608>\n  if you are a [heritage speaker](<https://en.wikipedia.org/wiki/Heritage_language>) of modern Greek, no matter your greek level\n- 👅 <@&481544681520365577>\n  if you know the [International Phonetic Alphabet](<https://en.wikipedia.org/wiki/International_Phonetic_Alphabet>)"
+  }, {
+    "type": 1,
+    "components": [{
+      "type": 2,
+      "style": 1,
+      "custom_id": "role:762747975164100608",
+      "emoji": {
+        "name": "🇬🇷"
+      }
+    }, {
+      "type": 2,
+      "style": 1,
+      "custom_id": "role:481544681520365577",
+      "emoji": {
+        "name": "👅"
+      }
+    }]
+  }, {
+    "type": 10,
+    "content": "## Learning roles\n- 🧑‍🎓 <@&469239964119597056>\n  if you'd like to be notified about exercises or lessons!\n- <:omega:486886779941683211> <@&649313942002466826>\n  if you'd like to be notified about new words!\n- 🤗 <@&683443550410506273>\n  if you'd like to take part in some events we host from time to time!\n- 🗺️ <@&637359870009409576>\n  if you'd like to be notified about interesting stuff we find regarding Greek dialects!\n- 📑 <@&800464173385515058>\n  if you'd like to be notified about reading linguistics papers relating to Greek (dialects or standard) with <@189036489265381387>"
+  }, {
+    "type": 1,
+    "components": [{
+      "type": 2,
+      "style": 1,
+      "custom_id": "role:469239964119597056",
+      "emoji": {
+        "name": "🧑‍🎓"
+      }
+    }, {
+      "type": 2,
+      "style": 1,
+      "custom_id": "role:649313942002466826",
+      "emoji": {
+        "id": "486886779941683211",
+        "name": "omega"
+      }
+    }, {
+      "type": 2,
+      "style": 1,
+      "custom_id": "role:683443550410506273",
+      "emoji": {
+        "name": "🤗"
+      }
+    }, {
+      "type": 2,
+      "style": 1,
+      "custom_id": "role:637359870009409576",
+      "emoji": {
+        "name": "🗺️"
+      }
+    }, {
+      "type": 2,
+      "style": 1,
+      "custom_id": "role:800464173385515058",
+      "emoji": {
+        "name": "📑"
+      }
+    }]
+  }, {
+    "type": 10,
+    "content": "## Misc roles\n- ☎️ <@&650330610358943755>\n  if you're a <@&350483752490631181> and you would like to take part in some statistical questions we ask from time to time\n- 🎮 <@&357714047698993162>\n  if you'd like to be notified about game discounts or events in <#357713113321046016>\n- 🗣️ <@&886625423167979541>\n  if you'd like to be pinged to join voice chats. You may also ping others.\n- 📚 <@&928364890601685033>\n  if you'd like to join the Book Club. You will be pinged when meetings take place."
+  }, {
+    "type": 1,
+    "components": [{
+      "type": 2,
+      "style": 1,
+      "custom_id": "role:650330610358943755",
+      "emoji": {
+        "name": "☎️"
+      }
+    }, {
+      "type": 2,
+      "style": 1,
+      "custom_id": "role:357714047698993162",
+      "emoji": {
+        "name": "🎮"
+      }
+    }, {
+      "type": 2,
+      "style": 1,
+      "custom_id": "role:886625423167979541",
+      "emoji": {
+        "name": "🗣️"
+      }
+    }, {
+      "type": 2,
+      "style": 1,
+      "custom_id": "role:928364890601685033",
+      "emoji": {
+        "name": "📚"
+      }
+    }]
+  }, {
+    "type": 10,
+    "content": "# Exclusive colors for <@&593038680608735233>s\nSupport the server by nitro boosting and you may choose one of our color roles! If you're feeling extra special, you can request any custom color you want!"
+  }, {
+    "type": 1,
+    "components": [{
+      "type": 3,
+      "custom_id": "BOOSTER_MENU",
+      "placeholder": "Choose a color...",
+      "options": [{
+        "label": "No color",
+        "value": "0",
+        "emoji":{
+          "id": "1163928603273203742",
+          "name": "no_color"
+        }
+      }, {
+        "label": "Κακούλης",
+        "value": "657145859439329280",
+        "emoji": {
+          "id": "1163930132487081984",
+          "name": "kakoulis"
+        }
+      }, {
+        "label": "Πορτοκαλί",
+        "value": "677183404743327764",
+        "emoji": {
+          "id": "1163930130515767436",
+          "name": "portokali"
+        }
+      }, {
+        "label": "Μέλας",
+        "value": "735954079355895889",
+        "emoji": {
+          "id": "1163932479120490666",
+          "name": "melas"
+        }
+      }, {
+        "label": "Λεμόνι",
+        "value": "755763454266179595",
+        "emoji": {
+          "id": "1163932470165655602",
+          "name": "lemoni"
+        }
+      }, {
+        "label": "Μπεκρής",
+        "value": "777323857018617877",
+        "emoji": {
+          "id": "1163930127068057681",
+          "name": "bekris"
+        }
+      }, {
+        "label": "Γύπας",
+        "value": "793570278084968488",
+        "emoji": {
+          "id": "1163932465845518366",
+          "name": "gypas"
+        }
+      }, {
+        "label": "Ροζουλής",
+        "value": "925379778251485206",
+        "emoji": {
+          "id": "1163932477606334525",
+          "name": "rozoulis"
+        }
+      }, {
+        "label": "Πολωνός",
+        "value": "941041008169336913",
+        "emoji": {
+          "id": "1163932473277816832",
+          "name": "polwnos"
+        }
+      }, {
+        "label": "Σκατούλης",
+        "value": "1109212629882392586",
+        "emoji": {
+          "id": "1433192305048686592",
+          "name": "color_skatoulis"
+        }
+      }, {
+        "label": "Ροδάκινο",
+        "value": "1468608859567554631",
+        "emoji": {
+          "id": "1510731659803361572",
+          "name": "color_rodakino"
+        }
+      },{
+        "label": "Πέγκω",
+        "value": "1121773567785308181",
+        "emoji": {
+          "id": "1163932461206622258",
+          "name": "pegkw"
+        }
+      }, {
+        "label": "Κυνεζί",
+        "value": "1156980445058170991",
+        "emoji": {
+          "id": "1243870560518275093",
+          "name": "role_kynezi"
+        }
+      }, {
+        "label": "Χαρδ",
+        "value": "1163945469567832215",
+        "emoji": {
+          "id": "1433192303689994472",
+          "name": "color_hard"
+        }
+      }, {
+        "label": "Κατσίκα",
+        "value": "1265742860783845558",
+        "emoji": {
+          "id": "1267558102597767358",
+          "name": "role_katsika"
+        }
+      }]
+    }]
+  }]
+}

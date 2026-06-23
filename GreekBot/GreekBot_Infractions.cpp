@@ -347,8 +347,8 @@ cGreekBot::process_infractions_remove(cMsgCompInteraction& i, std::string_view f
 	cMessageUpdate response;
 	/* If the 'Cancel' button was clicked... */
 	if (fmt.starts_with("cancel:")) {
-		auto& comps = response.EmplaceComponents(i.GetMessage().MoveComponents());
-		get<cButton>(comps.at(1).GetComponents().front()).SetLabel("Remove an infraction").SetCustomId(std::format("unwarn:{}", fmt.substr(7)));
+		auto& comps = response.EmplaceComponents(std::from_range, i.GetMessage().MoveComponents());
+		comps.at(1).As<cActionRow>().GetComponents().front().As<cButton>().SetLabel("Remove an infraction").SetCustomId(std::format("unwarn:{}", fmt.substr(7)));
 		comps.front() = std::move(comps[1]);
 		comps.erase(comps.begin() + 1, comps.end());
 
@@ -376,8 +376,8 @@ cGreekBot::process_infractions_remove(cMsgCompInteraction& i, std::string_view f
 			response.EmplaceComponents();
 		} else {
 			make_stats(embed, stats);
-			auto& comps = response.EmplaceComponents(i.GetMessage().MoveComponents());
-			get<cButton>(comps.at(1).GetComponents().front()).SetLabel("Remove an infraction").SetCustomId(std::format("unwarn:{}", user_id));
+			auto& comps = response.EmplaceComponents(std::from_range, i.GetMessage().MoveComponents());
+			comps.at(1).As<cActionRow>().GetComponents().front().As<cButton>().SetLabel("Remove an infraction").SetCustomId(std::format("unwarn:{}", user_id));
 			comps.front() = std::move(comps[1]);
 			comps.erase(comps.begin() + 1, comps.end());
 		}
@@ -423,8 +423,8 @@ cGreekBot::process_infractions_remove(cMsgCompInteraction& i, std::string_view f
 			/* Update embed stats */
 			make_stats(embed, stats);
 			/* Change the 'Remove an infraction' button to 'Cancel' */
-			auto& comps = response.EmplaceComponents(i.GetMessage().MoveComponents());
-			get<cButton>(comps.at(0).GetComponents().front()).SetLabel("Cancel").SetCustomId(std::format("unwarn:cancel:{}", user_id));
+			auto& comps = response.EmplaceComponents(std::from_range, i.GetMessage().MoveComponents());
+			comps.at(0).As<cActionRow>().GetComponents().front().As<cButton>().SetLabel("Cancel").SetCustomId(std::format("unwarn:cancel:{}", user_id));
 			/* Add a select menu */
 			comps.emplace(comps.begin(), cActionRow{
 				cSelectMenu{

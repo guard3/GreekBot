@@ -49,19 +49,17 @@ cGreekBot::process_nick_member_update(const cMemberUpdate& member) HANDLER_BEGIN
 			// Update the notification message to notify of nickname change
 			co_await txn.Begin();
 			if (std::optional msg_id = co_await dao.DeleteMessage(member)) {
-				co_await EditMessage(LMG_CHANNEL_NEW_MEMBERS, *msg_id, cMessageUpdate()
-					.SetContent(std::format("{:u} Just got a nickname!", member.GetUser().GetId()))
-					.SetComponents({
-						cActionRow{
-							cButton{
-								eButtonStyle::Secondary,
-								std::format("DLT#{}",
-								GetUser().GetId()), // Save the GreekBot id as the author
-								"Dismiss"
-							}
+				co_await EditMessage(LMG_CHANNEL_NEW_MEMBERS, *msg_id, cMessageUpdate().SetComponents({
+					cTextDisplay(std::format("{:u} Just got a nickname!", member.GetUser().GetId())),
+					cActionRow{
+						cButton{
+							eButtonStyle::Secondary,
+							std::format("DLT#{}",
+							GetUser().GetId()), // Save the GreekBot id as the author
+							"Dismiss"
 						}
-					})
-				);
+					}
+				}));
 			}
 		} else if (!std::views::filter(member.GetRoles(), [](auto &id) { // If the member is verified and has a proficiency rank but no nickname...
 			return std::ranges::contains(LMG_PROFICIENCY_ROLES, id);
@@ -72,8 +70,8 @@ cGreekBot::process_nick_member_update(const cMemberUpdate& member) HANDLER_BEGIN
 				co_await ModifyGuildMember(LMG_GUILD_ID, member.GetUser().GetId(), cMemberOptions().SetNick(std::move(nick)));
 
 				// Message attributes
-				std::string content = std::format("{:u} rejoined and their nickname was restored!", member.GetUser().GetId());
-				std::vector components{
+				std::vector<cPartialMessageV2::component_type> components {
+					cTextDisplay(std::format("{:u} rejoined and their nickname was restored!", member.GetUser().GetId())),
 					cActionRow{
 						cButton{
 							eButtonStyle::Secondary,
@@ -87,30 +85,28 @@ cGreekBot::process_nick_member_update(const cMemberUpdate& member) HANDLER_BEGIN
 				// Having to edit a leftover message shouldn't ever happen, but we do it just to be safe
 				if (msg_id) {
 					co_await dao.DeleteMessage(member);
-					co_await EditMessage(LMG_CHANNEL_NEW_MEMBERS, *msg_id, cMessageUpdate().SetContent(std::move(content)).SetComponents(std::move(components)));
+					co_await EditMessage(LMG_CHANNEL_NEW_MEMBERS, *msg_id, cMessageUpdate().SetComponents(std::move(components)));
 				} else {
-					co_await CreateMessage(LMG_CHANNEL_NEW_MEMBERS, cPartialMessage().SetContent(std::move(content)).SetComponents(std::move(components)));
+					co_await CreateMessage(LMG_CHANNEL_NEW_MEMBERS, cPartialMessageV2().SetComponents(std::move(components)));
 				}
 			} else if (!msg_id) { // If there is no nickname registered in the database and no notification message...
-				auto msg = co_await CreateMessage(LMG_CHANNEL_NEW_MEMBERS, cPartialMessage()
-					.SetContent(std::format("{:u} just got a rank!", member.GetUser().GetId()))
-					.SetComponents({
-						cActionRow{
-							cButton{
-								eButtonStyle::Primary,
-								std::format("NCK#{}",
-								member.GetUser().GetId()), // Save the member id
-								"Assign nickname"
-							},
-							cButton{
-								eButtonStyle::Secondary,
-								std::format("DLT#{}",
-								GetUser().GetId()), // Save the GreekBot id as the author
-								"Dismiss"
-							}
+				auto msg = co_await CreateMessage(LMG_CHANNEL_NEW_MEMBERS, cPartialMessageV2().SetComponents({
+					cTextDisplay(std::format("{:u} just got a rank!", member.GetUser().GetId())),
+					cActionRow{
+						cButton{
+							eButtonStyle::Primary,
+							std::format("NCK#{}",
+							member.GetUser().GetId()), // Save the member id
+							"Assign nickname"
+						},
+						cButton{
+							eButtonStyle::Secondary,
+							std::format("DLT#{}",
+							GetUser().GetId()), // Save the GreekBot id as the author
+							"Dismiss"
 						}
-					})
-				);
+					}
+				}));
 				co_await dao.RegisterMessage(member.GetUser(), msg);
 			}
 		}

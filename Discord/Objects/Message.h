@@ -59,11 +59,16 @@ constexpr eMessageFlag operator|(eMessageFlag lhs, eMessageFlag rhs) { return st
 constexpr eMessageFlag operator&(eMessageFlag lhs, eMessageFlag rhs) { return static_cast<eMessageFlag>(std::to_underlying(lhs) & std::to_underlying(rhs)); }
 
 class cMessageUpdate final {
+public:
+	using component_type = cVariantComponent<cActionRow, cTextDisplay, cUnsupportedComponent>;
+
+private:
 	cSnowflake m_id;
 	cSnowflake m_channel_id;
 	std::optional<std::string> m_content;
-	std::optional<std::vector<cActionRow>> m_components;
+	std::optional<std::vector<component_type>> m_components;
 	std::optional<std::vector<cEmbed>> m_embeds;
+
 public:
 	cMessageUpdate() = default;
 	explicit cMessageUpdate(const boost::json::object&);
@@ -221,7 +226,7 @@ public:
  * TODO: implement
  */
 struct cPartialMessageV2 : cMessageBase {
-	using component_type = cVariantComponent<cTextDisplay, cUnsupportedComponent>;
+	using component_type = cVariantComponent<cActionRow, cTextDisplay, cUnsupportedComponent>;
 
 	cPartialMessageV2() = default;
 
