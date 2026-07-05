@@ -76,6 +76,9 @@ private:
 	cTask<> process_msglog_message_update(cMessageUpdate& msg);
 	cTask<> process_msglog_message_delete(std::span<const cSnowflake> msg_ids);
 
+	// Feature compro: Detect compromised accounts
+	cTask<> process_compro_new_message(const cMessage& msg, const cPartialMember& member);
+
 	cTask<> process_nick_new_member(const cMember&);
 	cTask<> process_nick_member_update(const cMemberUpdate&);
 	cTask<> process_nick_member_remove(const cUser&);

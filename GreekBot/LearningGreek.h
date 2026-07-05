@@ -10,6 +10,7 @@ inline constexpr cSnowflake LMG_CHANNEL_MESSAGE_LOG  =  539521989061378048;
 inline constexpr cSnowflake LMG_CHANNEL_NATIVE_POLLS =  650331739293745172;
 inline constexpr cSnowflake LMG_CHANNEL_STARBOARD    =  978993330694266920;
 inline constexpr cSnowflake LMG_CHANNEL_NEW_MEMBERS  = 1143888492422770778;
+inline constexpr cSnowflake LMG_CHANNEL_COMPROMISED  = 1520755509567819894;
 /* ========== Learning Greek roles ================================================================================== */
 inline constexpr cSnowflake LMG_ROLE_FLUENT               =  350483489461895168; // @Fluent
 inline constexpr cSnowflake LMG_ROLE_NATIVE               =  350483752490631181; // @Native

@@ -12,6 +12,10 @@ cGreekBot::OnMessageCreate(cMessage& msg, hSnowflake guild_id, hPartialMember me
 			/* Register message for the leaderboard */
 			co_await process_leaderboard_new_message(msg, *member);
 		} HANDLER_CATCH
+		HANDLER_TRY {
+			/* Detect compromised account */
+			co_await process_compro_new_message(msg, *member);
+		} HANDLER_CATCH
 	}
 }
 cTask<>

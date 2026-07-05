@@ -3,7 +3,7 @@ project(GreekBot)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR})
+set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 if(MSVC)
 	add_definitions(/bigobj)
 endif()
@@ -100,6 +100,8 @@ add_executable(GreekBot main.cpp Discord/Bot.cpp Discord/Bot.h Discord/Common.h 
 	GreekBot/NativePolls.cpp
 	Discord/Exception/RateLimitError.cpp
 	Discord/Objects/ComponentFwd.cpp
+	GreekBot/CompromisedAccounts.cpp
+	Database/CompromisedAccounts/CompromisedAccounts.cpp
 )
 
 target_include_directories(
@@ -153,6 +155,9 @@ define_query(QUERY_MSGLOG_GET      Database/MessageLog/query_msglog_get.sql)
 define_query(QUERY_MSGLOG_UPDATE   Database/MessageLog/query_msglog_update.sql)
 define_query(QUERY_MSGLOG_CLEANUP  Database/MessageLog/query_msglog_cleanup.sql)
 configure_file(Database/MessageLog/Queries.h.in MessageLogQueries.h)
+
+define_query(QUERY_COMPRO_METRICS Database/CompromisedAccounts/query_compro_metrics.sql)
+configure_file(Database/CompromisedAccounts/Queries.h.in ComproQueries.h)
 
 define_query(QUERY_LB_UPDATE  Database/Leaderboard/query_lb_update.sql)
 define_query(QUERY_LB_RANK    Database/Leaderboard/query_lb_rank.sql  )

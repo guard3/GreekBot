@@ -1,0 +1,4 @@
+#ifndef GREEKBOT_DBCOMPROMISEDACCOUNTS_H
+#define GREEKBOT_DBCOMPROMISEDACCOUNTS_H
+#include "CompromisedAccounts/CompromisedAccounts.h"
+#endif //GREEKBOT_DBCOMPROMISEDACCOUNTS_H
