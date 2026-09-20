@@ -3,16 +3,15 @@
 
 namespace json = boost::json;
 
-enum {
-	PONG                        = 1,         // ACK a Ping
-	CHANNEL_MESSAGE_WITH_SOURCE = 4,         // respond to an interaction with a message
-	DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,    // ACK an interaction and edit a response later, the user sees a loading state
-	DEFERRED_UPDATE_MESSAGE,                 // for components, ACK an interaction and edit the original message later; the user does not see a loading state
-	UPDATE_MESSAGE,                          // for components, edit the message the component was attached to
-	APPLICATION_COMMAND_AUTOCOMPLETE_RESULT, // respond to an autocomplete interaction with suggested choices
-	MODAL,                                   // respond to an interaction with a popup modal
-	PREMIUM_REQUIRED                         // respond to an interaction with an upgrade button, only available for apps with monetization enabled
-};
+static constexpr int PONG                                    =  1; // ACK a Ping
+static constexpr int CHANNEL_MESSAGE_WITH_SOURCE             =  4; // Respond to an interaction with a message
+static constexpr int DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE    =  5; // ACK an interaction and edit a response later, the user sees a loading state
+static constexpr int DEFERRED_UPDATE_MESSAGE                 =  6; // For components, ACK an interaction and edit the original message later; the user does not see a loading state
+static constexpr int UPDATE_MESSAGE                          =  7; // For components, edit the message the component was attached to
+static constexpr int APPLICATION_COMMAND_AUTOCOMPLETE_RESULT =  8; // Respond to an autocomplete interaction with suggested choices
+static constexpr int MODAL                                   =  9; // Respond to an interaction with a popup modal
+static constexpr int PREMIUM_REQUIRED                        = 10; // Deprecated; respond to an interaction with an upgrade button, only available for apps with monetization enabled
+static constexpr int LAUNCH_ACTIVITY                         = 12; // Launch the Activity associated with the app. Only available for apps with Activities enabled
 
 void detail::set_interaction_ack(const cInteraction& i) noexcept {
 	i.m_ack = true;

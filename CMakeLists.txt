@@ -121,6 +121,11 @@ find_package(OpenSSL REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(SQLite3 3.35.0 REQUIRED)
 
+# Fix SQLite target deprecation warning for newer CMake versions
+if(NOT TARGET SQLite3::SQLite3)
+	add_library(SQLite3::SQLite3 ALIAS SQLite::SQLite3)
+endif()
+
 # Configure compilation of header-only Boost libraries
 target_compile_definitions(GreekBot PRIVATE BOOST_ASIO_SEPARATE_COMPILATION BOOST_BEAST_SEPARATE_COMPILATION)
 if(NOT Boost_JSON_FOUND)
@@ -139,7 +144,7 @@ target_include_directories(GreekBot SYSTEM PRIVATE
 target_link_libraries(GreekBot
 	OpenSSL::SSL
 	${Boost_LIBRARIES}
-	SQLite::SQLite3
+	SQLite3::SQLite3
 	ZLIB::ZLIB
 )
 
