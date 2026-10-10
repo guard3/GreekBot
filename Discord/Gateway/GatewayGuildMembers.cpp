@@ -93,10 +93,37 @@ cGateway::implementation::RequestGuildMembers(const cSnowflake& guild_id, std::s
 			}
 		}; return _{ *this };
 	}();
-	/* Back up the current nonce and increment the original for future use */
-	auto nonce = m_rgm_nonce++;
+
+	// An awaitable that suspends this coroutine and saves it at the entry map with the active request nonce as key
+	// The coroutine will be resumed when chunks start arriving
+	struct _ {
+		implementation* self;
+		std::uint64_t nonce;
+
+		// Remove the entry at the end, even if the generator isn't consumed fully
+		~_() noexcept(false) {
+			net::defer(self->m_ws_strand, [s = self, n = nonce] { s->m_rgm_entries.erase(n); });
+		}
+
+		bool await_ready() const noexcept { return false; }
+		void await_suspend(std::coroutine_handle<> h) const {
+			auto& entry = self->m_rgm_entries[nonce];
+			if (auto ex = entry.except)
+				std::rethrow_exception(ex);
+			entry.started_at = steady_clock::now();
+			entry.coro = h;
+		}
+		auto& await_resume() const {
+			auto& entry = self->m_rgm_entries[nonce];
+			if (auto ex = entry.except)
+				std::rethrow_exception(ex);
+			entry.coro = nullptr;
+			return entry.chunks;
+		}
+	} const suspend_awaitable{ this, m_rgm_nonce++ }; // Back up the current nonce and increment the original for future use
+
 	/* Send payload - if we reach this point, then the session pointer is guaranteed to be valid */
-	send(m_ws_session.lock(), [&guild_id, query, user_ids, nonce] {
+	send(m_ws_session.lock(), [&guild_id, query, user_ids, nonce = suspend_awaitable.nonce] {
 		json::object obj;
 		obj.reserve(2);
 		obj.emplace("op", 8);
@@ -113,39 +140,7 @@ cGateway::implementation::RequestGuildMembers(const cSnowflake& guild_id, std::s
 		data.emplace("nonce", json::string_view(str, end - str));
 		return json::serialize(obj);
 	}());
-	/* Destroy the entry at the end, even if the generator isn't consumed fully */
-	volatile const auto cleanup = [this, nonce] {
-		struct _ {
-			implementation* self;
-			std::uint64_t nonce;
-			~_() try {
-				net::defer(self->m_ws_strand, [s = self, n = nonce] { s->m_rgm_entries.erase(n); });
-			} catch (...) {}
-		}; return _{ this, nonce };
-	}();
-	/* An awaitable to suspend the coroutine and save it at the entry map; to be resumed when chunks start arriving */
-	const auto suspend_awaitable = [this, nonce] {
-		struct _ {
-			implementation* self;
-			std::uint64_t nonce;
 
-			bool await_ready() const noexcept { return false; }
-			void await_suspend(std::coroutine_handle<> h) const {
-				auto& entry = self->m_rgm_entries[nonce];
-				if (auto ex = entry.except)
-					std::rethrow_exception(ex);
-				entry.started_at = steady_clock::now();
-				entry.coro = h;
-			}
-			auto& await_resume() const {
-				auto& entry = self->m_rgm_entries[nonce];
-				if (auto ex = entry.except)
-					std::rethrow_exception(ex);
-				entry.coro = nullptr;
-				return entry.chunks;
-			}
-		}; return _{ this, nonce };
-	}();
 	/* Wait for the first chunk */
 	auto& chunks = co_await suspend_awaitable;
 	for (std::size_t chunk_index = 0, chunk_count = chunks.front().GetChunkCount(); chunk_index < chunk_count; ++chunk_index) {
