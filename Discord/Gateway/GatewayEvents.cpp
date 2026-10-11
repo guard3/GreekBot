@@ -47,16 +47,14 @@ cGateway::implementation::process_event(std::shared_ptr<websocket_session> sess,
 		 * All JSON data is parsed BEFORE co_awaiting, as doing so will invalidate the argument reference! */
 		switch (const json::object& d = v.at("d").as_object(); type) {
 			case RESUMED: {
-				while (!m_pending.empty()) {
-					m_pending.front().resume();
-					m_pending.pop_front();
-				}
+				rgm_resume();
 			}	break;
 			case READY: {
 				m_session_id = json::value_to<std::string>(d.at("session_id"));
 				m_resume_gateway_url = urls::parse_uri(d.at("resume_gateway_url").as_string()).value();
 				m_application.emplace(d.at("application"));
 				cUser user{ d.at("user") };
+				rgm_resume();
 				co_await switch_strand();
 				co_await m_parent->OnReady(user);
 			}	break;

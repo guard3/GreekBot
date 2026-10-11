@@ -76,9 +76,8 @@ struct cGateway::implementation final {
 		std::exception_ptr except;
 		std::chrono::steady_clock::time_point started_at;
 	};
-	std::uint64_t                 m_rgm_nonce{};   // The nonce of the payload
-	std::exception_ptr            m_rgm_exception; // An exception in case all pending requests need to be canceled
-	std::deque<std::coroutine_handle<>> m_pending; // The queue of pending requests for when the gateway is unavailable
+	std::uint64_t                       m_rgm_nonce{}; // The nonce of the payload
+	std::deque<std::coroutine_handle<>> m_rgm_pending; // The queue of pending requests for when the gateway is unavailable
 	std::unordered_map<std::uint64_t, guild_members_entry> m_rgm_entries; // A map to hold and manage all responses
 	/* Partial application object */
 	std::optional<cApplication> m_application;
@@ -105,9 +104,13 @@ struct cGateway::implementation final {
 	/* Http functions */
 	void http_start();
 	net::awaitable<void> http_coro();
-	/* Canceling guild member requests */
+	/* Guild member requests */
 	void rgm_reset() noexcept;   // Cancel all pending requests when the session is reset
+	void rgm_resume() noexcept;  // Resume all pending requests waiting on websocket session to become available
 	void rgm_timeout() noexcept; // Cancel all pending requests that haven't been completed in a long time
+
+	[[nodiscard]]
+	cTask<std::shared_ptr<websocket_session>> rgm_lock_session(); // Lock the websocket session pointer, making sure it's not null
 
 	cTask<json::value> DiscordRequest(beast::http::verb method, std::string_view target, const json::object* obj, std::span<const cHttpField> fields);
 	cTask<json::value> DiscordRequestNoRetry(beast::http::verb method, std::string_view target, const json::object* obj, std::span<const cHttpField> fields);

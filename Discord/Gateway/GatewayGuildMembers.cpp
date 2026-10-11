@@ -1,27 +1,55 @@
 #include "GatewayImpl.h"
 
+auto
+cGateway::implementation::rgm_lock_session() -> cTask<std::shared_ptr<websocket_session>> {
+	// An awaitable that pushes this coroutine to the list of pending requests
+	// After a READY or RESUMED event are received, each pending request will be resumed
+	struct {
+		implementation* self;
+
+		bool await_ready() const noexcept { return false; }
+		void await_suspend(std::coroutine_handle<> h) const {
+			self->m_rgm_pending.push_back(h);
+		}
+		void await_resume() const noexcept {}
+	} const awaitable{ this };
+
+	// Continuously attempt to lock the session pointer
+	// If at any point the pointer is null, this means that the websocket session is in the process of being established
+	for (;;) {
+		if (auto sess = m_ws_session.lock())
+			co_return sess;
+		co_await awaitable;
+	}
+}
+
+void
+cGateway::implementation::rgm_resume() noexcept {
+	while (!m_rgm_pending.empty()) {
+		m_rgm_pending.front().resume();
+		m_rgm_pending.pop_front();
+	}
+}
+
 void
 cGateway::implementation::rgm_reset() noexcept {
-	/* Generate an exception for canceled guild member requests */
-	try {
-		throw xGatewaySessionResetError();
-	} catch (...) {
-		m_rgm_exception = std::current_exception();
+	// Cancel all ongoing requests
+	// Iterators are stable because potential erasing of entries occurs by means of net::defer
+	if (auto it = m_rgm_entries.begin(), end = m_rgm_entries.end(); it != end) {
+		std::exception_ptr ex;
+		try {
+			throw xGatewaySessionResetError();
+		} catch (...) {
+			ex = std::current_exception();
+		}
+
+		do {
+			auto& [_, entry] = *it;
+			entry.except = ex;
+			if (entry.coro)
+				entry.coro();
+		} while (++it != end);
 	}
-	/* Cancel all pending requests that didn't manage to get sent */
-	while (!m_pending.empty()) {
-		m_pending.front().resume();
-		m_pending.pop_front();
-	}
-	/* Cancel all ongoing requests;
-	 * Range for is safe because potential erasing of entries occurs by means of net::defer */
-	for (auto& elem : m_rgm_entries) {
-		auto& entry = elem.second;
-		entry.except = m_rgm_exception;
-		if (auto coro = entry.coro)
-			coro.resume();
-	}
-	m_rgm_exception = {};
 }
 
 void
@@ -32,7 +60,7 @@ cGateway::implementation::rgm_timeout() noexcept {
 	auto now = steady_clock::now();
 	/* Range for is safe because potential erasing of entries occurs by means of net::defer */
 	std::exception_ptr ex;
-	for (auto&[_, entry] : m_rgm_entries) {
+	for (auto& entry : m_rgm_entries | std::views::values) {
 		if (entry.coro && now - entry.started_at > 2min) {
 			if (!ex) try {
 				throw xGatewayTimeoutError();
@@ -81,18 +109,6 @@ cGateway::implementation::RequestGuildMembers(const cSnowflake& guild_id, std::s
 		if (!(m_application->GetFlags() & (APP_FLAG_GATEWAY_GUILD_MEMBERS | APP_FLAG_GATEWAY_GUILD_MEMBERS_LIMITED)))
 			throw xGatewayPrivilegedIntentsError();
 	}
-	/* Wait for the websocket stream to become available */
-	co_await [this] {
-		struct _ {
-			implementation& self;
-			bool await_ready() const noexcept { return !self.m_ws_session.expired(); }
-			void await_suspend(std::coroutine_handle<> h) const { self.m_pending.push_back(h); }
-			void await_resume() const {
-				if (self.m_rgm_exception)
-					std::rethrow_exception(self.m_rgm_exception);
-			}
-		}; return _{ *this };
-	}();
 
 	// An awaitable that suspends this coroutine and saves it at the entry map with the active request nonce as key
 	// The coroutine will be resumed when chunks start arriving
@@ -123,7 +139,7 @@ cGateway::implementation::RequestGuildMembers(const cSnowflake& guild_id, std::s
 	} const suspend_awaitable{ this, m_rgm_nonce++ }; // Back up the current nonce and increment the original for future use
 
 	/* Send payload - if we reach this point, then the session pointer is guaranteed to be valid */
-	send(m_ws_session.lock(), [&guild_id, query, user_ids, nonce = suspend_awaitable.nonce] {
+	send(co_await rgm_lock_session(), [&guild_id, query, user_ids, nonce = suspend_awaitable.nonce] {
 		json::object obj;
 		obj.reserve(2);
 		obj.emplace("op", 8);
